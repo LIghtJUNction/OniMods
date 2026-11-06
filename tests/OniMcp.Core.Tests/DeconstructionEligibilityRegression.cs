@@ -1,20 +1,9 @@
 using System;
-using System.Reflection;
 using OniMcp.Tools;
 
-internal static class DeconstructionEligibilityRegressionEntry
+internal static class DeconstructionEligibilityRegression
 {
-    private static void Main()
-    {
-        RunRegression();
-
-        MethodInfo existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing core regression entrypoint was not found");
-        existing.Invoke(null, null);
-    }
-
-    private static void RunRegression()
+    public static void Run()
     {
         AssertAllowed(
             DeconstructionEligibilityPolicy.Evaluate(true, true, false),

@@ -194,7 +194,7 @@ def main():
             sequence += 1
             action = paths["control"] / "action.json"
             action.unlink(missing_ok=True)
-            command = ["rtk", "proxy", sys.executable, str(scripts / "runtime.py"),
+            command = [sys.executable, str(scripts / "runtime.py"),
                        "--output", str(paths["control"]), "--url", client.url,
                        "step", "--seconds", str(args.seconds), "--speed", "1"]
             if args.release_native_pause:

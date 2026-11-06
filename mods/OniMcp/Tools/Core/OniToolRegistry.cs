@@ -71,7 +71,7 @@ namespace OniMcp.Tools
 
         public static List<McpTool> GetVisibleTools()
         {
-            return ToolCache.GetVisibleTools(_tools.Values, _tools.Values.Where(t => !t.Hidden));
+            return ToolCache.GetVisibleTools(_tools.Values);
         }
 
         public static bool TryGetTool(string name, out McpTool tool)

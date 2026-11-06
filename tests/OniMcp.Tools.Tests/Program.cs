@@ -13,6 +13,18 @@ internal static class Program
 
     private static void Main()
     {
+        LogicAlarmRegression.Run();
+        WorldEditorTools.RunMapContractRegressions();
+        MapReadPolicyRegression.Run();
+        BuildPlanningRegression.Run();
+        ObservationReadinessRegression.Run();
+        FarmingUprootRegression.Run();
+        PriorityWriteEligibilityRegression.Run();
+        BenchmarkMetadataRegression.Run();
+        RadboltDirectionEligibilityRegression.Run();
+        AttackDesignationPolicyRegression.Run();
+        PrintingPodClaimCleanupRegression.Run();
+
         OniToolRegistry.Tools["ok"] = new McpTool
         {
             Name = "ok", Mode = "read", Risk = "low",

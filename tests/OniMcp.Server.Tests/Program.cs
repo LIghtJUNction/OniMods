@@ -137,17 +137,18 @@ internal static class Program
             });
         }
         finally { Invoke(_bridge, "OnDestroy"); }
+        RetiredProtocolRegression.Run();
         HttpAdmissionRegression.Run();
-        RunGroup(typeof(HttpFrontDoorAdmissionRegressionEntry));
-        RunGroup(typeof(LegacyDiagnosticsExpiredSessionRegressionEntry));
-        RunGroup(typeof(LegacyExpiredSessionTaskCleanupRegressionEntry));
-        RunGroup(typeof(LegacyOutboundExpiredSessionRegressionEntry));
-        RunGroup(typeof(LegacyPingRegressionEntry));
-        RunGroup(typeof(LegacyRequestIdRegressionEntry));
-        RunGroup(typeof(LegacySessionCapacityAdmissionRegressionEntry));
-        RunGroup(typeof(LegacySessionLifecycleRegressionEntry));
-        RunGroup(typeof(LegacySseDisconnectActivityRegressionEntry));
-        RunGroup(typeof(LegacyAcceptNegotiationRegressionEntry));
+        HttpFrontDoorAdmissionRegression.Run();
+        LegacyDiagnosticsExpiredSessionRegression.Run();
+        LegacyExpiredSessionTaskCleanupRegression.Run();
+        LegacyOutboundExpiredSessionRegression.Run();
+        LegacyPingRegression.Run();
+        LegacyRequestIdRegression.Run();
+        LegacySessionCapacityAdmissionRegression.Run();
+        LegacySessionLifecycleRegression.Run();
+        LegacySseDisconnectActivityRegression.Run();
+        LegacyAcceptNegotiationRegression.Run();
         Console.WriteLine("PASS: " + _passed + " OniMcp Server regressions (production server sources; game boundaries stubbed).");
     }
 
@@ -351,14 +352,6 @@ internal static class Program
             }
         }
         finally { server.StopServer(); OniMcpOptions.Save(previous); }
-    }
-
-    private static void RunGroup(Type type)
-    {
-        var entry = type.GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
-        if (entry == null) throw new InvalidOperationException("Regression entrypoint missing: " + type.Name);
-        entry.Invoke(null, null);
-        Console.WriteLine("PASS " + type.Name);
     }
 
     private static object Process(McpHttpServer server, string method, string sessionId, JObject parameters = null) =>

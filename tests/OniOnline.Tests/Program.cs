@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -17,7 +16,7 @@ internal static class Program
 {
     private static int assertions;
     private static readonly List<RoomSession> sessions = new List<RoomSession>();
-    private static string address;
+    private static readonly string address = IPAddress.Loopback.ToString();
 
     private static SessionProfile Profile(string name, string version = "744825")
     {
@@ -156,11 +155,6 @@ internal static class Program
             if (args.Length == 2 && args[0] == "--check-bundled-valuetuple") return CheckBundledValueTuple(args[1]);
             if (args.Length == 2 && args[0] == "--check-no-probe") return CheckNoProbe(args[1]);
             if (args.Length == 2 && args[0] == "--check-plib") return CheckPLib(args[1]);
-            address = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
-                .Select(a => a.Address.ToString()).FirstOrDefault() ?? "127.0.0.1";
             GameplaySdkTests.Run(Check);
             CompatibilityTests.Run(Check);
             ModSynchronizationTests.Run(Check);

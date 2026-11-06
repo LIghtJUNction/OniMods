@@ -141,7 +141,7 @@ fn main() -> Result<()> {
                 Ok(())
             } else {
                 let selected = cfg.select_mod(cli.r#mod)?;
-                build::run(&cfg, &selected, release)
+                build::run(&cfg, &selected, release).map(|_| ())
             }
         }
         Commands::Dev { all } => {

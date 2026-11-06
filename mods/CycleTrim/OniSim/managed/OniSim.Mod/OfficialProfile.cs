@@ -31,11 +31,6 @@ namespace OniSim.CycleTrim
                 PortableProfile.Validate(assembly);
         }
 
-        internal static string MonoPath(string assemblyPath)
-        {
-            return NativePlatform.MonoPath(assemblyPath);
-        }
-
         internal static void ValidateMono(string path)
         {
             if (NativePlatform.IsLinux) RequireDigest(path, MonoSha256, "Unity Mono runtime");
