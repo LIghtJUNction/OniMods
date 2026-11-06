@@ -38,20 +38,32 @@ jobs:
           mkdir -p evidence "$RUNNER_TEMP/recovery-sdk"
           git diff --check "$BASELINE_SHA" "$CANDIDATE_SHA"
           git worktree add --detach "$RUNNER_TEMP/recovery-baseline" "$BASELINE_SHA"
-          # Installing an SDK does not select it when the runner has newer SDKs.
-          # Use an isolated working directory so neither source tree is modified.
+          # The CLI and project SDK resolvers search from different directories.
+          # Pin both without changing tracked source or any runner installation.
           printf '%s\n' '{"sdk":{"version":"10.0.401","rollForward":"disable"}}' \
             > "$RUNNER_TEMP/recovery-sdk/global.json"
+          for root in "$GITHUB_WORKSPACE" "$RUNNER_TEMP/recovery-baseline"; do
+            test ! -e "$root/global.json"
+            cp "$RUNNER_TEMP/recovery-sdk/global.json" "$root/global.json"
+          done
+          cp "$RUNNER_TEMP/recovery-sdk/global.json" evidence/sdk-global.json
           (
             cd "$RUNNER_TEMP/recovery-sdk"
             test "$(dotnet --version)" = '10.0.401'
             dotnet --info > "$GITHUB_WORKSPACE/evidence/build-sdk-info.txt"
-            dotnet build "$RUNNER_TEMP/recovery-baseline/tests/CycleTrim.Optimizations.Tests" -c Release \
-              -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/baseline-bin" \
-              2>&1 | tee "$GITHUB_WORKSPACE/evidence/baseline-build.log"
-            dotnet build "$GITHUB_WORKSPACE/tests/CycleTrim.Optimizations.Tests" -c Release \
-              -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/candidate-bin" \
-              2>&1 | tee "$GITHUB_WORKSPACE/evidence/candidate-build.log"
+            for variant in baseline candidate; do
+              root="$GITHUB_WORKSPACE"
+              if [[ "$variant" == baseline ]]; then root="$RUNNER_TEMP/recovery-baseline"; fi
+              dotnet msbuild "$root/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj" \
+                -nologo -p:Configuration=Release -p:ImportDirectoryBuildProps=false \
+                -getProperty:NETCoreSdkVersion,MSBuildVersion,MSBuildSDKsPath,RoslynTargetsPath \
+                > "$GITHUB_WORKSPACE/evidence/$variant-sdk.json"
+              python3 -c 'import json,sys; p=json.load(open(sys.argv[1]))["Properties"]; assert p["NETCoreSdkVersion"] == "10.0.401", p; assert "/sdk/10.0.401/" in p["MSBuildSDKsPath"], p; assert "/sdk/10.0.401/" in p["RoslynTargetsPath"], p' \
+                "$GITHUB_WORKSPACE/evidence/$variant-sdk.json"
+              dotnet build "$root/tests/CycleTrim.Optimizations.Tests" -c Release \
+                -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/$variant-bin" \
+                2>&1 | tee "$GITHUB_WORKSPACE/evidence/$variant-build.log"
+            done
           )
           git diff "$BASELINE_SHA" "$CANDIDATE_SHA" -- mods/CycleTrim/Core/PowerOverlayCache.cs \
             tests/CycleTrim.Optimizations.Tests > evidence/source.patch
