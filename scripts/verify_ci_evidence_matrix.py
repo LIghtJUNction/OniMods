@@ -8,7 +8,7 @@ import sys
 from run_cycletrim_synthetic_performance import (
     SYNTHETIC_TIMING_REGRESSION_MARKER,
 )
-from verify_oni_reference_provenance_contract import workflow_paths
+from workflow_contracts import workflow_paths
 
 
 ROOT = Path(__file__).resolve().parents[1]
