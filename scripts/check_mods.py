@@ -41,6 +41,32 @@ def build_project_command(
     return command
 
 
+def host_regression_checks(dotnet: str, skip_synthetic_performance: bool) -> list[tuple[str, list[str]]]:
+    """Discover host projects and their optional integration entry points."""
+    projects = sorted((ROOT / "tests").glob("*/*.csproj"))
+    if not projects:
+        return []
+
+    checks = [
+        (str(path.relative_to(ROOT)), build_project_command(path, dotnet, skip_synthetic_performance))
+        for path in projects
+    ]
+    adapter = ROOT / "tests/OniOnline.Tests/OniOnline.Tests.csproj"
+    if adapter in projects:
+        checks.append((
+            "OniOnline native-origin adapter regressions",
+            build_project_command(adapter, dotnet, skip_synthetic_performance)
+            + ["-p:OriginAdapterTests=true"],
+        ))
+    collector = ROOT / "tests/OniOnline.Tests/test_multiplayer_runtime.py"
+    if collector.is_file():
+        checks.append((
+            "OniOnline multiplayer collector regressions",
+            [sys.executable, str(collector), "-v"],
+        ))
+    return checks
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--static-only", action="store_true", help="run only Python source contracts")
@@ -60,28 +86,10 @@ def main() -> int:
         dotnet = shutil.which(args.dotnet)
         if dotnet is None:
             parser.error(".NET 10 SDK was not found; install it or pass --dotnet PATH")
-        projects = sorted((ROOT / "tests").glob("*/*.csproj"))
-        if not projects:
+        host_checks = host_regression_checks(dotnet, args.skip_synthetic_performance)
+        if not host_checks:
             parser.error("no Mod regression projects found under tests/")
-        checks.extend(
-            (
-                str(path.relative_to(ROOT)),
-                build_project_command(path, dotnet, args.skip_synthetic_performance),
-            )
-            for path in projects
-        )
-        checks.append((
-            "OniOnline native-origin adapter regressions",
-            build_project_command(
-                ROOT / "tests/OniOnline.Tests/OniOnline.Tests.csproj",
-                dotnet,
-                args.skip_synthetic_performance,
-            ) + ["-p:OriginAdapterTests=true"],
-        ))
-        checks.append((
-            "OniOnline multiplayer collector regressions",
-            [sys.executable, str(ROOT / "tests/OniOnline.Tests/test_multiplayer_runtime.py"), "-v"],
-        ))
+        checks.extend(host_checks)
 
     failures = []
     environment = dict(os.environ, DOTNET_CLI_TELEMETRY_OPTOUT="1",
