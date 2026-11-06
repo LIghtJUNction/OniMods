@@ -9,10 +9,7 @@ namespace OniMcp.Tools
     {
         private static ReadResourceResult ReadWorldAndColonyResourceRoutes(string uri, Uri parsed)
         {
-            if (!Uri.TryCreate(uri, UriKind.Absolute, out parsed) || parsed.Scheme != "oni")
-                                    return null;
-
-                                if (parsed.Host == "world" && parsed.AbsolutePath.StartsWith("/cell/"))
+            if (parsed.Host == "world" && parsed.AbsolutePath.StartsWith("/cell/"))
                                 {
                                     var parts = parsed.AbsolutePath.Trim('/').Split('/');
                                     if (parts.Length == 3)

@@ -29,6 +29,7 @@ internal static class Program
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
         Run("dynamic resource routes preserve read actions and reject sandbox routes", DynamicResources);
+        Run("resource URI authorities preserve canonical and fallback dispatch", ResourceAuthorityCompatibility);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
@@ -229,6 +230,8 @@ internal static class Program
         var b = new McpTool { Name = "b", Group = "one" };
         var c = new McpTool { Name = "c", Group = "one" };
         var tools = new[] { c, b, a };
+        var visibilityFirstCache = new OniToolRegistryCache();
+        visibilityFirstCache.GetVisibleTools(tools);
         var cache = new OniToolRegistryCache();
         var all = cache.GetTools(tools);
         Require(all.Select(tool => tool.Name).SequenceEqual(new[] { "a", "b", "c" }), "All-tools order is unstable.");
@@ -242,6 +245,8 @@ internal static class Program
         a.Group = "one";
         a.Name = "z";
         Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { c, a }), "Visible tools ignored current name ordering.");
+        Require(visibilityFirstCache.GetTools(tools).SequenceEqual(new[] { a, b, c }),
+            "Visible-first discovery changed the all-tools snapshot order.");
         all.Clear();
         visible.Clear();
         Require(cache.GetTools(tools).Count == 3 && cache.GetVisibleTools(tools).Count == 2,
@@ -337,6 +342,27 @@ internal static class Program
         Require(!OniResourceRegistry.GetResourceTemplateInfos().Any(template =>
             template.UriTemplate.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
             "Removed sandbox resource template remained advertised.");
+    }
+
+    private static void ResourceAuthorityCompatibility()
+    {
+        foreach (string user in new[] { "", "user@" })
+        foreach (string port in new[] { "", ":123" })
+        {
+            bool canonical = user.Length == 0 && port.Length == 0;
+            var configurables = Read("oni://" + user + "buildings" + port + "/configurables?action=delete");
+            var state = Read("oni://" + user + "controls" + port + "/state?action=delete");
+            Require((string)configurables["tool"] == "building_control"
+                && (string)configurables["arguments"]["action"] == (canonical ? "list" : "state_list"),
+                "Configurables authority changed its established operation.");
+            Require((string)state["tool"] == "building_control"
+                && (string)state["arguments"]["action"] == (canonical ? "state_list" : "list"),
+                "State authority changed its established operation.");
+        }
+
+        foreach (string uri in new[] { "oni://controls:invalid/state", "oni://[broken/state", "oni://", "controls/state", "https://controls/state" })
+            Require(OniResourceRegistry.ReadResource(uri) == null, "Malformed or foreign resource URI was admitted: " + uri);
+        Require((bool)Read("oni://guide/mechanics")["error"], "Disabled mechanics route became available.");
     }
 
     private static void ResourceErrors()

@@ -16,6 +16,7 @@ namespace OniMcp.Tools
 
         internal List<McpTool> GetVisibleTools(IEnumerable<McpTool> registeredTools)
         {
+            Ensure(registeredTools);
             return Sort(registeredTools.Where(tool => !tool.Hidden)).ToList();
         }
 
