@@ -9,6 +9,7 @@
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/ModInfo.cs" Link="ModInfo.cs" />
     <Compile Include="../../mods/CycleTrim/ModInfo.OniSim.cs" Link="ModInfo.OniSim.cs" />
     <Compile Include="../../mods/CycleTrim/OniSimOptions.cs" Link="OniSimOptions.cs" />
