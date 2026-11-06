@@ -15,6 +15,11 @@ namespace CycleTrim.Optimizations.Tests
                     SaveMetadataBenchmark.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--benchmark-save-scoped")
+                {
+                    SaveMetadataBenchmark.RunScoped();
+                    return 0;
+                }
                 if (args.Length == 1 && args[0] == "--benchmark-power")
                 {
                     PowerOverlayRegression.Benchmark();
@@ -38,7 +43,7 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
-                        + "save, power, conveyor or animation; --regression- selects one family");
+                        + "save, save-scoped, power, conveyor or animation; --regression- selects one family");
                 // Several negative cases irreversibly load another provider or
                 // a growable assembly. Each complete family gets its own process
                 // so those real invalidations cannot poison a later family's
