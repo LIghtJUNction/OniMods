@@ -23,6 +23,7 @@ internal static class Program
         BenchmarkMetadataRegression.Run();
         RadboltDirectionEligibilityRegression.Run();
         AttackDesignationPolicyRegression.Run();
+        PrintingPodClaimCleanupRegression.Run();
 
         OniToolRegistry.Tools["ok"] = new McpTool
         {

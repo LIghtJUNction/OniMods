@@ -40,6 +40,8 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/AttackDesignationPolicy.cs" Link="Source/AttackDesignationPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ThresholdValuePolicy.cs" Link="Source/ThresholdValuePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanExecutionSafety.cs" Link="Source/BuildPlanExecutionSafety.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/PrintingPodClaimCleanup.cs" Link="Source/PrintingPodClaimCleanup.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/FacilityPrintingPodRewardTools.cs" Link="Source/FacilityPrintingPodRewardTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
