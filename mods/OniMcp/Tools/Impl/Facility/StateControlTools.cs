@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "numeric_checkbox_controls_list", "capacity_counter_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
                 Description = "兼容入口：请优先使用 game_control domain=state action=list。列出数值/状态型侧屏控件：容量上限、单 checkbox、计数器、时间范围传感器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -70,26 +69,6 @@ namespace OniMcp.Tools
             };
         }
 
-        public static McpTool SetCapacity()
-        {
-            return new McpTool
-            {
-                Name = "capacity_control_set",
-                Group = "controls",
-                Mode = "write",
-                Risk = "medium",
-                Hidden = true,
-                Aliases = new List<string> { "user_capacity_set", "storage_capacity_set" },
-                Tags = new List<string> { "controls", "capacity", "side-screen", "storage" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=capacity",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["capacity"] = new McpToolParameter { Type = "number", Description = "目标容量，按目标 min/max 夹取；WholeValues 目标会取整", Required = true }
-                }),
-                Handler = args => SetStateControl(args, "capacity")
-            };
-        }
-
         public static McpTool SetStateControl()
         {
             return new McpTool
@@ -99,7 +78,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "state_side_control_set", "numeric_checkbox_control_set", "capacity_counter_control_set" },
                 Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
                 Description = "兼容入口：请优先使用 game_control domain=state action=set。用 kind 参数选择 capacity、checkbox、counter 或 time_range。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -125,7 +103,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "state_side_control", "numeric_checkbox_control", "capacity_counter_control" },
                 Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
                 Description = "数值/状态型侧屏聚合工具：action=list/set；读取或设置容量上限、checkbox、计数器和时间范围传感器。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -154,69 +131,6 @@ namespace OniMcp.Tools
                         return SetStateControl().Handler(args);
                     return CallToolResult.Error("action must be list or set");
                 }
-            };
-        }
-
-        public static McpTool SetCheckbox()
-        {
-            return new McpTool
-            {
-                Name = "checkbox_control_set",
-                Group = "controls",
-                Mode = "write",
-                Risk = "medium",
-                Hidden = true,
-                Aliases = new List<string> { "single_checkbox_set" },
-                Tags = new List<string> { "controls", "checkbox", "side-screen", "toggle" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=checkbox",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["value"] = new McpToolParameter { Type = "boolean", Description = "checkbox 目标值", Required = true }
-                }),
-                Handler = args => SetStateControl(args, "checkbox")
-            };
-        }
-
-        public static McpTool SetCounter()
-        {
-            return new McpTool
-            {
-                Name = "logic_counter_set",
-                Group = "controls",
-                Mode = "write",
-                Risk = "medium",
-                Hidden = true,
-                Aliases = new List<string> { "counter_control_set" },
-                Tags = new List<string> { "controls", "logic", "counter", "automation" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=counter",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["maxCount"] = new McpToolParameter { Type = "integer", Description = "目标最大计数 1-10；留空不修改", Required = false },
-                    ["advancedMode"] = new McpToolParameter { Type = "boolean", Description = "是否启用高级模式；留空不修改", Required = false },
-                    ["reset"] = new McpToolParameter { Type = "boolean", Description = "是否执行 Reset Counter，默认 false", Required = false }
-                }),
-                Handler = args => SetStateControl(args, "counter")
-            };
-        }
-
-        public static McpTool SetTimeRange()
-        {
-            return new McpTool
-            {
-                Name = "time_range_set",
-                Group = "controls",
-                Mode = "write",
-                Risk = "medium",
-                Hidden = true,
-                Aliases = new List<string> { "time_of_day_sensor_set" },
-                Tags = new List<string> { "controls", "logic", "time-range", "automation" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=time_range",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["start"] = new McpToolParameter { Type = "number", Description = "开始时间，周期百分比 0-1；留空不修改", Required = false },
-                    ["duration"] = new McpToolParameter { Type = "number", Description = "持续时间，周期百分比 0-1；留空不修改", Required = false }
-                }),
-                Handler = args => SetStateControl(args, "time_range")
             };
         }
 

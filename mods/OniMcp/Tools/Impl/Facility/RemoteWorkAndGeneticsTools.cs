@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "remote_work_terminal_docks_list" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -36,7 +35,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "remote_work_dock_set" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal action=set_dock",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -83,7 +81,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "remote_work_dock_control" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal；action=list 查询可选 dock，action=set_dock 设置或清空目标 dock",
                 Parameters = RemoteWorkTerminalControlParams(),
@@ -108,7 +105,6 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "botanical_analyzers_list", "seed_analysis_stations_list" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -129,7 +125,6 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "botanical_analyzer_seed_set", "seed_analysis_allowed_set" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station action=set_seed",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -174,7 +169,6 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "botanical_analyzer_control", "seed_analysis_station_control" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station；action=list 查询可分析种子，action=set_seed 设置允许/禁用",
                 Parameters = GeneticAnalysisStationControlParams(),

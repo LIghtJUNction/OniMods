@@ -1,0 +1,158 @@
+--- a/mods/CycleTrim/OniSim/native/src/lib.rs
++++ b/mods/CycleTrim/OniSim/native/src/lib.rs
+@@ -1,3 +1,4 @@
++mod reciprocal_index;
+ use std::ffi::{c_char, c_void};
+ 
+ mod bytes;
+--- a/mods/CycleTrim/OniSim/native/src/world.rs
++++ b/mods/CycleTrim/OniSim/native/src/world.rs
+@@ -19,6 +19,7 @@
+     pub(crate) width: usize,
+     pub(crate) height: usize,
+     pub(crate) stride: usize,
++    pub(crate) index_divisor: crate::reciprocal_index::ReciprocalDivisor,
+     pub(crate) padded_height: usize,
+     // Official +0x20 is the old read snapshot; +0x28 is active write storage.
+     pub(crate) read: Cells,
+@@ -103,6 +104,8 @@
+             width,
+             height,
+             stride,
++            index_divisor: crate::reciprocal_index::ReciprocalDivisor::new(stride as u64)
++                .ok_or_else(|| Error::new(Status::InvalidState, "invalid index stride"))?,
+             padded_height,
+             read: Cells::new(count)?,
+             write: Cells::new(count)?,
+--- a/mods/CycleTrim/OniSim/native/src/fluid_helpers.rs
++++ b/mods/CycleTrim/OniSim/native/src/fluid_helpers.rs
+@@ -6,8 +6,12 @@
+ pub(crate) use crate::numeric::{cvtt_f32_i32 as cvtt, smax, smin};
+ 
+ pub(crate) fn game_index(world: &PhysicsWorld, cell: usize) -> Option<i32> {
++    if cell > i64::MAX as usize {
++        return None;
++    }
+     let stride = world.stride as i64;
+-    let index = (cell as i64 / stride - 1) * (stride - 2) + cell as i64 % stride - 1;
++    let (row, column) = world.index_divisor.div_rem(cell as u64);
++    let index = (row as i64 - 1) * (stride - 2) + column as i64 - 1;
+     (index >= 0 && index < (world.width * world.height) as i64).then_some(index as i32)
+ }
+ 
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/reciprocal_index.rs
+@@ -0,0 +1,113 @@
++#![forbid(unsafe_code)]
++
++#[derive(Clone, Copy, Debug)]
++pub(crate) struct ReciprocalDivisor {
++    divisor: u64,
++    multiplier: u64,
++}
++
++impl ReciprocalDivisor {
++    pub(crate) fn new(divisor: u64) -> Option<Self> {
++        if divisor < 2 {
++            return None;
++        }
++        Some(Self {
++            divisor,
++            multiplier: ((1_u128 << 64) / u128::from(divisor)) as u64,
++        })
++    }
++
++    #[inline]
++    pub(crate) fn div_rem(self, value: u64) -> (u64, u64) {
++        let estimate = ((u128::from(value) * u128::from(self.multiplier)) >> 64) as u64;
++        let remainder = value - estimate * self.divisor;
++        if remainder >= self.divisor {
++            (estimate + 1, remainder - self.divisor)
++        } else {
++            (estimate, remainder)
++        }
++    }
++}
++
++#[cfg(test)]
++fn original_index(cell: u64, stride: u64, count: u64) -> Option<i32> {
++    let cell = cell as i64;
++    let stride = stride as i64;
++    let index = (cell / stride - 1) * (stride - 2) + cell % stride - 1;
++    (index >= 0 && index < count as i64).then_some(index as i32)
++}
++
++#[cfg(test)]
++fn next(value: &mut u64) -> u64 {
++    *value ^= *value << 13;
++    *value ^= *value >> 7;
++    *value ^= *value << 17;
++    *value
++}
++
++#[test]
++fn domain_and_boundaries() {
++    assert!(ReciprocalDivisor::new(0).is_none());
++    assert!(ReciprocalDivisor::new(1).is_none());
++    assert_eq!(std::mem::size_of::<ReciprocalDivisor>(), 16);
++    for d in [2, 3, 7, 31, 64, 65, 98, 306, 738, 1026, 2048,
++              u32::MAX as u64, i64::MAX as u64, u64::MAX] {
++        let divisor = ReciprocalDivisor::new(d).unwrap();
++        for n in [0, 1, d - 1, d, d.saturating_add(1), u64::MAX - 1, u64::MAX,
++                  (1_u64 << 63) - 1, 1_u64 << 63, (1_u64 << 63) + 1] {
++            assert_eq!(divisor.div_rem(n), (n / d, n % d), "n={n}, d={d}");
++        }
++    }
++}
++
++#[test]
++fn two_million_generated_unsigned_divisions() {
++    let mut random = 0x9e37_79b9_7f4a_7c15_u64;
++    for _ in 0..2_000_000 {
++        let n = next(&mut random);
++        let d = next(&mut random) | 2;
++        let divisor = ReciprocalDivisor::new(d).unwrap();
++        assert_eq!(divisor.div_rem(n), (n / d, n % d));
++    }
++}
++
++#[cfg(test)]
++fn index_world(width: u64, height: u64) -> crate::world::PhysicsWorld {
++    let ids = [0x2d39_bf75_u32, 0xa936_0b34, 0x6d95_058c];
++    let names = ["Vacuum", "Void", "Unobtanium"];
++    let mut bytes = (ids.len() as i32).to_le_bytes().to_vec();
++    for (index, id) in ids.into_iter().enumerate() {
++        let mut record = [0_u8; 164];
++        record[..4].copy_from_slice(&id.to_le_bytes());
++        record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
++        record[10] = if index == 2 { 7 } else { 0 };
++        bytes.extend(record);
++    }
++    for name in names {
++        bytes.extend((name.len() as i32).to_le_bytes());
++        bytes.extend(name.as_bytes());
++    }
++    let elements = crate::tables::ElementTable::parse(&bytes).unwrap();
++    crate::world::PhysicsWorld::new(width as usize, height as usize, 42, &elements)
++        .unwrap_or_else(|_| panic!("Authored index world failed to initialize"))
++}
++
++#[test]
++fn padded_grid_conversion_preserves_original_signed_semantics() {
++    let mut random = 0x1234_5678_9abc_def0_u64;
++    for (width, height) in [(1, 1), (2, 19), (63, 65), (96, 96), (256, 128), (736, 304)] {
++        let stride = width + 2;
++        let count = width * height;
++        let world = index_world(width, height);
++        for cell in 0..stride * (height + 2) {
++            assert_eq!(crate::fluid_helpers::game_index(&world, cell as usize), original_index(cell, stride, count));
++        }
++        for cell in [0, u64::MAX, i64::MAX as u64, 1_u64 << 63] {
++            assert_eq!(crate::fluid_helpers::game_index(&world, cell as usize), original_index(cell, stride, count));
++        }
++        for _ in 0..100_000 {
++            let cell = next(&mut random);
++            assert_eq!(crate::fluid_helpers::game_index(&world, cell as usize), original_index(cell, stride, count));
++        }
++    }
++}

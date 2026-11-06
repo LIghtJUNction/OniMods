@@ -2,6 +2,16 @@
 
 Generated from `git log -- mods/OniMcp`.
 
+## 2026-10-22 — 0.2.6
+
+- Add native Survival new-game controls and tolerate missing optional save previews.
+- Correct building placement anchors and occupied-cell checks; preserve native
+  utility-tool state and camera coordinates.
+- Add composable bounded waits for research, Printing Pod readiness and native
+  notifications, with compact observations and execution deltas.
+- Avoid patching input-event constructors that crash Unity Mono.
+- Update the current Workshop item `3807166922` using Legacy ZIP publishing.
+
 ## 2026-09-23 — 0.2.5
 
 - Switch Workshop packaging to a single legacy ZIP. Steam downloaded the earlier directory package, but ONI's mod loader rejected it; the release gate requires Steam LegacyItem and in-game load verification.

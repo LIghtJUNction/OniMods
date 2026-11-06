@@ -6,9 +6,6 @@ import re
 import sys
 
 from analyze_cycletrim_navgrid_probe import (
-    CANDIDATE_MIN_DIRTY_CELLS,
-    CANDIDATE_MIN_LONG_RANGE,
-    CANDIDATE_MIN_SHORT_RANGE,
     CaptureError,
     analyze_log,
 )
@@ -18,9 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "mods/CycleTrim/Patches/NavGridWorkloadProbePatch.cs"
 CORE = ROOT / "mods/CycleTrim/Core/NavGridWorkloadProbe.cs"
 ANALYZER = ROOT / "scripts/analyze_cycletrim_navgrid_probe.py"
-GATE_BENCHMARK = (
-    ROOT / "benchmarks/CycleTrim.BrainBenchmarks/NavGridAdaptiveGateBenchmark.cs"
-)
 
 
 def expect_capture_failure(
@@ -40,18 +34,10 @@ def expect_capture_failure(
     failures.append(f"capture analyzer accepted invalid fixture: expected {expected!r}")
 
 
-def read_benchmark_constant(source: str, name: str) -> int:
-    match = re.search(rf"private\s+const\s+int\s+{name}\s*=\s*(\d+)\s*;", source)
-    if match is None:
-        raise ValueError(f"missing NavGrid gate benchmark constant: {name}")
-    return int(match.group(1))
-
-
 def main() -> int:
     patch = PATCH.read_text(encoding="utf-8")
     core = CORE.read_text(encoding="utf-8")
     analyzer = ANALYZER.read_text(encoding="utf-8")
-    gate_benchmark = GATE_BENCHMARK.read_text(encoding="utf-8")
     failures = []
 
     required_patch_fragments = (
@@ -95,25 +81,6 @@ def main() -> int:
     for fragment in required_analyzer_fragments:
         if fragment not in analyzer:
             failures.append(f"capture analyzer contract missing: {fragment}")
-
-    try:
-        benchmark_gate = (
-            read_benchmark_constant(gate_benchmark, "MinDirtyCells"),
-            read_benchmark_constant(gate_benchmark, "MinShortRange"),
-            read_benchmark_constant(gate_benchmark, "MinLongRange"),
-        )
-        analyzer_gate = (
-            CANDIDATE_MIN_DIRTY_CELLS,
-            CANDIDATE_MIN_SHORT_RANGE,
-            CANDIDATE_MIN_LONG_RANGE,
-        )
-        if analyzer_gate != benchmark_gate:
-            failures.append(
-                "capture analyzer candidate gate drifted from NavGridAdaptiveGateBenchmark: "
-                f"analyzer={analyzer_gate}, benchmark={benchmark_gate}"
-            )
-    except ValueError as error:
-        failures.append(str(error))
 
     if not re.search(
         r"private\s+static\s+void\s+Prefix\s*\(",

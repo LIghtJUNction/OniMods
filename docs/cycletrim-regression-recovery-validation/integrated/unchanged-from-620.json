@@ -1,0 +1,9 @@
+{
+  "mods/CycleTrim/Patches/PowerOverlayCompatibility.cs": "441e49dcf123e10b57ebb142d3d76ede6dfb7fe06869f862e2a6ecdf2952aecb",
+  "tests/CycleTrim.Optimizations.Tests/PowerOverlayFixture.cs": "287abe5926729865a9d24372e8b5b3b6e9d19bcc57fad587756dd57299eb3fa3",
+  "tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs": "d44b90f5ea9b03d07572e6b056061ddcdb1b13e18aa92ed101f89f54b5e489e7",
+  "tests/CycleTrim.Optimizations.Tests/AnimationSymbolBenchmark.cs": "e6ab6c61d6d621d8d6c178b8bfe3351f3eb4dc3d7dbba1a0af5288de3a2e653b",
+  "tests/CycleTrim.Optimizations.Tests/ConveyorFixture.cs": "bf8e316947d54eb72c87e533fa832c059c862a8b763b260be4739be5c2433788",
+  "tests/CycleTrim.Optimizations.Tests/ConveyorPathBenchmark.cs": "6e9ccacbfce4f9a975abac987a4b617b6e3078c999800e670a540b0658bd0727",
+  "tests/CycleTrim.Optimizations.Tests/PowerOverlayBenchmark.cs": "777644f3c3e984d783b52229c493a38cfc3755fa76862953abc6100ebb983dcd"
+}

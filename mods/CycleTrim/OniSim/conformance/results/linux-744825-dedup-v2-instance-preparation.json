@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "prepared": true,
+  "game_instances_started": 0,
+  "runtime_validated": false,
+  "concurrency_validated": false,
+  "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "native_sha256": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "package_sha256": "98991a3f260b0d180211e573d9fe1e965dc6be92a66fad1331799200bb2072cd",
+  "source_save_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+  "controller_sha256": "d8f5fe075f231b48a2971cbcb8fc0789af1ca22c504d04a04e2829e3c0c5a1de",
+  "companion_sha256": {
+    "OniHarness.Runtime.dll": "596075ed57246976a2701f74fc6a9535598e0186ac342f7992767084639551a6",
+    "mod.yaml": "4c973ee3fc0202df2442e871d6fd0586fc1bc075a7e2381e1daa3f60b7ed7160",
+    "mod_info.yaml": "df6c5e480f51b583a7eac73cb6f02589b7afceee1a75baa02cbca54e1afcb104"
+  },
+  "group_sha256": "bafbd035fa7ebcef2718d668ce4ba7fa3bc5041c215b5081f5a6e25d08e0ffcd",
+  "instance_count": 4,
+  "threads_per_instance": 2,
+  "scope": "Isolated prepared inputs only. Serve/start/step and actual library audit remain required.",
+  "prepared_group": "/tmp/ct4-dedup2-20261021",
+  "host_tests_passed": 26,
+  "tool_sha256": {
+    "prepare_instances.py": "792f2dfa9f176c0dab95713680732b7e6ebcde2d53f12069d0ad578250c0944f",
+    "verify_instances.py": "ee68ebe5781cf83f2d0fda0bff8eb2bd8e0a3b5dc4e346ba4d475d5a31e82416",
+    "step_instance.py": "0bc2563b90b914debae06b255ddcf019f28f8d6f47361d717e76e4a2d94e6f52",
+    "test_instances.py": "950373186d8a7e3ee8e1d824dfc50421230458a0db32ffde45a685b4cda6a754",
+    "test_runner.py": "5211ff17707b09633185f43d81b90133ab817f1de130ebfc3bae2f197d9a17ba",
+    "benchmark_frames.py": "45f6be82f598d3626ad5eda8bcef3258d83769a3fa57370791cd1d37da762db7"
+  },
+  "capacity": {
+    "ready": false,
+    "captured_at": "2026-10-20T20:08:44.038400+00:00",
+    "mem_available_bytes": 3117010944,
+    "required_bytes": 13958643712,
+    "requested_instances": 4
+  },
+  "runtime_save_reload_verified": false,
+  "whole_game_performance_measured": false,
+  "headless_then_graphics_acceptance": false
+}

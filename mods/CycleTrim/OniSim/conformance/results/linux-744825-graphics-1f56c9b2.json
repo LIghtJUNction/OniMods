@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "probe_sha256": "b7a183a833efcf46238d8b95adea93f4dec8aeb7704dac9a6ac281bab3ae94da",
+  "test_controller_sha256": "ea31149af3f16cc19f6ec36217631793354e0be6378ad39d428f73e57225f0bf",
+  "probe_source_sha256": {
+    "TextureProbe.cs": "519c74c9dd9df391a284511bad072192fc8b50c360bd94aa47c9b53fab42cf5e",
+    "TextureProbe.csproj": "f48b8a04efdb1a23e0d4e0b319f79563341053f80f9a77607881e923cd6f60d3",
+    "mod.yaml": "b8ba44419a59b72fa011b951b5b69a59e0a6a804e81a11bc1ebcc6a1678a80fb",
+    "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907",
+    "build.py": "8a1f11615ed2f5b6194fe7c2a346b4ea9babf5b0dc52418c9f22c3cefbff8a20"
+  },
+  "restoration": {
+    "original_files_equal": true,
+    "mod_enable_fields_restored": true,
+    "source_unchanged": true,
+    "continue_save_restored": true,
+    "test_option_absent": true,
+    "original_controller_restored": true,
+    "test_probe_removed": true,
+    "test_probe_entry_removed": true
+  },
+  "owned_process_stopped": true,
+  "saved_without_overwrite": true,
+  "save_sha256": "5533ecf5aabc74fc7c6dd58cc678687fac1589a00944f253cfcb7a6cf33b2782",
+  "observation": {
+    "request": 1,
+    "complete": true,
+    "graphicsDevice": "OpenGLCore",
+    "frame": 293,
+    "width": 736,
+    "height": 304,
+    "textures": {
+      "Flow": {
+        "bytes": 1789952,
+        "format": "RGFloat",
+        "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 1789952,
+        "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "gpuEqual": true
+      },
+      "Liquid": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "077aba9cc39875e4416539a278ce279c90f7d39a156ce6b551b16a7cd10ced89",
+        "unityCpuSha256": "077aba9cc39875e4416539a278ce279c90f7d39a156ce6b551b16a7cd10ced89",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "077aba9cc39875e4416539a278ce279c90f7d39a156ce6b551b16a7cd10ced89",
+        "gpuEqual": true
+      },
+      "LiquidData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "4fb6d0d2967aff1ff14e01dc88ae243f563b86966d2f27a9ec338379651bdb2d",
+        "unityCpuSha256": "4fb6d0d2967aff1ff14e01dc88ae243f563b86966d2f27a9ec338379651bdb2d",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "4fb6d0d2967aff1ff14e01dc88ae243f563b86966d2f27a9ec338379651bdb2d",
+        "gpuEqual": true
+      },
+      "MaterialData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "a51d6ce014f192eead7fdd75d19d51f9e93e5d0f81e6deddefc61acc9dafeb27",
+        "unityCpuSha256": "a51d6ce014f192eead7fdd75d19d51f9e93e5d0f81e6deddefc61acc9dafeb27",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "a51d6ce014f192eead7fdd75d19d51f9e93e5d0f81e6deddefc61acc9dafeb27",
+        "gpuEqual": true
+      },
+      "ExposedToSunlight": {
+        "bytes": 223744,
+        "format": "R8",
+        "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 223744,
+        "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "gpuEqual": true
+      }
+    },
+    "passed": true,
+    "capturedAt": "2026-10-20T16:39:55.9588630Z"
+  },
+  "observation_after_reload": {
+    "request": 2,
+    "complete": true,
+    "graphicsDevice": "OpenGLCore",
+    "frame": 457,
+    "width": 736,
+    "height": 304,
+    "textures": {
+      "Flow": {
+        "bytes": 1789952,
+        "format": "RGFloat",
+        "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 1789952,
+        "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "gpuEqual": true
+      },
+      "Liquid": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "ddee72fe956d4962c0ad8592b6cf208e376cef9dbf6368cf2c2f1f4380a062b3",
+        "unityCpuSha256": "ddee72fe956d4962c0ad8592b6cf208e376cef9dbf6368cf2c2f1f4380a062b3",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "ddee72fe956d4962c0ad8592b6cf208e376cef9dbf6368cf2c2f1f4380a062b3",
+        "gpuEqual": true
+      },
+      "LiquidData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "b7b15784b7470a9d204e8f43b964cdcb34403358b3922ff1886f6775879aa53e",
+        "unityCpuSha256": "b7b15784b7470a9d204e8f43b964cdcb34403358b3922ff1886f6775879aa53e",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "b7b15784b7470a9d204e8f43b964cdcb34403358b3922ff1886f6775879aa53e",
+        "gpuEqual": true
+      },
+      "MaterialData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "ab9a2e0ba8b329c69d19bf133fb2459b4a6ab80e38eab8957a9b5dc7e35ec9e9",
+        "unityCpuSha256": "ab9a2e0ba8b329c69d19bf133fb2459b4a6ab80e38eab8957a9b5dc7e35ec9e9",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "ab9a2e0ba8b329c69d19bf133fb2459b4a6ab80e38eab8957a9b5dc7e35ec9e9",
+        "gpuEqual": true
+      },
+      "ExposedToSunlight": {
+        "bytes": 223744,
+        "format": "R8",
+        "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 223744,
+        "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "gpuEqual": true
+      }
+    },
+    "passed": true,
+    "capturedAt": "2026-10-20T16:41:08.9212570Z"
+  },
+  "steam_launched": true,
+  "reload_clock_equal": true,
+  "reload_clock": 52.73329162597656,
+  "scope": "One three-duplicant Linux 744825 survival colony. Five full native/Unity CPU/GPU buffers match before and after save/reload; bounded progress before and after reload. No performance or long-term compatibility claim."
+}

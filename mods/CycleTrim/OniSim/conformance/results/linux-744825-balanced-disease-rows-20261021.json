@@ -1,0 +1,2014 @@
+{
+  "schema": 1,
+  "date": "2026-10-21",
+  "status": "rejected_not_adopted",
+  "production_native_changed": false,
+  "base_commit": "adc4b2ebb0c1e2e6a22b5cf3f71278a628a6733f",
+  "baseline_native_tree_sha1": "78a3a96032d063b196a52226fcdd9dcb0ab76564",
+  "experiment": "Replace fixed 2,048 visited-cell disease cleanup chunks with complete row bands evenly divided across the actual pool thread count.",
+  "patch": "../proposals/disease-balanced-rows-20261021.patch",
+  "patch_sha256": "2a758a43c548cfa7b208d19d55acdcfc416f4e31b87ae4cec23954922d063225",
+  "compiler": "rustc 1.99.1",
+  "build": "cargo build/test --release --offline --locked; RUSTC_WRAPPER=; RUSTC_WORKSPACE_WRAPPER=; CARGO_BUILD_JOBS=1",
+  "release_tests": {
+    "baseline_passed": 43,
+    "candidate_passed": 43
+  },
+  "plan": {
+    "scope": "authored complete native frames; baseline equivalence only, no official compatibility or game FPS",
+    "size": 96,
+    "samples": 8,
+    "baseline_workers": 4,
+    "candidate_workers": 4,
+    "cpu_affinity": [
+      0,
+      2,
+      4,
+      6
+    ],
+    "native_sha256": {
+      "baseline": "55d5a236ccf6ac311d05a63898e34faceff686495ac372d1f6c9ccd785a62fd9",
+      "candidate": "a69764272f08e5b884e7ea30be1a09d905065eda7c969d1eabf3fee97dbc4c36"
+    },
+    "gates": {
+      "any_case_cpu_improvement_percent": 5,
+      "all_cases_max_cpu_regression_percent": 3,
+      "all_cases_max_wall_regression_percent": 3,
+      "all_cases_max_peak_rss_regression_percent": 3
+    },
+    "warmup_batches": 2,
+    "timed_batches": 6,
+    "requested_sim_seconds_per_batch": 10
+  },
+  "gates": {
+    "any_cpu_improvement": false,
+    "cpu": false,
+    "wall": false,
+    "rss": true,
+    "zero_major_faults": true
+  },
+  "relative_performance_pass": false,
+  "summary": {
+    "fluid": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.3034214435,
+          "candidate": 0.31117560400000005
+        },
+        "change_percent": 2.555574322814813,
+        "minimum": {
+          "baseline": 0.292680402,
+          "candidate": 0.291094856
+        },
+        "maximum": {
+          "baseline": 0.382912589,
+          "candidate": 0.36334231000000006
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.2856458179994661,
+          "candidate": 0.2908744369960914
+        },
+        "change_percent": 1.8304552936374785,
+        "minimum": {
+          "baseline": 0.2754518729998381,
+          "candidate": 0.27124569999432424
+        },
+        "maximum": {
+          "baseline": 0.4483638770034304,
+          "candidate": 0.4529207990053692
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23668.0,
+          "candidate": 23674.0
+        },
+        "change_percent": 0.02535068446847255,
+        "minimum": {
+          "baseline": 23644,
+          "candidate": 23636
+        },
+        "maximum": {
+          "baseline": 23696,
+          "candidate": 23692
+        }
+      }
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.14885345649999998,
+          "candidate": 0.14402533149999996
+        },
+        "change_percent": -3.2435424164974025,
+        "minimum": {
+          "baseline": 0.12990912799999998,
+          "candidate": 0.12546363500000002
+        },
+        "maximum": {
+          "baseline": 0.18373797900000002,
+          "candidate": 0.15344015699999997
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.12540942350096884,
+          "candidate": 0.12109124100243207
+        },
+        "change_percent": -3.4432679602449556,
+        "minimum": {
+          "baseline": 0.11023545499483589,
+          "candidate": 0.10710297500190791
+        },
+        "maximum": {
+          "baseline": 0.14341394900111482,
+          "candidate": 0.1327614019974135
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23592.0,
+          "candidate": 23614.0
+        },
+        "change_percent": 0.09325194981348872,
+        "minimum": {
+          "baseline": 23560,
+          "candidate": 23588
+        },
+        "maximum": {
+          "baseline": 23628,
+          "candidate": 23628
+        }
+      }
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.2634033775,
+          "candidate": 0.252819931
+        },
+        "change_percent": -4.0179615768214605,
+        "minimum": {
+          "baseline": 0.24082178099999998,
+          "candidate": 0.239358477
+        },
+        "maximum": {
+          "baseline": 0.297464173,
+          "candidate": 0.32551266199999995
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.24791057450056542,
+          "candidate": 0.23340804499821388
+        },
+        "change_percent": -5.849903551539892,
+        "minimum": {
+          "baseline": 0.2252910049937782,
+          "candidate": 0.22242979000293417
+        },
+        "maximum": {
+          "baseline": 0.2755622309996397,
+          "candidate": 0.30519500999798765
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23662.0,
+          "candidate": 23688.0
+        },
+        "change_percent": 0.10988082157044055,
+        "minimum": {
+          "baseline": 23636,
+          "candidate": 23652
+        },
+        "maximum": {
+          "baseline": 23688,
+          "candidate": 23696
+        }
+      }
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.404245896,
+          "candidate": 0.40741740449999997
+        },
+        "change_percent": 0.7845493377624635,
+        "minimum": {
+          "baseline": 0.36546325700000004,
+          "candidate": 0.36343071299999996
+        },
+        "maximum": {
+          "baseline": 0.479574819,
+          "candidate": 0.5119242860000001
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.36234584450357943,
+          "candidate": 0.37743973499527783
+        },
+        "change_percent": 4.165603309837129,
+        "minimum": {
+          "baseline": 0.3288065099986852,
+          "candidate": 0.330470023000089
+        },
+        "maximum": {
+          "baseline": 0.4319228410022333,
+          "candidate": 0.4620267140053329
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23922.0,
+          "candidate": 23938.0
+        },
+        "change_percent": 0.06688403979600022,
+        "minimum": {
+          "baseline": 23900,
+          "candidate": 23928
+        },
+        "maximum": {
+          "baseline": 23956,
+          "candidate": 23984
+        }
+      }
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.42084196800000007,
+          "candidate": 0.438915669
+        },
+        "change_percent": 4.294652713913738,
+        "minimum": {
+          "baseline": 0.389949287,
+          "candidate": 0.39729601000000003
+        },
+        "maximum": {
+          "baseline": 0.51161009,
+          "candidate": 0.5010356140000001
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.3777148325025337,
+          "candidate": 0.3992088369996054
+        },
+        "change_percent": 5.690537582192401,
+        "minimum": {
+          "baseline": 0.35281683599896496,
+          "candidate": 0.3591867299983278
+        },
+        "maximum": {
+          "baseline": 0.46277742300298996,
+          "candidate": 0.45847369999682996
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23952.0,
+          "candidate": 23948.0
+        },
+        "change_percent": -0.016700066800268143,
+        "minimum": {
+          "baseline": 23920,
+          "candidate": 23920
+        },
+        "maximum": {
+          "baseline": 23976,
+          "candidate": 23984
+        }
+      }
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "median": {
+          "baseline": 0.21070703899999998,
+          "candidate": 0.218373488
+        },
+        "change_percent": 3.6384399099263165,
+        "minimum": {
+          "baseline": 0.195569269,
+          "candidate": 0.202165345
+        },
+        "maximum": {
+          "baseline": 0.25093494699999996,
+          "candidate": 0.26760502100000005
+        }
+      },
+      "wall_seconds": {
+        "median": {
+          "baseline": 0.193577729001845,
+          "candidate": 0.19801377250041696
+        },
+        "change_percent": 2.291608400122147,
+        "minimum": {
+          "baseline": 0.1808167639974272,
+          "candidate": 0.1861439540007268
+        },
+        "maximum": {
+          "baseline": 0.22320406999642728,
+          "candidate": 0.24503619500319473
+        }
+      },
+      "vm_hwm_kib": {
+        "median": {
+          "baseline": 23472.0,
+          "candidate": 23486.0
+        },
+        "change_percent": 0.059645535105667946,
+        "minimum": {
+          "baseline": 23452,
+          "candidate": 23464
+        },
+        "maximum": {
+          "baseline": 23500,
+          "candidate": 23500
+        }
+      }
+    }
+  },
+  "samples": [
+    {
+      "sample": 0,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.382912589,
+      "wall_seconds": 0.4483638770034304,
+      "major_faults": 0,
+      "vm_hwm_kib": 23688,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 47722439,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.36334231000000006,
+      "wall_seconds": 0.4529207990053692,
+      "major_faults": 0,
+      "vm_hwm_kib": 23672,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 35815010,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.18373797900000002,
+      "wall_seconds": 0.14341394900111482,
+      "major_faults": 0,
+      "vm_hwm_kib": 23560,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 86906119,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.15121723,
+      "wall_seconds": 0.1327614019974135,
+      "major_faults": 0,
+      "vm_hwm_kib": 23616,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 64643357,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.290044451,
+      "wall_seconds": 0.2658351029967889,
+      "major_faults": 0,
+      "vm_hwm_kib": 23656,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 56415178,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.32551266199999995,
+      "wall_seconds": 0.30519500999798765,
+      "major_faults": 0,
+      "vm_hwm_kib": 23684,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 59703921,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.479574819,
+      "wall_seconds": 0.4319228410022333,
+      "major_faults": 0,
+      "vm_hwm_kib": 23924,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 97810361,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.5119242860000001,
+      "wall_seconds": 0.4620267140053329,
+      "major_faults": 0,
+      "vm_hwm_kib": 23984,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 118748075,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.51161009,
+      "wall_seconds": 0.46277742300298996,
+      "major_faults": 0,
+      "vm_hwm_kib": 23944,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 123815614,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.48965452600000003,
+      "wall_seconds": 0.4383995390016935,
+      "major_faults": 0,
+      "vm_hwm_kib": 23956,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 111282922,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.25093494699999996,
+      "wall_seconds": 0.22320406999642728,
+      "major_faults": 0,
+      "vm_hwm_kib": 23496,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 54789375,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 0,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.26760502100000005,
+      "wall_seconds": 0.24503619500319473,
+      "major_faults": 0,
+      "vm_hwm_kib": 23468,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 65211270,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.35985554900000005,
+      "wall_seconds": 0.3271661979961209,
+      "major_faults": 0,
+      "vm_hwm_kib": 23636,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 66917040,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.34796186399999995,
+      "wall_seconds": 0.32426548300281866,
+      "major_faults": 0,
+      "vm_hwm_kib": 23644,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 63641773,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.15344015699999997,
+      "wall_seconds": 0.12226465200365055,
+      "major_faults": 0,
+      "vm_hwm_kib": 23608,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 60681875,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.15522940899999998,
+      "wall_seconds": 0.13067634299659403,
+      "major_faults": 0,
+      "vm_hwm_kib": 23592,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 58938186,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.285621052,
+      "wall_seconds": 0.26340898100170307,
+      "major_faults": 0,
+      "vm_hwm_kib": 23668,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 60672818,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.282942617,
+      "wall_seconds": 0.2629365920001874,
+      "major_faults": 0,
+      "vm_hwm_kib": 23668,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 47742856,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.44276658399999996,
+      "wall_seconds": 0.39773052600503433,
+      "major_faults": 0,
+      "vm_hwm_kib": 23956,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 97495600,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.44998611099999997,
+      "wall_seconds": 0.40197002799686743,
+      "major_faults": 0,
+      "vm_hwm_kib": 23920,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 102455073,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.459662022,
+      "wall_seconds": 0.41390310699352995,
+      "major_faults": 0,
+      "vm_hwm_kib": 23984,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 101322863,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.446531375,
+      "wall_seconds": 0.40415084500273224,
+      "major_faults": 0,
+      "vm_hwm_kib": 23976,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 84138606,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.207738203,
+      "wall_seconds": 0.19016479299898492,
+      "major_faults": 0,
+      "vm_hwm_kib": 23500,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 44777587,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 1,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.20270951799999998,
+      "wall_seconds": 0.184015888000431,
+      "major_faults": 0,
+      "vm_hwm_kib": 23456,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 46835420,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.29490156300000003,
+      "wall_seconds": 0.2754518729998381,
+      "major_faults": 0,
+      "vm_hwm_kib": 23648,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 45892079,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.31159075700000005,
+      "wall_seconds": 0.2875824089933303,
+      "major_faults": 0,
+      "vm_hwm_kib": 23656,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 47962034,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.14483205499999996,
+      "wall_seconds": 0.1235697930023889,
+      "major_faults": 0,
+      "vm_hwm_kib": 23628,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 53721743,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.146448486,
+      "wall_seconds": 0.12580757799878484,
+      "major_faults": 0,
+      "vm_hwm_kib": 23628,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 59237068,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.269193398,
+      "wall_seconds": 0.25497749500209466,
+      "major_faults": 0,
+      "vm_hwm_kib": 23636,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 42187887,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.256219315,
+      "wall_seconds": 0.23496618699573446,
+      "major_faults": 0,
+      "vm_hwm_kib": 23696,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 51505797,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.376285156,
+      "wall_seconds": 0.3349389010036248,
+      "major_faults": 0,
+      "vm_hwm_kib": 23936,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 83392517,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.36343071299999996,
+      "wall_seconds": 0.330470023000089,
+      "major_faults": 0,
+      "vm_hwm_kib": 23972,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 75023403,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.432115318,
+      "wall_seconds": 0.39721760799875483,
+      "major_faults": 0,
+      "vm_hwm_kib": 23920,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 89855748,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.43616898800000004,
+      "wall_seconds": 0.3981637929973658,
+      "major_faults": 0,
+      "vm_hwm_kib": 23936,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 92391135,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.210120378,
+      "wall_seconds": 0.19274864900216926,
+      "major_faults": 0,
+      "vm_hwm_kib": 23464,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 47766566,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 2,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.202165345,
+      "wall_seconds": 0.1861439540007268,
+      "major_faults": 0,
+      "vm_hwm_kib": 23480,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 44276569,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.291094856,
+      "wall_seconds": 0.27124569999432424,
+      "major_faults": 0,
+      "vm_hwm_kib": 23692,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 43931058,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.322655694,
+      "wall_seconds": 0.30089736099762376,
+      "major_faults": 0,
+      "vm_hwm_kib": 23656,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 46528611,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.132015015,
+      "wall_seconds": 0.1112504920020001,
+      "major_faults": 0,
+      "vm_hwm_kib": 23600,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 52449649,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.15960514999999997,
+      "wall_seconds": 0.13326867400610354,
+      "major_faults": 0,
+      "vm_hwm_kib": 23624,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 67797366,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.24670379699999997,
+      "wall_seconds": 0.22242979000293417,
+      "major_faults": 0,
+      "vm_hwm_kib": 23692,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 49468945,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.25159806,
+      "wall_seconds": 0.2390667469953769,
+      "major_faults": 0,
+      "vm_hwm_kib": 23688,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 43854239,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.432198433,
+      "wall_seconds": 0.3890765790056321,
+      "major_faults": 0,
+      "vm_hwm_kib": 23940,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 91905018,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.42053780900000004,
+      "wall_seconds": 0.37290333000419196,
+      "major_faults": 0,
+      "vm_hwm_kib": 23936,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 92971756,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.44166235,
+      "wall_seconds": 0.400253881001845,
+      "major_faults": 0,
+      "vm_hwm_kib": 23964,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 92786495,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.428129562,
+      "wall_seconds": 0.38416896700073266,
+      "major_faults": 0,
+      "vm_hwm_kib": 23972,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 92228695,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.218229207,
+      "wall_seconds": 0.20073133100231644,
+      "major_faults": 0,
+      "vm_hwm_kib": 23488,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 43598374,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 3,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.21641020700000002,
+      "wall_seconds": 0.19737266800075304,
+      "major_faults": 0,
+      "vm_hwm_kib": 23500,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 49910161,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.3009936,
+      "wall_seconds": 0.2787443120032549,
+      "major_faults": 0,
+      "vm_hwm_kib": 23696,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 46981762,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.30033280399999995,
+      "wall_seconds": 0.27834224599791924,
+      "major_faults": 0,
+      "vm_hwm_kib": 23652,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 52294255,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.129932918,
+      "wall_seconds": 0.11023545499483589,
+      "major_faults": 0,
+      "vm_hwm_kib": 23560,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 54006319,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.12546363500000002,
+      "wall_seconds": 0.10710297500190791,
+      "major_faults": 0,
+      "vm_hwm_kib": 23612,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 48258200,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.297464173,
+      "wall_seconds": 0.2755622309996397,
+      "major_faults": 0,
+      "vm_hwm_kib": 23644,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 50488265,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.250197778,
+      "wall_seconds": 0.2318499030006933,
+      "major_faults": 0,
+      "vm_hwm_kib": 23652,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 48040898,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.461960677,
+      "wall_seconds": 0.4153452530008508,
+      "major_faults": 0,
+      "vm_hwm_kib": 23920,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 124367384,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.41542125799999996,
+      "wall_seconds": 0.38300537599570816,
+      "major_faults": 0,
+      "vm_hwm_kib": 23928,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 91941866,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.395172538,
+      "wall_seconds": 0.35281683599896496,
+      "major_faults": 0,
+      "vm_hwm_kib": 23972,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 84528900,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.5010356140000001,
+      "wall_seconds": 0.45847369999682996,
+      "major_faults": 0,
+      "vm_hwm_kib": 23952,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 122565890,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.21630009299999997,
+      "wall_seconds": 0.20212889400136191,
+      "major_faults": 0,
+      "vm_hwm_kib": 23492,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 39912098,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 4,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.20609907600000002,
+      "wall_seconds": 0.18990450199635234,
+      "major_faults": 0,
+      "vm_hwm_kib": 23492,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 38743803,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.295797195,
+      "wall_seconds": 0.27450176399725024,
+      "major_faults": 0,
+      "vm_hwm_kib": 23692,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 44657351,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.292680402,
+      "wall_seconds": 0.27807449900137726,
+      "major_faults": 0,
+      "vm_hwm_kib": 23680,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 45806317,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.14160217699999997,
+      "wall_seconds": 0.11991783000121359,
+      "major_faults": 0,
+      "vm_hwm_kib": 23628,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 54395358,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.15287485800000003,
+      "wall_seconds": 0.12724905399954878,
+      "major_faults": 0,
+      "vm_hwm_kib": 23588,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 61221922,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.239358477,
+      "wall_seconds": 0.222802167001646,
+      "major_faults": 0,
+      "vm_hwm_kib": 23688,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 41506031,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.257613357,
+      "wall_seconds": 0.24084365399903618,
+      "major_faults": 0,
+      "vm_hwm_kib": 23636,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 46027140,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.399413551,
+      "wall_seconds": 0.36400688200228615,
+      "major_faults": 0,
+      "vm_hwm_kib": 23936,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 83559480,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.37334299699999995,
+      "wall_seconds": 0.33746930200140923,
+      "major_faults": 0,
+      "vm_hwm_kib": 23900,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 78612871,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.39729601000000003,
+      "wall_seconds": 0.3662629500031471,
+      "major_faults": 0,
+      "vm_hwm_kib": 23920,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 77591714,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.389949287,
+      "wall_seconds": 0.3576026430018828,
+      "major_faults": 0,
+      "vm_hwm_kib": 23928,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 76812877,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.221703985,
+      "wall_seconds": 0.1952962139985175,
+      "major_faults": 0,
+      "vm_hwm_kib": 23464,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 50274449,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 5,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.21129369999999997,
+      "wall_seconds": 0.19440680900152074,
+      "major_faults": 0,
+      "vm_hwm_kib": 23468,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 39198160,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.29717038500000004,
+      "wall_seconds": 0.2872752949988353,
+      "major_faults": 0,
+      "vm_hwm_kib": 23672,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 39549094,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.31609318500000005,
+      "wall_seconds": 0.29903610100154765,
+      "major_faults": 0,
+      "vm_hwm_kib": 23676,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 44849733,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.12990912799999998,
+      "wall_seconds": 0.11086220200377284,
+      "major_faults": 0,
+      "vm_hwm_kib": 23620,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 49843255,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.14677041300000002,
+      "wall_seconds": 0.12885637699946528,
+      "major_faults": 0,
+      "vm_hwm_kib": 23588,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 55513584,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.24082178099999998,
+      "wall_seconds": 0.2252910049937782,
+      "major_faults": 0,
+      "vm_hwm_kib": 23684,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 40383254,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.24547092,
+      "wall_seconds": 0.22616195999580668,
+      "major_faults": 0,
+      "vm_hwm_kib": 23688,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 46304535,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.38795398299999995,
+      "wall_seconds": 0.3517883590029669,
+      "major_faults": 0,
+      "vm_hwm_kib": 23920,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 85381327,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.379534989,
+      "wall_seconds": 0.34292300100059947,
+      "major_faults": 0,
+      "vm_hwm_kib": 23928,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 77937593,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.41355437400000006,
+      "wall_seconds": 0.3712606980043347,
+      "major_faults": 0,
+      "vm_hwm_kib": 23948,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 88165245,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.400416888,
+      "wall_seconds": 0.3591867299983278,
+      "major_faults": 0,
+      "vm_hwm_kib": 23944,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 84707601,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.207957468,
+      "wall_seconds": 0.19199345000379253,
+      "major_faults": 0,
+      "vm_hwm_kib": 23452,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 42377731,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 6,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.252521146,
+      "wall_seconds": 0.2316987739977776,
+      "major_faults": 0,
+      "vm_hwm_kib": 23484,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 55941616,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "fluid",
+      "label": "candidate",
+      "cpu_seconds": 0.31076045100000005,
+      "wall_seconds": 0.29416646499885246,
+      "major_faults": 0,
+      "vm_hwm_kib": 23676,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 49299481,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "fluid",
+      "label": "baseline",
+      "cpu_seconds": 0.305849287,
+      "wall_seconds": 0.2840163410000969,
+      "major_faults": 0,
+      "vm_hwm_kib": 23664,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 48698632,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "thermal",
+      "label": "candidate",
+      "cpu_seconds": 0.13314310000000001,
+      "wall_seconds": 0.10893337499874178,
+      "major_faults": 0,
+      "vm_hwm_kib": 23624,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 55584626,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "thermal",
+      "label": "baseline",
+      "cpu_seconds": 0.13670484500000002,
+      "wall_seconds": 0.11800354499428067,
+      "major_faults": 0,
+      "vm_hwm_kib": 23592,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 49105035,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "sealed",
+      "label": "candidate",
+      "cpu_seconds": 0.255442084,
+      "wall_seconds": 0.24052983099682024,
+      "major_faults": 0,
+      "vm_hwm_kib": 23692,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 40078938,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "sealed",
+      "label": "baseline",
+      "cpu_seconds": 0.243495609,
+      "wall_seconds": 0.22665340000094147,
+      "major_faults": 0,
+      "vm_hwm_kib": 23668,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 43010914,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "germ_flow",
+      "label": "candidate",
+      "cpu_seconds": 0.39812397299999996,
+      "wall_seconds": 0.3718740939948475,
+      "major_faults": 0,
+      "vm_hwm_kib": 23932,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 83955964,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "germ_flow",
+      "label": "baseline",
+      "cpu_seconds": 0.36546325700000004,
+      "wall_seconds": 0.3288065099986852,
+      "major_faults": 0,
+      "vm_hwm_kib": 23956,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 77282122,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "mixed_germs",
+      "label": "candidate",
+      "cpu_seconds": 0.411026844,
+      "wall_seconds": 0.37915732200053753,
+      "major_faults": 0,
+      "vm_hwm_kib": 23928,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 85799845,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "mixed_germs",
+      "label": "baseline",
+      "cpu_seconds": 0.400510347,
+      "wall_seconds": 0.36524479200306814,
+      "major_faults": 0,
+      "vm_hwm_kib": 23956,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 79108976,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "vacuum",
+      "label": "candidate",
+      "cpu_seconds": 0.218517769,
+      "wall_seconds": 0.2020391020050738,
+      "major_faults": 0,
+      "vm_hwm_kib": 23496,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 48314829,
+      "differences_from_official": 0
+    },
+    {
+      "sample": 7,
+      "case": "vacuum",
+      "label": "baseline",
+      "cpu_seconds": 0.195569269,
+      "wall_seconds": 0.1808167639974272,
+      "major_faults": 0,
+      "vm_hwm_kib": 23476,
+      "cell_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "cell_workers_runtime_ns": 38289968,
+      "differences_from_official": 0
+    }
+  ],
+  "official_final_checks": [
+    {
+      "case": "fluid",
+      "samples_checked": 16,
+      "differences": 0
+    },
+    {
+      "case": "thermal",
+      "samples_checked": 16,
+      "differences": 0
+    },
+    {
+      "case": "sealed",
+      "samples_checked": 16,
+      "differences": 0
+    },
+    {
+      "case": "germ_flow",
+      "samples_checked": 16,
+      "differences": 0
+    },
+    {
+      "case": "mixed_germs",
+      "samples_checked": 16,
+      "differences": 0
+    },
+    {
+      "case": "vacuum",
+      "samples_checked": 16,
+      "differences": 0
+    }
+  ],
+  "reference_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "limitations": [
+    "Authored native frames only; no Unity/game FPS or whole-colony memory observation.",
+    "Timing used a live shared host; order alternated and all 96 samples are retained.",
+    "PSI files are not exposed in this container. Pressure is unknown, not zero.",
+    "Official final-state checks were run later during concurrent correctness jobs; their timing is excluded.",
+    "192x192 and same-file 1/4 scaling were not run for this rejected candidate; a 96x96 gate failure is already decisive."
+  ],
+  "failed_first_attempt": {
+    "error": "FileNotFoundError /proc/pressure/cpu",
+    "timed_samples_accepted": 0
+  },
+  "reproduce": "Build baseline from base_commit, apply the proposal to a disposable native source copy, build candidate with the same toolchain; benchmark_frames.py --reference <pinned official lib> --baseline <baseline> --candidate <candidate> --workers 4 --cpus 0,2,4,6 --samples 8 --size 96 --output <new directory>. Run without concurrent games or other benchmarks."
+}

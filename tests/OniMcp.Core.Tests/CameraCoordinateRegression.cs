@@ -17,7 +17,7 @@ internal static class CameraCoordinateRegression
         })
         {
             ExpectDispatch("navigation_control", args, true);
-            ExpectDispatch("legacy_navigation_control", args, true);
+            ExpectDispatch("legacy_navigation_control", args, false);
         }
 
         foreach (var args in new[]

@@ -1,0 +1,352 @@
+{
+  "schema": 1,
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "failed_run": "matrix-rust2024-soak-workers1",
+  "failed_cases": [
+    {
+      "case": "thermal-asymmetric-i255-hot0",
+      "passed": false,
+      "failures": [
+        {
+          "role": "candidate",
+          "timeout_seconds": 20
+        }
+      ],
+      "fixture_sha256": "bcf63cf61bf15d3be3634b35f32a94d6cd9799d50033f1ca5b996b92397fbaf8",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": []
+    }
+  ],
+  "failed_logs_retained": true,
+  "single_case_recheck_passed": true,
+  "stress": [
+    {
+      "iteration": 0,
+      "exit_code": 0,
+      "seconds": 0.16450156799692195
+    },
+    {
+      "iteration": 1,
+      "exit_code": 0,
+      "seconds": 0.16464077399723465
+    },
+    {
+      "iteration": 2,
+      "exit_code": 0,
+      "seconds": 0.1645443450033781
+    },
+    {
+      "iteration": 3,
+      "exit_code": 0,
+      "seconds": 0.16460421599913388
+    },
+    {
+      "iteration": 4,
+      "exit_code": 0,
+      "seconds": 0.16459349399519851
+    },
+    {
+      "iteration": 5,
+      "exit_code": 0,
+      "seconds": 0.16463581800053362
+    },
+    {
+      "iteration": 6,
+      "exit_code": 0,
+      "seconds": 0.16473953199601965
+    },
+    {
+      "iteration": 7,
+      "exit_code": 0,
+      "seconds": 0.1646963270031847
+    },
+    {
+      "iteration": 8,
+      "exit_code": 0,
+      "seconds": 0.1648312640027143
+    },
+    {
+      "iteration": 9,
+      "exit_code": 0,
+      "seconds": 0.1649363020042074
+    },
+    {
+      "iteration": 10,
+      "exit_code": 0,
+      "seconds": 0.16485075799573679
+    },
+    {
+      "iteration": 11,
+      "exit_code": 0,
+      "seconds": 0.16471160099899862
+    },
+    {
+      "iteration": 12,
+      "exit_code": 0,
+      "seconds": 0.16498038099962287
+    },
+    {
+      "iteration": 13,
+      "exit_code": 0,
+      "seconds": 0.16459838800074067
+    },
+    {
+      "iteration": 14,
+      "exit_code": 0,
+      "seconds": 0.16452056699927198
+    },
+    {
+      "iteration": 15,
+      "exit_code": 0,
+      "seconds": 0.16447224400326377
+    },
+    {
+      "iteration": 16,
+      "exit_code": 0,
+      "seconds": 0.16439778000494698
+    },
+    {
+      "iteration": 17,
+      "exit_code": 0,
+      "seconds": 0.1651892579975538
+    },
+    {
+      "iteration": 18,
+      "exit_code": 0,
+      "seconds": 0.16463053000188665
+    },
+    {
+      "iteration": 19,
+      "exit_code": 0,
+      "seconds": 0.16454067599988775
+    },
+    {
+      "iteration": 20,
+      "exit_code": 0,
+      "seconds": 0.16520403300091857
+    },
+    {
+      "iteration": 21,
+      "exit_code": 0,
+      "seconds": 0.16492324499995448
+    },
+    {
+      "iteration": 22,
+      "exit_code": 0,
+      "seconds": 0.16459277000103611
+    },
+    {
+      "iteration": 23,
+      "exit_code": 0,
+      "seconds": 0.1645201859937515
+    },
+    {
+      "iteration": 24,
+      "exit_code": 0,
+      "seconds": 0.16443466000055196
+    },
+    {
+      "iteration": 25,
+      "exit_code": 0,
+      "seconds": 0.16469274800329003
+    },
+    {
+      "iteration": 26,
+      "exit_code": 0,
+      "seconds": 0.16472116300428752
+    },
+    {
+      "iteration": 27,
+      "exit_code": 0,
+      "seconds": 0.16469644699827768
+    },
+    {
+      "iteration": 28,
+      "exit_code": 0,
+      "seconds": 0.16483548299584072
+    },
+    {
+      "iteration": 29,
+      "exit_code": 0,
+      "seconds": 0.1647199590006494
+    },
+    {
+      "iteration": 30,
+      "exit_code": 0,
+      "seconds": 0.16480174099706346
+    },
+    {
+      "iteration": 31,
+      "exit_code": 0,
+      "seconds": 0.16460942199773854
+    },
+    {
+      "iteration": 32,
+      "exit_code": 0,
+      "seconds": 0.16482842800178332
+    },
+    {
+      "iteration": 33,
+      "exit_code": 0,
+      "seconds": 0.1647838220014819
+    },
+    {
+      "iteration": 34,
+      "exit_code": 0,
+      "seconds": 0.16480648900324013
+    },
+    {
+      "iteration": 35,
+      "exit_code": 0,
+      "seconds": 0.16469834300369257
+    },
+    {
+      "iteration": 36,
+      "exit_code": 0,
+      "seconds": 0.16442976299731527
+    },
+    {
+      "iteration": 37,
+      "exit_code": 0,
+      "seconds": 0.16444589300226653
+    },
+    {
+      "iteration": 38,
+      "exit_code": 0,
+      "seconds": 0.16458060999866575
+    },
+    {
+      "iteration": 39,
+      "exit_code": 0,
+      "seconds": 0.1645454850004171
+    },
+    {
+      "iteration": 40,
+      "exit_code": 0,
+      "seconds": 0.16430712200235575
+    },
+    {
+      "iteration": 41,
+      "exit_code": 0,
+      "seconds": 0.16437409199716058
+    },
+    {
+      "iteration": 42,
+      "exit_code": 0,
+      "seconds": 0.1644296230006148
+    },
+    {
+      "iteration": 43,
+      "exit_code": 0,
+      "seconds": 0.1645726860006107
+    },
+    {
+      "iteration": 44,
+      "exit_code": 0,
+      "seconds": 0.16459030699479626
+    },
+    {
+      "iteration": 45,
+      "exit_code": 0,
+      "seconds": 0.16447798700392013
+    },
+    {
+      "iteration": 46,
+      "exit_code": 0,
+      "seconds": 0.16480068700184347
+    },
+    {
+      "iteration": 47,
+      "exit_code": 0,
+      "seconds": 0.16512992600473808
+    },
+    {
+      "iteration": 48,
+      "exit_code": 0,
+      "seconds": 0.1651832689967705
+    },
+    {
+      "iteration": 49,
+      "exit_code": 0,
+      "seconds": 0.16437089199462207
+    },
+    {
+      "iteration": 50,
+      "exit_code": 0,
+      "seconds": 0.16449508200457785
+    },
+    {
+      "iteration": 51,
+      "exit_code": 0,
+      "seconds": 0.2146203099982813
+    },
+    {
+      "iteration": 52,
+      "exit_code": 0,
+      "seconds": 0.16469900900119683
+    },
+    {
+      "iteration": 53,
+      "exit_code": 0,
+      "seconds": 0.11448001700046007
+    },
+    {
+      "iteration": 54,
+      "exit_code": 0,
+      "seconds": 0.16431869700318202
+    },
+    {
+      "iteration": 55,
+      "exit_code": 0,
+      "seconds": 0.11448281299817609
+    },
+    {
+      "iteration": 56,
+      "exit_code": 0,
+      "seconds": 0.11411332499847049
+    },
+    {
+      "iteration": 57,
+      "exit_code": 0,
+      "seconds": 0.1644130970016704
+    },
+    {
+      "iteration": 58,
+      "exit_code": 0,
+      "seconds": 0.11472038299689302
+    },
+    {
+      "iteration": 59,
+      "exit_code": 0,
+      "seconds": 0.16433558300195727
+    },
+    {
+      "iteration": 60,
+      "exit_code": 0,
+      "seconds": 0.16503948099853005
+    },
+    {
+      "iteration": 61,
+      "exit_code": 0,
+      "seconds": 0.11480995100282598
+    },
+    {
+      "iteration": 62,
+      "exit_code": 0,
+      "seconds": 0.11416553700109944
+    },
+    {
+      "iteration": 63,
+      "exit_code": 0,
+      "seconds": 0.11417490500025451
+    }
+  ],
+  "root_cause": "Unproven. One timeout during concurrent one/four-worker conformance processes; single-case recheck and 64 fresh native child runs pass. Timeout remains a recorded failure; no timeout threshold changed.",
+  "isolated_full_serial_recheck": {
+    "passed": true,
+    "cases": 224,
+    "publications": 8440
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "complete": true,
+  "scope": "Own warmed native fixture process hardware counters; not whole-game FPS or performance acceptance",
+  "baseline_native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "candidate_native_sha256": "9dbb9536ab9b776be19521781effe6933aa1f0569166c5d6056c909203e25169",
+  "cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "pmu": {
+    "name": "cpu_core",
+    "type": 4,
+    "instructions_config": "0xc0",
+    "cycles_config": "0x3c"
+  },
+  "workers": 4,
+  "samples": 24,
+  "alternating_pairs_per_scene": 6,
+  "all_final_publications_match_official": true,
+  "minimum_running_enabled_ratio": 1.0,
+  "scenes": {
+    "sealed": {
+      "totals": {
+        "baseline": {
+          "instructions": 3997475746.0,
+          "cycles": 717047720.5
+        },
+        "candidate": {
+          "instructions": 3953049846.5,
+          "cycles": 703190642.5
+        }
+      },
+      "instructions_change_percent": -1.1113488191755505,
+      "cycles_change_percent": -1.9325182416502829
+    },
+    "mixed_germs": {
+      "totals": {
+        "baseline": {
+          "instructions": 5087226249.5,
+          "cycles": 1152200281.0
+        },
+        "candidate": {
+          "instructions": 5079822121.0,
+          "cycles": 1139241280.5
+        }
+      },
+      "instructions_change_percent": -0.14554352680358207,
+      "cycles_change_percent": -1.1247177000124342
+    }
+  },
+  "thread_group_analysis": {
+    "sealed": {
+      "physics": {
+        "totals": {
+          "baseline": {
+            "instructions": 3882171678.0,
+            "cycles": 669259830.0
+          },
+          "candidate": {
+            "instructions": 3882370608.0,
+            "cycles": 667112935.0
+          }
+        },
+        "instructions_change_percent": 0.0051241937889301425,
+        "cycles_change_percent": -0.3207864724228293
+      },
+      "pool": {
+        "totals": {
+          "baseline": {
+            "instructions": 111707686.5,
+            "cycles": 41480501.5
+          },
+          "candidate": {
+            "instructions": 67194472.0,
+            "cycles": 29743818.5
+          }
+        },
+        "instructions_change_percent": -39.84794233474703,
+        "cycles_change_percent": -28.294457818934514
+      },
+      "orchestration": {
+        "totals": {
+          "baseline": {
+            "instructions": 3572029.0,
+            "cycles": 6146206.5
+          },
+          "candidate": {
+            "instructions": 3546091.5,
+            "cycles": 5759082.0
+          }
+        },
+        "instructions_change_percent": -0.7261279233735207,
+        "cycles_change_percent": -6.298592473259723
+      },
+      "cpu_change_percent": -3.8237006397454865,
+      "wall_change_percent": -2.9350879906581695
+    },
+    "mixed_germs": {
+      "physics": {
+        "totals": {
+          "baseline": {
+            "instructions": 4573187555.5,
+            "cycles": 1011063828.0
+          },
+          "candidate": {
+            "instructions": 4573294185.5,
+            "cycles": 1002435319.0
+          }
+        },
+        "instructions_change_percent": 0.002331634089047796,
+        "cycles_change_percent": -0.8534089303806058
+      },
+      "pool": {
+        "totals": {
+          "baseline": {
+            "instructions": 509135408.0,
+            "cycles": 132560207.5
+          },
+          "candidate": {
+            "instructions": 501787046.5,
+            "cycles": 128361840.5
+          }
+        },
+        "instructions_change_percent": -1.443301994820212,
+        "cycles_change_percent": -3.1671397315819694
+      },
+      "orchestration": {
+        "totals": {
+          "baseline": {
+            "instructions": 4776882.0,
+            "cycles": 8327103.0
+          },
+          "candidate": {
+            "instructions": 4851702.5,
+            "cycles": 7947603.0
+          }
+        },
+        "instructions_change_percent": 1.5663041289276203,
+        "cycles_change_percent": -4.557407299993765
+      },
+      "cpu_change_percent": 0.6098561268425673,
+      "wall_change_percent": 0.555520873483295
+    }
+  },
+  "raw_summary_sha256": "b8d4d81e0909813ad8859384129ecc6b3e158308f1d145765236a6e963bbc7b0",
+  "adopted": false,
+  "interpretation": "Cleanup worker instructions decrease, but serial physics still accounts for about 90-97% of retired instructions in these scenes. Whole-process instruction reductions are only about 0.15-1.11%. The failed elapsed-time gates remain failed; use the thread distribution to prioritize serial physics hotspots.",
+  "limitations": [
+    "Cycles and retired instructions are not wall time or game FPS.",
+    "Thread groups use the same process thread names/identities captured around warmed timing; exact thread set remains unchanged.",
+    "All counter samples retained, including the high-cycle mixed-germ candidate outlier.",
+    "The live host and changing effective frequency/scheduling prevent attributing every CPU-time difference to source changes."
+  ]
+}

@@ -14,19 +14,14 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacySseDisconnectActivityRegressionEntry
+internal static class LegacySseDisconnectActivityRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLongLivedSseDisconnectRegression();
 
-        var existing = typeof(LegacySessionLifecycleRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing legacy session regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLongLivedSseDisconnectRegression()

@@ -1,0 +1,3 @@
+title: "CycleTrim Memory Probe"
+description: "Explicit read-only Unity, Mono and process memory snapshots for test runs."
+staticID: "LIghtJUNction.CycleTrim.MemoryProbe"

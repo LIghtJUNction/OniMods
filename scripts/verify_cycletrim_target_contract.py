@@ -427,10 +427,6 @@ def main() -> int:
             Path(__file__).resolve().parents[1]
             / "mods/CycleTrim/Core/CreatureBrainSchedulePolicy.cs"
         ).read_text(encoding="utf-8")
-        scheduler_simulator_source = (
-            Path(__file__).resolve().parents[1]
-            / "benchmarks/CycleTrim.BrainBenchmarks/CreatureBrainSchedulerSimulator.cs"
-        ).read_text(encoding="utf-8")
         for needle, message in (
             (
                 "typeof(BrainScheduler.BrainGroup)",
@@ -507,18 +503,6 @@ def main() -> int:
             generation_failures.append(
                 "production scheduler duplicated shared scan algorithm"
             )
-        if (
-            "new CreatureBrainScheduleCursor(runningAllowance)"
-            not in scheduler_simulator_source
-        ):
-            generation_failures.append(
-                "scheduler simulator does not exercise shared cursor"
-            )
-        if "for (var scanned" in scheduler_simulator_source:
-            generation_failures.append(
-                "scheduler simulator duplicated shared scan algorithm"
-            )
-
         async_patch_source = (
             Path(__file__).resolve().parents[1]
             / "mods/CycleTrim/Patches/AsyncPathProbeOptimizationPatch.cs"

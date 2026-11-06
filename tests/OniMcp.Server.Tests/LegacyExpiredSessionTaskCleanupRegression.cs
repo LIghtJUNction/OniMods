@@ -12,20 +12,15 @@ using System.Threading.Tasks;
 using OniMcp.Config;
 using OniMcp.Server;
 
-internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
+internal static class LegacyExpiredSessionTaskCleanupRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunExpiredSessionTaskCleanupRegression();
         RunDirectExpiredSessionTaskCleanupRegression();
 
-        var existing = typeof(LegacySessionCapacityAdmissionRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunExpiredSessionTaskCleanupRegression()

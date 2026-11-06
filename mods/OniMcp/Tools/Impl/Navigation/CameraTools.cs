@@ -42,7 +42,6 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "camera", "camera_tools", "screenshot_control" },
                 Tags = new List<string> { "camera", "screenshot", "overlay", "world", "navigation" },
                 Description = "相机聚合工具：action=get_view/set_active_world/set_view/set_zoom/move/switch_view/focus_cell/focus_dupe/screenshot/coordinate_screenshot",
                 Parameters = CameraControlParams(),
@@ -122,7 +121,6 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "world_set_active", "camera_switch_world", "view_world" },
                 Tags = new List<string> { "camera", "world", "cluster", "rocket", "navigation" },
                 Description = "兼容入口：请优先使用 navigation_control action=set_active_world",
                 Parameters = new Dictionary<string, McpToolParameter>

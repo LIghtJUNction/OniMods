@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "schedules_control", "schedule_management_control" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "dupe", "日程", "作息", "轮班" },
                 Description = "日程管理聚合工具：action=list/create/set_block/assign_dupe/optimize",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -99,7 +98,6 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "set_schedule_block", "schedule_block_set", "change_schedule_block" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "blocks", "日程", "作息", "轮班", "时间段" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=set_block",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -135,7 +133,6 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "create_schedule", "schedule_add", "add_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "create", "日程", "作息", "轮班", "创建" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=create",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -180,7 +177,6 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "assign_dupe_schedule", "schedule_assign_duplicant", "assign_duplicant_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "assign", "shift", "日程", "复制人", "分配", "轮班" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=assign_dupe",
                 Parameters = new Dictionary<string, McpToolParameter>

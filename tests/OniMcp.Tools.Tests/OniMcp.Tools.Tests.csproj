@@ -6,7 +6,6 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <StartupObject>BenchmarkMetadataRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -24,6 +23,9 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/ObservedTaskRanking.cs" Link="Source/ObservedTaskRanking.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantNeedStatePolicy.cs" Link="Source/DuplicantNeedStatePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameSpeedTools.cs" Link="Source/GameSpeedTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/NewGameOpeningPolicy.cs" Link="Source/NewGameOpeningPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameStepUntilCancellation.cs" Link="Source/GameStepUntilCancellation.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameStepUntilWatcher.cs" Link="Source/GameStepUntilWatcher.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepPrintingPodState.cs" Link="Source/StepPrintingPodState.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/BenchmarkTools.cs" Link="Source/BenchmarkTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/HarvestMarkPolicy.cs" Link="Source/HarvestMarkPolicy.cs" />
@@ -34,6 +36,10 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameControlTools.cs" Link="Source/GameControlTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameplayRequestPolicy.cs" Link="Source/GameplayRequestPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/RadboltDirectionEligibilityPolicy.cs" Link="Source/RadboltDirectionEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/AttackDesignationPolicy.cs" Link="Source/AttackDesignationPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ThresholdValuePolicy.cs" Link="Source/ThresholdValuePolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanExecutionSafety.cs" Link="Source/BuildPlanExecutionSafety.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
@@ -50,6 +56,11 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/PriorityWriteEligibilityPolicy.cs" Link="Source/PriorityWriteEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/TreeFilterEligibility.cs" Link="Source/TreeFilterEligibility.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmUpdatePolicy.cs" Link="Source/LogicAlarmUpdatePolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmSideScreenTools.cs" Link="Source/LogicAlarmSideScreenTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/MiscSideScreenTargetLookup.cs" Link="Source/MiscSideScreenTargetLookup.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs" Link="Source/BuildPlanningPlacementCoordinates.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs" Link="Source/BuildPlanningPlacementModels.cs" />

@@ -13,7 +13,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "building_visual_control", "color_control" },
                 Tags = new List<string> { "buildings", "lights", "pixel-pack", "colors", "visual" },
                 Description = "建筑视觉/颜色统一入口。kind=light/pixel_pack；action 透传到对应旧 control。",
                 Parameters = new Dictionary<string, McpToolParameter>

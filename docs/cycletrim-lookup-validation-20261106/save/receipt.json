@@ -1,0 +1,130 @@
+{
+  "commit": "9b06e51d69901aea5f0d83a08dff724df95da7a3",
+  "cpu": 0,
+  "sdk": "10.0.401",
+  "runtime": "10.0.12",
+  "benchmark": "--benchmark-save-scoped",
+  "runs": [
+    {
+      "mode": "default",
+      "process": 1,
+      "log": "default-1.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": null,
+        "COMPlus_TieredCompilation": null
+      }
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "log": "default-2.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": null,
+        "COMPlus_TieredCompilation": null
+      }
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "log": "default-3.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": null,
+        "COMPlus_TieredCompilation": null
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "log": "tiering-off-1.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": "0",
+        "COMPlus_TieredCompilation": null
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "log": "tiering-off-2.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": "0",
+        "COMPlus_TieredCompilation": null
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "log": "tiering-off-3.log",
+      "exit_code": 0,
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/save-checkout/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-save-scoped"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "DOTNET_TieredCompilation": "0",
+        "COMPlus_TieredCompilation": null
+      }
+    }
+  ],
+  "environment_note": "Overrides record the executed inline driver; null means the variable was removed before launching the child."
+}

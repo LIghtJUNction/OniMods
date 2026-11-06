@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "scope": "Nine arithmetic theorems for a rejected cached-index candidate. No compiled-Rust, cache-lifetime, game-behavior or performance proof.",
+  "passed": true,
+  "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "checked_theorems": 9,
+  "logical_dependencies": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "source_sha256": {
+    "ReciprocalIndex.lean": "5b2fd587c1f2879a58ddba93264074d670f427a427f8bc963ee4df3421bf7602",
+    "reciprocal.rs": "e65e4a51a8c9058b96d9d21e4cd3613ac971dd805921627486b71c459c86b3ef"
+  },
+  "rust_semantic_tests": {
+    "passed": 3,
+    "generated_unsigned_cases": 2000000,
+    "generated_signed_grid_cases": 600000,
+    "exhaustive_padded_dimensions": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        19
+      ],
+      [
+        63,
+        65
+      ],
+      [
+        96,
+        96
+      ],
+      [
+        256,
+        128
+      ],
+      [
+        736,
+        304
+      ]
+    ]
+  },
+  "production_adopted": false,
+  "performance_measured": false
+}

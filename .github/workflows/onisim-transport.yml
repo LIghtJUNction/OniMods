@@ -2,14 +2,14 @@ name: OniSim transport proof and regression
 on:
   pull_request:
     paths:
-      - 'experimental/OniSim/native/**'
-      - 'experimental/OniSim/transport-lab/**'
+      - 'mods/CycleTrim/OniSim/native/**'
+      - 'mods/CycleTrim/OniSim/transport-lab/**'
       - '.github/workflows/onisim-transport.yml'
   push:
     branches: [main]
     paths:
-      - 'experimental/OniSim/native/**'
-      - 'experimental/OniSim/transport-lab/**'
+      - 'mods/CycleTrim/OniSim/native/**'
+      - 'mods/CycleTrim/OniSim/transport-lab/**'
       - '.github/workflows/onisim-transport.yml'
   workflow_dispatch:
 permissions:
@@ -18,7 +18,7 @@ concurrency:
   group: onisim-transport-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  component-regression:
+  historical-component-regression:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
@@ -30,31 +30,43 @@ jobs:
         run: python3 scripts/check_git_whitespace.py
       - name: Install pinned Rust and formatter
         run: rustup toolchain install 1.90.0 --profile minimal --component rustfmt
-      - name: Check candidate formatting without rewriting the immutable baseline
+      - name: Check historical candidate formatting without rewriting either snapshot
         shell: bash
         run: |
           rustup run 1.90.0 rustfmt --edition 2021 --check --config skip_children=true \
-            experimental/OniSim/native/src/gas.rs \
-            experimental/OniSim/native/src/thermal.rs \
-            experimental/OniSim/native/src/mass_components_flood.rs \
-            experimental/OniSim/native/src/simulation_step.rs \
-            experimental/OniSim/transport-lab/src/*.rs
-      - name: Prepare exact production kernels and verify baseline hashes
-        working-directory: experimental/OniSim/transport-lab
+            mods/CycleTrim/OniSim/transport-lab/historical-source/gas.rs \
+            mods/CycleTrim/OniSim/transport-lab/historical-source/thermal.rs \
+            mods/CycleTrim/OniSim/transport-lab/historical-source/mass_components_flood.rs \
+            mods/CycleTrim/OniSim/transport-lab/historical-source/simulation_step.rs \
+            mods/CycleTrim/OniSim/transport-lab/src/*.rs
+      - name: Verify historical source and baseline hashes
+        working-directory: mods/CycleTrim/OniSim/transport-lab
         run: python3 prepare.py
-      - name: Build standalone component regression only
-        working-directory: experimental/OniSim/transport-lab
+      - name: Build historical component regression only
+        working-directory: mods/CycleTrim/OniSim/transport-lab
         env:
           RUSTFLAGS: -Dwarnings
         run: cargo +1.90.0 build --release --locked --offline
       - name: Compare ordered output and float bits with FTZ off and on
-        working-directory: experimental/OniSim/transport-lab
+        working-directory: mods/CycleTrim/OniSim/transport-lab
         run: ./target/release/onisim-transport-lab verify
       - name: Validate recorded timing matrix without claiming new CI performance
-        working-directory: experimental/OniSim/transport-lab
+        working-directory: mods/CycleTrim/OniSim/transport-lab
         run: |
           python3 summarize.py
           git diff --exit-code -- results/summary.json results/summary.csv
+  current-native-regression:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install current native toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - name: Test current native code including the FIFO differential
+        working-directory: mods/CycleTrim/OniSim
+        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
   lean-proof:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
@@ -69,4 +81,4 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.19.0
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
       - name: Compile 27 theorems and inspect logical dependencies
-        run: python3 experimental/OniSim/transport-lab/proof/verify.py
+        run: python3 mods/CycleTrim/OniSim/transport-lab/proof/verify.py

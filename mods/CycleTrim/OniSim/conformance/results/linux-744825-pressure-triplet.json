@@ -1,0 +1,918 @@
+{
+  "schema": 1,
+  "scope": "Authored native frame fixtures only; no ONI, UI, whole-colony, FPS or Steam acceptance.",
+  "baseline_revision": "304055d8d7e6f1946a1ce0d8c752faf8912a2df4",
+  "reference_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "baseline_sha256": "e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056",
+  "candidate_sha256": "9cc75e38d7d6706a5949c04c9914cfc5a1fb8ee67dc38457625ac77e29c4743c",
+  "adopted": false,
+  "decision": "Inconclusive timing under external host load; 192x192 incomplete. Keep patch only and restore baseline source/native.",
+  "hypothesis": "Compute three pressure/germ arithmetic pairs together with SSE2 for a gas cell whose side, upper and diagonal neighbours have the same unchanged gas identity. Apply writes and events in their existing scalar order. Unmasked exceptions and other cells retain the scalar path.",
+  "proposal": "../proposals/pressure-triplet-unadopted.patch",
+  "proposal_sha256": "3629c1872a73c23e805d4c6bfb1e380004d2a79d749c70b4a414c18e24675b7e",
+  "correctness": {
+    "rust_release_tests_passed": 57,
+    "rust_tests_ignored": 2,
+    "ignored_tests": "Existing explicit publication/sun microbenchmarks; not correctness tests.",
+    "numeric_edge_comparisons": 1849056,
+    "mxcsr_environments": 32,
+    "numeric_checks": "Exact flow words, integer germs, sticky flags and all control bits; scalar fallback for every unmasked exception.",
+    "reference_oracle": "Initial combined reference helper was auto-vectorized into DIVPS with unused 0/0 lanes. An explicit non-inlined scalar edge removed that oracle defect. No production changes were needed for this correction.",
+    "official_cases": 287,
+    "official_passed": true,
+    "workers": 1,
+    "four_worker_corpus_run": false
+  },
+  "method": {
+    "sizes_planned": [
+      96,
+      192
+    ],
+    "samples_per_role_per_scene": 8,
+    "scenes": [
+      "fluid",
+      "thermal",
+      "sealed",
+      "germ_flow",
+      "mixed_germs",
+      "vacuum"
+    ],
+    "cpu": 16,
+    "workers": 1,
+    "warmup_batches": 2,
+    "timed_batches": 6,
+    "interleaving": "A/B on even samples, B/A on odd samples",
+    "harness_sha256": {
+      "host.py": "b0cc570ed1f5575ef4b9c87d8c81ef28f4b46b909e632e46276aca27cf4f6ebb",
+      "run.py": "528ed75d19c6ec86595246e049bd06995779387c4d2526c1e5df114e281c4ee3",
+      "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+      "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+      "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+      "physics_cases.py": "ed45032133423b7bce6030cff79aacf4b98ceb82508d94151a5d9934a28f17c0",
+      "pressure_cases.py": "9b2a1527e2e138d020816dbe75deda3e45174977a515de3af1f63c3bb73cfb86",
+      "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+      "thermal_boundary_cases.py": "c72b3a3d20babb7b3467bf15978fd2f9a7f0340b1dc4dc8a9fada1f6e4be8ca0",
+      "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+    }
+  },
+  "gates": {
+    "maxCpuRegressionPercent": 3,
+    "maxWallRegressionPercent": 3,
+    "maxPeakRssIncreasePercent": 3,
+    "minimumOneSceneCpuReductionPercent": 10,
+    "samplesPerRole": 8,
+    "officialWordDifferences": 0
+  },
+  "frames_96": {
+    "complete": true,
+    "official_exact_final_states": 96,
+    "timed_major_faults": 0,
+    "point_estimate_gates_passed": true,
+    "performance_accepted": false,
+    "reason": "All paired bootstrap diagnostic intervals cross zero; large within-run frequency/load dispersion. A nominal fluid median improvement is not a reliable speed claim.",
+    "paired_diagnostic_method": "10000 paired bootstrap resamples of eight CPU ratios, median and 2.5/97.5 percentiles, Random(20261026); exploratory uncertainty diagnostic only, no replacement for fixed gates.",
+    "scenes": {
+      "fluid": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.3718725335,
+            "range": [
+              0.31582546100000003,
+              0.44654305099999997
+            ],
+            "samples": [
+              0.31582546100000003,
+              0.405289723,
+              0.336665198,
+              0.44654305099999997,
+              0.33283635200000006,
+              0.403552115,
+              0.344614611,
+              0.39913045599999997
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.39266099999076687,
+            "range": [
+              0.3281711239833385,
+              0.49511559001985006
+            ],
+            "samples": [
+              0.3281711239833385,
+              0.4340538550168276,
+              0.35755973000777885,
+              0.49511559001985006,
+              0.3453678190126084,
+              0.482783946004929,
+              0.36025561098358594,
+              0.4250663889979478
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33368.0,
+            "range": [
+              33316,
+              33404
+            ],
+            "samples": [
+              33372,
+              33396,
+              33404,
+              33316,
+              33320,
+              33364,
+              33364,
+              33388
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.328027875,
+            "range": [
+              0.287810538,
+              0.482202055
+            ],
+            "samples": [
+              0.287810538,
+              0.40677232199999996,
+              0.32911799799999997,
+              0.320119587,
+              0.482202055,
+              0.32314706200000004,
+              0.37109864800000003,
+              0.3269377520000001
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.3431493295065593,
+            "range": [
+              0.2975956889858935,
+              0.5776055289898068
+            ],
+            "samples": [
+              0.2975956889858935,
+              0.5238366959965788,
+              0.3485260799934622,
+              0.33169348700903356,
+              0.5776055289898068,
+              0.33588894602144137,
+              0.38363858399679884,
+              0.3377725790196564
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33384.0,
+            "range": [
+              33292,
+              33436
+            ],
+            "samples": [
+              33436,
+              33432,
+              33364,
+              33428,
+              33376,
+              33372,
+              33392,
+              33292
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": -11.79023846890267,
+          "wall_seconds": -12.609266131694207,
+          "peak_rss_kib": 0.04795013186287278
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            -8.870381416145555,
+            0.36581213780246813,
+            -2.2417523536246375,
+            -28.311595873429006,
+            44.876619426474164,
+            -19.924329476008307,
+            7.68511727438046,
+            -18.087495683366217
+          ],
+          "pairedMedianChangePercent": -5.5560668848851025,
+          "pairedBootstrap95MedianChangePercent": [
+            -19.924329476008307,
+            7.68511727438046
+          ],
+          "fasterPairs": 5,
+          "sampledCpuFrequencyKHz": [
+            2500007,
+            3512373
+          ]
+        }
+      },
+      "thermal": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.122953145,
+            "range": [
+              0.112285881,
+              0.146978643
+            ],
+            "samples": [
+              0.14497691199999999,
+              0.12088014700000002,
+              0.112285881,
+              0.112656692,
+              0.115360995,
+              0.12502614299999998,
+              0.146978643,
+              0.131885995
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.1336304860014934,
+            "range": [
+              0.12053929100511596,
+              0.16516259498894215
+            ],
+            "samples": [
+              0.16516259498894215,
+              0.13314409798476845,
+              0.12053929100511596,
+              0.12279634899459779,
+              0.12583955298759975,
+              0.13411687401821837,
+              0.1576864850067068,
+              0.14325991802616045
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33400.0,
+            "range": [
+              33356,
+              33460
+            ],
+            "samples": [
+              33368,
+              33432,
+              33396,
+              33420,
+              33380,
+              33460,
+              33356,
+              33404
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.1223356145,
+            "range": [
+              0.112435165,
+              0.15976827100000002
+            ],
+            "samples": [
+              0.14401387999999998,
+              0.12448517,
+              0.11808495699999999,
+              0.11574139600000002,
+              0.112435165,
+              0.15976827100000002,
+              0.13036653999999998,
+              0.12018605899999998
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.1330806895130081,
+            "range": [
+              0.1218183389864862,
+              0.1883465470164083
+            ],
+            "samples": [
+              0.16180019901366904,
+              0.13589919402147643,
+              0.12778127298224717,
+              0.12540963501669466,
+              0.1218183389864862,
+              0.1883465470164083,
+              0.13925334601663053,
+              0.1302621850045398
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33378.0,
+            "range": [
+              33304,
+              33408
+            ],
+            "samples": [
+              33388,
+              33368,
+              33408,
+              33364,
+              33388,
+              33388,
+              33320,
+              33304
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": -0.5022486411388694,
+          "wall_seconds": -0.41143043397983137,
+          "peak_rss_kib": -0.06586826347305674
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            -0.6642657694350684,
+            2.9823118927874814,
+            5.164563833274816,
+            2.7381453735566996,
+            -2.5362385267221343,
+            27.787890729381324,
+            -11.302392416291408,
+            -8.871249748693955
+          ],
+          "pairedMedianChangePercent": 1.03693980206081,
+          "pairedBootstrap95MedianChangePercent": [
+            -8.871249748693955,
+            5.164563833274816
+          ],
+          "fasterPairs": 4,
+          "sampledCpuFrequencyKHz": [
+            2599970,
+            3299833
+          ]
+        }
+      },
+      "sealed": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.30290685500000003,
+            "range": [
+              0.273378203,
+              0.457208629
+            ],
+            "samples": [
+              0.295812919,
+              0.28662922300000004,
+              0.310000791,
+              0.336130928,
+              0.28582766700000006,
+              0.273378203,
+              0.3930375549999999,
+              0.457208629
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.3205112050054595,
+            "range": [
+              0.28503438297775574,
+              0.5076345790002961
+            ],
+            "samples": [
+              0.31881007601623423,
+              0.3005303480022121,
+              0.32221233399468474,
+              0.3604305119952187,
+              0.29781419900245965,
+              0.28503438297775574,
+              0.4230776780168526,
+              0.5076345790002961
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33332.0,
+            "range": [
+              33248,
+              33348
+            ],
+            "samples": [
+              33348,
+              33340,
+              33284,
+              33332,
+              33336,
+              33332,
+              33248,
+              33316
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.3017020285,
+            "range": [
+              0.26666056800000004,
+              0.39529622
+            ],
+            "samples": [
+              0.26666056800000004,
+              0.301711095,
+              0.39529622,
+              0.291872904,
+              0.31343051600000005,
+              0.280231019,
+              0.301692962,
+              0.36435715300000004
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.31888526600960176,
+            "range": [
+              0.2772387709992472,
+              0.42293806001544
+            ],
+            "samples": [
+              0.2772387709992472,
+              0.3190794800175354,
+              0.42293806001544,
+              0.3029698269965593,
+              0.32561031499062665,
+              0.2923907700169366,
+              0.31869105200166814,
+              0.3798822039971128
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33344.0,
+            "range": [
+              33188,
+              33364
+            ],
+            "samples": [
+              33364,
+              33296,
+              33348,
+              33364,
+              33340,
+              33364,
+              33316,
+              33188
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": -0.39775478174636225,
+          "wall_seconds": -0.507295523671325,
+          "peak_rss_kib": 0.03600144005759809
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            -9.854995886775308,
+            5.261805423098798,
+            27.514584309560664,
+            -13.166900250250102,
+            9.657164853813804,
+            2.5067163090541023,
+            -23.240678107719237,
+            -20.308338493760125
+          ],
+          "pairedMedianChangePercent": -3.6741397888605976,
+          "pairedBootstrap95MedianChangePercent": [
+            -20.308338493760125,
+            9.657164853813804
+          ],
+          "fasterPairs": 4,
+          "sampledCpuFrequencyKHz": [
+            2399989,
+            3300275
+          ]
+        }
+      },
+      "germ_flow": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.42676420350000005,
+            "range": [
+              0.40020011,
+              0.539355231
+            ],
+            "samples": [
+              0.42051116000000005,
+              0.475039756,
+              0.412985872,
+              0.411828246,
+              0.43469047099999997,
+              0.43301724700000005,
+              0.40020011,
+              0.539355231
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.4444238405121723,
+            "range": [
+              0.4155622980033513,
+              0.5635827330115717
+            ],
+            "samples": [
+              0.43720129801658913,
+              0.5213835050235502,
+              0.4267895960074384,
+              0.42581144100404344,
+              0.4516463830077555,
+              0.4527542870200705,
+              0.4155622980033513,
+              0.5635827330115717
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33390.0,
+            "range": [
+              33344,
+              33420
+            ],
+            "samples": [
+              33364,
+              33392,
+              33408,
+              33420,
+              33344,
+              33408,
+              33376,
+              33388
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.4165535665,
+            "range": [
+              0.38085807499999996,
+              0.523539191
+            ],
+            "samples": [
+              0.3835431,
+              0.430402042,
+              0.39763665699999995,
+              0.38085807499999996,
+              0.403278813,
+              0.44144036700000006,
+              0.42982832000000004,
+              0.523539191
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.43358563499350566,
+            "range": [
+              0.39221150102093816,
+              0.5532976239919662
+            ],
+            "samples": [
+              0.3946277119976003,
+              0.45240821602055803,
+              0.4102494120015763,
+              0.39221150102093816,
+              0.4206673050066456,
+              0.46466149800107814,
+              0.4465039649803657,
+              0.5532976239919662
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33370.0,
+            "range": [
+              33284,
+              33452
+            ],
+            "samples": [
+              33416,
+              33384,
+              33412,
+              33452,
+              33284,
+              33336,
+              33332,
+              33356
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": -2.3925711004484485,
+          "wall_seconds": -2.4387092974526903,
+          "peak_rss_kib": -0.05989817310572132
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            -8.791219714596876,
+            -9.396627005677393,
+            -3.716644088977461,
+            -7.520166793027605,
+            -7.226212695147849,
+            1.9452158218538518,
+            7.40334878968425,
+            -2.9323976279373554
+          ],
+          "pairedMedianChangePercent": -5.471428392062649,
+          "pairedBootstrap95MedianChangePercent": [
+            -8.791219714596876,
+            1.9452158218538518
+          ],
+          "fasterPairs": 6,
+          "sampledCpuFrequencyKHz": [
+            1835180,
+            3207929
+          ]
+        }
+      },
+      "mixed_germs": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.42735149399999994,
+            "range": [
+              0.38168076900000003,
+              0.549051289
+            ],
+            "samples": [
+              0.430152218,
+              0.40792481999999997,
+              0.476932565,
+              0.42455076999999997,
+              0.38168076900000003,
+              0.40904638800000004,
+              0.549051289,
+              0.44400068499999995
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.4543762660032371,
+            "range": [
+              0.4028449350153096,
+              0.5889566520054359
+            ],
+            "samples": [
+              0.4568229379947297,
+              0.4205281210015528,
+              0.49322863802080974,
+              0.4519295940117445,
+              0.4028449350153096,
+              0.4233973170048557,
+              0.5889566520054359,
+              0.4651248980080709
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33294.0,
+            "range": [
+              33228,
+              33388
+            ],
+            "samples": [
+              33228,
+              33388,
+              33228,
+              33284,
+              33304,
+              33360,
+              33284,
+              33336
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.43103622750000004,
+            "range": [
+              0.39588278499999996,
+              0.482197067
+            ],
+            "samples": [
+              0.42991573800000005,
+              0.39588278499999996,
+              0.448525326,
+              0.43215671699999997,
+              0.411745673,
+              0.482197067,
+              0.468603837,
+              0.41639013500000005
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.4506028900068486,
+            "range": [
+              0.40646722601377405,
+              0.5122335110208951
+            ],
+            "samples": [
+              0.44730392799829133,
+              0.40646722601377405,
+              0.4737070550036151,
+              0.4539018520154059,
+              0.42626477702287957,
+              0.5122335110208951,
+              0.4930334840028081,
+              0.43100183800561354
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33320.0,
+            "range": [
+              33252,
+              33352
+            ],
+            "samples": [
+              33320,
+              33260,
+              33252,
+              33308,
+              33332,
+              33320,
+              33352,
+              33344
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": 0.8622254869196988,
+          "wall_seconds": -0.8304518256597504,
+          "peak_rss_kib": 0.07809214873550907
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            -0.054975887628672115,
+            -2.952023120338698,
+            -5.956238069002473,
+            1.7915282546772993,
+            7.876976374463318,
+            17.883223308159344,
+            -14.652083259201664,
+            -6.2185827483576706
+          ],
+          "pairedMedianChangePercent": -1.5034995039836851,
+          "pairedBootstrap95MedianChangePercent": [
+            -6.2185827483576706,
+            7.876976374463318
+          ],
+          "fasterPairs": 5,
+          "sampledCpuFrequencyKHz": [
+            2500032,
+            3422909
+          ]
+        }
+      },
+      "vacuum": {
+        "baseline": {
+          "cpu_seconds": {
+            "median": 0.263834925,
+            "range": [
+              0.22585422900000002,
+              0.457605152
+            ],
+            "samples": [
+              0.253771759,
+              0.31628308299999996,
+              0.22585422900000002,
+              0.229928358,
+              0.273898091,
+              0.328932965,
+              0.25060223699999995,
+              0.457605152
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.2790372799936449,
+            "range": [
+              0.2363371640094556,
+              0.49104246401111595
+            ],
+            "samples": [
+              0.2654133829928469,
+              0.33893584000179544,
+              0.2363371640094556,
+              0.2457699199730996,
+              0.29266117699444294,
+              0.35546984398388304,
+              0.2608639739919454,
+              0.49104246401111595
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33266.0,
+            "range": [
+              33168,
+              33348
+            ],
+            "samples": [
+              33220,
+              33268,
+              33268,
+              33344,
+              33240,
+              33168,
+              33264,
+              33348
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "candidate": {
+          "cpu_seconds": {
+            "median": 0.26902922900000004,
+            "range": [
+              0.24349798799999997,
+              0.325860248
+            ],
+            "samples": [
+              0.268500571,
+              0.25189783600000004,
+              0.26955788700000005,
+              0.274048365,
+              0.325860248,
+              0.24474316100000001,
+              0.298188926,
+              0.24349798799999997
+            ]
+          },
+          "wall_seconds": {
+            "median": 0.2809803970012581,
+            "range": [
+              0.2559711240173783,
+              0.3483784899872262
+            ],
+            "samples": [
+              0.2820939059893135,
+              0.2632532379939221,
+              0.2798668880132027,
+              0.30313857601140626,
+              0.3483784899872262,
+              0.2559711240173783,
+              0.31136511999648064,
+              0.25665069502429105
+            ]
+          },
+          "peak_rss_kib": {
+            "median": 33326.0,
+            "range": [
+              33180,
+              33356
+            ],
+            "samples": [
+              33328,
+              33336,
+              33296,
+              33260,
+              33324,
+              33344,
+              33180,
+              33356
+            ]
+          },
+          "timed_major_faults": 0
+        },
+        "median_changes_percent": {
+          "cpu_seconds": 1.9687704347709278,
+          "wall_seconds": 0.696364660541926,
+          "peak_rss_kib": 0.1803643359586271
+        },
+        "paired_diagnostics": {
+          "pairedCpuChangePercent": [
+            5.803960242873218,
+            -20.356841848541084,
+            19.350382852472524,
+            19.18858873423521,
+            18.971346901428387,
+            -25.59482112107554,
+            18.988932249635138,
+            -46.78862619099184
+          ],
+          "pairedMedianChangePercent": 12.387653572150814,
+          "pairedBootstrap95MedianChangePercent": [
+            -25.59482112107554,
+            19.18858873423521
+          ],
+          "fasterPairs": 3,
+          "sampledCpuFrequencyKHz": [
+            2499860,
+            3300052
+          ]
+        }
+      }
+    }
+  },
+  "frames_192": {
+    "complete": false,
+    "performance_accepted": false,
+    "error_type": "TimeoutExpired",
+    "failed_role": "baseline",
+    "failed_scene": "vacuum",
+    "failed_sample": 0,
+    "child_timeout_seconds": 60,
+    "accepted_rows_before_timeout": 10,
+    "accepted_rows_timed_major_faults": 0,
+    "inputs_unchanged": true,
+    "reason": "Original fixed child timeout hit during external host pressure. Partial rows do not establish performance; timeout and gates were not raised."
+  },
+  "restoration": {
+    "exitCode": 0,
+    "nativeSha256": "e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056",
+    "matchesBaseline": true,
+    "wallSeconds": 32.52265633898787
+  }
+}

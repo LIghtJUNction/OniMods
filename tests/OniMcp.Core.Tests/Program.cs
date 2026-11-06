@@ -11,9 +11,11 @@ using OniMcp.Tools;
 internal static class Program
 {
     private static int failures;
+    private static int groups;
 
     private static int Main()
     {
+        Run("deconstruction preserves protected-target eligibility", DeconstructionEligibilityRegression.Run);
         Run("registry initialization can retry after a factory failure", InitializationRetry);
         Run("JSON-RPC preserves null id and success result", JsonRpcNulls);
         Run("tool JSON text uses configurable TOON encoding", ToolTextEncoding);
@@ -27,15 +29,18 @@ internal static class Program
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
         Run("dynamic resource routes preserve read actions and reject sandbox routes", DynamicResources);
+        Run("resource URI authorities preserve canonical and fallback dispatch", ResourceAuthorityCompatibility);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
-        Console.WriteLine(failures == 0 ? "All 16 core regression groups passed." : failures + " regression groups failed.");
+        Run("speech Markdown keeps formatting balanced", SpeechTextRegression.Run);
+        Console.WriteLine(failures == 0 ? "All " + groups + " core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
     private static void Run(string name, Action test)
     {
+        groups++;
         try
         {
             ToolCallMiddleware.Clear();
@@ -213,7 +218,10 @@ internal static class Program
             ["task"] = "inspect",
             ["target"] = new JObject { ["x"] = 4 }
         }).IsError, "Nested coordinates escaped validation.");
-        Require(!OniToolRegistry.CallTool("legacy_game_control", new JObject { ["task"] = "inspect" }).IsError, "Alias dispatch failed.");
+        Require(!OniToolRegistry.CallTool("game_control", new JObject { ["task"] = "inspect" }).IsError, "Canonical dispatch failed.");
+        int calls = GameStubs.HandlerCalls;
+        Require(OniToolRegistry.CallTool("legacy_game_control", new JObject { ["task"] = "inspect" }).IsError
+            && GameStubs.HandlerCalls == calls, "Retired alias reached the handler.");
     }
 
     private static void CacheVisibility()
@@ -222,15 +230,27 @@ internal static class Program
         var b = new McpTool { Name = "b", Group = "one" };
         var c = new McpTool { Name = "c", Group = "one" };
         var tools = new[] { c, b, a };
+        var visibilityFirstCache = new OniToolRegistryCache();
+        visibilityFirstCache.GetVisibleTools(tools);
         var cache = new OniToolRegistryCache();
         var all = cache.GetTools(tools);
         Require(all.Select(tool => tool.Name).SequenceEqual(new[] { "a", "b", "c" }), "All-tools order is unstable.");
-        Require(cache.GetVisibleTools(tools, new[] { c }).Single() == c, "Previously cached all-tools ignored the supplied visible subset.");
+        var visible = cache.GetVisibleTools(tools);
+        Require(visible.SequenceEqual(new[] { b, c }), "Visible tools included a hidden tool or lost their order.");
         a.Hidden = false;
-        Require(cache.GetVisibleSnapshot().Count == 3, "Visibility changes were retained in a stale snapshot.");
+        b.Hidden = true;
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { a, c }), "Visibility changes were retained in a stale snapshot.");
+        a.Group = "two";
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { c, a }), "Visible tools ignored current group ordering.");
+        a.Group = "one";
+        a.Name = "z";
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { c, a }), "Visible tools ignored current name ordering.");
+        Require(visibilityFirstCache.GetTools(tools).SequenceEqual(new[] { a, b, c }),
+            "Visible-first discovery changed the all-tools snapshot order.");
         all.Clear();
-        cache.GetVisibleSnapshot().Clear();
-        Require(cache.GetTools(tools).Count == 3, "Caller modified cached membership.");
+        visible.Clear();
+        Require(cache.GetTools(tools).Count == 3 && cache.GetVisibleTools(tools).Count == 2,
+            "Caller modified registered or cached membership.");
         cache.Clear();
         Require(cache.GetTools(new[] { b }).Count == 1, "Clear did not invalidate the cache.");
     }
@@ -243,6 +263,13 @@ internal static class Program
             "Public catalog membership changed.");
         Require(infos.Select(info => info.Name).SequenceEqual(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name)),
             "Catalog order differs from visible registry order.");
+        foreach (string name in new[] { "mcp_server_control", "tools_call_many", "oni_editor", "map_editor", "spatial_control", "view_control", "buildings_control" })
+        {
+            int calls = GameStubs.HandlerCalls;
+            Require(!OniToolRegistry.TryGetTool(name, out _)
+                && OniToolRegistry.CallTool(name, new JObject { ["task"] = "inspect" }).IsError
+                && GameStubs.HandlerCalls == calls, "Removed tool alias still dispatches: " + name);
+        }
         foreach (var info in infos)
         {
             Require(info.InputSchema.Required.Count(name => name == "task") == 1
@@ -315,6 +342,27 @@ internal static class Program
         Require(!OniResourceRegistry.GetResourceTemplateInfos().Any(template =>
             template.UriTemplate.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
             "Removed sandbox resource template remained advertised.");
+    }
+
+    private static void ResourceAuthorityCompatibility()
+    {
+        foreach (string user in new[] { "", "user@" })
+        foreach (string port in new[] { "", ":123" })
+        {
+            bool canonical = user.Length == 0 && port.Length == 0;
+            var configurables = Read("oni://" + user + "buildings" + port + "/configurables?action=delete");
+            var state = Read("oni://" + user + "controls" + port + "/state?action=delete");
+            Require((string)configurables["tool"] == "building_control"
+                && (string)configurables["arguments"]["action"] == (canonical ? "list" : "state_list"),
+                "Configurables authority changed its established operation.");
+            Require((string)state["tool"] == "building_control"
+                && (string)state["arguments"]["action"] == (canonical ? "state_list" : "list"),
+                "State authority changed its established operation.");
+        }
+
+        foreach (string uri in new[] { "oni://controls:invalid/state", "oni://[broken/state", "oni://", "controls/state", "https://controls/state" })
+            Require(OniResourceRegistry.ReadResource(uri) == null, "Malformed or foreign resource URI was admitted: " + uri);
+        Require((bool)Read("oni://guide/mechanics")["error"], "Disabled mechanics route became available.");
     }
 
     private static void ResourceErrors()

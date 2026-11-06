@@ -10,12 +10,16 @@ PUBLISHER_PROJECT="$ROOT/tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csp
 PUBLISHER_DLL="$ROOT/tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll"
 case "$MOD_KEY" in
 CycleTrim)
-  EXPECTED_ID="3766318556"
+  EXPECTED_ID="3807166689"
   TITLE_CONTAINS="CycleTrim"
   ;;
 OniMcp)
-  EXPECTED_ID="3731864673"
-  TITLE_CONTAINS="ONI MCP Server"
+  EXPECTED_ID="3807166922"
+  TITLE_CONTAINS="OniMcp"
+  ;;
+OniOnline)
+  EXPECTED_ID="0"
+  TITLE_CONTAINS="OniOnline"
   ;;
 *)
   echo "Unsupported publish target: $MOD_KEY" >&2
@@ -28,6 +32,9 @@ DRY_RUN=false
 PREFLIGHT_ONLY=false
 SKIP_TESTS=false
 ALLOW_DIRTY=false
+FIRST_MODE=""
+FIRST_PLAN=""
+FIRST_PLAN_HASH=""
 
 usage() {
   cat <<'EOF'
@@ -37,6 +44,11 @@ Usage: scripts/publish_cycletrim_steam.sh [options]
   --preflight-only  Query both Steam App contexts without uploading
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
+  --prepare-first-item  OniOnline only: prepare an offline, immutable first-item plan
+  --create-first-item   OniOnline only: create the reviewed Private Legacy item once
+  --publish-first-item  OniOnline only: publish the verified Private Legacy item
+  --plan <path>         First-item plan path (required for all first-item stages)
+  --expected-plan-sha256 <hash>  Reviewed plan SHA (required for create/publish)
   -h, --help     Show this help
 
 The publisher uses the logged-in Steam client and uploads a single legacy ZIP.
@@ -55,6 +67,15 @@ while (($#)); do
     ;;
   --skip-tests) SKIP_TESTS=true ;;
   --allow-dirty) ALLOW_DIRTY=true ;;
+  --prepare-first-item | --create-first-item | --publish-first-item)
+    [[ -z "$FIRST_MODE" ]] || { echo "Choose one first-item stage" >&2; exit 2; }
+    FIRST_MODE="$1"
+    ;;
+  --plan | --expected-plan-sha256)
+    [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || { echo "Missing value for $1" >&2; exit 2; }
+    if [[ "$1" == "--plan" ]]; then FIRST_PLAN="$2"; else FIRST_PLAN_HASH="$2"; fi
+    shift
+    ;;
   -h | --help)
     usage
     exit 0
@@ -70,6 +91,14 @@ done
 
 if [[ "$DRY_RUN" == true && "$PREFLIGHT_ONLY" == true ]]; then
   echo "--dry-run and --preflight-only cannot be combined" >&2
+  exit 2
+fi
+if [[ "$MOD_KEY" == "OniOnline" && -z "$FIRST_MODE" ]] || [[ "$MOD_KEY" != "OniOnline" && -n "$FIRST_MODE" ]]; then
+  echo "OniOnline requires an explicit first-item stage; existing-item targets cannot use it" >&2
+  exit 2
+fi
+if [[ -n "$FIRST_MODE" && ( "$DRY_RUN" == true || "$PREFLIGHT_ONLY" == true || -z "$FIRST_PLAN" ) ]]; then
+  echo "First-item stages require --plan and cannot combine with --dry-run/--preflight-only" >&2
   exit 2
 fi
 
@@ -92,24 +121,15 @@ with open(sys.argv[1], "rb") as handle:
 print(config.get("mods", {}).get(sys.argv[2], {}).get("publishedfileid", ""))
 PY
   )"
+  if [[ "$MOD_KEY" == "OniOnline" && -z "$configured_id" ]]; then configured_id="0"; fi
   if [[ "$configured_id" != "$EXPECTED_ID" ]]; then
     echo "Refusing upload: $MOD_KEY publishedfileid is '$configured_id', expected '$EXPECTED_ID'" >&2
     exit 1
   fi
 
-  if [[ "$DRY_RUN" != true ]]; then
-    local page
-    page="$(curl --proto '=https' --tlsv1.2 -fsSL --max-time 20 \
-      "https://steamcommunity.com/sharedfiles/filedetails/?id=$EXPECTED_ID")"
-    grep -Fq "steamcommunity.com/app/$CONSUMER_APP_ID" <<<"$page" || {
-      echo "Refusing upload: Workshop item does not belong to ONI app $CONSUMER_APP_ID" >&2
-      exit 1
-    }
-    grep -Fqi "$TITLE_CONTAINS" <<<"$page" || {
-      echo "Refusing upload: Workshop item title does not contain $TITLE_CONTAINS" >&2
-      exit 1
-    }
-  fi
+  # Live app, owner and title checks run through the Steam SDK in
+  # client_preflight and again immediately before the upload. Public HTML can
+  # return a rate-limit page with HTTP 200 and is not an identity check.
 }
 
 require_clean_worktree() {
@@ -127,7 +147,7 @@ run_tests() {
     (cd "$ROOT" && cargo run --quiet --release -- \
       --config "$ROOT/onim.toml" --mod CycleTrim build --release)
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
-    (cd "$ROOT" && dotnet run --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj)
+    (cd "$ROOT" && dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true)
   else
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Release -warnaserror)
@@ -147,7 +167,7 @@ run_publisher() {
   local context_app_id="$CREATOR_APP_ID"
   local argument
   for argument in "$@"; do
-    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" ]]; then
+    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" || "$argument" == "--metadata-only" || "$argument" == "--publish-first-item" ]]; then
       context_app_id="$CONSUMER_APP_ID"
     fi
   done
@@ -222,6 +242,11 @@ client_preflight() {
       cat "$creator_log" "$consumer_log"
       return
     fi
+    if grep -Fq "Workshop item identity check failed" "$creator_log" "$consumer_log"; then
+      cat "$creator_log" "$consumer_log" >&2
+      echo "Steam returned an invalid target; preflight stopped without upload" >&2
+      return 1
+    fi
     sleep 2
   done
   tail -20 "$creator_log" "$consumer_log" >&2
@@ -230,6 +255,29 @@ client_preflight() {
 }
 
 validate_target
+
+if [[ -n "$FIRST_MODE" ]]; then
+  require_clean_worktree
+  if [[ "$FIRST_MODE" == "--prepare-first-item" ]]; then
+    if [[ "$SKIP_TESTS" != true ]]; then
+      (cd "$ROOT" && dotnet run --project tests/OniOnline.Tests -c Release)
+      (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests -c Release)
+    fi
+    (cd "$ROOT" && cargo run --quiet --release -- --config "$ROOT/onim.toml" --mod OniOnline publish --non-interactive --auto-note --dry-run)
+    dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
+    run_publisher --prepare-first-item --vdf "$VDF_PATH" --output "$FIRST_PLAN"
+  else
+    [[ -n "$FIRST_PLAN_HASH" ]] || { echo "Create/publish requires reviewed --expected-plan-sha256" >&2; exit 2; }
+    pgrep -x steam >/dev/null 2>&1 || { echo "Steam must already be running" >&2; exit 1; }
+    dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
+    if [[ "$FIRST_MODE" == "--create-first-item" ]]; then
+      run_publisher --create-first-item --plan "$FIRST_PLAN" --expected-plan-sha256 "$FIRST_PLAN_HASH" --confirm-first-create-once
+    else
+      run_publisher --publish-first-item --plan "$FIRST_PLAN" --expected-plan-sha256 "$FIRST_PLAN_HASH" --confirm-first-publication
+    fi
+  fi
+  exit 0
+fi
 
 if [[ "$PREFLIGHT_ONLY" == true ]]; then
   pgrep -x steam >/dev/null 2>&1 || {
@@ -242,6 +290,11 @@ if [[ "$PREFLIGHT_ONLY" == true ]]; then
 fi
 
 require_clean_worktree
+
+if [[ "$MOD_KEY" == "CycleTrim" ]]; then
+  : "${OniSimNativeBundle:?CycleTrim releases require OniSimNativeBundle from the three-platform OniSim native CI run}"
+  python3 "$ROOT/scripts/build_onisim_native.py" --validate-bundle "$OniSimNativeBundle"
+fi
 
 if [[ "$DRY_RUN" != true ]]; then
   client_preflight

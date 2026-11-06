@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "oni_editor", "map_editor", "save_editor" },
                 Tags = new List<string> { "world", "editor", "filesystem", "search-replace", "save", "build", "orders", "overlay", "batch" },
                 Description = "Read small virtual map files, edit exact SEARCH/REPLACE blocks, and issue native orders. Pause before observation; preview edits, confirm, run briefly, then re-read. Default maps are compact; format=edit expands cells. Success means orders accepted, not work completed.",
                 Parameters = Params(),

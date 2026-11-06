@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "overheat_risk_scan", "thermal_risk_scan" },
                 Tags = new List<string> { "thermal", "temperature", "overheat", "buildings", "heat", "温度", "过热" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=thermal_overheat_risk",

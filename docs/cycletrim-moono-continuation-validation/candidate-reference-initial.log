@@ -1,0 +1,11 @@
+  Determining projects to restore...
+/workspace/scratch/7399a4bc922c/OniMods/mods/CycleTrim/CycleTrim.csproj : error NU1900: Warning As Error: Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.
+  Failed to restore /workspace/scratch/7399a4bc922c/OniMods/mods/CycleTrim/CycleTrim.csproj (in 5.9 sec).
+
+Build FAILED.
+
+/workspace/scratch/7399a4bc922c/OniMods/mods/CycleTrim/CycleTrim.csproj : error NU1900: Warning As Error: Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:07.26

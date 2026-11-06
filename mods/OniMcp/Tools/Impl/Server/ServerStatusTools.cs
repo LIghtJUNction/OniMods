@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "get_mcp_status" },
                 Description = "兼容旧名；建议使用 server_diagnostics_control action=status",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>

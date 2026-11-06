@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "orders", "orders_unified_control", "orders_action_control", "map_orders_control" },
 Tags = new List<string> { "orders", "priority", "area", "designation", "task", "dig", "sweep", "mop", "disinfect", "deconstruct", "capture" },
                 Description = "Unified orders entrypoint. Supports task diagnosis by target InstanceID, priority, and work orders: area dig/sweep/mop/disinfect/cancel/harvest and designation deconstruct/attack/capture(wrangle)/empty_conduits/cut_conduits/manual_delivery. Chinese map-edit verbs are supported in operation files: 挖/扫/捡/擦/毒/消/收/拆/杀/捕.",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

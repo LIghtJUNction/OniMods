@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "consumables_control" },
                 Description = "饮食权限聚合工具：action=status 查看；action=set 设置单个食物；action=policy 按品质批量应用策略",
                 Parameters = DietControlParams(),
                 Handler = args =>
@@ -93,7 +92,6 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "set_diet_food" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=diet action=set",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -141,7 +139,6 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "apply_diet_policy" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=diet action=policy",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>

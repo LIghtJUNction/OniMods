@@ -61,7 +61,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "build_parse_sequence", "building_plan_parse", "blueprint_parse" },
                 Tags = new List<string> { "buildings", "planning", "parse", "sequence", "blueprint", "建造", "规划", "解析" },
                 Description = "兼容入口：请使用 building_control domain=planning action=parse_plan。把自然语言/文字序列解析成 prefabId、material、anchor query 等建造参数。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -99,7 +98,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "building_materials", "build_materials" },
                 Tags = new List<string> { "buildings", "materials", "inventory", "available", "建造", "材料" },
                 Description = "兼容入口：请使用 building_control domain=planning action=materials",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -162,7 +160,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "build_validate", "building_preview" },
                 Tags = new List<string> { "buildings", "preview", "footprint", "placement", "建造", "预检" },
                 Description = "兼容入口：请使用 building_control domain=planning action=preview",
                 Parameters = BuildPlacementParameters(includeConfirm: false, includeArea: false),
@@ -191,7 +188,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "build_auto_connect", "wire_auto_connect", "pipe_auto_connect", "logic_auto_connect" },
                 Tags = new List<string> { "buildings", "utility", "wire", "pipe", "logic", "connect", "电线", "水管", "气管", "信号线" },
                 Description = "兼容入口：请使用 building_control domain=planning action=auto_connect",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -214,8 +210,7 @@ namespace OniMcp.Tools
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最多处理路径格数，默认 200，最大 500", Required = false },
                     ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到自然固体自动标记挖掘", Required = false },
                     ["autoUprootObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到可铲植物自动标记铲除", Required = false },
-                    ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "最多自动标记挖掘/铲除格，默认 100，最大 500", Required = false },
-                    ["nativePathPlacement"] = new McpToolParameter { Type = "boolean", Description = "Deprecated compatibility input; utility paths always use validated per-cell blueprints without activating a player tool.", Required = false }
+                    ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "最多自动标记挖掘/铲除格，默认 100，最大 500", Required = false }
                 },
                 Handler = args =>
                 {
@@ -357,7 +352,6 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "placement_candidates", "footprint_candidates", "anchor_candidates", "build_anchor_candidates" },
                 Tags = new List<string> { "buildings", "preview", "footprint", "placement", "anchor", "candidate", "layout", "建造", "候选", "空位", "支撑", "碰撞" },
                 Description = "兼容入口：请使用 building_control domain=planning action=placement_candidates",
                 Parameters = new Dictionary<string, McpToolParameter>

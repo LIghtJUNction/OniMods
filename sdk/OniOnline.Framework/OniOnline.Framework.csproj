@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup><ImportDirectoryBuildProps>false</ImportDirectoryBuildProps></PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework><LangVersion>7.3</LangVersion>
+    <AssemblyName>OniOnline.Framework</AssemblyName><Version>0.4.0</Version><NuGetAudit>false</NuGetAudit>
+    <PackageId>OniOnline.Framework</PackageId><PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/LIghtJUNction/OniMods</RepositoryUrl><PackageProjectUrl>https://github.com/LIghtJUNction/OniMods</PackageProjectUrl>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile><Description>Game-independent networking, gameplay contracts and synchronization for OniOnline.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile><NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="../../LICENSE;../../LICENSING.md" Pack="true" PackagePath="/" />
+    <None Include="../../mods/OniOnline/docs/SDK.md;../../mods/OniOnline/docs/SDK-MOD-SYNC.md;../../mods/OniOnline/docs/FRAMEWORK-COMPATIBILITY.md;../../mods/OniOnline/docs/MOD-CONTENT-SYNC.md" Pack="true" PackagePath="docs/" />
+    <Compile Include="../../mods/OniOnline/Network/*.cs" Link="Network/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Core/*.cs" Exclude="../../mods/OniOnline/Core/NativeSimSaveBlock.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Sdk/*.cs;../../mods/OniOnline/Gameplay/*.cs" Link="Sdk/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/PlanetManifest.cs;../../mods/OniOnline/Multiplayer/SystemWire.cs;../../mods/OniOnline/Multiplayer/StarSystemCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

@@ -28,7 +28,8 @@ namespace CycleTrim.Patches
 
         private static bool IsCompatible()
         {
-            return AccessTools.TypeByName(FastTrackPatchType) == null;
+            return CycleTrimPatchOptions.LimitCreatureBrainUpdates
+                && AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
         private static RateState CreateState(BrainScheduler.BrainGroup group)

@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "egg_incubator_set", "ranching_incubator_configure" },
                 Tags = new List<string> { "ranching", "eggs", "incubator", "receptacle" },
                 Description = "兼容入口：配置孵化器蛋请求、连续孵化和移除占用对象。新调用请使用 colony_control domain=bio bioDomain=ranching kind=incubator action=configure。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -79,7 +78,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "ranching_dropoff_set", "critter_dropoff_filter_set" },
                 Tags = new List<string> { "ranching", "critters", "dropoff", "filters", "capacity" },
                 Description = "兼容入口：配置小动物投放点/鱼类投放点的物种过滤器和容量上限。新调用请使用 colony_control domain=bio bioDomain=ranching kind=dropoff action=configure。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -112,7 +110,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "ranching_dropoffs_batch_set", "critter_dropoffs_batch_configure" },
                 Tags = new List<string> { "ranching", "critters", "dropoff", "filters", "capacity", "batch" },
                 Description = "兼容入口：按区域批量配置小动物/鱼类投放点容量和物种过滤器。新调用请使用 colony_control domain=bio bioDomain=ranching kind=dropoff action=batch。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -169,7 +166,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "egg_incubators_batch_set", "ranching_incubators_batch_configure" },
                 Tags = new List<string> { "ranching", "eggs", "incubator", "receptacle", "batch" },
                 Description = "兼容入口：按区域批量配置孵化器蛋请求、连续孵化或取消请求。新调用请使用 colony_control domain=bio bioDomain=ranching kind=incubator action=batch。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

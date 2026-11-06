@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "source_integrated": false,
+  "runtime_accepted": false,
+  "candidate_native_sha256": "9dbb9536ab9b776be19521781effe6933aa1f0569166c5d6056c909203e25169",
+  "release_unit_tests": 45,
+  "runs": [
+    {
+      "workers": 1,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "5fb5c1e67debd0400fb01cc480f93a72b5ce1a03e58d1078ae57af7432ee8201"
+    },
+    {
+      "workers": 4,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "2d23838852803d69f967fb0cea300c664ab05071d22ad21e7e799401bfc6e57c"
+    }
+  ],
+  "complete": true,
+  "adopted": false,
+  "scope": "Exact all-clear/all-retained SSE2 cleanup branches with unchanged parallel ownership; native frame fixtures only",
+  "sizes": {
+    "96": {
+      "samples": 96,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -2.9353654970344034,
+          "wall_change_percent": -2.6302327913200307,
+          "peak_rss_change_percent": 0.059733588196642096
+        },
+        "thermal": {
+          "cpu_change_percent": -1.2874752431374037,
+          "wall_change_percent": 0.28676849583817443,
+          "peak_rss_change_percent": 0.17333094256171133
+        },
+        "sealed": {
+          "cpu_change_percent": -10.412220834799923,
+          "wall_change_percent": -9.095272950996048,
+          "peak_rss_change_percent": 0.07787695441203724
+        },
+        "germ_flow": {
+          "cpu_change_percent": -1.6991099055064796,
+          "wall_change_percent": -0.7675500141140712,
+          "peak_rss_change_percent": 0.1015470999342849
+        },
+        "mixed_germs": {
+          "cpu_change_percent": 4.365412472821273,
+          "wall_change_percent": 3.8297851683868345,
+          "peak_rss_change_percent": -0.0059822924144525835
+        },
+        "vacuum": {
+          "cpu_change_percent": -7.7295283021832635,
+          "wall_change_percent": -8.17673004701225,
+          "peak_rss_change_percent": 0.029916831209231276
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "6d0cab652d6ae77de52c262a2452a2070f1f377c0c4b242b7b26e2daa708dcd9"
+    },
+    "192": {
+      "samples": 60,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -0.8058202176271734,
+          "wall_change_percent": -0.77065228428701,
+          "peak_rss_change_percent": -0.007492881762327652
+        },
+        "thermal": {
+          "cpu_change_percent": -6.370823994040675,
+          "wall_change_percent": -1.70200518826642,
+          "peak_rss_change_percent": -0.015076134479119485
+        },
+        "sealed": {
+          "cpu_change_percent": 1.9231865479929056,
+          "wall_change_percent": 2.2422790243262103,
+          "peak_rss_change_percent": -0.06040927282338071
+        },
+        "germ_flow": {
+          "cpu_change_percent": -4.7108321277626874,
+          "wall_change_percent": -5.370303901259188,
+          "peak_rss_change_percent": 0.09598346131127755
+        },
+        "mixed_germs": {
+          "cpu_change_percent": -5.957648214254297,
+          "wall_change_percent": -5.976762975647631,
+          "peak_rss_change_percent": 0.014779781259233182
+        },
+        "vacuum": {
+          "cpu_change_percent": 1.7959199571770945,
+          "wall_change_percent": 2.983465839484678,
+          "peak_rss_change_percent": 0.03867873443181846
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": true,
+        "no_scene_wall_regression_over_3_percent": true,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": true,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "d14fd630451e668d16789fcafc12ffa5b5bab1f73e0963054c15ef01fa020188"
+    }
+  },
+  "decision": "Not adopted: the original whole-frame gates fail. Diagnose instruction/cycle distribution before another cleanup variant.",
+  "base_commit": "512a95c82729ef9a45b9267f59bd68dfda6fe7e9",
+  "proposal_patch_sha256": "e68b79607e9d84b91cca949ba986ac07127dadb423f6d3137c50523b85be8a0b",
+  "ignored_diagnostic_test_excluded_from_proposal": true,
+  "proposal_rebuild_matches_tested_native": true,
+  "proposal_rebuild_native_sha256": "9dbb9536ab9b776be19521781effe6933aa1f0569166c5d6056c909203e25169"
+}

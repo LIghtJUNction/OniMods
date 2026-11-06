@@ -1,0 +1,486 @@
+diff --git i/mods/CycleTrim/OniSim/native/src/pressure_sweep.rs w/mods/CycleTrim/OniSim/native/src/pressure_sweep.rs
+index 96a8c4c..db5e5a3 100644
+--- i/mods/CycleTrim/OniSim/native/src/pressure_sweep.rs
++++ w/mods/CycleTrim/OniSim/native/src/pressure_sweep.rs
+@@ -6,6 +6,16 @@ use crate::fluid_helpers::{cvtt, smax, smin};
+ use crate::tables::{DiseaseTable, ElementTable};
+ use crate::world::{PhysicsWorld, Region};
+ 
++#[cfg(target_arch = "x86_64")]
++#[path = "pressure_triplet.rs"]
++mod triplet;
++
++#[derive(Clone, Copy, Default)]
++struct PressureMath {
++    flow: f32,
++    germs: i32,
++}
++
+ struct ReadPressure<'a> {
+     element: &'a [u16],
+     mass: &'a [f32],
+@@ -32,6 +42,8 @@ struct PressureSweep<'a> {
+     stride: usize,
+     sink_element: u16,
+     scan_direction: i32,
++    #[cfg(target_arch = "x86_64")]
++    packed: bool,
+ }
+ impl<'a> PressureSweep<'a> {
+     #[inline(always)]
+@@ -61,6 +73,8 @@ impl<'a> PressureSweep<'a> {
+             stride: world.stride,
+             sink_element: world.sink_element,
+             scan_direction: world.scan_direction,
++            #[cfg(target_arch = "x86_64")]
++            packed: crate::float_env::FloatEnv::capture().masks_all_exceptions(),
+         }
+     }
+ 
+@@ -121,6 +135,70 @@ fn pressure_cell(
+     }
+     let direction = world.scan_direction;
+     let side = cell.wrapping_add_signed(direction as isize);
++    let upper = cell + world.stride;
++    #[cfg(target_arch = "x86_64")]
++    if world.packed && source_phase == 1 {
++        let same_gas = |target: usize| {
++            world.read.element[target] == element
++                && world.write.element[target] == element
++                && world.read.properties[target] & 1 == 0
++        };
++        let targets = [side, upper, side + world.stride];
++        if targets.iter().all(|&target| same_gas(target)) {
++            // Same-gas pressure transfers cannot change any element identity.
++            // The old-snapshot arithmetic is independent; live writes stay in
++            // horizontal, vertical, diagonal order, including germ identities.
++            let math = triplet::calculate(
++                world.read.mass[cell],
++                targets.map(|target| world.read.mass[target]),
++                coefficient,
++                world.read.disease_count[cell],
++                targets.map(|target| world.read.disease_count[target]),
++            );
++            let horizontal = direction as f32
++                * update_pressure(
++                    world,
++                    elements,
++                    diseases,
++                    events,
++                    cell,
++                    element,
++                    source_phase,
++                    coefficient,
++                    side,
++                    Some(math[0]),
++                );
++            world.flow[cell][1] += horizontal;
++            world.flow[side][0] -= horizontal;
++            let vertical = update_pressure(
++                world,
++                elements,
++                diseases,
++                events,
++                cell,
++                element,
++                source_phase,
++                coefficient,
++                upper,
++                Some(math[1]),
++            );
++            world.flow[cell][2] += vertical;
++            world.flow[upper][3] -= vertical;
++            update_pressure(
++                world,
++                elements,
++                diseases,
++                events,
++                cell,
++                element,
++                source_phase,
++                coefficient,
++                targets[2],
++                Some(math[2]),
++            );
++            return true;
++        }
++    }
+     let horizontal = if pressure_target(world, elements, element, source_phase, side) {
+         direction as f32
+             * update_pressure(
+@@ -133,13 +211,13 @@ fn pressure_cell(
+                 source_phase,
+                 coefficient,
+                 side,
++                None,
+             )
+     } else {
+         0.0
+     };
+     world.flow[cell][1] += horizontal;
+     world.flow[side][0] -= horizontal;
+-    let upper = cell + world.stride;
+     let vertical = if world.write.element[cell] == element
+         && pressure_target(world, elements, element, source_phase, upper)
+     {
+@@ -153,6 +231,7 @@ fn pressure_cell(
+             source_phase,
+             coefficient,
+             upper,
++            None,
+         )
+     } else {
+         0.0
+@@ -173,6 +252,7 @@ fn pressure_cell(
+             source_phase,
+             coefficient,
+             side + world.stride,
++            None,
+         );
+     }
+     // All cell-mutating pressure calls are below the early-return guard.
+@@ -192,6 +272,7 @@ fn update_pressure(
+     phase_a: u8,
+     coefficient: f32,
+     b: usize,
++    prepared: Option<PressureMath>,
+ ) -> f32 {
+     // Preflight already enforces equal CellSOA lengths. Reborrow every field
+     // with one common checked length so LLVM can share index proofs. No
+@@ -221,15 +302,23 @@ fn update_pressure(
+     } else {
+         record_b.flow
+     };
+-    let flow = smax(smin(coefficient * (ma - mb), 0.125 * ma), -0.125 * mb);
++    let flow = prepared.map_or_else(
++        || smax(smin(coefficient * (ma - mb), 0.125 * ma), -0.125 * mb),
++        |math| math.flow,
++    );
+     let (src, dst, old_mass, amount, source_element, dest_element, dest_phase) = if flow < 0.0 {
+         (b, a, mb, -flow, element_b, element_a, phase_a)
+     } else {
+         (a, b, ma, flow, element_a, element_b, record_b.state & 3)
+     };
+     let amount = smin(amount, old_mass);
+-    let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
+-    let germ_count = cvtt(read_disease_count[src] as f32 * fraction);
++    let germ_count = prepared.map_or_else(
++        || {
++            let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
++            cvtt(read_disease_count[src] as f32 * fraction)
++        },
++        |math| math.germs,
++    );
+     let germ_id = write_disease_idx[src];
+     let source_temperature = write_temperature[src];
+     let dest_temperature = write_temperature[dst];
+@@ -333,6 +422,28 @@ mod tests {
+         PhysicsWorld::new(width, height, 42, &elements).unwrap_or_else(|_| panic!("test world"))
+     }
+ 
++    #[cfg(target_arch = "x86_64")]
++    #[test]
++    fn unmasked_exceptions_keep_the_scalar_pressure_path() {
++        let _restore = crate::float_env::FloatEnv::capture().install();
++        let mut world = world(4, 4);
++        for unmask in [0, 0x80, 0x100, 0x200, 0x400, 0x800, 0x1000] {
++            let requested = 0x1f80_u32 & !unmask;
++            // SAFETY: controls are valid; flags are clear. Construction only
++            // borrows storage and reads MXCSR, with no arithmetic or transfers.
++            let enabled = unsafe {
++                std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &requested,
++                    options(nostack, preserves_flags));
++                let enabled = PressureSweep::new(&mut world).packed;
++                let masked = 0x1f80_u32;
++                std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &masked,
++                    options(nostack, preserves_flags));
++                enabled
++            };
++            assert_eq!(enabled, unmask == 0, "unmasked={unmask:#x}");
++        }
++    }
++
+     #[test]
+     fn shortened_pressure_storage_is_rejected_before_writes() {
+         let truncate: [fn(&mut PhysicsWorld); 14] = [
+diff --git 1/mods/CycleTrim/OniSim/native/src/pressure_triplet.rs 2/mods/CycleTrim/OniSim/native/src/pressure_triplet.rs
+new file mode 100644
+index 0000000..1223f6f
+--- /dev/null
++++ 2/mods/CycleTrim/OniSim/native/src/pressure_triplet.rs
+@@ -0,0 +1,72 @@
++//! Independent old-snapshot arithmetic for three same-gas pressure edges.
++use super::PressureMath;
++use core::arch::x86_64::{
++    _mm_cvtepi32_ps, _mm_cvttps_epi32, _mm_div_ps, _mm_loadu_ps, _mm_max_ps, _mm_min_ps,
++    _mm_mul_ps, _mm_set_ps, _mm_set1_ps, _mm_setr_epi32, _mm_setzero_ps, _mm_storeu_ps,
++    _mm_storeu_si128, _mm_sub_ps,
++};
++
++#[inline(always)]
++pub(super) fn calculate(
++    mass: f32,
++    neighbours: [f32; 3],
++    coefficient: f32,
++    count: i32,
++    neighbour_counts: [i32; 3],
++) -> [PressureMath; 3] {
++    let mut flows = [0.0_f32; 4];
++    // SAFETY: SSE2 is part of x86_64. The store targets four valid f32s.
++    // The spare lane computes only exact finite operations (0 / 1).
++    unsafe {
++        let a = _mm_set_ps(1.0, mass, mass, mass);
++        let b = _mm_set_ps(1.0, neighbours[2], neighbours[1], neighbours[0]);
++        let k = _mm_set_ps(0.0, coefficient, coefficient, coefficient);
++        let flow = _mm_max_ps(
++            _mm_min_ps(
++                _mm_mul_ps(k, _mm_sub_ps(a, b)),
++                _mm_mul_ps(_mm_set1_ps(0.125), a),
++            ),
++            _mm_mul_ps(_mm_set1_ps(-0.125), b),
++        );
++        _mm_storeu_ps(flows.as_mut_ptr(), flow);
++    }
++
++    let mut amounts = [0.0_f32; 4];
++    let mut old_masses = [1.0_f32; 4];
++    let mut counts = [0_i32; 4];
++    for lane in 0..3 {
++        if flows[lane] < 0.0 {
++            amounts[lane] = -flows[lane];
++            old_masses[lane] = neighbours[lane];
++            counts[lane] = neighbour_counts[lane];
++        } else {
++            amounts[lane] = flows[lane];
++            old_masses[lane] = mass;
++            counts[lane] = count;
++        }
++    }
++    let mut germs = [0_i32; 4];
++    // SAFETY: every load/store covers one complete four-element local array;
++    // unaligned SSE2 accesses do not require stack alignment beyond the arrays.
++    unsafe {
++        let old = _mm_loadu_ps(old_masses.as_ptr());
++        let amount = _mm_min_ps(_mm_loadu_ps(amounts.as_ptr()), old);
++        let fraction = _mm_max_ps(
++            _mm_min_ps(_mm_div_ps(amount, old), _mm_set1_ps(1.0)),
++            _mm_setzero_ps(),
++        );
++        let count = _mm_cvtepi32_ps(_mm_setr_epi32(counts[0], counts[1], counts[2], 0));
++        _mm_storeu_si128(
++            germs.as_mut_ptr().cast(),
++            _mm_cvttps_epi32(_mm_mul_ps(count, fraction)),
++        );
++    }
++    std::array::from_fn(|lane| PressureMath {
++        flow: flows[lane],
++        germs: germs[lane],
++    })
++}
++
++#[cfg(test)]
++#[path = "pressure_triplet_tests.rs"]
++mod tests;
+diff --git 1/mods/CycleTrim/OniSim/native/src/pressure_triplet_tests.rs 2/mods/CycleTrim/OniSim/native/src/pressure_triplet_tests.rs
+new file mode 100644
+index 0000000..c8d6bd0
+--- /dev/null
++++ 2/mods/CycleTrim/OniSim/native/src/pressure_triplet_tests.rs
+@@ -0,0 +1,197 @@
++use super::*;
++use crate::fluid_helpers::{cvtt, smax, smin};
++use std::hint::black_box;
++
++#[derive(Clone, Copy, Debug)]
++struct Input {
++    mass: f32,
++    neighbours: [f32; 3],
++    coefficient: f32,
++    count: i32,
++    neighbour_counts: [i32; 3],
++}
++
++#[derive(Debug, PartialEq, Eq)]
++struct Observed {
++    flows: [u32; 3],
++    germs: [i32; 3],
++    environment: u32,
++}
++
++fn install(environment: u32) {
++    // SAFETY: tests pass only valid MXCSR controls and keep exceptions masked.
++    unsafe {
++        std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &environment,
++            options(nostack, preserves_flags));
++    }
++}
++
++fn observe(values: [PressureMath; 3]) -> Observed {
++    let mut environment = 0_u32;
++    // SAFETY: the pointer covers one u32. Every computed value is an explicit
++    // dependency so neither conversion nor flow arithmetic can follow STMXCSR.
++    unsafe {
++        std::arch::asm!(
++            "/* {f0} {f1} {f2} {g0:e} {g1:e} {g2:e} */",
++            "stmxcsr [{p}]",
++            f0 = in(xmm_reg) values[0].flow,
++            f1 = in(xmm_reg) values[1].flow,
++            f2 = in(xmm_reg) values[2].flow,
++            g0 = in(reg) values[0].germs,
++            g1 = in(reg) values[1].germs,
++            g2 = in(reg) values[2].germs,
++            p = in(reg) &mut environment,
++            options(nostack, preserves_flags),
++        );
++    }
++    Observed {
++        flows: values.map(|value| value.flow.to_bits()),
++        germs: values.map(|value| value.germs),
++        environment,
++    }
++}
++
++#[inline(never)]
++fn original_edge(
++    mass: f32,
++    neighbour: f32,
++    coefficient: f32,
++    count: i32,
++    other: i32,
++) -> PressureMath {
++    // A call boundary prevents SLP from merging independent reference edges
++    // into DIVPS with unused 0/0 lanes, which would add spurious invalid flags.
++    let (mass, neighbour, coefficient, count, other) =
++        black_box((mass, neighbour, coefficient, count, other));
++    let flow = smax(
++        smin(coefficient * (mass - neighbour), 0.125 * mass),
++        -0.125 * neighbour,
++    );
++    let (amount, old_mass, count) = if flow < 0.0 {
++        (-flow, neighbour, other)
++    } else {
++        (flow, mass, count)
++    };
++    let amount = smin(amount, old_mass);
++    let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
++    PressureMath {
++        flow,
++        germs: cvtt(count as f32 * fraction),
++    }
++}
++
++#[inline(never)]
++fn original(input: Input) -> Observed {
++    let input = black_box(input);
++    observe(std::array::from_fn(|lane| {
++        original_edge(
++            input.mass,
++            input.neighbours[lane],
++            input.coefficient,
++            input.count,
++            input.neighbour_counts[lane],
++        )
++    }))
++}
++
++#[inline(never)]
++fn packed(input: Input) -> Observed {
++    let input = black_box(input);
++    observe(calculate(
++        input.mass,
++        input.neighbours,
++        input.coefficient,
++        input.count,
++        input.neighbour_counts,
++    ))
++}
++
++fn compare(input: Input, environment: u32) {
++    install(environment);
++    let expected = original(input);
++    install(environment);
++    let actual = packed(input);
++    install(0x1f80);
++    assert_eq!(actual, expected, "input={input:?}, MXCSR={environment:#x}");
++}
++
++fn next(rng: &mut u32) -> u32 {
++    *rng ^= *rng << 13;
++    *rng ^= *rng >> 17;
++    *rng ^= *rng << 5;
++    *rng
++}
++
++#[test]
++fn pressure_triplet_preserves_words_germs_and_mxcsr_in_32_environments() {
++    let _restore = crate::float_env::FloatEnv::capture().install();
++    let words: [u32; 21] = [
++        0,
++        0x8000_0000,
++        1,
++        0x8000_0001,
++        0x007f_ffff,
++        0x0080_0000,
++        0x3c23_d70a,
++        0x3dcc_cccd,
++        0x3f00_0000,
++        0x3f80_0000,
++        0x4080_0000,
++        0xbf80_0000,
++        0x4eff_ffff,
++        0x4f00_0000,
++        0x7f7f_ffff,
++        0x7f80_0000,
++        0xff80_0000,
++        0x7fc0_1234,
++        0xffc0_5678,
++        0x7f80_0001,
++        0xff80_0001,
++    ];
++    let mut rng = 0x3141_5926;
++    let mut comparisons = 0;
++    for rounding in [0, 0x2000, 0x4000, 0x6000] {
++        for daz in [0, 0x40] {
++            for ftz in [0, 0x8000] {
++                for sticky in [0, 0x3f] {
++                    let environment = 0x1f80 | rounding | daz | ftz | sticky;
++                    for (a, &mass) in words.iter().enumerate() {
++                        for (b, &neighbour) in words.iter().enumerate() {
++                            for &coefficient in &words {
++                                compare(
++                                    Input {
++                                        mass: f32::from_bits(mass),
++                                        neighbours: [
++                                            f32::from_bits(neighbour),
++                                            f32::from_bits(words[(a + b + 1) % words.len()]),
++                                            f32::from_bits(words[(2 * a + b) % words.len()]),
++                                        ],
++                                        coefficient: f32::from_bits(coefficient),
++                                        count: next(&mut rng) as i32,
++                                        neighbour_counts: [i32::MAX, i32::MIN, 16_777_217],
++                                    },
++                                    environment,
++                                );
++                                comparisons += 3;
++                            }
++                        }
++                    }
++                    for _ in 0..10_000 {
++                        compare(
++                            Input {
++                                mass: f32::from_bits(next(&mut rng)),
++                                neighbours: std::array::from_fn(|_| f32::from_bits(next(&mut rng))),
++                                coefficient: f32::from_bits(next(&mut rng)),
++                                count: next(&mut rng) as i32,
++                                neighbour_counts: std::array::from_fn(|_| next(&mut rng) as i32),
++                            },
++                            environment,
++                        );
++                        comparisons += 3;
++                    }
++                }
++            }
++        }
++    }
++    eprintln!("CT_PRESSURE_CHECK edge_comparisons={comparisons}");
++}

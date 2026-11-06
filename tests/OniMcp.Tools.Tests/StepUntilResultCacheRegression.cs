@@ -56,8 +56,3 @@ internal static class StepUntilResultCacheRegression
             throw new System.InvalidOperationException("no handle preserves cancel-current behavior");
     }
 }
-
-internal static class StepUntilResultCacheRegressionEntry
-{
-    private static void Main() => StepUntilResultCacheRegression.Run();
-}

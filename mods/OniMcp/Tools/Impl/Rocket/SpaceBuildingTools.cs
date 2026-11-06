@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "space_side_building_control" },
                 Tags = new List<string> { "automation", "space", "rocket", "sensor", "railgun", "side-screen" },
                 Description = "航天建筑侧屏聚合工具：kind=comet_detector/cluster_location_sensor/railgun，action 使用对应旧 control 的动作。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -70,7 +69,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "space_scanner_control", "comet_detector_target_control" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
                 Description = "彗星探测器聚合工具：action=list 查询探测目标；action=set_target 设置 meteor_shower、ballistic_object 或 rocket",
                 Parameters = CometDetectorControlParams(),
@@ -95,7 +93,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "space_scanners_list", "comet_detector_targets_list" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=comet_detector action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -144,7 +141,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "space_scanner_target_set" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=comet_detector action=set_target。DLC 模式支持 meteor_shower、ballistic_object、rocket；基础版支持 meteor_shower 或 rocket",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

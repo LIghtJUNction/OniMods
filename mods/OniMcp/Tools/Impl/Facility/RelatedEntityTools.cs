@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "related_entities_side_screen_list", "side_related_entities_list" },
                 Tags = new List<string> { "controls", "side-screen", "related-entities", "navigation", "selection" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface kind=related action=list。列出实现 IRelatedEntities 的侧屏关联对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -67,7 +66,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "low",
                 Hidden = true,
-                Aliases = new List<string> { "related_entities_side_screen_focus", "side_related_entity_select" },
                 Tags = new List<string> { "controls", "side-screen", "related-entities", "navigation", "selection", "camera" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface kind=related action=focus。选择并聚焦 RelatedEntitiesSideScreen 中的一个关联对象",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

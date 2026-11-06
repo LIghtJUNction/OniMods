@@ -1,0 +1,46 @@
+{
+  "base_commit": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6",
+  "command": [
+    "flock",
+    "-n",
+    "-E",
+    "75",
+    "/tmp/oni-tiered-benchmark.lock",
+    "taskset",
+    "-c",
+    "0",
+    "/tmp/cycletrim-dotnet/dotnet",
+    "tests/CycleTrim.Fetch.Tests/bin/Release/net10.0/CycleTrim.Fetch.Tests.dll",
+    "--benchmark"
+  ],
+  "environment": {
+    "DOTNET_TieredCompilation": "0",
+    "DOTNET_gcServer": "0"
+  },
+  "source_sha256": {
+    "tests/CycleTrim.Fetch.Tests/FetchBenchmark.cs": "138f0a2a2d4495f6b155c339598510f506579580747ef6b101fcf2ce446638df",
+    "tests/CycleTrim.Fetch.Tests/FetchControlFixture.cs": "af0087c9b34bd29e9b6eb4d20116bc46151d124c75d0ea418ca78b9b3b401171",
+    "tests/CycleTrim.Fetch.Tests/FetchFixture.cs": "c46cb88c35863836a9b67e33aee5a29b42d242632c0a255ae458b3a3658b6d2b",
+    "tests/CycleTrim.Fetch.Tests/FetchRegression.cs": "056963ec59f57430f27588e8fc87f2d04d7752fafedcaa0a22730e1a0be5b755",
+    "tests/CycleTrim.Fetch.Tests/Program.cs": "559848f791409b1b435c7c77a61fd62e7fc223c6649ab3102675a0007cef4403",
+    "tests/CycleTrim.Fetch.Tests/CycleTrim.Fetch.Tests.csproj": "5cab0bba0dd703e74fb0277b22c49e91305461f94b32310298f168fed9174a7a",
+    "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df",
+    "mods/CycleTrim/Core/FetchCandidateBuffer.cs": "12a4773093392ceb9a46dfa0e31fd2bca65416052f8e383754449641c020cb59",
+    "mods/CycleTrim/Core/FetchLayoutControl.cs": "2d8fa170f7877cc6c6f84d901f08ea74026e180bc495240e9f74338f601a8e3f",
+    "mods/CycleTrim/Patches/FetchLayoutExperiment.cs": "b9add7891caf8eb7519839656e862ae5226eb7f0bea732744929f64ec90a2cce",
+    "mods/CycleTrim/Core/ThreadLocalObjectPool.cs": "a3ebbb23d0bbe8a3fb1fcb65f1a68edc2674ebc76b57ae8fc19e35798f210bc4"
+  },
+  "host_load_before": [
+    0.625,
+    1.86376953125,
+    2.267578125
+  ],
+  "complete": true,
+  "exit_code": 0,
+  "wall_seconds": 28.508362608001335,
+  "host_load_after": [
+    1.49365234375,
+    1.94384765625,
+    2.28125
+  ]
+}

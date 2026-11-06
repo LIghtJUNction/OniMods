@@ -19,22 +19,10 @@ namespace OniMcp.Server
     {
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
-            if (!string.IsNullOrEmpty(protocolVersion)
-                && !string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
-                && !IsSupportedProtocolVersion(protocolVersion))
+            if (!string.IsNullOrEmpty(protocolVersion) && !IsSupportedProtocolVersion(protocolVersion))
             {
                 SendJson(response, UnsupportedProtocolVersion(null, protocolVersion),
                     (int)HttpStatusCode.BadRequest);
-                return;
-            }
-
-            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
-                && !IsJsonRequestMediaType(request.ContentType))
-            {
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    "MCP 2026-07-28 POST requests require Content-Type: application/json"),
-                    (int)HttpStatusCode.UnsupportedMediaType);
                 return;
             }
 
@@ -68,8 +56,7 @@ namespace OniMcp.Server
             {
                 if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
                     return;
-                int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), statusCode);
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
                 return;
             }
 
@@ -90,21 +77,17 @@ namespace OniMcp.Server
             {
                 if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
                     return;
-                int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), statusCode);
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), 200);
                 return;
             }
 
-            // MCP 2026-07-28 is a stateless protocol era. Route it before the
-            // initialize/session code so legacy transport semantics remain untouched.
-            if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
+            string metadataVersion = (rawMessage["params"] as JObject)?["_meta"]?["io.modelcontextprotocol/protocolVersion"]?.ToString();
+            if (!string.IsNullOrEmpty(metadataVersion) && !IsSupportedProtocolVersion(metadataVersion))
+            {
+                SendJson(response, UnsupportedProtocolVersion(requestId, metadataVersion), 400);
                 return;
+            }
 
-            // Legacy compatibility remains permissive for an absent Accept header and
-            // for JSON-only clients because this server's 2025 POST path returns JSON.
-            // If a response-bearing request explicitly excludes JSON, however, do not
-            // send a media type the client said it cannot consume. Notifications and
-            // client responses stay on their existing 202 no-body path.
             bool isClientResponse = rawMessage["method"] == null
                 && (rawMessage["result"] != null || rawMessage["error"] != null);
             bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
@@ -163,11 +146,15 @@ namespace OniMcp.Server
             bool isNotification = rawMessage.Property("id") == null;
             bool isPingRequest = rpcRequest.Method == "ping" && !isNotification;
             var initializeVersion = rpcRequest.Params?["protocolVersion"];
-            if (isInitialize && (isNotification || initializeVersion?.Type != JTokenType.String
-                || !IsSupportedProtocolVersion((string)initializeVersion)))
+            if (isInitialize && (isNotification || initializeVersion?.Type != JTokenType.String))
             {
                 SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
-                    "initialize requires a request id and a supported protocolVersion"), 200);
+                    "initialize requires a request id and a protocolVersion string"), 200);
+                return;
+            }
+            if (isInitialize && !IsSupportedProtocolVersion((string)initializeVersion))
+            {
+                SendJson(response, UnsupportedProtocolVersion(rpcRequest.Id, (string)initializeVersion), 200);
                 return;
             }
             if (!isInitialize)
@@ -192,7 +179,7 @@ namespace OniMcp.Server
             }
 
             MainThreadHttpAdmissionLease admission;
-            if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, sessionId, false, out admission))
+            if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, sessionId, out admission))
                 return;
 
             if (isInitialize)
@@ -232,8 +219,7 @@ namespace OniMcp.Server
         private bool RejectUnacceptableLegacyJsonResponse(HttpListenerRequest request,
             HttpListenerResponse response, string protocolVersion, object requestId)
         {
-            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
-                || AcceptsLegacyJsonResponse(request))
+            if (AcceptsLegacyJsonResponse(request))
             {
                 return false;
             }
@@ -242,18 +228,6 @@ namespace OniMcp.Server
                 "Legacy MCP request does not accept application/json responses"),
                 (int)HttpStatusCode.NotAcceptable);
             return true;
-        }
-
-        private static bool IsJsonRequestMediaType(string contentType)
-        {
-            if (string.IsNullOrWhiteSpace(contentType))
-                return false;
-
-            int parameterSeparator = contentType.IndexOf(';');
-            string mediaType = parameterSeparator >= 0
-                ? contentType.Substring(0, parameterSeparator)
-                : contentType;
-            return string.Equals(mediaType.Trim(), "application/json", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool TryValidateCors(HttpListenerRequest request, out string origin)

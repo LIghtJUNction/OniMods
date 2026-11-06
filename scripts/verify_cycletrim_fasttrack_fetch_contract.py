@@ -113,7 +113,8 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
     )
     require_regex(
         busy_patch,
-        r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
+        r"return\s+CycleTrimPatchOptions\.ThrottleBusyDuplicants\s*&&\s*"
+        r"AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
         "CycleTrim busy-duplicant patch no longer uses the conservative type-presence guard",
         failures,
     )

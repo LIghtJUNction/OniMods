@@ -1,0 +1,76 @@
+[
+  {
+    "case": "complete",
+    "result": "accepted; all 22 summaries exactly reproduced"
+  },
+  {
+    "case": "missing",
+    "result": "rejected",
+    "reason": "missing or extra process records"
+  },
+  {
+    "case": "extra-duplicate",
+    "result": "rejected",
+    "reason": "missing or extra process records"
+  },
+  {
+    "case": "reordered",
+    "result": "rejected",
+    "reason": "process record sequence differs from protocol"
+  },
+  {
+    "case": "negative-position",
+    "result": "rejected",
+    "reason": "invalid process position"
+  },
+  {
+    "case": "bad-set",
+    "result": "rejected",
+    "reason": "process record sequence differs from protocol"
+  },
+  {
+    "case": "unknown-revision",
+    "result": "rejected",
+    "reason": "process record sequence differs from protocol"
+  },
+  {
+    "case": "invalid-time-0",
+    "result": "rejected",
+    "reason": "nonpositive or nonfinite timing"
+  },
+  {
+    "case": "invalid-time--1",
+    "result": "rejected",
+    "reason": "nonpositive or nonfinite timing"
+  },
+  {
+    "case": "invalid-time-nan",
+    "result": "rejected",
+    "reason": "nonpositive or nonfinite timing"
+  },
+  {
+    "case": "invalid-time-inf",
+    "result": "rejected",
+    "reason": "nonpositive or nonfinite timing"
+  },
+  {
+    "case": "wrong-output",
+    "result": "rejected",
+    "reason": "original/patched output mismatch"
+  },
+  {
+    "case": "wrong-direction-count",
+    "result": "rejected",
+    "reason": "direction-read mismatch"
+  },
+  {
+    "case": "all-revisions-wrong-power-count",
+    "result": "rejected",
+    "reason": "power query-count mismatch"
+  },
+  {
+    "case": "all-revisions-wrong-copy-bytes",
+    "result": "rejected",
+    "reason": "animation copy contract mismatch"
+  }
+]

@@ -53,7 +53,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "beds_list", "medical_assignables_list" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -97,7 +96,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "bed_assign", "medical_bed_assign", "assignable_set" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=set，并用 assignmentAction=assign/unassign/public",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -156,7 +154,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "equipment_slot_set", "ownables_slot_set", "bionic_upgrade_slot_set" },
                 Tags = new List<string> { "dupes", "equipment", "assignables", "ownables", "bionic", "side-screen" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=set_slot，并用 slotAction=assign/unassign/none",
