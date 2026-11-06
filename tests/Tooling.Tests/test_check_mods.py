@@ -18,6 +18,7 @@ class CheckModsTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.write("scripts/check_mods.py", RUNNER.read_text(encoding="utf-8"))
+        self.write("scripts/mod_test_plan.py", RUNNER.with_name("mod_test_plan.py").read_text(encoding="utf-8"))
         self.write("scripts/verify_sample.py", "print('sample source contract')\n")
 
     def write(self, relative, content):
@@ -119,6 +120,14 @@ class CheckModsTests(unittest.TestCase):
         result = self.run_runner("--dotnet", self.fake_dotnet())
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("FAIL tests/Fail.Tests/Fail.Tests.csproj", result.stderr)
+
+    def test_collector_runs_once_with_host_projects(self):
+        self.write("tests/Example.Tests/Example.Tests.csproj", "0")
+        self.add_unittest("tests/OniOnline.Tests/test_multiplayer_runtime.py", "collector")
+        result = self.run_runner("--dotnet", self.fake_dotnet())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "events.txt").read_text().splitlines(), ["collector"])
+        self.assertEqual(result.stdout.count("RUN tests/OniOnline.Tests\n"), 1)
 
     def test_missing_sdk_fails_before_running_checks(self):
         result = self.run_runner("--dotnet", str(self.root / "missing-sdk"))

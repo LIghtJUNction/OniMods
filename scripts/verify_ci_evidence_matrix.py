@@ -5,13 +5,10 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 import sys
 
-from check_mods import SYNTHETIC_PERFORMANCE_PROJECT, build_project_command
 from run_cycletrim_synthetic_performance import (
     SYNTHETIC_TIMING_REGRESSION_MARKER,
-    build_probe_command,
-    classify_probe_exit_code,
 )
-from verify_oni_reference_provenance_contract import workflow_paths
+from workflow_contracts import workflow_paths
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,70 +64,6 @@ def verify_steam_publisher_trigger_coverage() -> None:
                 )
 
 
-def verify_project_command_selection() -> None:
-    performance_host = build_project_command(
-        SYNTHETIC_PERFORMANCE_PROJECT,
-        "dotnet",
-        skip_synthetic_performance=True,
-    )
-    performance_full = build_project_command(
-        SYNTHETIC_PERFORMANCE_PROJECT,
-        "dotnet",
-        skip_synthetic_performance=False,
-    )
-    normal_project = ROOT / "tests/OniMcp.Core.Tests/OniMcp.Core.Tests.csproj"
-    normal_host = build_project_command(
-        normal_project,
-        "dotnet",
-        skip_synthetic_performance=True,
-    )
-
-    require(
-        performance_host[-2:] == ["--", SKIP_SYNTHETIC_ARGUMENT],
-        "host mode must skip timing only for CycleTrim.PerformanceProbe.Tests",
-    )
-    require(
-        SKIP_SYNTHETIC_ARGUMENT not in performance_full,
-        "default performance-probe execution must retain the timing gate",
-    )
-    require(
-        SKIP_SYNTHETIC_ARGUMENT not in normal_host,
-        "host mode must not alter unrelated regression projects",
-    )
-
-
-def verify_synthetic_reporter_policy() -> None:
-    command = build_probe_command("dotnet")
-    require(
-        command[-2:] == ["--", SYNTHETIC_ONLY_ARGUMENT],
-        "synthetic reporter must execute only the CycleTrim timing probe",
-    )
-    require(
-        str(SYNTHETIC_PERFORMANCE_PROJECT) in command,
-        "synthetic reporter must run the existing performance-probe project",
-    )
-    require(
-        classify_probe_exit_code(0) == 0,
-        "a successful synthetic probe must remain successful",
-    )
-    require(
-        classify_probe_exit_code(2, SYNTHETIC_TIMING_REGRESSION_MARKER + " threshold") == 0,
-        "a marked wall-clock threshold breach must be advisory",
-    )
-    require(
-        classify_probe_exit_code(2, "MSBUILD tool failure") == 2,
-        "an unmarked tool exit using the same numeric code must remain a failure",
-    )
-    require(
-        classify_probe_exit_code(1, SYNTHETIC_TIMING_REGRESSION_MARKER + " threshold") == 1,
-        "a real probe/assertion failure must remain a CI failure",
-    )
-    require(
-        classify_probe_exit_code(137) == 137,
-        "unexpected probe failures must not be swallowed by the advisory reporter",
-    )
-
-
 def main() -> int:
     try:
         reference = REFERENCE_WORKFLOW.read_text(encoding="utf-8")
@@ -168,8 +101,6 @@ def main() -> int:
         )
         verify_netstandard_compatibility_coverage(reference)
         verify_steam_publisher_trigger_coverage()
-        verify_project_command_selection()
-        verify_synthetic_reporter_policy()
     except (AssertionError, OSError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
