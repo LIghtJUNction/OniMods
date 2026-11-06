@@ -3,68 +3,19 @@
 
 import argparse
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 
+from mod_test_plan import ROOT, host_regression_checks
 
-ROOT = Path(__file__).resolve().parents[1]
+
 GAME_CHECKS = {
     "verify_cycletrim_target_contract.py": "requires the installed game's Assembly-CSharp.dll and ilspycmd",
     "verify_cycletrim_release_binary.py": "requires a built CycleTrim Release DLL and ilspycmd",
     "verify_cycletrim_navgrid_source_contract.py": "requires the pinned online ONI 744825 decompilation source",
     "verify_restart_packaging.py": "requires an OniMcp Debug build and distribution archive",
 }
-SYNTHETIC_PERFORMANCE_PROJECT = (
-    ROOT / "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj"
-)
-
-
-def build_project_command(
-    path: Path,
-    dotnet: str,
-    skip_synthetic_performance: bool,
-) -> list[str]:
-    command = [
-        dotnet,
-        "run",
-        "--project",
-        str(path),
-        "--configuration",
-        "Release",
-        "-p:ImportDirectoryBuildProps=false",
-        "-p:TreatWarningsAsErrors=true",
-    ]
-    if skip_synthetic_performance and path == SYNTHETIC_PERFORMANCE_PROJECT:
-        command.extend(["--", "--skip-synthetic-performance"])
-    return command
-
-
-def host_regression_checks(dotnet: str, skip_synthetic_performance: bool) -> list[tuple[str, list[str]]]:
-    """Discover host projects and their optional integration entry points."""
-    projects = sorted((ROOT / "tests").glob("*/*.csproj"))
-    if not projects:
-        return []
-
-    checks = [
-        (str(path.relative_to(ROOT)), build_project_command(path, dotnet, skip_synthetic_performance))
-        for path in projects
-    ]
-    adapter = ROOT / "tests/OniOnline.Tests/OniOnline.Tests.csproj"
-    if adapter in projects:
-        checks.append((
-            "OniOnline native-origin adapter regressions",
-            build_project_command(adapter, dotnet, skip_synthetic_performance)
-            + ["-p:OriginAdapterTests=true"],
-        ))
-    collector = ROOT / "tests/OniOnline.Tests/test_multiplayer_runtime.py"
-    if collector.is_file():
-        checks.append((
-            "OniOnline multiplayer collector regressions",
-            [sys.executable, str(collector), "-v"],
-        ))
-    return checks
 
 
 def main() -> int:
@@ -86,7 +37,7 @@ def main() -> int:
         dotnet = shutil.which(args.dotnet)
         if dotnet is None:
             parser.error(".NET 10 SDK was not found; install it or pass --dotnet PATH")
-        host_checks = host_regression_checks(dotnet, args.skip_synthetic_performance)
+        host_checks = host_regression_checks(dotnet, args.skip_synthetic_performance, root=ROOT)
         if not host_checks:
             parser.error("no Mod regression projects found under tests/")
         checks.extend(host_checks)
