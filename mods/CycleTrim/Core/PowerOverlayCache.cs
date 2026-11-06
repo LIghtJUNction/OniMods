@@ -10,20 +10,31 @@ namespace CycleTrim.Core
     {
         internal const int MaximumEntries = 4096;
 
-        [ThreadStatic]
-        private static PowerOverlayCache current;
-        [ThreadStatic]
-        private static PowerOverlayCache spare;
+        [ThreadStatic] private static PowerOverlayCache current;
+        [ThreadStatic] private static PowerOverlayCache spare;
 
-        private readonly Dictionary<CircuitKey, float> values =
-            new Dictionary<CircuitKey, float>();
+        // A normal update has one manager and small circuit IDs. Index those
+        // answers directly; other managers and large IDs retain identity keys.
+        // Allocate lazily, grow geometrically, and bound the dense payload at
+        // 4096 * 8 bytes. Entries contain no managed references.
+        private Entry[] dense;
+        private object primaryManager;
+        private Dictionary<CircuitKey, float> overflow;
+        private int denseCount;
+        private uint epoch = 1;
         private PowerOverlayCache previous;
         private bool enabled;
+
+        private struct Entry
+        {
+            internal uint Epoch;
+            internal float Watts;
+        }
 
         internal static PowerOverlayCache Current { get { return current; } }
         internal int Version { get; private set; }
         internal int EnvironmentVersion { get; private set; }
-        internal int Count { get { return values.Count; } }
+        internal int Count { get { return denseCount + (overflow == null ? 0 : overflow.Count); } }
         internal bool Enabled { get { return enabled; } }
         internal bool CompatibilityChecked { get; private set; }
 
@@ -61,18 +72,55 @@ namespace CycleTrim.Core
                 spare = lease;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryGet(object manager, ushort circuit, out float watts)
         {
             watts = 0f;
-            return enabled && manager != null
-                && values.TryGetValue(new CircuitKey(manager, circuit), out watts);
+            if (!enabled || manager == null)
+                return false;
+            if (ReferenceEquals(manager, primaryManager) && circuit < MaximumEntries)
+            {
+                if (dense == null || circuit >= dense.Length || dense[circuit].Epoch != epoch)
+                    return false;
+                watts = dense[circuit].Watts;
+                return true;
+            }
+            return overflow != null && overflow.TryGetValue(new CircuitKey(manager, circuit), out watts);
         }
 
         internal void Remember(object manager, ushort circuit, float watts, int version)
         {
-            if (enabled && ReferenceEquals(current, this) && Version == version
-                && manager != null && values.Count < MaximumEntries)
-                values[new CircuitKey(manager, circuit)] = watts;
+            if (!enabled || !ReferenceEquals(current, this) || Version != version
+                || manager == null || Count >= MaximumEntries)
+                return;
+
+            if (primaryManager == null)
+                primaryManager = manager;
+            if (ReferenceEquals(manager, primaryManager) && circuit < MaximumEntries)
+            {
+                if (dense == null || circuit >= dense.Length)
+                    GrowDense(circuit);
+                ref var entry = ref dense[circuit];
+                if (entry.Epoch != epoch)
+                    denseCount++;
+                entry.Watts = watts;
+                entry.Epoch = epoch;
+            }
+            else
+            {
+                if (overflow == null)
+                    overflow = new Dictionary<CircuitKey, float>();
+                overflow[new CircuitKey(manager, circuit)] = watts;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void GrowDense(ushort circuit)
+        {
+            var capacity = dense == null ? 16 : dense.Length;
+            while (capacity <= circuit)
+                capacity *= 2;
+            Array.Resize(ref dense, capacity);
         }
 
         internal void ConfirmCompatibility()
@@ -88,7 +136,18 @@ namespace CycleTrim.Core
 
         private void Invalidate()
         {
-            values.Clear();
+            primaryManager = null;
+            denseCount = 0;
+            if (overflow != null)
+                overflow.Clear();
+            // Invalidation is constant-time for the dense table. On rollover,
+            // clear stamps before epoch 1 can match an ancient answer again.
+            if (unchecked(++epoch) == 0)
+            {
+                if (dense != null)
+                    Array.Clear(dense, 0, dense.Length);
+                epoch = 1;
+            }
             CompatibilityChecked = false;
             unchecked { Version++; }
         }
