@@ -86,7 +86,7 @@ internal partial class BuildingDef
     internal ObjectLayer ReplacementLayer { get; set; }
 }
 internal partial class Building { internal BuildingDef Def { get; set; } }
-internal sealed class BuildingComplete : Building { }
+internal class BuildingComplete : Building { }
 internal interface IHaveUtilityNetworkMgr { IUtilityNetworkMgr GetNetworkManager(); }
 internal interface IUtilityNetworkMgr
 {
@@ -142,10 +142,6 @@ internal static class TileVisualizer
 }
 namespace OniMcp.Tools
 {
-    public static partial class ToolUtil
-    {
-        internal static bool CellMatchesWorld(int cell, int worldId) => worldId == 0;
-    }
     public static partial class BuildPlanningTools
     {
         internal struct CellCoord

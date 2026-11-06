@@ -24,6 +24,9 @@ internal static class Program
         BuildMaterialSufficiencyRegression.Run();
         RadboltDirectionEligibilityRegression.Run();
         AttackDesignationPolicyRegression.Run();
+        NativeOrderPolicyRegression.Run();
+        NativeControlRegression.Run();
+        ProductionQueueHandlerRegression.Run();
         PrintingPodClaimCleanupRegression.Run();
 
         OniToolRegistry.Tools["ok"] = new McpTool

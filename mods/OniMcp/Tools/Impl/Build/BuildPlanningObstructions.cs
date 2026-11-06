@@ -183,8 +183,10 @@ namespace OniMcp.Tools
                     continue;
                 }
 
-                if (DigTool.PlaceDig(target.Cell, context.NextDistance()) != null)
+                var digPlacer = TileDigPlacement.Place(target.Cell, placement.WorldId, context.NextDistance());
+                if (digPlacer != null)
                 {
+                    SetPriority(digPlacer, ToolUtil.GetInt(args, "priority") ?? 5);
                     marked++;
                     context.Marked++;
                     targetResults.Add(AutoDigTarget(target, "marked"));
@@ -297,11 +299,7 @@ namespace OniMcp.Tools
 
         private static bool IsNaturalDiggableSolidCell(int cell, int worldId)
         {
-            return Grid.IsValidCell(cell)
-                && Grid.IsVisible(cell)
-                && ToolUtil.CellMatchesWorld(cell, worldId)
-                && Grid.Solid[cell]
-                && !Grid.Foundation[cell];
+            return TileDigPlacement.RejectionReason(cell, worldId) == null;
         }
 
         private static Dictionary<string, object> AutoDigTarget(FootprintCell cell, string status)

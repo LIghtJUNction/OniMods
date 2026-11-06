@@ -141,7 +141,7 @@ internal sealed class LogicTemperatureSensor : TestThreshold
 internal interface ICircuitConnected { }
 internal sealed class TestCircuitConnection : ICircuitConnected { }
 internal sealed class TestElectricalSystem { internal bool IsDirty { get; set; } }
-internal sealed class Game
+internal sealed partial class Game
 {
     internal static Game Instance { get; set; }
     internal CircuitManager circuitManager { get; set; }

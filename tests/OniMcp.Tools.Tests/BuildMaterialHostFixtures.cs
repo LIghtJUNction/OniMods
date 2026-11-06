@@ -27,38 +27,8 @@ internal static class ElementLoader
     internal static Element GetElement(Tag tag) => tag.IsValid && Elements.TryGetValue(tag.Name, out var value) ? value : null;
 }
 
-internal sealed class DiscoveredResources
-{
-    internal static DiscoveredResources Instance => null;
-    internal IEnumerable<Tag> GetDiscoveredResourcesFromTag(Tag tag) => new Tag[0];
-}
-
-internal sealed class Navigator
-{
-    internal bool CanReach(int cell) => true;
-}
-
-internal sealed class MinionIdentity
-{
-    internal int WorldId { get; set; }
-    internal GameObject gameObject { get; } = new GameObject();
-    internal int GetMyWorldId() => WorldId;
-    internal T GetComponent<T>() where T : class => gameObject.GetComponent<T>();
-}
-
-internal static partial class Components
-{
-    internal static class LiveMinionIdentities
-    {
-        internal static readonly List<MinionIdentity> Items = new List<MinionIdentity>();
-    }
-}
-
-internal static partial class Grid
-{
-    internal static readonly int[] WorldIdx = new int[1000];
-    internal static bool IsWorldValidCell(int cell) => cell >= 0 && cell < WorldIdx.Length;
-}
+// Shared native object, discovery, navigation and world-index fixtures live in
+// NativeControlTestDoubles and NativeFilterTestDoubles.
 
 namespace OniMcp.Tools
 {

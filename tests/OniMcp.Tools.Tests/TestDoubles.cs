@@ -147,7 +147,7 @@ namespace UnityEngine
         internal static int frameCount { get; set; }
     }
 
-    internal static class Mathf
+    internal static partial class Mathf
     {
         internal static int RoundToInt(float value) => (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
@@ -168,5 +168,5 @@ internal partial class BuildingDef
     public float[] Mass { get; set; }
     public string[] MaterialCategory { get; set; }
     public float MassTier { get; set; }
-    internal List<Tag> DefaultElements() => ElementLoader.Elements.Keys.Select(name => new Tag(name)).ToList();
+    internal IList<Tag> DefaultElements() => Defaults ?? ElementLoader.Elements.Keys.Select(name => new Tag(name)).ToList();
 }

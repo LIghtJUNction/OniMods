@@ -68,24 +68,10 @@ namespace OniMcp.Tools
                         for (int x = rect["x1"]; x <= rect["x2"]; x++)
                         {
                             int cell = Grid.XYToCell(x, y);
-                            if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                            string rejection = TileDigPlacement.RejectionReason(cell, worldId);
+                            if (rejection != null)
                             {
-                                IncrementSkip(skipped, "invalid_or_wrong_world");
-                                continue;
-                            }
-                            if (!Grid.IsVisible(cell))
-                            {
-                                IncrementSkip(skipped, "not_visible");
-                                continue;
-                            }
-                            if (!Grid.Solid[cell])
-                            {
-                                IncrementSkip(skipped, "not_solid");
-                                continue;
-                            }
-                            if (Grid.Foundation[cell])
-                            {
-                                IncrementSkip(skipped, "foundation_or_constructed_tile");
+                                IncrementSkip(skipped, rejection);
                                 continue;
                             }
                             var existingDig = Grid.Objects[cell, (int)ObjectLayer.DigPlacer];
@@ -112,6 +98,13 @@ namespace OniMcp.Tools
                                 continue;
                             }
 
+                            var digPlacer = dryRun ? null : TileDigPlacement.Place(cell, worldId, dist++);
+                            if (!dryRun && digPlacer == null)
+                            {
+                                IncrementSkip(skipped, "placement_rejected");
+                                continue;
+                            }
+
                             kgTotal += ToolUtil.SafeFloat(Grid.Mass[cell]);
                             riskBuilder.ScanTarget(cell, x, y, worldId);
                             targetCells.Add(cell);
@@ -124,7 +117,6 @@ namespace OniMcp.Tools
                                 continue;
                             }
 
-                            var digPlacer = DigTool.PlaceDig(cell, dist++);
                             if (digPlacer != null)
                             {
                                 marked++;

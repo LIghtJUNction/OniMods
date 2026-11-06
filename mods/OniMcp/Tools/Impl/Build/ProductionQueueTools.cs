@@ -38,14 +38,28 @@ namespace OniMcp.Tools
                     if (fabricator == null)
                         return CallToolResult.Error("ComplexFabricator target not found");
 
-                    var items = args["items"] as JArray ?? new JArray();
+                    var itemsToken = args["items"];
+                    if (itemsToken != null && itemsToken.Type != JTokenType.Null && !(itemsToken is JArray))
+                        return CallToolResult.Error("items must be an array");
+                    var items = itemsToken as JArray ?? new JArray();
                     bool clearAll = ToolUtil.GetBool(args, "clearAll", false);
                     if (!clearAll && items.Count == 0)
                         return CallToolResult.Error("items must contain at least one operation unless clearAll=true");
 
-                    var defaults = args["defaults"] as JObject ?? args["defaultArguments"] as JObject;
+                    // A malformed container is not the same as an omitted one.
+                    // In particular, never turn invalid items into clearAll-only
+                    // or silently drop invalid defaults before committing a batch.
+                    var defaultsToken = args["defaults"];
+                    var defaultArgumentsToken = args["defaultArguments"];
+                    if (defaultsToken != null && defaultsToken.Type != JTokenType.Null && !(defaultsToken is JObject))
+                        return CallToolResult.Error("defaults must be an object");
+                    if (defaultArgumentsToken != null && defaultArgumentsToken.Type != JTokenType.Null && !(defaultArgumentsToken is JObject))
+                        return CallToolResult.Error("defaultArguments must be an object");
+                    var defaults = defaultsToken as JObject ?? defaultArgumentsToken as JObject;
                     var before = QueueSummary(fabricator);
                     var changes = new List<Dictionary<string, object>>();
+                    var plannedCounts = new Dictionary<ComplexRecipe, int>();
+                    var updates = new List<KeyValuePair<ComplexRecipe, int>>();
                     if (clearAll)
                     {
                         foreach (var recipe in fabricator.GetRecipes())
@@ -53,7 +67,8 @@ namespace OniMcp.Tools
                             int oldCount = fabricator.GetRecipeQueueCount(recipe);
                             if (oldCount == 0)
                                 continue;
-                            fabricator.SetRecipeQueueCount(recipe, 0);
+                            plannedCounts[recipe] = 0;
+                            updates.Add(new KeyValuePair<ComplexRecipe, int>(recipe, 0));
                             changes.Add(new Dictionary<string, object>
                             {
                                 ["recipeId"] = recipe.id,
@@ -80,12 +95,16 @@ namespace OniMcp.Tools
 
                         string mode = (item["mode"]?.ToString() ?? "set").Trim().ToLowerInvariant();
                         int requested = Math.Max(0, ToolUtil.GetInt(item, "count") ?? 1);
-                        int oldCount = fabricator.GetRecipeQueueCount(recipe);
+                        int oldCount;
+                        if (!plannedCounts.TryGetValue(recipe, out oldCount))
+                            oldCount = fabricator.GetRecipeQueueCount(recipe);
                         int next;
-                        if (!TryComputeQueueCount(oldCount, mode, requested, out next))
-                            return CallToolResult.Error("mode must be set, add, remove, infinite or clear");
+                        string error;
+                        if (!ProductionQueuePolicy.TryCompute(recipe, oldCount, mode, requested, out next, out error))
+                            return CallToolResult.Error(error);
 
-                        fabricator.SetRecipeQueueCount(recipe, next);
+                        plannedCounts[recipe] = next;
+                        updates.Add(new KeyValuePair<ComplexRecipe, int>(recipe, next));
                         changes.Add(new Dictionary<string, object>
                         {
                             ["recipeId"] = recipe.id,
@@ -93,10 +112,15 @@ namespace OniMcp.Tools
                             ["mode"] = mode,
                             ["requested"] = requested,
                             ["before"] = FormatQueueCount(oldCount),
-                            ["after"] = FormatQueueCount(fabricator.GetRecipeQueueCount(recipe)),
-                            ["changed"] = oldCount != fabricator.GetRecipeQueueCount(recipe)
+                            ["after"] = FormatQueueCount(next),
+                            ["changed"] = oldCount != next
                         });
                     }
+
+                    // Validate the entire request before clearAll or any item
+                    // can change a queue. Repeated recipes use planned counts.
+                    foreach (var update in updates)
+                        fabricator.SetRecipeQueueCount(update.Key, update.Value);
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {

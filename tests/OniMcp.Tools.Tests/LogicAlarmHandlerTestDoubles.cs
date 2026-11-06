@@ -20,10 +20,13 @@ internal sealed class LogicAlarm
     internal void UpdateNotification(bool clear) { UpdateCalls++; }
 }
 
-internal sealed class AlarmTestBuilding
+internal sealed class AlarmTestBuilding : BuildingComplete
 {
-    internal GameObject gameObject { get; set; }
-    internal int WorldId { get; set; }
+    internal int WorldId
+    {
+        get { return gameObject.WorldId; }
+        set { gameObject.WorldId = value; }
+    }
 }
 
 internal sealed class SpaceHeater
@@ -34,24 +37,8 @@ internal sealed class SpaceHeater
     internal void SetUserSpecifiedPowerConsumptionValue(float value) => throw new NotSupportedException();
 }
 
-internal static partial class Components
-{
-    internal static class BuildingCompletes
-    {
-        internal static readonly List<AlarmTestBuilding> Items = new List<AlarmTestBuilding>();
-    }
-}
-
 namespace OniMcp.Tools
 {
-    public static partial class ToolUtil
-    {
-        internal static bool GameObjectMatchesWorld(GameObject target, int worldId)
-        {
-            return worldId < 0 || target.GetComponent<AlarmTestBuilding>().WorldId == worldId;
-        }
-    }
-
     public static partial class MiscSideScreenTools
     {
         private static Dictionary<string, McpToolParameter> RectParams(Dictionary<string, McpToolParameter> parameters) => parameters;

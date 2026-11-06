@@ -253,6 +253,8 @@ namespace OniMcp.Tools
                     ["dropIncorrectOnFilterChange"] = tree.dropIncorrectOnFilterChange,
                     ["storageCategories"] = tree.GetFilterStorage()?.storageFilters.Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList()
                 };
+                if (includeOptions)
+                    treeInfo["options"] = TreeFilterSelection.GetOptions(tree).Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
                 result["tree"] = treeInfo;
             }
 
@@ -267,7 +269,8 @@ namespace OniMcp.Tools
                     ["currentlyUserAssignable"] = flat.currentlyUserAssignable
                 };
                 if (includeOptions)
-                    flatInfo["options"] = flat.tagOptions.Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
+                    flatInfo["options"] = (tree != null ? TreeFilterSelection.GetOptions(tree) : new HashSet<Tag>())
+                        .Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
                 result["flat"] = flatInfo;
             }
 

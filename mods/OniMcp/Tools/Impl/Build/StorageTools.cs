@@ -101,22 +101,12 @@ namespace OniMcp.Tools
                     if (tags.Count == 0)
                         return CallToolResult.Error("tags must contain at least one resource tag");
 
-                    string mode = (args["mode"]?.ToString() ?? "replace").ToLowerInvariant();
+                    string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
                     if (mode != "replace" && mode != "add" && mode != "remove")
                         return CallToolResult.Error("mode must be replace, add, or remove");
-
-                    HashSet<string> selected;
-                    string eligibilityError;
-                    if (!TreeFilterEligibility.TryApply(
-                        mode,
-                        filterable.GetTags().Select(tag => tag.Name),
-                        tags.Select(tag => tag.Name),
-                        TreeFilterSelectableTags.For(target.GameObject, filterable),
-                        out selected,
-                        out eligibilityError))
-                        return CallToolResult.Error(eligibilityError);
-
-                    filterable.UpdateFilters(new HashSet<Tag>(selected.Select(name => new Tag(name))));
+                    if (!TreeFilterSelection.TryApply(filterable, tags, mode, out error))
+                        return CallToolResult.Error(error);
+                    target.AcceptedTags = filterable.GetTags().Select(tag => tag.Name).OrderBy(tag => tag).ToList();
                     return CallToolResult.Text(JsonConvert.SerializeObject(target.ToDictionary(includeItems: false), McpJsonUtil.Settings));
                 }
             };
