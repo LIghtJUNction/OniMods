@@ -66,6 +66,12 @@ namespace CycleTrim
         [RestartRequired]
         public bool OptimizeAnimationSymbols { get; set; }
 
+        [Option("状态机查询复用 / State machine lookups",
+            "复用列表未变化时的状态机查询结果，减少重复扫描。默认关闭，需要重启游戏。",
+            "优化 / Optimizations")]
+        [RestartRequired]
+        public bool OptimizeStateMachineLookups { get; set; }
+
         [Option("性能诊断日志 / Performance diagnostics",
             "向 Player.log 输出耗时和内存统计，用于反馈问题。统计本身有额外开销，平时保持关闭。需要重启游戏。",
             "诊断 / Diagnostics")]
