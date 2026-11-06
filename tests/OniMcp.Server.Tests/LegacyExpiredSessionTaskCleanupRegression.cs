@@ -12,11 +12,11 @@ using System.Threading.Tasks;
 using OniMcp.Config;
 using OniMcp.Server;
 
-internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
+internal static class LegacyExpiredSessionTaskCleanupRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunExpiredSessionTaskCleanupRegression();
         RunDirectExpiredSessionTaskCleanupRegression();

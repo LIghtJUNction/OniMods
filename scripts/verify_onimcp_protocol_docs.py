@@ -1,66 +1,54 @@
 #!/usr/bin/env python3
-"""Keep public OniMcp protocol docs aligned with the implemented dual-era transport."""
+"""Check public protocol examples against the supported session transport."""
 
 from pathlib import Path
+import re
 import sys
 
+
 ROOT = Path(__file__).resolve().parents[1]
-API_GUIDE = ROOT / "docs/api-developer-guide.md"
-TOOLS_REFERENCE = ROOT / "docs/mcp-tools-reference.md"
-README = ROOT / "mods/OniMcp/README.md"
+PROTOCOL_SOURCE = ROOT / "mods/OniMcp/Server/McpHttpServerProtocolTasks.cs"
+DOCUMENTS = (
+    ROOT / "docs/api-developer-guide.md",
+    ROOT / "docs/mcp-tools-reference.md",
+    ROOT / "mods/OniMcp/README.md",
+    ROOT / "mods/OniMcp/README_EN.md",
+)
 
 
-def fail(message: str) -> None:
-    print(f"FAIL: {message}", file=sys.stderr)
-    raise SystemExit(1)
+def validate_document(text: str, version: str) -> None:
+    for required in (version, "initialize", "Mcp-Session-Id"):
+        if required not in text:
+            raise ValueError(f"missing supported session guidance: {required}")
 
-
-def require(text: str, token: str, label: str) -> None:
-    if token not in text:
-        fail(f"{label} is missing {token!r}")
+    for example in re.findall(r"```[^\n]*\n(.*?)```", text, re.DOTALL):
+        versions = re.findall(
+            r"\bMcp-Protocol-Version\s*:\s*(\d{4}-\d{2}-\d{2})", example, re.IGNORECASE
+        )
+        versions += re.findall(
+            r'"(?:io\.modelcontextprotocol/)?protocolVersion"\s*:\s*"([^"]+)"', example
+        )
+        if any(value != version for value in versions):
+            raise ValueError(f"example uses an unsupported protocol: {versions}")
+        if re.search(r'"method"\s*:\s*"server/discover"', example):
+            raise ValueError("example invokes retired server/discover")
 
 
 def main() -> int:
-    api = API_GUIDE.read_text(encoding="utf-8")
-    tools = TOOLS_REFERENCE.read_text(encoding="utf-8")
-    readme = README.read_text(encoding="utf-8")
-
-    for label, text in (
-        ("api developer guide", api),
-        ("MCP tools reference", tools),
-        ("OniMcp README", readme),
-    ):
-        require(text, "2026-07-28", label)
-        require(text, "server/discover", label)
-        require(text, "2025-11-25", label)
-        require(text, "initialize", label)
-        require(text, "Mcp-Session-Id", label)
-
-    for label, text in (("api developer guide", api), ("MCP tools reference", tools)):
-        require(text, "Mcp-Method", label)
-        require(text, "Mcp-Name", label)
-        require(text, "_meta", label)
-        require(text, "benchmark", label)
-
-    if "第一个请求必须是 `initialize`" in api:
-        fail("api developer guide still claims every client must initialize")
-    if "非 `initialize` 请求必须携带会话协商后的 `Mcp-Session-Id`" in tools:
-        fail("MCP tools reference still applies legacy session requirements to modern requests")
-
-    modern_no_session_phrases = (
-        "不创建、要求或返回 `Mcp-Session-Id`",
-        "不要求或返回 `Mcp-Session-Id`",
-        "不发送 `Mcp-Session-Id`",
-    )
-    if not any(phrase in api for phrase in modern_no_session_phrases):
-        fail("api developer guide does not state that modern requests are sessionless")
-    if not any(phrase in tools for phrase in modern_no_session_phrases):
-        fail("MCP tools reference does not state that modern requests are sessionless")
-
-    require(api, "只读 `benchmark`", "api developer guide")
-    require(tools, "Modern `2026-07-28` `tools/list`: 当前只广告只读 `benchmark`", "MCP tools reference")
-
-    print("OK: public OniMcp docs describe the 2026 stateless path and 2025 legacy fallback")
+    try:
+        source = PROTOCOL_SOURCE.read_text(encoding="utf-8")
+        version = re.search(r'CurrentProtocolVersion\s*=\s*"([^"]+)"', source)
+        if version is None:
+            raise ValueError("supported protocol version is missing from the server")
+        for path in DOCUMENTS:
+            try:
+                validate_document(path.read_text(encoding="utf-8"), version.group(1))
+            except ValueError as error:
+                raise ValueError(f"{path.relative_to(ROOT)}: {error}") from error
+    except (OSError, ValueError) as error:
+        print(f"FAIL: {error}", file=sys.stderr)
+        return 1
+    print(f"OK: public examples use the supported {version.group(1)} session protocol")
     return 0
 
 
