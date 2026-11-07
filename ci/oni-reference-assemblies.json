@@ -248,10 +248,14 @@
       "extract": [
         {
           "name": "System.Memory.dll",
-          "entry": "lib/net461/System.Memory.dll"
+          "entry": "lib/net461/System.Memory.dll",
+          "size": 142240,
+          "sha256": "bf3fb84664f4097f1a8a9bc71a51dcf8cf1a905d4080a4d290da1730866e856f"
         }
       ],
-      "note": "Compile-only Microsoft System.Memory API reference for the net48 compatibility build; not copied into the game Mod package."
+      "note": "Compile-only Microsoft System.Memory API reference for the net48 compatibility build; not copied into the game Mod package.",
+      "size": 208978,
+      "sha256": "10f43da352a29fb2b3188e4edd4dcf5100194c8b526e4f61fe2e2b5623775a22"
     }
   ]
 }
