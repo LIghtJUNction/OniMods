@@ -1,58 +1,40 @@
-[b]Required mod: Jlib.[/b] Subscribe to and enable Jlib, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-warning.png[/img]
+[h1]WARNING[/h1]
+[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]
 
-[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png[/img]
+[h1]⚠ HIGH-RISK EXPERIMENTAL MOD ⚠[/h1]
+[b]For experimentation and early previews only. Not suitable for long-term, stable play.[/b]
+CycleTrim is rebuilding core simulation behavior. Crashes, missing materials, unusual flows, corrupted saves and mod conflicts are possible. Back up your original saves and use disposable test saves only.
+[b]Future experimental saves may not open in vanilla or older versions of the mod. Do not assume you can remove the mod and continue playing.[/b]
 
-Welcome to CycleTrim! A disruptive, experimental performance mod for Oxygen Not Included.
-With this mod, [b]the low-level algorithms get rebuilt, and as much of the math as possible moves onto the GPU.[/b]
+[h2]More than one material in a cell[/h2]
+CycleTrim is exploring a different simulation for Oxygen Not Included: gases and liquids sharing, flowing and mixing within a cell, with GPU acceleration where possible. The following are [b]actual in-game screenshots from development builds[/b]; they do not mean these features are fully available in the current Workshop release.
 
-This is still early development. The order is fixed: speed first, compatibility later.
+[h3]Gas mixing: oxygen and carbon dioxide in one cell[/h3]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-gas-mix.png[/img]
+This test shows two gases and their proportions in one cell. Diffusion, stratification and mass conservation still need complete in-game validation.
 
-[h2]Current Stage: v0.4.0 Early[/h2]
-[i]This is an experiment. Speed comes first. Save safety, other mods, and the rest of the game come after.[/i]
-[i]Use a disposable test save. Do not treat this as a finished late-game optimization patch.[/i]
+[h3]Liquid mixing: water and polluted water[/h3]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-liquid-mix.png[/img]
+This test shows water and polluted water in one cell. Textures, proportions and flow are still being refined.
 
-[h3]Next version: experiment past one element per cell & GPU Poisson pressure projection[/h3]
-The stock simulation stores one element and one mass in each cell. When two substances meet, they cannot share the cell, so the old substance has to be pushed somewhere else. That push searches neighbor cells, branches, and then decides who gets in first. Wide CPU vectors and GPUs are built for the same multiply-add on every cell. They stall on that kind of divergence.
+[h3]Multicomponent information cards[/h3]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-species-card.png[/img]
+The experimental interface displays individual substances. Partial pressures are zero in this screenshot: pressure data is unfinished and should not be treated as physically valid.
 
-[b]1. Legacy Vanilla Sweep (serial grid sweep + arbitration displacement):[/b]
-Serial donor-receiver mass exchange hard-clamped to 12.5% of donor mass, combined with recursive displace_gas / displace_liquid neighbor searches. Heavy branching and strict order-dependence destroy CPU cache locality and cause GPU warp divergence.
+[h2]In development[/h2]
+[list]
+[*]Three or more substances per cell throughout transport, diffusion, exchange and rendering.
+[*]Multiple substances in one gas or liquid pipe cell, including storage, flow, building input/output, display and save/load. This is unfinished; no verified in-game screenshot is available yet.
+[*]Saving and restoring every component and migrating experimental save formats.
+[*]GPU thermal diffusion, pressure and multicomponent computation, with fewer transfers between CPU and GPU.
+[*]In-game visual and physics validation of textures, information cards, density stratification and rising bubbles.
+[/list]
+These are development goals, not promises that they are released or work in your save. GPU acceleration and frame rate depend on hardware, scene and build; no specific frame rate is guaranteed.
 
-[b]2. New GPU Numerical Pipeline (under research):[/b]
-Variable-density continuous Poisson pressure projection (Red-Black Gauss-Seidel with SOR iterations) combined with multicomponent face-flux transport, eliminating neighbor displacement divergence via GPU memory barriers and divergence-free projection.
+[h2]Installation and feedback[/h2]
+Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Subscribe to and enable Jlib and CycleTrim, then restart the game. Settings are available in the mod options.
 
-This build is not that algorithm yet. OniSim is still one element per cell. The pressure solve does not become a single multiply. The Stage 2 mathematical reference (residual 1e-7, divergence decay, zero-velocity fixed point, and semantic comparator tests) has passed in an isolated experimental branch. The production kernel remains segregated, and disease, buildings, and the save format do not move in the same step. Speed first, followed by strict behavioral compatibility validation.
+Report crashes, save problems or material anomalies on [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url], with your game version, reproduction steps and logs without private information.
 
-Full note: [url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/docs/next-cell-representation.md]why one element per cell fights modern hardware[/url]
-
-[h3]What the current build already does[/h3]
-Busy duplicants, stationary critters, and pickup scans repeat less work. These are early cuts, not the final shape.
-The OniSim native core ships in the package but does not take over the simulation by default. Keep the vanilla SimDLL for normal colonies; explicitly enable the experimental option only on a disposable test save.
-CycleTrim still needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Enable Jlib above CycleTrim, then restart.
-Options live under Mods, then CycleTrim, and apply on the next launch. OniSim is off by default; the new experimental opt-in must be enabled explicitly. CYCLETRIM_ONISIM_ENABLE=0 keeps the vanilla SimDLL mapping. The mapping cannot be hot-reverted.
-
-[h3]Controls and Quality of Life[/h3]
-The default keeps the official simulation core active. OniSim remains an experimental, opt-in test path.
-
-* Subscribe and enable. Restart once so Jlib and the options page load together.
-* Keep OniSim off for normal colonies; enable it only for a disposable test save.
-* Conduit animation, power-overlay reuse, and state-machine reuse can each be narrowed in the options. Restart after changing them.
-
-[h3]Built with onim[/h3]
-This mod comes from [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]. onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing.
-
-onim dev tries it in game. onim build packs it. onim publish sends it to Steam.
-
-[h3]Contributions[/h3]
-Contributions are welcome!
-If you have improvements, fixes, or new features, feel free to open a Pull Request.
-
-Please make sure your changes are clear and well-documented where necessary.
-
-You can find the [url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub repository here[/url]
-
-[h3]Disclaimer[/h3]
-Please remember that this mod is an early experiment and will keep changing.
-Your feedback and suggestions are highly appreciated.
-Speed first, compatibility later. Report crashes, bad saves, and mod conflicts on GitHub, and use a test save.
-
-Have fun out there. Get the cycles moving. Oxygen and compatibility are still behind them.
+[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]Source code and development progress[/url]
