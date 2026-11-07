@@ -94,7 +94,7 @@ const CAPABILITIES: &[u8] = concat!(
     "\"ignoredMessages\":[-563057023,-409964931,-727746602],",
     "\"callbacks\":false,\"callbackRecords\":true,\"saveLoad\":true,\"events\":true,",
     "\"flow\":true,\"textures\":false,\"radiationSimulation\":true,\"radiationStorage\":\"native\",",
-    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",",
+    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",\"multicomponentPublication\":\"legacy-single-element-v1\",",
     "\"storageMutationTiming\":\"frame-command-stage\",\"officialCommandScheduling\":false,",
     "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable\",\"runtimeValidated\":false,",
     "\"batchPrevalidation\":true,\"readyObservation\":true,\"externalPointerSynchronization\":\"caller-required\"}\0"
