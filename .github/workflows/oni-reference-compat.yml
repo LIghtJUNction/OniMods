@@ -120,7 +120,8 @@ jobs:
         run: >-
           dotnet build mods/CycleTrim/CycleTrim.csproj
           --configuration Release
-          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
+          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
       - name: Verify compiled CycleTrim release safety guards
