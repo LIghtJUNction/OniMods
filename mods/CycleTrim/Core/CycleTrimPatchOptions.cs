@@ -15,6 +15,7 @@ namespace CycleTrim.Core
         internal static ConduitAnimationQuality ConduitAnimation { get; private set; }
             = ConduitAnimationQuality.Full;
         internal static bool EnablePerformanceDiagnostics { get; private set; }
+        internal static bool EnableMulticomponentShim { get; private set; } = true;
 
         // Capture settings before Harmony installs patches. Runtime edits take
         // effect after restarting ONI, so a patch group is never half enabled.
@@ -30,7 +31,8 @@ namespace CycleTrim.Core
             bool conveyorPathLookup = false,
             bool animationSymbols = false,
             bool stateMachineLookups = false,
-            ConduitAnimationQuality conduitAnimation = ConduitAnimationQuality.Full)
+            ConduitAnimationQuality conduitAnimation = ConduitAnimationQuality.Full,
+            bool multicomponentShim = true)
         {
             OptimizePickupCandidates = pickupCandidates;
             ThrottleBusyDuplicants = busyDuplicants;
@@ -46,6 +48,7 @@ namespace CycleTrim.Core
             ConduitAnimation = conduitAnimation == ConduitAnimationQuality.Half
                 || conduitAnimation == ConduitAnimationQuality.Quarter
                 ? conduitAnimation : ConduitAnimationQuality.Full;
+            EnableMulticomponentShim = multicomponentShim;
         }
     }
 }
