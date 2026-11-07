@@ -60,18 +60,11 @@ cell-volume convention and a decision about phase-specific volume.
 
 Use a finite-volume projection with shared face-normal velocities:
 
-[
-
-abla cdot (eta 
-abla p) = rac{
-abla cdot u^*}{Delta t},
-qquad eta_f = rac{1}{ho_f}
-]
-
-[
-u^{n+1}_f = u^*_f - Delta t,eta_f,(
-abla p)_f.
-]
+```text
+div(β ∇p) = div(u*) / Δt
+β_f = 1 / ρ_f
+u_f^(n+1) = u_f* - Δt · β_f · (∇p)_f
+```
 
 The first reference uses a cell-centred provisional velocity, arithmetic
 face-density averaging, closed outer walls, zero normal velocity on
