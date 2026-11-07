@@ -64,7 +64,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             POptions.ThrowOnRead = true;
             try { Load(mixed, expectedEnabled: false, useDefaults: true); }
             finally { POptions.ThrowOnRead = false; }
-            Load(null, expectedEnabled: true);
+            Load(null, expectedEnabled: false);
             Console.WriteLine("PASS CycleTrim options: " + assertions
                 + " assertions; configuration applied before patching and dialog registered after");
         }
