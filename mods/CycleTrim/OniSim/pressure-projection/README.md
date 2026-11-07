@@ -163,3 +163,25 @@ residual alongside CPU/GPU corrected-face parity and divergence reduction.
 The hard gates remain parity <= 1e-4 and strictly reduced divergence; a
 residual threshold will be calibrated after representative Vulkan hardware
 runs rather than guessed.
+
+
+## Stage 2.4 — explicit gas EOS calibration
+
+The GPU crate now includes `gpu/src/material_eos.rs`, a first-principles ideal-gas adapter that requires explicit unit scales. It can:
+- infer an effective cell volume from a gas element's default mass, molar mass, temperature and pressure;
+- compare multiple gas records and reject inconsistent inferred volumes;
+- compute mixture density and total pressure from species masses and molar masses;
+- preserve a vacuum as zero density/pressure rather than silently inventing a density floor.
+
+The utility maps the native `ElementRecord` fields `molar_mass`,
+`default_mass`, `default_temperature`, and `default_pressure`. Unit scales
+must be supplied explicitly; the implementation does not assume the game's
+wire values are SI. Six synthetic tests cover the ideal-gas equations,
+cross-record volume consistency, vacuum, and invalid inputs.
+
+This is a calibration tool, not yet a production material adapter. It has not
+been run against an official in-game element table. A zero-density vacuum is
+still outside the current Poisson solver's positive-density domain and needs
+an explicit free-surface/open-boundary treatment or a separately calibrated
+density-floor policy before gas-to-vacuum projection can be enabled. Liquid
+and solid densities still require their own measured/configured material data.
