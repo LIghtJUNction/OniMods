@@ -146,47 +146,7 @@ impl MulticomponentGpu {
 
     pub fn upload(&mut self, state: &State<'_>) -> Result<(), String> {
         self.uploaded = false;
-        let values = self.count * self.channels;
-        if state.mass.len() != values || state.enthalpy.len() != values
-            || state.velocity_x.len() != self.count || state.velocity_y.len() != self.count
-            || state.solid.len() != self.count || state.species.len() != self.channels {
-            return Err("input tensor or species metadata dimensions mismatch".into());
-        }
-        let mut ids = HashSet::with_capacity(self.channels);
-        for (channel, species) in state.species.iter().enumerate() {
-            if species.phase < 1 || species.phase > 3
-                || !species.specific_heat_capacity.is_finite()
-                || species.specific_heat_capacity <= 0.0
-                || !species.vertical_drift.is_finite()
-                || !ids.insert(species.element_id) {
-                return Err(format!("invalid or duplicate species metadata at channel {channel}"));
-            }
-        }
-        if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
-            || state.enthalpy.iter().any(|v| !v.is_finite() || *v < 0.0)
-            || state.velocity_x.iter().chain(state.velocity_y).any(|v| !v.is_finite()) {
-            return Err("state contains negative mass/enthalpy or non-finite values".into());
-        }
-        let mut max_rate = 0.0f32;
-        for cell in 0..self.count {
-            let start = cell * self.channels;
-            let end = start + self.channels;
-            if state.solid[cell] != 0
-                && (state.mass[start..end].iter().any(|v| *v != 0.0)
-                    || state.enthalpy[start..end].iter().any(|v| *v != 0.0)) {
-                return Err("solid cells must contain zero mass and enthalpy".into());
-            }
-            for channel in 0..self.channels {
-                if state.mass[start + channel] == 0.0 && state.enthalpy[start + channel] != 0.0 {
-                    return Err("empty species channels must contain zero enthalpy".into());
-                }
-            }
-            let max_vertical = state.species.iter()
-                .map(|species| (state.velocity_y[cell] + species.vertical_drift).abs())
-                .fold(0.0f32, f32::max);
-            max_rate = max_rate.max(state.velocity_x[cell].abs() + max_vertical);
-        }
-        self.max_cfl_rate = max_rate;
+        let max_rate = validate_state(state, self.count, self.channels)?;
         let drift: Vec<f32> = state.species.iter().map(|species| species.vertical_drift).collect();
         self.queue.write_buffer(&self.mass_a, 0, bytemuck::cast_slice(state.mass));
         self.queue.write_buffer(&self.enthalpy_a, 0, bytemuck::cast_slice(state.enthalpy));
@@ -194,6 +154,7 @@ impl MulticomponentGpu {
         self.queue.write_buffer(&self.velocity_y, 0, bytemuck::cast_slice(state.velocity_y));
         self.queue.write_buffer(&self.solid, 0, bytemuck::cast_slice(state.solid));
         self.queue.write_buffer(&self.drift_y, 0, bytemuck::cast_slice(&drift));
+        self.max_cfl_rate = max_rate;
         self.uploaded = true;
         Ok(())
     }
@@ -250,6 +211,55 @@ impl MulticomponentGpu {
         self.readback.unmap();
         Ok(())
     }
+}
+
+
+/// Validates the CPU-side channel catalogue and conserved state before any GPU
+/// buffer is mutated. This is also used by CPU-only regression tests.
+fn validate_state(state: &State<'_>, count: usize, channels: usize) -> Result<f32, String> {
+    let values = count.checked_mul(channels).ok_or("tensor dimensions overflow")?;
+    if state.mass.len() != values || state.enthalpy.len() != values
+        || state.velocity_x.len() != count || state.velocity_y.len() != count
+        || state.solid.len() != count || state.species.len() != channels {
+        return Err("input tensor or species metadata dimensions mismatch".into());
+    }
+    let mut ids = HashSet::with_capacity(channels);
+    for (channel, species) in state.species.iter().enumerate() {
+        if species.phase != 1 {
+            return Err(format!("channel {channel} is not gas; this transport operator is gas-only"));
+        }
+        if !species.specific_heat_capacity.is_finite()
+            || species.specific_heat_capacity <= 0.0
+            || !species.vertical_drift.is_finite()
+            || !ids.insert(species.element_id) {
+            return Err(format!("invalid or duplicate gas species metadata at channel {channel}"));
+        }
+    }
+    if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
+        || state.enthalpy.iter().any(|v| !v.is_finite() || *v < 0.0)
+        || state.velocity_x.iter().chain(state.velocity_y).any(|v| !v.is_finite()) {
+        return Err("state contains negative mass/enthalpy or non-finite values".into());
+    }
+    let mut max_rate = 0.0f32;
+    for cell in 0..count {
+        let start = cell * channels;
+        let end = start + channels;
+        if state.solid[cell] != 0
+            && (state.mass[start..end].iter().any(|v| *v != 0.0)
+                || state.enthalpy[start..end].iter().any(|v| *v != 0.0)) {
+            return Err("solid cells must contain zero mass and enthalpy".into());
+        }
+        for channel in 0..channels {
+            if state.mass[start + channel] == 0.0 && state.enthalpy[start + channel] != 0.0 {
+                return Err("empty species channels must contain zero enthalpy".into());
+            }
+        }
+        let max_vertical = state.species.iter()
+            .map(|species| (state.velocity_y[cell] + species.vertical_drift).abs())
+            .fold(0.0f32, f32::max);
+        max_rate = max_rate.max(state.velocity_x[cell].abs() + max_vertical);
+    }
+    Ok(max_rate)
 }
 
 fn bind(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
@@ -375,20 +385,37 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_species_metadata_and_enthalpy_state() {
+    fn validates_gas_species_metadata_and_enthalpy_state() {
         let mass = [1.0f32, 1.0];
-        let enthalpy = [300.0f32, 300.0];
+        let enthalpy = [300.0f32, 600.0];
         let velocity = [0.0f32];
         let solid = [0u32];
-        let valid = [SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0 },
-            SpeciesInfo { element_id: 2, phase: 2, specific_heat_capacity: 2.0, vertical_drift: 0.0 }];
+        let valid = [
+            SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0 },
+            SpeciesInfo { element_id: 2, phase: 1, specific_heat_capacity: 2.0, vertical_drift: 0.0 },
+        ];
         let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &velocity,
             velocity_y: &velocity, solid: &solid, species: &valid };
-        // Validation is exercised through the upload path by the Vulkan bench; keep
-        // deterministic metadata invariants covered without requiring a GPU here.
-        assert!(state.species.iter().all(|s| s.phase >= 1 && s.phase <= 3));
+        assert_eq!(validate_state(&state, 1, 2).unwrap(), 0.0);
+
         let duplicate = [valid[0], valid[0]];
-        assert_eq!(duplicate[0].element_id, duplicate[1].element_id);
-        assert_eq!(mass.len(), enthalpy.len());
+        let duplicate_state = State { species: &duplicate, ..state };
+        assert!(validate_state(&duplicate_state, 1, 2).is_err());
+
+        let liquid = [
+            valid[0],
+            SpeciesInfo { phase: 2, ..valid[1] },
+        ];
+        let liquid_state = State { species: &liquid, ..state };
+        assert!(validate_state(&liquid_state, 1, 2).is_err());
+
+        let bad_energy = [300.0f32, f32::NAN];
+        let energy_state = State { enthalpy: &bad_energy, ..state };
+        assert!(validate_state(&energy_state, 1, 2).is_err());
+
+        let empty_mass = [0.0f32, 1.0];
+        let empty_energy = [1.0f32, 600.0];
+        let empty_state = State { mass: &empty_mass, enthalpy: &empty_energy, ..state };
+        assert!(validate_state(&empty_state, 1, 2).is_err());
     }
 }
