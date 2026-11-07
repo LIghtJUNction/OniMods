@@ -40,7 +40,7 @@ impl Fixture {
         let species = (0..channels)
             .map(|i| SpeciesInfo {
                 element_id: (i + 1) as u16,
-                phase: (i % 3 + 1) as u8,
+                phase: 1,
                 specific_heat_capacity: 0.8 + i as f32 * 0.15,
                 vertical_drift: (i as f32 - (channels as f32 - 1.0) * 0.5) * 0.0001,
             })
