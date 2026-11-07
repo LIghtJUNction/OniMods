@@ -20,7 +20,7 @@ Default endpoint: http://localhost:8788/mcp/.
 
 ```sh
 oni-mcp set-url http://localhost:8788/mcp/
-oni-mcp set-secret "$ONIM_MCP_SECRET"
+printf '%s' "$ONIM_MCP_SECRET" | oni-mcp set-secret -
 oni-mcp config
 oni-mcp status
 ```
