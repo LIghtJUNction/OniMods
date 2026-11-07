@@ -99,6 +99,21 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 
 `session.LocalEnvironment` 和 `session.HostEnvironment` 是当前会话的只读环境快照；`session.EnvironmentFor(playerId)` 只返回本端、主机或主机可见的已认证成员。快照中的游戏构建、DLC 和 CycleTrim 版本是适配线索，不是准入条件；具体功能仍要检查 `Capabilities`、`RequiredCapabilities`、`Ready` 和模组同步状态。断线或准入代次变化后，重新读取快照，不要缓存旧对象。
 
+## 共用模拟的可选底层能力
+
+默认聊天不声明这些合同。玩法要在 `IGameplayCapabilityContract` 里自己加入，双方协商到之后才能启用：
+
+| 合同 | 类型 | 作用 |
+| --- | --- | --- |
+| `onionline.shared-simulation.v1` | `SnapshotAdmission`、`ContentDigestBoard` | 权威端先暂停出快照，快照带编号、校验和、指纹。客户端加载后必须回报同一份指纹。客户端等待 90 秒，权威端总期限 180 秒，5 秒没有新字节记一次停滞。之后客户端按块上报哈希；少数不一致返回要补的块，多数不一致要求重发快照，未知快照隔离且不抹掉已发布哈希。 |
+| `onionline.strict-admission.v1` | `StrictAdmission` | 比较玩法版本、游戏构建号、已启用 DLC 和其他模组的 ID 与版本。最多列出 10 条差异。未协商这个合同时，构建号不同仍然可以进大厅。 |
+| `onionline.presence.v1` | `PresenceBoard` | 每个玩家只保留最新光标，地图标记要求序号递增。未协商时输入被丢弃。 |
+| `onionline.shared-clock.v1` | `SharedClockPolicy` | 必须同时协商共用模拟。任何参与者可以暂停，速度取更新的修订号，只接受 1 到 3。 |
+
+`CommandInFlight` 按命令键去重：权威端答复、超时或准入代次变化之前，同一条命令不会再次发出。这些类型不冻结游戏模拟，也不替玩法拦截 `SimMessages`。模拟冻结仍由声明共用模拟的玩法自己实现；补丁贴不上时拒绝的是该玩法。
+
+`TestSlotLayout` 给第二个本机客户端分配 `onionline-slotN/save_files` 和 `playerprefs`。`SessionLogPrivacy` 从报错文本里去掉 Steam ID、调用方给出的名字，以及以 `CHAT ` 或 `chat:` 开头的行，再写成 zip。
+
 适配器离开或切换玩法时先解除当前绑定；框架会释放旧的 `GameplaySession`，再通知 `SessionChanged`。插件应在回调中丢弃旧订阅，并从 `Current` 取得新会话，不要缓存旧对象继续发送。
 
 完整合同见[模组状态同步](SDK-MOD-SYNC.md)、[原生模组对齐](MOD-CONTENT-SYNC.md)和[版本与能力协商](FRAMEWORK-COMPATIBILITY.md)。

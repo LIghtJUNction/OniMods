@@ -71,6 +71,8 @@ internal static class Program
             { GameplaySdkTests.Run(Check); Console.WriteLine("PASS " + assertions + " SDK assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--compatibility")
             { CompatibilityTests.Run(Check); Console.WriteLine("PASS " + assertions + " compatibility assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--framework-primitives")
+            { FrameworkPrimitiveTests.Run(Check); Console.WriteLine("PASS " + assertions + " framework primitive assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--mod-sync-contracts")
             { ModSynchronizationTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod synchronization assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--gameplay-admission")

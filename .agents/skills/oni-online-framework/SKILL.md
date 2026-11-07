@@ -51,6 +51,7 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 
 ```sh
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --sdk
+rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --framework-primitives
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --compatibility
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-sync-declarations
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-sync-contracts

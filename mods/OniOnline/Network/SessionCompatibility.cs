@@ -15,6 +15,11 @@ namespace OniOnline.Network
         public const string NativePlanetV1 = "onionline.native-planet.v1";
         public const string NativeObservationV1 = "onionline.native-observation.v1";
         public const string NativeStarMapV1 = "onionline.native-star-map.v1";
+        // Opt-in contracts. Chat does not advertise or require them.
+        public const string SharedSimulationV1 = "onionline.shared-simulation.v1";
+        public const string PresenceV1 = "onionline.presence.v1";
+        public const string SharedClockV1 = "onionline.shared-clock.v1";
+        public const string StrictAdmissionV1 = "onionline.strict-admission.v1";
         public const string NativePlanet744825V1 = NativePlanetV1;
         public const string NativeObservation744825V1 = NativeObservationV1;
         public const string NativeStarMap744825V1 = NativeStarMapV1;
@@ -36,6 +41,27 @@ namespace OniOnline.Network
             }
             return SessionCompatibility.Normalize(supported);
         }
+
+        public static bool Negotiated(System.Collections.Generic.IEnumerable<string> capabilities, string capability)
+        {
+            if (capabilities == null || capability == null) return false;
+            foreach (string value in capabilities)
+                if (value == capability) return true;
+            return false;
+        }
+
+        public static bool UsesSharedSimulation(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return Negotiated(capabilities, SharedSimulationV1); }
+
+        public static bool UsesPresence(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return Negotiated(capabilities, PresenceV1); }
+
+        // A shared clock is meaningless for separate colonies. Both contracts are required.
+        public static bool UsesSharedClock(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return UsesSharedSimulation(capabilities) && Negotiated(capabilities, SharedClockV1); }
+
+        public static bool UsesStrictAdmission(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return Negotiated(capabilities, StrictAdmissionV1); }
 
         public static bool SupportsNativeAdapter(string gameVersion, bool spacedOut, string capability)
         {
