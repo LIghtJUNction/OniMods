@@ -43,17 +43,54 @@ fn transfer_liquid(
         return true;
     }
     match phase(tables, previous_element) {
-        2 => return false,
-        1 if !displace_gas(
-            world,
-            tables,
-            diseases,
-            events,
-            destination,
-            previous_element,
-        ) =>
-        {
+        2 => {
+            // 互溶流体多组分混合（如洁净水与污染水，盐水与水）
+            let record = &tables.elements[element as usize].record;
+            let prev_record = &tables.elements[previous_element as usize].record;
+            if are_liquids_miscible(record, prev_record) {
+                if world.mixture_mass[destination] <= 0.0 || world.mixture_element[destination] == element {
+                    world.mixture_element[destination] = element;
+                    world.mixture_mass[destination] += amount;
+                    // 主组分始终保持质量最大项
+                    if world.mixture_mass[destination] > world.write.mass[destination] {
+                        let dom_elem = world.mixture_element[destination];
+                        let dom_mass = world.mixture_mass[destination];
+                        world.mixture_element[destination] = world.write.element[destination];
+                        world.mixture_mass[destination] = world.write.mass[destination];
+                        world.write.element[destination] = dom_elem;
+                        world.write.mass[destination] = dom_mass;
+                    }
+                    notify(world, events, destination);
+                    return true;
+                }
+            }
             return false;
+        }
+        1 => {
+            // 1.0 m³ 空间模型：当液体未充满格（<95%容积）时，气体保留在空隙容积，不被挤掉
+            let max_m = tables.elements[element as usize].record.max_mass.max(1.0);
+            let liq_vol = amount / max_m;
+            if liq_vol < 0.95 {
+                let gas_elem = previous_element;
+                let gas_mass = world.write.mass[destination];
+                world.write.element[destination] = element;
+                world.write.mass[destination] = amount;
+                world.write.temperature[destination] = temperature;
+                world.mixture_element[destination] = gas_elem;
+                world.mixture_mass[destination] = gas_mass;
+                notify(world, events, destination);
+                return true;
+            }
+            if !displace_gas(
+                world,
+                tables,
+                diseases,
+                events,
+                destination,
+                previous_element,
+            ) {
+                return false;
+            }
         }
         _ => {}
     }
@@ -137,6 +174,30 @@ pub(crate) fn do_liquid_pressure_displacement(
         || phase(tables, element_b) != 2
     {
         return 0.0;
+    }
+
+    // 激进真实物理：互溶液体（洁净水、污染水、盐水）接触界面自然对流混溶形成多组分
+    let record_a = &tables.elements[element as usize].record;
+    let record_b = &tables.elements[element_b as usize].record;
+    if are_liquids_miscible(record_a, record_b) {
+        let diff = (world.read.mass[a] - world.read.mass[b]).abs();
+        let amount = smin(smax(diff * 0.1, 10.0), world.write.mass[a] * 0.25);
+        if amount > 0.0 && (world.mixture_mass[b] <= 0.0 || world.mixture_element[b] == element) {
+            world.mixture_element[b] = element;
+            world.mixture_mass[b] += amount;
+            world.write.mass[a] = smax(world.write.mass[a] - amount, 0.0);
+            if world.mixture_mass[b] > world.write.mass[b] {
+                let dom_elem = world.mixture_element[b];
+                let dom_mass = world.mixture_mass[b];
+                world.mixture_element[b] = world.write.element[b];
+                world.mixture_mass[b] = world.write.mass[b];
+                world.write.element[b] = dom_elem;
+                world.write.mass[b] = dom_mass;
+            }
+            notify(world, events, a);
+            notify(world, events, b);
+            return amount;
+        }
     }
     let available = ((world.read.mass[a] - world.flow[a][0])
         - (world.flow[a][1] + world.flow[a][2]))

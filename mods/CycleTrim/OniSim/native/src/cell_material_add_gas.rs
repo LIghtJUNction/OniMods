@@ -32,6 +32,33 @@ pub(crate) fn add_gas(
         return;
     }
     let state = phase(elements, previous);
+    if state == 1 {
+        // 多组分气体混合：气体与气体共存，不强行排挤，形成道尔顿分压混合相
+        if world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element {
+            world.mixture_element[cell] = element;
+            world.mixture_mass[cell] += mass;
+            if world.mixture_mass[cell] > world.write.mass[cell] {
+                let dom_elem = world.mixture_element[cell];
+                let dom_mass = world.mixture_mass[cell];
+                world.mixture_element[cell] = world.write.element[cell];
+                world.mixture_mass[cell] = world.write.mass[cell];
+                world.write.element[cell] = dom_elem;
+                world.write.mass[cell] = dom_mass;
+            }
+            notify(world, events, cell);
+            return;
+        }
+    } else if state == 2 {
+        // 气体进入未满格液体的空隙容积
+        let prev_max = elements.elements[previous as usize].record.max_mass.max(1.0);
+        let liq_vol = world.write.mass[cell] / prev_max;
+        if liq_vol < 0.95 && (world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element) {
+            world.mixture_element[cell] = element;
+            world.mixture_mass[cell] += mass;
+            notify(world, events, cell);
+            return;
+        }
+    }
     let displaced = match state {
         1 => displace_gas(world, elements, diseases, events, cell, previous),
         2 => displace_liquid(world, elements, diseases, events, cell, previous),

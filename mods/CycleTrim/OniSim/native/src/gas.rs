@@ -60,9 +60,35 @@ pub(crate) fn do_gas_pressure_displacement(
     let element_b = world.read.element[b];
     let old_mass = world.read.mass[a];
     if tables.elements[element_b as usize].record.state & 3 != 1
-        || !(old_mass > world.read.mass[b])
         || world.write.element[a] != element_a
         || world.write.element[b] != element_b
+    {
+        return 0.0;
+    }
+
+    // 激进真实物理：相邻不同气体直接进行分子扩散与压力渗透混合，形成多组分共存相
+    if element_a != element_b {
+        let diff = (old_mass - world.read.mass[b]).abs();
+        let amount = smin(smax(diff * 0.1, 0.05 * old_mass), world.write.mass[a] * 0.25);
+        if amount > 0.001 && (world.mixture_mass[b] <= 0.0 || world.mixture_element[b] == element_a) {
+            world.mixture_element[b] = element_a;
+            world.mixture_mass[b] += amount;
+            world.write.mass[a] = smax(world.write.mass[a] - amount, 0.0);
+            if world.mixture_mass[b] > world.write.mass[b] {
+                let dom_elem = world.mixture_element[b];
+                let dom_mass = world.mixture_mass[b];
+                world.mixture_element[b] = world.write.element[b];
+                world.mixture_mass[b] = world.write.mass[b];
+                world.write.element[b] = dom_elem;
+                world.write.mass[b] = dom_mass;
+            }
+            notify(world, events, a);
+            notify(world, events, b);
+            return amount;
+        }
+    }
+
+    if !(old_mass > world.read.mass[b])
         || !displace_gas_directional(world, tables, diseases, events, b, c, element_b)
     {
         return 0.0;
