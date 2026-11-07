@@ -21,8 +21,7 @@ Legacy ZIP。决定是否转换的是消费该字段的 API，不是字段存在
 
 ## 唯一合法发布路径
 
-单文件 Legacy ZIP 发布器，即下面的两个脚本。`onim publish` CLI 只生成 VDF 并交给
-OniUploader GUI，不自行上传；它的 `--steamcmd` / `--steam-user` 参数已移除。
+单文件 Legacy ZIP 发布器。`onim publish` 现已内置无头 Legacy 发布器，直接在终端中完成打包、Steam Cloud 写入、工坊提交与下载校验（也可通过 `--gui` 打开 OniUploader 或使用 `scripts/publish_legacy_steam.sh`）；绝不能把 VDF 内容目录交给 SteamCMD 目录模式。
 
 仓库提供两个固定目标的发布入口：
 
@@ -33,7 +32,34 @@ OniUploader GUI，不自行上传；它的 `--steamcmd` / `--steam-user` 参数�
 
 两个入口都调用 `tools/OniMods.SteamPublisher/`，使用已登录 Steam 客户端的旧版 `ISteamRemoteStorage` 工坊文件 API 更新**原 Workshop ID**。原条目的 creator app 是 Oxygen Not Included Uploader (`636750`)，consumer app 才是 ONI (`457140`)。发布器从 `dist/<Mod>/` 创建单文件 ZIP，在 `636750` 上下文写入 Steam Cloud 并提交更新；它不会启动 ONI 或 OniUploader。
 
+新模组或未登记 Workshop ID 的模组使用通用入口，目标由 `-m` 选择并从 `onim.toml`
+和所选模组包读取。脚本不写死模组名或 Workshop ID。首次创建前要设置
+`ONIM_PUBLISH_EXPECTED_OWNER`（将拥有该条目的 SteamID64）和
+`ONIM_PUBLISH_TAGS`（逗号分隔的工坊标签）：
+
+```bash
+scripts/publish_legacy_steam.sh Jlib --prepare-first-item --plan dist/Jlib.first-publication-plan.json
+scripts/publish_legacy_steam.sh Jlib --create-first-item --plan dist/Jlib.first-publication-plan.json --expected-plan-sha256 <复核过的 SHA256>
+scripts/publish_legacy_steam.sh Jlib --verify-first-item --plan dist/Jlib.first-publication-plan.json --expected-plan-sha256 <同一 SHA256>
+```
+
+准备阶段只生成并校验 Legacy ZIP 与不可变计划，不启动 Steam API。首次创建只建立
+Private 条目，创建 journal 按所选模组命名并禁止重复创建。完成 ONI 实际安装验证后，才可
+运行 `--publish-first-item`；成功后应把 Steam 返回的 ID 写入对应 `[mods.<key>]`
+的 `publishedfileid`。已有 ID 的条目通过同一入口的 `--update-existing` 更新。
+
 ONI 当前的 Steam 模组读取路径把 `ISteamUGC.GetItemInstallInfo` 返回值作为 ZIP 文件打开。普通 `SteamUGC.SetItemContent` 和 SteamCMD 的 `contentfolder` 上传会产生目录路径，ONI 因而报“下载失败”。只有 Steam 的 `LegacyItem` 状态返回文件路径。不能把“Steam 接收上传”视为兼容性验证。
+
+已发布条目的页面字段用 `onim workshop page` 修改，不重新上传 ZIP：
+
+```bash
+onim workshop page show 3807166689
+onim workshop page set 3807166689 --title "CycleTrim" --tags "tweaks,Spaced Out!" --visibility public
+onim workshop page set 3807166689 --description-file docs/steam-description-en.md --chinese-description-file docs/steam-description-zh.md
+onim workshop page set 3807166689 --preview preview.png
+```
+
+可改英文和简体中文的标题与说明、整组标签、可见性（`public`、`friends`、`private`、`unlisted`）和预览图。说明从 UTF-8 文件读取。命令会回读这些字段，并确认 Legacy 文件句柄还在、ZIP 大小没变。讨论区、截图画廊、YouTube 和删除条目不在这个命令里。
 
 ## 发布前检查
 

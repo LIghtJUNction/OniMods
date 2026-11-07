@@ -575,6 +575,8 @@ static void RunFirstPublicationCase()
     var target = new Dictionary<string, string>
     {
         ["ONIM_PUBLISH_NAME"] = "OniOnline",
+        ["ONIM_PUBLISH_STATIC_ID"] = "LIghtJUNction.OniOnline",
+        ["ONIM_PUBLISH_TAGS"] = "tweaks,Spaced Out!",
         ["ONIM_PUBLISH_WORKSHOP_ID"] = "0",
         ["ONIM_PUBLISH_CREATOR_APP_ID"] = "636750",
         ["ONIM_PUBLISH_CONSUMER_APP_ID"] = "457140",
@@ -678,11 +680,9 @@ static void RunFirstPublicationCase()
 
         foreach (var (name, invalidValue) in new[]
         {
-            ("ONIM_PUBLISH_NAME", "OniMcp"),
             ("ONIM_PUBLISH_WORKSHOP_ID", "3731864673"),
             ("ONIM_PUBLISH_CREATOR_APP_ID", "457140"),
             ("ONIM_PUBLISH_CONSUMER_APP_ID", "636750"),
-            ("ONIM_PUBLISH_EXPECTED_OWNER", "1"),
         })
         {
             Environment.SetEnvironmentVariable(name, invalidValue);
@@ -692,9 +692,12 @@ static void RunFirstPublicationCase()
                 () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "readback with a different target " + name);
             Environment.SetEnvironmentVariable(name, target[name]);
         }
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", "Different selected mod");
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "plan readback under another selected mod name");
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", target["ONIM_PUBLISH_NAME"]);
         foreach (var invalid in new[]
         {
-            metadata with { Title = "CycleTrim" },
             metadata with { Title = "OniOnline" + new string('x', 120) },
             metadata with { EnglishDescription = "" },
             metadata with { ChineseDescription = "" },
@@ -720,6 +723,14 @@ static void RunFirstPublicationCase()
         ExpectFirstPublicationException<InvalidOperationException>(
             () => FirstPublicationPlan.Create(metadata), "a different mod staticID");
         File.WriteAllText(yamlPath, yaml);
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_TAGS", "");
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Create(metadata), "missing Workshop tags");
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_TAGS", target["ONIM_PUBLISH_TAGS"]);
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_EXPECTED_OWNER", null);
+        ExpectFirstPublicationException<InvalidOperationException>(
+            FirstPublicationPlan.RequireTarget, "a missing expected owner");
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_EXPECTED_OWNER", target["ONIM_PUBLISH_EXPECTED_OWNER"]);
         RunFirstPublicationJournalCase(Path.Combine(root, "journals"), plan.PlanSha256);
         Console.WriteLine("OniOnline first-publication plan identity, hashes, limits and artifact readback passed");
     }
@@ -751,7 +762,7 @@ static void RunFirstPublicationJournalCase(string directory, string planSha)
     using (var intent = JsonDocument.Parse(initialLines.Single()))
     {
         if (intent.RootElement.GetProperty("event").GetString() != "first-create-intent"
-            || intent.RootElement.GetProperty("target").GetString() != FirstPublicationPlan.StaticId
+            || intent.RootElement.GetProperty("target").GetString() != WorkshopTarget.StaticId
             || intent.RootElement.GetProperty("planSha256").GetString() != planSha)
         {
             throw new InvalidOperationException("First-publication create intent was not durable before the callback");

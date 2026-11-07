@@ -7,11 +7,15 @@ mod build;
 mod config;
 mod dev;
 mod doctor;
+mod embedded_publisher;
+mod game_process;
+mod identity;
 mod info;
 mod init;
 mod install;
 mod mod_config_backup;
 mod publish;
+mod remote;
 mod setup;
 mod steam;
 mod uninstall;
@@ -66,7 +70,17 @@ enum Commands {
         all: bool,
     },
     /// 正式安装到游戏 Local 目录
-    Install,
+    Install {
+        /// 从 GitHub 最新 Release 下载并安装
+        #[arg(long, conflicts_with = "repo")]
+        release: Option<String>,
+        /// 从 GitHub 源代码仓库扫描、构建并安装
+        #[arg(long, conflicts_with = "release")]
+        repo: Option<String>,
+        /// GitHub 源代码仓库分支、标签或提交
+        #[arg(long, conflicts_with = "release")]
+        r#ref: Option<String>,
+    },
     /// 从游戏目录卸载 Mod
     Uninstall {
         /// 卸载范围
@@ -75,15 +89,15 @@ enum Commands {
     },
     /// 查看已安装的 Mod 信息
     Info,
-    /// 发布到 Steam 创意工坊
+    /// 发布到 Steam 创意工坊（默认通过 Legacy ZIP 发布器纯命令行上传）
     Publish {
-        /// 直接使用 OniUploader GUI，跳过更新说明提示
+        /// 使用 OniUploader GUI 代替默认的纯命令行发布
         #[arg(long)]
         gui: bool,
         /// 自动使用最新更新日志作为上传说明，不弹更新说明输入
         #[arg(long)]
         auto_note: bool,
-        /// 禁止所有提示；不启动 GUI，只提示改用单 ZIP 发布脚本
+        /// 禁止所有提示；非交互式纯命令行发布
         #[arg(long, visible_alias = "yes", conflicts_with = "gui")]
         non_interactive: bool,
         /// 仅构建并生成 Workshop VDF，不上传
@@ -94,6 +108,54 @@ enum Commands {
     List,
     /// 检查本机 ONI Mod 开发环境
     Doctor,
+    /// 搜索、安装或卸载 Steam 创意工坊 Mod
+    Workshop {
+        #[command(subcommand)]
+        command: WorkshopCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum WorkshopCommands {
+    /// 搜索 ONI 创意工坊
+    Search { query: String },
+    /// 订阅并安装一个 Legacy ZIP 条目
+    Install { id: String },
+    /// 取消订阅一个条目
+    Uninstall { id: String },
+    /// 查看或修改已发布条目的工坊页面，不替换 Legacy ZIP
+    Page {
+        #[command(subcommand)]
+        command: PageCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum PageCommands {
+    /// 读取标题、双语说明、标签、可见性和 Legacy 文件状态
+    Show { id: String },
+    /// 修改页面字段。标签会整组替换；说明从 UTF-8 文件读取
+    Set {
+        id: String,
+        #[arg(long)]
+        title: Option<String>,
+        #[arg(long)]
+        description_file: Option<PathBuf>,
+        #[arg(long)]
+        chinese_title: Option<String>,
+        #[arg(long)]
+        chinese_description_file: Option<PathBuf>,
+        /// 逗号分隔。会替换该条目的全部标签
+        #[arg(long)]
+        tags: Option<String>,
+        /// public、friends、private 或 unlisted
+        #[arg(long)]
+        visibility: Option<String>,
+        #[arg(long)]
+        preview: Option<PathBuf>,
+        #[arg(long)]
+        change_note: Option<String>,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -158,15 +220,59 @@ fn main() -> Result<()> {
                 dev::run(&cfg, &selected)
             }
         }
-        Commands::Install => {
-            let selected = cfg.select_mod(cli.r#mod)?;
-            install::run(&cfg, &selected)
-        }
+        Commands::Install {
+            release,
+            repo,
+            r#ref,
+        } => match (release, repo) {
+            (Some(source), None) => remote::install_release(&cfg, cli.r#mod, &source),
+            (None, Some(source)) => {
+                remote::install_repository(&cfg, cli.r#mod, &source, r#ref.as_deref())
+            }
+            (None, None) if r#ref.is_some() => bail!("--ref 只能与 --repo 同用"),
+            (None, None) => {
+                let selected = cfg.select_mod(cli.r#mod)?;
+                install::run(&cfg, &selected)
+            }
+            _ => unreachable!(),
+        },
         Commands::Uninstall { scope } => {
             let selected = cfg.select_mod(cli.r#mod)?;
             uninstall::run(&cfg, &selected, scope)
         }
         Commands::Info => info::run(&cfg),
+        Commands::Workshop { command } => match command {
+            WorkshopCommands::Search { query } => install::workshop(&cfg, "search", &query),
+            WorkshopCommands::Install { id } => install::workshop(&cfg, "install", &id),
+            WorkshopCommands::Uninstall { id } => install::workshop(&cfg, "uninstall", &id),
+            WorkshopCommands::Page { command } => match command {
+                PageCommands::Show { id } => install::workshop_page_show(&cfg, &id),
+                PageCommands::Set {
+                    id,
+                    title,
+                    description_file,
+                    chinese_title,
+                    chinese_description_file,
+                    tags,
+                    visibility,
+                    preview,
+                    change_note,
+                } => install::workshop_page_set(
+                    &cfg,
+                    &id,
+                    install::WorkshopPageEdit {
+                        title,
+                        description_file,
+                        chinese_title,
+                        chinese_description_file,
+                        tags,
+                        visibility,
+                        preview,
+                        change_note,
+                    },
+                ),
+            },
+        },
         Commands::Publish {
             gui,
             auto_note,
@@ -211,5 +317,49 @@ mod tests {
     fn init_command_accepts_an_optional_name() {
         assert!(Cli::try_parse_from(["onim", "init"]).is_ok());
         assert!(Cli::try_parse_from(["onim", "init", "ExampleMod"]).is_ok());
+    }
+
+    #[test]
+    fn install_accepts_github_release_and_source_repository() {
+        assert!(
+            Cli::try_parse_from([
+                "onim",
+                "install",
+                "--release",
+                "LIghtJUNction/CycleTrim",
+                "-m",
+                "CycleTrim"
+            ])
+            .is_ok()
+        );
+        assert!(
+            Cli::try_parse_from([
+                "onim",
+                "install",
+                "--repo",
+                "https://github.com/owner/repo",
+                "--ref",
+                "main"
+            ])
+            .is_ok()
+        );
+        assert!(
+            Cli::try_parse_from([
+                "onim",
+                "install",
+                "--release",
+                "owner/repo",
+                "--repo",
+                "other/repo"
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn workshop_install_lifecycle_commands_parse() {
+        assert!(Cli::try_parse_from(["onim", "workshop", "search", "CycleTrim"]).is_ok());
+        assert!(Cli::try_parse_from(["onim", "workshop", "install", "12345"]).is_ok());
+        assert!(Cli::try_parse_from(["onim", "workshop", "uninstall", "12345"]).is_ok());
     }
 }

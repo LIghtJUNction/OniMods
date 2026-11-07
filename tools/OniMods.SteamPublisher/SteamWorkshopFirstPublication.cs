@@ -5,13 +5,13 @@ internal static partial class SteamWorkshopPublisher
     internal static (ulong Id, FirstPublicationJournal Journal) PublishFirstPrivate(FirstPublicationPlan plan)
     {
         FirstPublicationPlan.RequireTarget();
-        RequireNoOwnedOniOnline();
         var package = plan.ReadPackage();
         var preview = plan.ReadPreview();
-        var zipName = $"onim_onionline_first_{plan.ZipSha256[..16]}.zip";
-        var previewName = $"onim_onionline_first_{plan.PreviewSha256[..16]}{Path.GetExtension(plan.PreviewPath).ToLowerInvariant()}";
-        ShareCloudFile(zipName, package.Bytes, "first OniOnline ZIP");
-        ShareCloudFile(previewName, preview, "first OniOnline preview");
+        var slug = string.Concat(WorkshopTarget.DisplayName.Select(ch => char.IsAsciiLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '-')).Trim('-');
+        var zipName = $"onim_{slug}_first_{plan.ZipSha256[..16]}.zip";
+        var previewName = $"onim_{slug}_first_{plan.PreviewSha256[..16]}{Path.GetExtension(plan.PreviewPath).ToLowerInvariant()}";
+        ShareCloudFile(zipName, package.Bytes, $"first {WorkshopTarget.DisplayName} ZIP");
+        ShareCloudFile(previewName, preview, $"first {WorkshopTarget.DisplayName} preview");
         var journal = FirstPublicationJournal.Begin(CandidateCreationJournal.DefaultDirectory(), plan.PlanSha256);
         bool callbackReceived = false;
         try
@@ -19,12 +19,12 @@ internal static partial class SteamWorkshopPublisher
             var result = WaitForCall<RemoteStoragePublishFileResult_t>(SteamRemoteStorage.PublishWorkshopFile(
                 zipName, previewName, new AppId_t(457140), plan.Title, plan.EnglishDescription,
                 ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate,
-                plan.Tags, EWorkshopFileType.k_EWorkshopFileTypeCommunity), UploadTimeout, "First OniOnline Private Legacy creation");
+                plan.Tags, EWorkshopFileType.k_EWorkshopFileTypeCommunity), UploadTimeout, $"First {WorkshopTarget.DisplayName} Private Legacy creation");
             callbackReceived = true;
             var id = result.m_nPublishedFileId.m_PublishedFileId;
             journal.RecordCallback(result.m_eResult.ToString(), id, result.m_bUserNeedsToAcceptWorkshopLegalAgreement);
             if (result.m_eResult != EResult.k_EResultOK || result.m_bUserNeedsToAcceptWorkshopLegalAgreement || id is 0 or ulong.MaxValue)
-                throw new InvalidOperationException($"First OniOnline creation was not a usable success; journal={journal.Path}; do not retry create");
+                throw new InvalidOperationException($"First creation was not a usable success; journal={journal.Path}; do not retry create");
             Console.WriteLine($"firstWorkshopId={id}; creationJournal={journal.Path}");
             RequireFirstCreatedPage(plan, id);
             return (id, journal);
@@ -40,7 +40,7 @@ internal static partial class SteamWorkshopPublisher
     {
         WaitForPromotionPage(id, page => page.Visibility == "Private" && page.Title == plan.Title
             && page.DescriptionEnglish == plan.EnglishDescription && page.FileSize == plan.ZipBytes,
-            "first Private OniOnline Legacy package");
+            $"first Private {WorkshopTarget.DisplayName} Legacy package");
     }
 
     internal static void PublishFirstPublic(FirstPublicationPlan plan, ulong id)
@@ -61,10 +61,10 @@ internal static partial class SteamWorkshopPublisher
             && page.Title == plan.Title && page.TitleChinese == plan.Title
             && page.DescriptionEnglish == plan.EnglishDescription && page.DescriptionChinese == plan.ChineseDescription
             && page.FileSize == plan.ZipBytes && page.Tags.ToHashSet(StringComparer.Ordinal).SetEquals(plan.Tags),
-            "first OniOnline bilingual page");
+            $"first {WorkshopTarget.DisplayName} bilingual page");
     }
 
-    private static void RequireNoOwnedOniOnline()
+    internal static void RequireNoOwnedTarget(FirstPublicationPlan plan)
     {
         var account = SteamUser.GetSteamID().GetAccountID();
         for (uint page = 1; page <= 10; page++)
@@ -82,13 +82,39 @@ internal static partial class SteamWorkshopPublisher
                     Require(SteamUGC.GetQueryUGCResult(query, index, out var item), "GetQueryUGCResult owned items");
                     if (item.m_eResult != EResult.k_EResultOK || item.m_ulSteamIDOwner != WorkshopTarget.ExpectedOwner)
                         throw new InvalidOperationException("First-item duplicate check returned an invalid owned item");
-                    if (item.m_rgchTitle.Contains("OniOnline", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException($"An owned OniOnline item already exists: {item.m_nPublishedFileId.m_PublishedFileId}; inspect it instead of creating another");
+                    var id = item.m_nPublishedFileId.m_PublishedFileId;
+                    if (item.m_rgchTitle.Equals(plan.Title, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException($"An owned item titled {plan.Title} already exists: {id}; inspect it instead of creating another");
+                    var tagCount = SteamUGC.GetQueryUGCNumTags(query, index);
+                    for (uint tagIndex = 0; tagIndex < tagCount; tagIndex++)
+                    {
+                        if (!SteamUGC.GetQueryUGCTag(query, index, tagIndex, out var tag, 1024))
+                            throw new InvalidOperationException($"Could not read Workshop tag {tagIndex} for owned item {id}");
+                        if (tag == plan.StaticId)
+                            throw new InvalidOperationException($"An owned item already uses staticID {plan.StaticId}: {id}; inspect it instead of creating another");
+                    }
+                    if (InstalledStaticId(item.m_nPublishedFileId) == plan.StaticId)
+                        throw new InvalidOperationException($"An installed Workshop ZIP already uses staticID {plan.StaticId}: {id}; inspect it instead of creating another");
                 }
                 if (result.m_unNumResultsReturned == 0 || page * 50 >= result.m_unTotalMatchingResults) return;
             }
             finally { SteamUGC.ReleaseQueryUGCRequest(query); }
         }
         throw new InvalidOperationException("First-item duplicate check exceeded its bounded page limit");
+    }
+
+    private static string? InstalledStaticId(PublishedFileId_t fileId)
+    {
+        var state = (EItemState)SteamUGC.GetItemState(fileId);
+        if ((state & EItemState.k_EItemStateInstalled) == 0
+            || (state & EItemState.k_EItemStateLegacyItem) == 0)
+            return null;
+        if (!SteamUGC.GetItemInstallInfo(fileId, out _, out var path, 4096, out _) || !File.Exists(path))
+            return null;
+        try { return FirstPublicationPlan.ReadPackagedStaticId(path); }
+        catch (Exception error) when (error is InvalidOperationException or IOException or InvalidDataException)
+        {
+            return null;
+        }
     }
 }

@@ -12,11 +12,12 @@ internal static partial class SteamWorkshopPublisher
             throw new InvalidOperationException("Steam client is not logged in");
         }
         var steamId = SteamUser.GetSteamID().m_SteamID;
-        if (steamId != WorkshopTarget.ExpectedOwner)
+        if (WorkshopTarget.ConfiguredOwner is ulong expectedOwner && steamId != expectedOwner)
         {
             throw new InvalidOperationException(
                 $"Steam account {steamId} is not the expected Workshop owner");
         }
+        WorkshopTarget.SetCurrentOwner(steamId);
     }
 
     internal static SteamUGCDetails_t QueryTarget() =>

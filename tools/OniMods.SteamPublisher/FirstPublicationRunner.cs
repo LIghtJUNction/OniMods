@@ -3,7 +3,7 @@ using Steamworks;
 
 internal static class FirstPublicationRunner
 {
-    private static readonly string[] Modes = ["--prepare-first-item", "--create-first-item", "--publish-first-item", "--verify-first-item"];
+    private static readonly string[] Modes = ["--prepare-first-item", "--create-first-item", "--publish-first-item", "--verify-first-item", "--check-first-target"];
     internal static bool IsMode(string[] args) => args.Any(value => Modes.Contains(value, StringComparer.Ordinal));
 
     internal static int Run(string[] args)
@@ -37,6 +37,14 @@ internal static class FirstPublicationRunner
         var planPath = Path.GetFullPath(Required(args, "--plan"));
         var expectedHash = Required(args, "--expected-plan-sha256");
         var reviewed = FirstPublicationPlan.Load(planPath, expectedHash);
+        if (args.Contains("--check-first-target", StringComparer.Ordinal))
+        {
+            Initialize(SteamAppRole.Consumer);
+            try { SteamWorkshopPublisher.RequireNoOwnedTarget(reviewed); }
+            finally { SteamAPI.Shutdown(); }
+            Console.WriteLine($"firstTargetDuplicateCheckPassed={reviewed.Title}; steamContext=Consumer");
+            return 0;
+        }
         if (args.Contains("--verify-first-item", StringComparer.Ordinal))
             return Verify(reviewed, args.Contains("--first-public-readback", StringComparer.Ordinal));
         bool create = args.Contains("--create-first-item", StringComparer.Ordinal);
@@ -44,10 +52,11 @@ internal static class FirstPublicationRunner
         if (!args.Contains(confirmation, StringComparer.Ordinal))
             throw new ArgumentException($"First-publication write requires {confirmation}");
         if (create && File.Exists(FirstPublicationJournal.DefaultPath))
-            throw new InvalidOperationException("OniOnline first creation was already attempted; inspect its journal and owned items, never automatically retry create");
+            throw new InvalidOperationException("First creation was already attempted; inspect its journal and owned items, never automatically retry create");
         // DownloadItem belongs to a short-lived child. Steam shutdown can hang
         // after downloads; the process that performs writes must not download.
-        if (!create) RunConsumerVerifier(planPath, reviewed.PlanSha256, publicItem: false);
+        if (create) RunConsumerTargetCheck(planPath, reviewed.PlanSha256);
+        else RunConsumerVerifier(planPath, reviewed.PlanSha256, publicItem: false);
         Initialize(create ? SteamAppRole.Creator : SteamAppRole.Consumer);
         FirstPublicationJournal? journal = null;
         ulong id;
@@ -128,6 +137,24 @@ internal static class FirstPublicationRunner
             throw new TimeoutException("First-item Consumer verification timed out; do not retry create");
         }
         if (child.ExitCode != 0) throw new InvalidOperationException("First-item Consumer verification failed; do not retry create");
+    }
+
+    private static void RunConsumerTargetCheck(string path, string hash)
+    {
+        var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, WorkingDirectory = SteamAppContext.HintDirectory(SteamAppRole.Consumer) };
+        start.Environment["SteamAppId"] = "457140";
+        start.Environment["SteamGameId"] = "457140";
+        start.ArgumentList.Add(typeof(Program).Assembly.Location);
+        start.ArgumentList.Add("--check-first-target");
+        start.ArgumentList.Add("--plan"); start.ArgumentList.Add(path);
+        start.ArgumentList.Add("--expected-plan-sha256"); start.ArgumentList.Add(hash);
+        using var child = Process.Start(start) ?? throw new InvalidOperationException("Could not start first-item Consumer duplicate check");
+        if (!child.WaitForExit(TimeSpan.FromMinutes(3)))
+        {
+            child.Kill(entireProcessTree: true);
+            throw new TimeoutException("First-item Consumer duplicate check timed out; no create was attempted");
+        }
+        if (child.ExitCode != 0) throw new InvalidOperationException("First-item Consumer duplicate check failed; no create was attempted");
     }
 
     private static string Required(string[] args, string option)

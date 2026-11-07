@@ -5,7 +5,8 @@ internal sealed class FirstPublicationJournal
 {
     private FirstPublicationJournal(string path) { Path = path; }
     internal string Path { get; }
-    internal static string JournalPath(string directory) => System.IO.Path.Combine(directory, "onionline-first-publication.jsonl");
+    internal static string JournalPath(string directory) => System.IO.Path.Combine(directory,
+        $"{string.Concat(WorkshopTarget.StaticId.Select(ch => char.IsAsciiLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '-')).Trim('-')}-first-publication.jsonl");
     internal static string DefaultPath => JournalPath(CandidateCreationJournal.DefaultDirectory());
 
     internal static FirstPublicationJournal Begin(string directory, string planSha256)
@@ -14,7 +15,7 @@ internal sealed class FirstPublicationJournal
         Directory.CreateDirectory(directory);
         var path = JournalPath(directory);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        Write(stream, new { @event = "first-create-intent", utc = DateTimeOffset.UtcNow, target = FirstPublicationPlan.StaticId, planSha256 });
+        Write(stream, new { @event = "first-create-intent", utc = DateTimeOffset.UtcNow, target = WorkshopTarget.StaticId, planSha256 });
         return new FirstPublicationJournal(path);
     }
 
@@ -59,7 +60,7 @@ internal sealed class FirstPublicationJournal
         if (lines.Length < 2) throw new InvalidOperationException("First publication lacks a successful creation callback; do not retry create");
         using var intent = JsonDocument.Parse(lines[0]);
         if (intent.RootElement.GetProperty("event").GetString() != "first-create-intent"
-            || intent.RootElement.GetProperty("target").GetString() != FirstPublicationPlan.StaticId
+            || intent.RootElement.GetProperty("target").GetString() != WorkshopTarget.StaticId
             || !string.Equals(intent.RootElement.GetProperty("planSha256").GetString(), planSha256, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("First publication journal has a different reviewed plan or target");
         ulong id = 0;

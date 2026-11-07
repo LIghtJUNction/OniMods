@@ -38,6 +38,11 @@ impl Project {
         .unwrap();
         for name in ["Alpha", "Beta"] {
             fs::create_dir_all(root.join("mods").join(name)).unwrap();
+            fs::write(
+                root.join("mods").join(name).join("mod.yaml"),
+                format!("staticID: test.{name}\n"),
+            )
+            .unwrap();
         }
         let bin = root.join("bin");
         fs::create_dir(&bin).unwrap();
@@ -228,13 +233,74 @@ fn install_refuses_a_dev_shadow_before_building_or_overwriting_local() {
     let output = project.run(&["install"], "0");
     assert!(!output.status.success(), "{output:?}");
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("同名 Dev 模组"), "{stderr}");
+    assert!(
+        stderr.contains("无法验证同名旧 Mod 的 staticID"),
+        "{stderr}"
+    );
     assert!(!project.0.join("calls.txt").exists());
     assert!(!project.mods().join("Local/Alpha").exists());
     assert_eq!(
         fs::read_to_string(shadow.join("OniOnline.dll")).unwrap(),
         "old-dev-copy"
     );
+}
+
+#[test]
+fn install_removes_only_a_verified_dev_duplicate_and_keeps_a_recovery_copy() {
+    let project = Project::new();
+    let old_dev = project.mods().join("Dev/Alpha");
+    fs::create_dir_all(&old_dev).unwrap();
+    fs::write(old_dev.join("Alpha.dll"), "old-dev-copy").unwrap();
+    fs::write(old_dev.join("mod.yaml"), "staticID: test.Alpha\n").unwrap();
+    let old_local = project.mods().join("Local/AlphaHarness");
+    fs::create_dir_all(&old_local).unwrap();
+    fs::write(old_local.join("Alpha.dll"), "old-local-copy").unwrap();
+    fs::write(old_local.join("mod.yaml"), "staticID: test.Alpha\n").unwrap();
+    let manifest = project.mods().join("mods.json");
+    fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+    fs::write(&manifest, r#"{
+  "mod_load_in_progress": false,
+  "mods": [
+    {"enabled": false, "status": 1, "staticID": "test.Alpha", "label": {"distribution_platform": 4, "id": "Alpha", "title": "Alpha", "version": 0}},
+    {"enabled": false, "status": 1, "staticID": "test.Alpha", "label": {"distribution_platform": 0, "id": "AlphaHarness", "title": "Alpha", "version": 0}},
+    {"enabled": true, "status": 1, "staticID": "test.Other", "label": {"distribution_platform": 0, "id": "Other", "title": "Other", "version": 0}}
+  ]
+}
+"#).unwrap();
+
+    let output = project.run(&["install"], "0");
+    assert!(output.status.success(), "{output:?}");
+    assert!(!old_dev.exists(), "old Dev path remains active");
+    assert_eq!(
+        fs::read_to_string(project.mods().join("Local/Alpha/Alpha.dll")).unwrap(),
+        "new-package"
+    );
+    assert!(!old_local.exists(), "old Local path remains active");
+    let recovery_root = project.mods().join(".onim-recovery");
+    let recovery = fs::read_dir(&recovery_root)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    assert_eq!(
+        fs::read_to_string(recovery.join("0-Alpha/Alpha.dll")).unwrap(),
+        "old-dev-copy"
+    );
+    assert_eq!(
+        fs::read_to_string(recovery.join("1-AlphaHarness/Alpha.dll")).unwrap(),
+        "old-local-copy"
+    );
+    let data: serde_json::Value = serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
+    assert_eq!(data["mods"].as_array().unwrap().len(), 1);
+    assert_eq!(data["mods"][0]["staticID"], "test.Other");
+    assert!(fs::read_dir(project.mods()).unwrap().any(|entry| {
+        entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("mods.json.onim-backup-")
+    }));
 }
 
 #[test]
@@ -335,6 +401,9 @@ fn successful_replacement_uses_the_new_package_and_removes_obsolete_files() {
         let installed = project.installed(scope);
         fs::write(installed.join("obsolete.dll"), "obsolete").unwrap();
         let legacy = (command == "dev").then(|| project.installed("dev"));
+        if let Some(legacy) = &legacy {
+            fs::write(legacy.join("mod.yaml"), "staticID: test.Alpha\n").unwrap();
+        }
         let output = project.run(&[command], "0");
         assert!(output.status.success(), "{command}: {output:?}");
         assert_eq!(

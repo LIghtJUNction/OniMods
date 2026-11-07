@@ -1,6 +1,6 @@
 # onim
 
-`onim` is a command-line toolkit for creating and developing Oxygen Not Included mods. It creates the project layout, builds the C# mod, installs development builds, and prepares Workshop publishing through the OniUploader workflow.
+`onim` is a command-line toolkit for creating and developing Oxygen Not Included mods. It creates the project layout, builds the C# mod, installs development builds, and publishes to Steam Workshop directly via the headless Legacy ZIP publisher.
 
 ## Install
 
@@ -42,10 +42,22 @@ path. Legacy lowercase `dev` copies are removed after a successful Dev install.
 - `onim setup` detects the game and required tools for an existing OniMods workspace.
 - `onim doctor` checks configured paths, tools and mod sources.
 - `onim build` and `onim dev` build and install a development copy.
-- `onim install` installs a Release build to the game's Local mods directory. It
-  refuses to proceed while the same mod still exists in `Dev` so ONI cannot load
-  two copies with the same static ID; remove or move the Dev copy first.
+- `onim install` builds the configured project and installs it to `Local`.
+  `onim install --release OWNER/REPO` installs a mod from the latest GitHub
+  Release; `onim install --repo OWNER/REPO [--ref REF]` scans C# projects,
+  builds their mods, and installs them. Use `-m NAME` to select one mod from a
+  repository containing several.
+- `onim workshop search QUERY`, `onim workshop install ID`, and
+  `onim workshop uninstall ID` search, install, and remove Steam Workshop mods.
+  Workshop install accepts ONI-compatible single-file Legacy ZIP items.
+- `onim workshop page show ID` reads an owned Workshop page.
+  `onim workshop page set ID` changes the English and Simplified Chinese title
+  and description, replaces the full tag set, and sets visibility or the preview
+  image. It does not upload a new ZIP.
+- Install and uninstall operations enforce one active version per `staticID`
+  across `Local`, `Dev`, and Workshop. Verified duplicate folders are moved to
+  `mods/.onim-recovery`; `mods.json` is backed up before it is changed.
 - `onim info`, `onim list` and `onim uninstall` inspect and manage configured mods.
-- `onim publish` prepares the VDF for OniUploader; it does not use SteamCMD directory uploads.
+- `onim publish` uploads directly to Steam Workshop via the headless Legacy ZIP publisher (or `--gui` for OniUploader); it never uses incompatible SteamCMD directory uploads.
 
 See the [OniMods repository](https://github.com/LIghtJUNction/OniMods) for the full guide, troubleshooting and source.

@@ -1,6 +1,6 @@
 [package]
 name = "onim"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2024"
 license-file = "LICENSE"
 description = "Command-line toolkit for creating, building, installing, and managing Oxygen Not Included mods."
@@ -15,7 +15,15 @@ include = [
     "/LICENSING.md",
     "/Directory.Build.props.example",
     "/src/**",
-    "/mods/OniModTemplate/**",
+    "/mods/OniModTemplate/*.cs",
+    "/mods/OniModTemplate/*.csproj",
+    "/mods/OniModTemplate/*.md",
+    "/mods/OniModTemplate/docs/*.md",
+    "/mods/OniModTemplate/Patches/*.cs",
+    "/tools/OniMods.SteamPublisher/*.cs",
+    "/tools/OniMods.SteamPublisher/*.csproj",
+    "/tools/OniMods.SteamPublisher/steam_appid.txt",
+    "/tools/OniMods.SteamPublisher/consumer/steam_appid.txt",
 ]
 
 

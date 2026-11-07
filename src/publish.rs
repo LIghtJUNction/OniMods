@@ -221,6 +221,11 @@ fn read_mod_info(dist_mod: &Path) -> Option<(String, String, String)> {
     Some((title, description, version))
 }
 
+fn read_static_id(dist_mod: &Path) -> Option<String> {
+    let yaml = fs::read_to_string(dist_mod.join("mod.yaml")).ok()?;
+    yaml_value(&yaml, "staticID")
+}
+
 fn read_file(path: &Path) -> Option<String> {
     fs::read_to_string(path).ok().map(|s| s.trim().to_string())
 }
@@ -409,9 +414,8 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
 
     let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
         id.clone()
-    } else if dry_run && selected.name == "OniOnline" {
-        // First creation is handled by the reviewed, one-shot Legacy publisher.
-        // ID 0 here only prepares metadata and never reaches a Steam upload.
+    } else if dry_run {
+        // ID 0 only prepares metadata; the staged Legacy publisher owns creation.
         "0".to_string()
     } else if non_interactive || dry_run {
         anyhow::bail!("无人值守发布要求在 onim.toml 配置 publishedfileid");
@@ -449,13 +453,51 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
 
     reject_directory_upload_for_oni(&vdf)?;
 
-    if non_interactive {
+    run_headless_publisher(cfg, selected, &vdf, &title, &publishedfileid, &dist_mod)?;
+    Ok(())
+}
+
+fn run_headless_publisher(
+    cfg: &Config,
+    selected: &SelectedMod,
+    vdf: &Path,
+    title: &str,
+    publishedfileid: &str,
+    dist_mod: &Path,
+) -> Result<()> {
+    if publishedfileid.is_empty() || publishedfileid == "0" {
         anyhow::bail!(
-            "无人值守发布请改用单 ZIP 发布器：scripts/publish_onimcp_steam.sh 或 scripts/publish_cycletrim_steam.sh"
+            "未在 onim.toml 中配置 publishedfileid。首次发布请参阅 docs/steam-publishing.md 使用受控的阶段性审查流程：\n  \
+            scripts/publish_legacy_steam.sh {} --prepare-first-item --plan dist/{}.first-publication-plan.json",
+            selected.name,
+            selected.name
         );
     }
 
-    launch_uploader(&dist_mod, &preview);
+    let static_id = read_static_id(dist_mod)
+        .ok_or_else(|| anyhow::anyhow!("发布包 mod.yaml 缺少 staticID；拒绝发布"))?;
+
+    println!("\n📦 准备 Steam Legacy ZIP 发布器...");
+    let publisher_dll = crate::embedded_publisher::ensure_publisher_ready(cfg)?;
+
+    println!("📤 正在通过命令行发布到 Steam 创意工坊 (Legacy ZIP 模式)...");
+    let mut cmd = Command::new("dotnet");
+    cmd.arg(&publisher_dll)
+        .arg("--vdf")
+        .arg(vdf)
+        .env("SteamAppId", "636750")
+        .env("SteamGameId", "636750")
+        .env("ONIM_PUBLISH_NAME", &selected.name)
+        .env("ONIM_PUBLISH_TITLE_CONTAINS", title)
+        .env("ONIM_PUBLISH_STATIC_ID", &static_id)
+        .env("ONIM_PUBLISH_WORKSHOP_ID", publishedfileid);
+
+    let status = cmd.status().context("执行 OniMods.SteamPublisher 失败")?;
+    if !status.success() {
+        anyhow::bail!("Steam 发布失败 (exit code: {:?})", status.code());
+    }
+
+    println!("\n🎉 成功发布到 Steam 创意工坊！");
     Ok(())
 }
 
@@ -468,8 +510,7 @@ fn launch_uploader(dist_mod: &Path, preview: &Path) {
             println!();
             println!("不要改用 SteamCMD：它的 contentfolder 目录上传会把条目");
             println!("单向转换为 UGC 目录模式，ONI 无法安装，且没有回退 API。");
-            println!("无人值守发布请用 scripts/publish_onimcp_steam.sh 或");
-            println!("scripts/publish_cycletrim_steam.sh 的单 ZIP 发布器。");
+            println!("无人值守发布请使用单文件 Legacy ZIP 发布流程；不要改用 SteamCMD 目录上传。");
             return;
         }
     };
@@ -641,6 +682,22 @@ mod tests {
         )?;
         assert!(reject_directory_upload_for_oni(&vdf).is_err());
 
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn read_static_id_extracts_from_mod_yaml() -> TestResult {
+        let root = test_dir("static-id");
+        fs::create_dir_all(&root)?;
+        fs::write(
+            root.join("mod.yaml"),
+            "title: \"MyMod\"\ndescription: \"desc\"\nstaticID: \"LIghtJUNction.MyMod\"\n",
+        )?;
+        assert_eq!(
+            read_static_id(&root).as_deref(),
+            Some("LIghtJUNction.MyMod")
+        );
         fs::remove_dir_all(root)?;
         Ok(())
     }

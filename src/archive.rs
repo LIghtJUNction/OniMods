@@ -128,6 +128,67 @@ pub fn unzip(zip: &Path, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn read_static_id_from_zip(zip: &Path) -> Result<String> {
+    let text = read_mod_yaml_from_zip(zip)?;
+    for line in text.lines() {
+        if let Some((key, value)) = line.split_once(':')
+            && key.trim() == "staticID"
+        {
+            let value = value.trim().trim_matches('"').trim_matches('\'');
+            if !value.is_empty() {
+                return Ok(value.to_owned());
+            }
+        }
+    }
+    anyhow::bail!("Workshop ZIP 的 mod.yaml 缺少 staticID")
+}
+
+pub fn read_mod_yaml_from_zip(zip: &Path) -> Result<String> {
+    let listing = Command::new("unzip")
+        .args(["-Z1"])
+        .arg(zip)
+        .output()
+        .context("读取 Workshop ZIP 内容失败；请确认已安装 unzip")?;
+    if !listing.status.success() {
+        anyhow::bail!("不是可读取的 ZIP 文件：{}", zip.display());
+    }
+    let entries = String::from_utf8(listing.stdout).context("ZIP 文件名不是 UTF-8")?;
+    let mut metadata_paths = Vec::new();
+    for entry in entries.lines() {
+        let path = Path::new(entry);
+        if path.components().any(|part| {
+            matches!(
+                part,
+                std::path::Component::ParentDir
+                    | std::path::Component::RootDir
+                    | std::path::Component::Prefix(_)
+            )
+        }) {
+            anyhow::bail!("Workshop ZIP 含越界路径：{entry}");
+        }
+        if path.file_name().and_then(|name| name.to_str()) == Some("mod.yaml") {
+            metadata_paths.push(entry);
+        }
+    }
+    if metadata_paths.len() != 1 {
+        anyhow::bail!(
+            "Workshop Legacy ZIP 必须恰好包含一个 mod.yaml；发现 {} 个",
+            metadata_paths.len()
+        );
+    }
+    let output = Command::new("unzip")
+        .arg("-p")
+        .arg(zip)
+        .arg(metadata_paths[0])
+        .output()
+        .context("读取 Workshop ZIP 的 mod.yaml 失败")?;
+    if !output.status.success() {
+        anyhow::bail!("提取 Workshop ZIP 的 mod.yaml 失败");
+    }
+    let text = String::from_utf8(output.stdout).context("mod.yaml 不是 UTF-8")?;
+    Ok(text)
+}
+
 #[cfg(any(target_os = "windows", test))]
 fn escape_powershell_single_quoted(value: &str) -> String {
     value.replace('\'', "''")

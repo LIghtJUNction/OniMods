@@ -1,6 +1,54 @@
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
+
+use crate::config::Config;
+use anyhow::{Context, Result};
+
+pub fn workshop_command(cfg: &Config, operation: &str, argument: &str) -> Result<String> {
+    let project = cfg
+        .repo_root
+        .join("tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj");
+    if !project.is_file() {
+        anyhow::bail!("缺少 Steam Workshop helper：{}", project.display());
+    }
+    let output = Command::new("dotnet")
+        .args(["run", "--project"])
+        .arg(&project)
+        .args(["-c", "Release", "--", "--workshop", operation, argument])
+        .current_dir(&cfg.repo_root)
+        .output()
+        .context("启动 Steam Workshop helper 失败；请确认已安装 .NET SDK")?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "Steam Workshop {operation} 失败：{}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+pub fn workshop_args(cfg: &Config, args: &[String]) -> Result<()> {
+    let project = cfg
+        .repo_root
+        .join("tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj");
+    if !project.is_file() {
+        anyhow::bail!("缺少 Steam Workshop helper：{}", project.display());
+    }
+    let status = Command::new("dotnet")
+        .args(["run", "--project"])
+        .arg(&project)
+        .args(["-c", "Release", "--", "--workshop"])
+        .args(args)
+        .current_dir(&cfg.repo_root)
+        .status()
+        .context("启动 Steam Workshop helper 失败；请确认已安装 .NET SDK")?;
+    if !status.success() {
+        anyhow::bail!("Steam Workshop 页面操作失败");
+    }
+    Ok(())
+}
 
 /// Return the Steam library roots that may contain ONI or its uploader.
 ///

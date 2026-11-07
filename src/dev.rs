@@ -1,71 +1,71 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 
 use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
+use crate::game_process;
+use crate::identity::{self, KeepSource, SourceKind};
 use crate::mod_config_backup;
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
+    game_process::ensure_stopped()?;
+    let source_dir = selected.config.project_abs(&cfg.repo_root);
+    let static_id = read_static_id(&source_dir).context("源码缺少可确认的 Mod staticID")?;
+    let keep = KeepSource {
+        kind: SourceKind::Dev,
+        id: selected.name.clone(),
+    };
+    identity::preflight(cfg, &static_id, Some(&keep))?;
     let package = build::run(cfg, selected, false)?;
 
     let dev_dir = cfg.dev_mod_dir(&selected.name)?;
-    let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
     println!("\n🔧 安装到 Dev 目录：{}", dev_dir.display());
 
     archive::install(&package.archive, &dev_dir, &package.assembly_name, || {
-        enable_dev_mod(cfg, selected, &dev_dir)
+        enable_dev_mod(cfg, selected, &static_id)?;
+        identity::enforce_single_source(cfg, &static_id, Some(&keep))
     })?;
-    if distinct_legacy_directory(&legacy_dev_dir, &dev_dir).unwrap_or_else(|error| {
-        eprintln!("⚠️ 新 Dev 模组已安装，但无法确认旧目录身份，已保留：{error:#}");
-        false
-    }) && let Err(error) = fs::remove_dir_all(&legacy_dev_dir)
-    {
-        eprintln!(
-            "⚠️ 新 Dev 模组已安装，但旧版小写 dev 目录清理失败：{}：{error}",
-            legacy_dev_dir.display()
-        );
-    }
+    remove_legacy_dev_copy(cfg, &selected.name)?;
 
     println!("✅ 已安装到游戏 Dev 目录");
-
-    if is_game_running() {
-        println!("⚠️  检测到游戏正在运行，需要重启游戏才能加载新版本的 Mod");
-    } else {
-        println!("💡 游戏未运行，启动游戏后在 Mod 列表中启用即可");
-    }
+    println!("💡 启动游戏后在 Mod 列表中确认启用即可");
 
     Ok(())
 }
 
-fn distinct_legacy_directory(legacy: &Path, current: &Path) -> Result<bool> {
-    if !legacy.try_exists()? {
-        return Ok(false);
+fn remove_legacy_dev_copy(cfg: &Config, name: &str) -> Result<()> {
+    let legacy = cfg.legacy_dev_mod_dir(name)?;
+    let current = cfg.dev_mod_dir(name)?;
+    let metadata = match fs::symlink_metadata(&legacy) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("检查旧 dev 目录失败：{}", legacy.display()));
+        }
+    };
+    if metadata.file_type().is_symlink() {
+        return Ok(());
     }
-    #[cfg(unix)]
+    if !metadata.is_dir() {
+        bail!("旧 dev 路径不是普通目录，已保留：{}", legacy.display());
+    }
+    if let (Ok(legacy_real), Ok(current_real)) =
+        (fs::canonicalize(&legacy), fs::canonicalize(&current))
+        && legacy_real == current_real
     {
-        use std::os::unix::fs::MetadataExt;
-        let old = fs::metadata(legacy)?;
-        let new = fs::metadata(current)?;
-        Ok(old.dev() != new.dev() || old.ino() != new.ino())
+        return Ok(());
     }
-    #[cfg(not(unix))]
-    {
-        let old = fs::canonicalize(legacy)?;
-        let new = fs::canonicalize(current)?;
-        // Dev/dev can be the same directory on a case-insensitive filesystem.
-        // Retain an ambiguous alias rather than deleting the new installation.
-        Ok(!old
-            .to_string_lossy()
-            .eq_ignore_ascii_case(&new.to_string_lossy()))
-    }
+    fs::remove_dir_all(&legacy)
+        .with_context(|| format!("删除旧 dev 目录失败：{}", legacy.display()))?;
+    println!("🧹 已删除旧版小写 dev 目录：{}", legacy.display());
+    Ok(())
 }
 
-fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Result<()> {
-    let static_id = read_static_id(dev_dir).unwrap_or_else(|| format!("local.{}", selected.name));
+fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, static_id: &str) -> Result<()> {
     let mods_file = cfg.game_mods_dir()?.join("mods.json");
     if !mods_file.exists() {
         println!(
@@ -108,7 +108,7 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
         }
 
         if !found {
-            mods.push(new_dev_mod_entry(selected, &static_id));
+            mods.push(new_dev_mod_entry(selected, static_id));
         }
 
         (before_enabled, count_enabled_mods(mods))
@@ -205,42 +205,5 @@ fn new_dev_mod_entry(selected: &SelectedMod, static_id: &str) -> Value {
      "crash_count": 0,
      "reinstall_path": null,
      "staticID": static_id
-    })
-}
-
-fn is_game_running() -> bool {
-    // Match the game process name only. Never use full-command-line matching
-    // (e.g. `pgrep -f`): Steam uploader paths like
-    // `.../OxygenNotIncludedUploader/OniUploader64` would false-positive.
-    #[cfg(target_os = "linux")]
-    {
-        process_name_running(&["OxygenNotIncluded", "OxygenNotIncluded.x86_64"])
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        Command::new("tasklist")
-            .arg("/FI")
-            .arg("IMAGENAME eq OxygenNotIncluded.exe")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).contains("OxygenNotIncluded.exe"))
-            .unwrap_or(false)
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        process_name_running(&["OxygenNotIncluded"])
-    }
-}
-
-/// True if any of the exact process names is running (`pgrep -x`).
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-fn process_name_running(names: &[&str]) -> bool {
-    names.iter().any(|name| {
-        Command::new("pgrep")
-            .args(["-x", name])
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
     })
 }
