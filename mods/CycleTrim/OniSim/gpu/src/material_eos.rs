@@ -212,7 +212,9 @@ mod tests {
 
     #[test]
     fn rejects_inconsistent_default_volume() {
-        let records = [gas(32.0, 0.032), gas(44.0, 0.088)];
+        let mut inconsistent = gas(44.0, 0.044);
+        inconsistent.default_pressure *= 2.0;
+        let records = [gas(32.0, 0.032), inconsistent];
         assert!(calibrate_effective_cell_volume(&records, si_units(), 1e-3).is_err());
     }
 
