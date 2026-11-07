@@ -1,4 +1,4 @@
-use std::{sync::mpsc, time::Duration};
+use std::{sync::{mpsc, Arc}, time::Duration};
 const SHADER: &str = include_str!("multicomponent_flux.wgsl");
 
 pub struct State<'a> {
@@ -6,7 +6,7 @@ pub struct State<'a> {
     pub solid: &'a [u32], pub drift_y: &'a [f32],
 }
 pub struct MulticomponentGpu {
-    device: wgpu::Device, queue: wgpu::Queue, pipeline: wgpu::ComputePipeline,
+    device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, pipeline: wgpu::ComputePipeline,
     groups: [wgpu::BindGroup; 2], mass_a: wgpu::Buffer, mass_b: wgpu::Buffer,
     velocity_x: wgpu::Buffer, velocity_y: wgpu::Buffer, solid: wgpu::Buffer,
     drift_y: wgpu::Buffer, params: wgpu::Buffer, readback: wgpu::Buffer,
@@ -15,17 +15,19 @@ pub struct MulticomponentGpu {
 }
 impl MulticomponentGpu {
     pub async fn new(width: usize, height: usize, channels: usize) -> Result<Self,String> {
+        let context = Arc::new(crate::gpu_context::GpuContext::new().await?);
+        Self::new_with_context(context, width, height, channels).await
+    }
+
+    pub async fn new_with_context(context: Arc<crate::gpu_context::GpuContext>, width: usize, height: usize, channels: usize) -> Result<Self,String> {
         let count=width.checked_mul(height).ok_or("grid overflow")?;
         let values=count.checked_mul(channels).ok_or("tensor overflow")?;
         if width==0 || height==0 || channels==0 || values>u32::MAX as usize { return Err("invalid grid dimensions".into()); }
-        let instance=wgpu::Instance::new(wgpu::InstanceDescriptor{backends:wgpu::Backends::VULKAN,..wgpu::InstanceDescriptor::new_without_display_handle()});
-        let adapter=instance.enumerate_adapters(wgpu::Backends::VULKAN).await.into_iter()
-            .find(|a|matches!(a.get_info().device_type,wgpu::DeviceType::DiscreteGpu|wgpu::DeviceType::IntegratedGpu))
-            .ok_or("no hardware Vulkan adapter available")?;
-        let info=adapter.get_info();
+        let device=&context.device;
+        let queue=&context.queue;
+        let info=context.adapter.clone();
         let max_bytes=(values.max(count).max(channels)*4) as u64;
-        if max_bytes>adapter.limits().max_storage_buffer_binding_size as u64 { return Err("tensor exceeds Vulkan storage-buffer limit".into()); }
-        let (device,queue)=adapter.request_device(&wgpu::DeviceDescriptor{label:Some("OniSim multicomponent stage 1"),required_limits:wgpu::Limits::default(),..Default::default()}).await.map_err(|e|e.to_string())?;
+        if max_bytes>device.limits().max_storage_buffer_binding_size as u64 { return Err("tensor exceeds Vulkan storage-buffer limit".into()); }
         let scope=device.push_error_scope(wgpu::ErrorFilter::Validation);
         let shader=device.create_shader_module(wgpu::ShaderModuleDescriptor{label:Some("multicomponent finite-volume flux"),source:wgpu::ShaderSource::Wgsl(SHADER.into())});
         let pipeline=device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor{label:Some("multicomponent flux pipeline"),layout:None,module:&shader,entry_point:Some("main"),compilation_options:Default::default(),cache:None});
@@ -48,7 +50,7 @@ impl MulticomponentGpu {
         };
         let groups=[create_group(&mass_a,&mass_b),create_group(&mass_b,&mass_a)];
         if let Some(e)=scope.pop().await{return Err(e.to_string());}
-        Ok(Self{device,queue,pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,max_cfl_rate:0.0,adapter:info})
+        Ok(Self{device:context.device.clone(),queue:context.queue.clone(),pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,max_cfl_rate:0.0,adapter:info})
     }
     pub fn upload(&mut self,state:&State<'_>)->Result<(),String>{
         self.uploaded=false;
