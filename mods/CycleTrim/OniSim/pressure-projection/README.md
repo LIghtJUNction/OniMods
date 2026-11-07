@@ -160,3 +160,14 @@ velocity for each call, then keeps the pressure iterations and projection on
 the GPU. It is not yet a full multi-physics GPU-resident game timestep. No
 material-to-density mapping, legacy pressure replacement or GPU performance
 claim is included.
+
+
+## Stage 2.2 — validation hardening
+
+The follow-up branch `experiment/onisim-pressure-projection-validation` extends
+the pressure benchmark with a normalized Poisson residual computed from the
+returned GPU pressure field and the original finite-volume RHS. It reports
+residual alongside CPU/GPU corrected-face parity and divergence reduction.
+The hard gates remain parity <= 1e-4 and strictly reduced divergence; a
+residual threshold will be calibrated after representative Vulkan hardware
+runs rather than guessed.

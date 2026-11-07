@@ -42,7 +42,7 @@ fn cpu_project(f:&Fixture,w:usize,h:usize,dt:f32,iterations:usize,omega:f32)->Cp
  CpuProjection{u,v}
 }
 #[derive(Serialize)]
-struct Row{width:usize,height:usize,iterations:usize,median_us:f64,p95_us:f64,divergence_before_l2:f64,divergence_after_l2:f64,divergence_ratio:f64,max_abs_face_error:f64,max_relative_face_error:f64,cpu_gpu_parity_pass:bool}
+struct Row{width:usize,height:usize,iterations:usize,median_us:f64,p95_us:f64,divergence_before_l2:f64,divergence_after_l2:f64,divergence_ratio:f64,relative_poisson_residual:f64,max_abs_face_error:f64,max_relative_face_error:f64,cpu_gpu_parity_pass:bool}
 #[derive(Serialize)]
 struct Report{stage:&'static str,adapter:String,vendor:u32,device_type:String,backend:String,warmup:usize,samples:usize,rows:Vec<Row>}
 fn median(v:&mut[f64])->f64{v.sort_by(f64::total_cmp);v[v.len()/2]}
@@ -51,6 +51,29 @@ fn divergence(w:usize,h:usize,u:&[f32],v:&[f32],solid:&[u32])->f64{
  for y in 0..h{for x in 0..w{let i=y*w+x;if solid[i]!=0{continue;}let d=(u[y*(w+1)+x+1]-u[y*(w+1)+x])+(v[(y+1)*w+x]-v[y*w+x]);sum+=(d as f64)*(d as f64);}}
  sum.sqrt()
 }
+
+fn poisson_residual(f:&Fixture,w:usize,h:usize,p:&[f32],dt:f32)->f64 {
+ let mut nr=0.0f64; let mut dr=0.0f64;
+ for y in 0..h { for x in 0..w {
+  let i=y*w+x; if f.solid[i]!=0 { continue; }
+  let mut rhs=0.0f64;
+  if x+1<w && f.solid[i+1]==0 { rhs+=0.5*f64::from(f.ux[i]+f.ux[i+1]); }
+  if x>0 && f.solid[i-1]==0 { rhs-=0.5*f64::from(f.ux[i]+f.ux[i-1]); }
+  if y+1<h && f.solid[i+w]==0 { rhs+=0.5*f64::from(f.uy[i]+f.uy[i+w]); }
+  if y>0 && f.solid[i-w]==0 { rhs-=0.5*f64::from(f.uy[i]+f.uy[i-w]); }
+  rhs/=f64::from(dt);
+  let mut lap=0.0f64;
+  for j in [if x>0 {Some(i-1)} else {None},if x+1<w {Some(i+1)} else {None},if y>0 {Some(i-w)} else {None},if y+1<h {Some(i+w)} else {None}].into_iter().flatten() {
+   if f.solid[j]==0 {
+    let beta=2.0/(f64::from(f.rho[i])+f64::from(f.rho[j]));
+    lap+=beta*f64::from(p[j]-p[i]);
+   }
+  }
+  nr+=(lap-rhs)*(lap-rhs); dr+=rhs*rhs;
+ }}
+ nr.sqrt()/dr.sqrt().max(1e-30)
+}
+
 fn initial_faces(f:&Fixture,w:usize,h:usize)->(Vec<f32>,Vec<f32>){
  let mut u=vec![0.0;h*(w+1)];let mut v=vec![0.0;(h+1)*w];
  for y in 0..h{for x in 1..w{let a=y*w+x-1;let b=a+1;if f.solid[a]==0&&f.solid[b]==0{u[y*(w+1)+x]=0.5*(f.ux[a]+f.ux[b]);}}}
@@ -79,7 +102,8 @@ fn main()->Result<(),String>{
   }
   if max_rel>1e-4{return Err(format!("CPU/GPU face parity failed for {w}x{h}: max scaled relative error {max_rel:e}"));}
   if after>=before{return Err(format!("pressure projection did not reduce divergence for {w}x{h}: {before:e} -> {after:e}"));}
-  rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
+  let residual=poisson_residual(&fixture,w,h,&output.pressure,0.2);
+  rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),relative_poisson_residual:residual,max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
  }
  println!("{}",serde_json::to_string_pretty(&Report{stage:"Stage 2 Vulkan Poisson pressure projection",adapter:adapter_name,vendor,device_type,backend,warmup:5,samples:31,rows}).map_err(|e|e.to_string())?);
  Ok(())
