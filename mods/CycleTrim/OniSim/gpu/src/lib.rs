@@ -1,5 +1,6 @@
 //! Targeted experimental operators, deliberately not enabled in the game.
 //! The CPU helper is also called by native presentation; GPU code is not.
+pub mod gpu_context;
 pub mod multicomponent;
 pub mod pressure_projection;
 #[path = "../../native/src/presentation_flow.rs"]
