@@ -55,7 +55,7 @@ namespace OniSim.Compatibility
             GetGeneration = Load<GenerationDelegate>("ONISIM_GetGeneration");
             GetCapabilities = Load<PointerDelegate>("ONISIM_GetCapabilities");
             GetGrid = Load<PointerDelegate>("ONISIM_GetGrid");
-            CopyGridImage = Load<CopyImageDelegate>("ONISIM_CopyGridImage");\n            CopyMulticomponentImage = Load<CopyImageDelegate>("ONISIM_CopyMulticomponentImage");
+            CopyGridImage = Load<CopyImageDelegate>("ONISIM_CopyGridImage");\n            CopyMulticomponentImage = TryLoad<CopyImageDelegate>("ONISIM_CopyMulticomponentImage");
             uint version = GetAbiVersion();
             if (version != 1) throw new NotSupportedException("Native ABI version " + version + " is not supported.");
         }
@@ -98,6 +98,12 @@ namespace OniSim.Compatibility
             IntPtr address = dlsym(library, symbol);
             if (address == IntPtr.Zero) throw new EntryPointNotFoundException("Missing native export " + symbol + ": " + LoaderError());
             return Marshal.GetDelegateForFunctionPointer(address, typeof(T)) as T;
+        }
+
+        private T TryLoad<T>(string symbol) where T : class
+        {
+            IntPtr address = dlsym(library, symbol);
+            return address == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer(address, typeof(T)) as T;
         }
         private static string LoaderError()
         { IntPtr p = dlerror(); return p == IntPtr.Zero ? "unknown loader error" : Marshal.PtrToStringAnsi(p); }
