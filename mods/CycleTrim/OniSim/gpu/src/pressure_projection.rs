@@ -29,9 +29,11 @@ impl PressureProjectionGpu{
   let v_count=(height+1).checked_mul(width).ok_or("v-face count overflow")?;
   if [cells,u_count,v_count].iter().any(|&n|n>u32::MAX as usize){return Err("pressure grid exceeds u32 shader indexing".into());}
   let instance=wgpu::Instance::new(wgpu::InstanceDescriptor{backends:wgpu::Backends::VULKAN,..wgpu::InstanceDescriptor::new_without_display_handle()});
-  let adapter=instance.enumerate_adapters(wgpu::Backends::VULKAN).await.into_iter()
-   .find(|a|matches!(a.get_info().device_type,wgpu::DeviceType::DiscreteGpu|wgpu::DeviceType::IntegratedGpu))
+  let mut adapters=instance.enumerate_adapters(wgpu::Backends::VULKAN).await;
+  let preferred=adapters.iter().position(|a|a.get_info().device_type==wgpu::DeviceType::DiscreteGpu)
+   .or_else(||adapters.iter().position(|a|a.get_info().device_type==wgpu::DeviceType::IntegratedGpu))
    .ok_or("no hardware Vulkan adapter available")?;
+  let adapter=adapters.swap_remove(preferred);
   let info=adapter.get_info();let limits=adapter.limits();
   let largest=[cells,u_count,v_count].into_iter().max().unwrap()*4;
   if largest as u64>limits.max_storage_buffer_binding_size as u64
