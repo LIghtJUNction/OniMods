@@ -50,10 +50,21 @@ official simulation is unresolved and must not be guessed or marked complete.
   value from silently enabling takeover after upgrade.
 - The standalone loader is also default-off; it requires an explicit
   `CYCLETRIM_ONISIM_ENABLE=1/true/on` opt-in.
-- The OniMods main branch had an unreachable `tools/OniHarness` gitlink
-  (`107fee3c…`). The PR branch now points at reachable OniHarness main
-  `c149819e…` so CI can check out the test dependency. CI must still complete;
-  checkout success alone is not test acceptance.
+- The original `tools/OniHarness` gitlink pointed at an unreachable commit
+  (`107fee3c…`). The PR pins reachable OniHarness main
+  (`c149819e…`) so checkout can proceed.
+- The Jlib submodule now pins `68e4935…`. Its net48
+  `FrameworkPathOverride` is applied only when the supplied ONI Managed
+  directory actually contains `mscorlib.dll`; a references-only directory
+  therefore falls back to the installed .NET targeting pack.
+- The embedded SteamPublisher build smoke test still checks extracted files
+  on every host. It compiles only when the game-shipped
+  `com.rlabrecque.steamworks.net.dll` is available; otherwise it reports
+  an explicit skip instead of treating a missing ONI installation as a Rust
+  core regression. This is not a substitute for a game-installed publisher
+  integration build.
+- The CI rerun after these fixes is in progress. A merge is gated on its
+  results; no failed or pending check is being reported as passed.
 
 The existing source checkpoint below records 47 passing Release Rust tests.
 It explicitly does not claim whole-game FPS/RSS, overall worker speedup or a
