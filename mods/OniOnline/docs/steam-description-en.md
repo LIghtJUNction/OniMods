@@ -1,3 +1,5 @@
+[b]Required mod: Jlib.[/b] Subscribe to and enable Jlib, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
+
 [h1]OniOnline[/h1]
 
 [b]Multiplayer Framework for Oxygen Not Included (Preview)[/b]

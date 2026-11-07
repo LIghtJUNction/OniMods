@@ -18,6 +18,8 @@ if (oniPlanSha == cyclePlanSha)
 RunPromotionCase();
 RunCycleTrimPromotionCase();
 RunFirstPublicationCase();
+RunFirstPublicationCase("Jlib");
+WorkshopDependencyTests.Run();
 RunPackagedDescriptionLayoutCase();
 
 var directory = Path.Combine(Path.GetTempPath(),
@@ -115,10 +117,21 @@ static void RunPackagedDescriptionLayoutCase()
             throw new InvalidOperationException("Legacy root description precedence changed");
         File.Delete(Path.Combine(root, "steam-description-en.md"));
         Directory.Delete(Path.Combine(root, "docs"), recursive: true);
+        File.WriteAllText(Path.Combine(root, "description.en.txt"), "Jlib English description\n");
+        File.WriteAllText(Path.Combine(root, "description.txt"), "Jlib 中文说明\n");
+        var text = WorkshopMetadataReader.Read(vdf);
+        if (text.EnglishDescription != "Jlib English description" || text.ChineseDescription != "Jlib 中文说明")
+            throw new InvalidOperationException("Jlib localized text descriptions were replaced by the combined VDF fallback");
+        File.WriteAllText(Path.Combine(root, "steam-description-en.md"), "Preferred Markdown description");
+        if (WorkshopMetadataReader.Read(vdf).EnglishDescription != "Preferred Markdown description")
+            throw new InvalidOperationException("Localized text descriptions overrode the existing Markdown layout");
+        File.Delete(Path.Combine(root, "steam-description-en.md"));
+        File.Delete(Path.Combine(root, "description.en.txt"));
+        File.Delete(Path.Combine(root, "description.txt"));
         var fallback = WorkshopMetadataReader.Read(vdf);
         if (fallback.EnglishDescription != "Combined fallback" || fallback.ChineseDescription != "Combined fallback")
             throw new InvalidOperationException("Description fallback failed when no localized file was packaged");
-        Console.WriteLine("packaged docs, legacy root descriptions and combined fallback passed");
+        Console.WriteLine("packaged docs, root Markdown, Jlib localized text and combined fallback passed");
     }
     finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
 }
@@ -570,12 +583,12 @@ static void ExpectRecoveryJournalRejection(string path, string planSha256)
     }
 }
 
-static void RunFirstPublicationCase()
+static void RunFirstPublicationCase(string modName = "OniOnline")
 {
     var target = new Dictionary<string, string>
     {
-        ["ONIM_PUBLISH_NAME"] = "OniOnline",
-        ["ONIM_PUBLISH_STATIC_ID"] = "LIghtJUNction.OniOnline",
+        ["ONIM_PUBLISH_NAME"] = modName,
+        ["ONIM_PUBLISH_STATIC_ID"] = "LIghtJUNction." + modName,
         ["ONIM_PUBLISH_TAGS"] = "tweaks,Spaced Out!",
         ["ONIM_PUBLISH_WORKSHOP_ID"] = "0",
         ["ONIM_PUBLISH_CREATOR_APP_ID"] = "636750",
@@ -585,26 +598,26 @@ static void RunFirstPublicationCase()
     var previous = target.Keys.ToDictionary(
         name => name, Environment.GetEnvironmentVariable);
     var root = Path.Combine(Path.GetTempPath(),
-        "onionline-first-publication-" + Guid.NewGuid().ToString("N"));
+        modName.ToLowerInvariant() + "-first-publication-" + Guid.NewGuid().ToString("N"));
     try
     {
         foreach (var (name, value) in target)
         {
             Environment.SetEnvironmentVariable(name, value);
         }
-        var content = Path.Combine(root, "OniOnline");
+        var content = Path.Combine(root, modName);
         Directory.CreateDirectory(content);
-        var dllPath = Path.Combine(content, "OniOnline.dll");
+        var dllPath = Path.Combine(content, modName + ".dll");
         File.WriteAllBytes(dllPath, [1, 2, 3]);
         var yamlPath = Path.Combine(content, "mod.yaml");
-        const string yaml = "title: OniOnline\nstaticID: LIghtJUNction.OniOnline\n";
+        var yaml = $"title: {modName}\nstaticID: LIghtJUNction.{modName}\n";
         File.WriteAllText(yamlPath, yaml);
         File.WriteAllText(Path.Combine(content, "mod_info.yaml"), "version: 0.1.0\n");
         var previewPath = Path.Combine(root, "preview.png");
         byte[] previewBytes = [0x89, 0x50, 0x4E, 0x47];
         File.WriteAllBytes(previewPath, previewBytes);
         var metadata = new WorkshopMetadata(content, previewPath,
-            "OniOnline (Early Development)", "Reviewed English body", "已审阅的中文说明", "Test");
+            modName + " (Early Development)", "Reviewed English body", "已审阅的中文说明", "Test");
         var plan = FirstPublicationPlan.Create(metadata);
         var zipBytes = File.ReadAllBytes(plan.ZipPath);
         var repeated = FirstPublicationPlan.Create(metadata);
@@ -613,7 +626,7 @@ static void RunFirstPublicationCase()
             || plan.Title != metadata.Title
             || plan.EnglishDescription != metadata.EnglishDescription
             || plan.ChineseDescription != metadata.ChineseDescription
-            || !plan.Tags.SequenceEqual(new[] { "tweaks", "Spaced Out!" })
+            || !plan.Tags.SequenceEqual(modName == "Jlib" ? new[] { "tweaks" } : new[] { "tweaks", "Spaced Out!" })
             || plan.ZipBytes != zipBytes.Length
             || plan.ZipSha256 != Convert.ToHexString(SHA256.HashData(zipBytes))
             || plan.PreviewSha256 != Convert.ToHexString(SHA256.HashData(previewBytes)))
@@ -623,7 +636,7 @@ static void RunFirstPublicationCase()
         using (var archive = ZipFile.OpenRead(plan.ZipPath))
         {
             var names = archive.Entries.Select(entry => entry.FullName).ToHashSet();
-            if (!names.SetEquals(new[] { "OniOnline.dll", "mod.yaml", "mod_info.yaml" }))
+            if (!names.SetEquals(new[] { modName + ".dll", "mod.yaml", "mod_info.yaml" }))
             {
                 throw new InvalidOperationException("First-publication ZIP changed its ONI root layout");
             }
@@ -653,7 +666,7 @@ static void RunFirstPublicationCase()
         }
         foreach (var tampered in new[]
         {
-            plan with { Title = "OniOnline changed" },
+            plan with { Title = modName + " changed" },
             plan with { ChineseDescription = "changed" },
             plan with { Tags = ["changed"] },
             plan with { ZipBytes = plan.ZipBytes + 1 },
@@ -677,6 +690,16 @@ static void RunFirstPublicationCase()
         ExpectFirstPublicationException<InvalidOperationException>(
             () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "a preview changed after review");
         File.WriteAllBytes(previewPath, previewBytes);
+
+        var otherTarget = modName == "Jlib" ? "OniOnline" : "Jlib";
+        var ownJournal = FirstPublicationJournal.JournalPath(root);
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", otherTarget);
+        FirstPublicationPlan.RequireTarget();
+        if (FirstPublicationJournal.JournalPath(root) == ownJournal)
+            throw new InvalidOperationException("First-publication targets share a creation journal");
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "a plan reviewed for the other allowed target");
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", modName);
 
         foreach (var (name, invalidValue) in new[]
         {
@@ -732,7 +755,7 @@ static void RunFirstPublicationCase()
             FirstPublicationPlan.RequireTarget, "a missing expected owner");
         Environment.SetEnvironmentVariable("ONIM_PUBLISH_EXPECTED_OWNER", target["ONIM_PUBLISH_EXPECTED_OWNER"]);
         RunFirstPublicationJournalCase(Path.Combine(root, "journals"), plan.PlanSha256);
-        Console.WriteLine("OniOnline first-publication plan identity, hashes, limits and artifact readback passed");
+        Console.WriteLine($"{modName} first-publication plan identity, hashes, limits and artifact readback passed");
     }
     finally
     {
@@ -778,6 +801,8 @@ static void RunFirstPublicationJournalCase(string directory, string planSha)
         () => FirstPublicationJournal.BeginPublic(journal.Path, planSha), "public intent before creation");
     const ulong createdId = 3808000001;
     journal.RecordCallback("k_EResultOK", createdId, false);
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.ReadPublicVerifiedId(journal.Path, planSha), "a private-only dependency child");
     if (FirstPublicationJournal.ReadCreatedId(journal.Path, planSha) != createdId)
     {
         throw new InvalidOperationException("First-publication journal lost its created item ID");
@@ -812,6 +837,8 @@ static void RunFirstPublicationJournalCase(string directory, string planSha)
     ExpectFirstPublicationException<InvalidOperationException>(
         () => FirstPublicationJournal.RecordPrivateVerified(journal.Path, planSha), "private verification after public intent");
     publicJournal.RecordPublicVerified();
+    if (FirstPublicationJournal.ReadPublicVerifiedId(journal.Path, planSha) != createdId)
+        throw new InvalidOperationException("Verified public journal lost its dependency item identity");
     if (FirstPublicationJournal.ReadCreatedId(journal.Path, planSha) != createdId)
     {
         throw new InvalidOperationException("Verified public journal lost its item ID");
@@ -869,7 +896,7 @@ static void RunFirstPublicationJournalCase(string directory, string planSha)
     outOfOrder.RecordCallback("k_EResultOK", createdId, false);
     outOfOrder.RecordPublicVerified();
     ExpectFirstPublicationJournalBlocked(outOfOrder.Path, planSha);
-    Console.WriteLine("OniOnline first-publication one-shot creation, ordered verification and exclusive public intent passed");
+    Console.WriteLine($"{FirstPublicationPlan.Name} first-publication one-shot creation, ordered verification and exclusive public intent passed");
 }
 
 static void ExpectFirstPublicationJournalBlocked(string path, string planSha)

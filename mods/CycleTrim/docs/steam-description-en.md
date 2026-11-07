@@ -1,3 +1,5 @@
+[b]Required mod: Jlib.[/b] Subscribe to and enable Jlib, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
+
 [img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png[/img]
 
 Welcome to CycleTrim! A disruptive, experimental performance mod for Oxygen Not Included.

@@ -1,5 +1,7 @@
 # CycleTrim
 
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。消费者包不再内嵌一份 Jlib。
+
 极具颠覆性的实验性性能优化 Mod，目前仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
 
 本模组来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 是这个仓库里的工具，把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
@@ -31,7 +33,7 @@
 
 ### 模组设置
 
-在游戏的**模组 → CycleTrim → 设置**中调整。PLib 已内置，不需要另装配置工具；更改后按提示重启游戏。
+在游戏的**模组 → CycleTrim → 设置**中调整。设置界面由独立 Jlib 提供；更改后按提示重启游戏。
 
 - **OniSim 仿真核心**：默认关闭，保留官方 SimDLL。只有显式开启 `EnableOniSimExperimental` 并重启后才尝试接管；旧 `EnableOniSim` 配置不会迁移。
 - **物流候选、忙碌复制人刷新、静止小动物寻路、异步寻路去重、小动物思考刷新**：五项优化可分别关闭，便于排查其他模组的兼容问题；默认保持开启。关闭某项后不安装该组优化补丁。
@@ -47,7 +49,7 @@
 
 短轨道、提前返回和动画比较等退化路径的后续改进，见[开销回收与复测报告](../../docs/cycletrim-regression-recovery.md)。其中保留了旧版与新版的交错样本，以及未采纳方案的记录。
 
-如果列表里只有旧的 `CycleTrimHarness` 测试副本，需退出游戏后更新到包含 PLib 的 CycleTrim 包，并确认只启用一份相同 `staticID` 的安装。源码中存在设置页，不代表当前游戏加载的旧 DLL 也有这个入口。
+如果列表里只有旧的 `CycleTrimHarness` 测试副本，需退出游戏后更新 CycleTrim 并启用 Jlib，并确认只启用一份相同 `staticID` 的安装。源码中存在设置页，不代表当前游戏加载的旧 DLL 也有这个入口。
 
 ## 兼容与说明
 

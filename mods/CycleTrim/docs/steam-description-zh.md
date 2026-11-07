@@ -1,3 +1,5 @@
+[b]前置模组：Jlib。[/b] 在模组菜单订阅并启用 Jlib，然后重启缺氧。本模组使用共享前置，不再内嵌一份。
+
 [img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png[/img]
 
 欢迎来到 CycleTrim！一个极具颠覆性的实验性性能优化模组。

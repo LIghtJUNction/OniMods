@@ -13,6 +13,11 @@ pub struct PublishOptions {
     pub auto_note: bool,
     pub non_interactive: bool,
     pub dry_run: bool,
+    pub create: bool,
+    pub visibility: Option<crate::workshop::Visibility>,
+    pub expected_owner: Option<u64>,
+    pub resume: Option<PathBuf>,
+    pub preflight: bool,
 }
 
 fn uploader_path() -> Option<PathBuf> {
@@ -101,7 +106,7 @@ fn reject_directory_upload_for_oni(vdf: &Path) -> Result<()> {
     Ok(())
 }
 
-fn yaml_value(yaml: &str, key: &str) -> Option<String> {
+pub(crate) fn yaml_value(yaml: &str, key: &str) -> Option<String> {
     yaml.lines().find_map(|line| {
         let (candidate, value) = split_yaml_mapping(line)?;
         (candidate.trim() == key).then(|| parse_yaml_scalar(value))
@@ -363,7 +368,23 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         auto_note,
         non_interactive,
         dry_run,
+        create,
+        visibility,
+        expected_owner,
+        resume,
+        preflight,
     } = options;
+    if let Some(path) = resume {
+        return crate::workshop::resume(&path);
+    }
+    let owner = expected_owner.or(cfg.workshop_owner);
+    if preflight {
+        return crate::workshop::preflight(
+            cfg,
+            selected,
+            owner.context("配置 workshop_owner 或使用 --expected-owner 固定发布账号")?,
+        );
+    }
     println!("🚀 构建发布包：{}", selected.name);
     let package = build::run(cfg, selected, true)?;
     let dist_mod = package.directory;
@@ -446,12 +467,38 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
     println!("   描述: {} 字符", description_chars);
     println!("   VDF: {}", vdf.display());
 
-    if dry_run {
-        println!("✅ 元数据 dry-run 通过；发布脚本会另行验证单文件 ZIP");
-        return Ok(());
-    }
-
     reject_directory_upload_for_oni(&vdf)?;
+
+    if create || dry_run {
+        let target_id: u64 = publishedfileid
+            .parse()
+            .context("publishedfileid 必须是数值")?;
+        if create && target_id != 0 {
+            anyhow::bail!("已配置 publishedfileid，不能使用 --create；直接更新现有条目");
+        }
+        let owner = owner.context("配置 workshop_owner 或使用 --expected-owner 固定发布账号")?;
+        let assembly_name = selected.assembly_name(&cfg.repo_root);
+        return crate::workshop::upload(
+            cfg,
+            selected,
+            crate::workshop::Publication {
+                folder: &dist_mod,
+                preview: &preview,
+                assembly: &assembly_name,
+                title,
+                fallback: description,
+                change_note: changenote,
+                target_id,
+                owner,
+                visibility,
+            },
+            if dry_run {
+                crate::workshop::Execution::DryRun
+            } else {
+                crate::workshop::Execution::Publish
+            },
+        );
+    }
 
     run_headless_publisher(cfg, selected, &vdf, &title, &publishedfileid, &dist_mod)?;
     Ok(())

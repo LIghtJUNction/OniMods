@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using PeterHan.PLib.Core;
 using UnityEngine;
 
 namespace OniMcp.Support
@@ -18,9 +19,8 @@ namespace OniMcp.Support
                 return;
             }
 
-            string assemblyLocation = assembly?.Location;
-            if (!string.IsNullOrEmpty(assemblyLocation))
-                _modPath = Path.GetDirectoryName(assemblyLocation);
+            if (assembly != null)
+                _modPath = PUtil.GetModPath(assembly);
         }
 
         public static string ModPath
@@ -30,8 +30,7 @@ namespace OniMcp.Support
                 if (!string.IsNullOrEmpty(_modPath))
                     return _modPath;
 
-                string assemblyLocation = typeof(OniMcpPaths).Assembly.Location;
-                return string.IsNullOrEmpty(assemblyLocation) ? null : Path.GetDirectoryName(assemblyLocation);
+                return PUtil.GetModPath(typeof(OniMcpPaths).Assembly);
             }
         }
 

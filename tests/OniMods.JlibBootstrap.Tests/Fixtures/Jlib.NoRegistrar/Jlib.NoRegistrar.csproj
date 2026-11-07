@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Jlib</AssemblyName><Version>0.1.0.0</Version><DefineConstants>NO_REGISTRAR</DefineConstants></PropertyGroup>
+  <ItemGroup><Compile Include="../JlibApi.cs" /><ProjectReference Include="../../GameApiDoubles/GameApiDoubles.csproj" /></ItemGroup>
+</Project>

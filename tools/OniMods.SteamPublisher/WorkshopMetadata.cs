@@ -34,9 +34,9 @@ internal static partial class WorkshopMetadataReader
             contentFolder,
             RequirePath(values, "previewfile", directory: false),
             RequireText(values, "title"),
-            ReadLocalizedDescription(contentFolder, "steam-description-en.md")
+            ReadLocalizedDescription(contentFolder, "steam-description-en.md", "description.en.txt")
                 ?? combinedDescription,
-            ReadLocalizedDescription(contentFolder, "steam-description-zh.md")
+            ReadLocalizedDescription(contentFolder, "steam-description-zh.md", "description.txt")
                 ?? combinedDescription,
             RequireText(values, "changenote"));
         ValidateLengths(metadata);
@@ -57,10 +57,11 @@ internal static partial class WorkshopMetadataReader
         return values;
     }
 
-    private static string? ReadLocalizedDescription(string contentFolder, string fileName)
+    private static string? ReadLocalizedDescription(string contentFolder, string fileName, string textFileName)
     {
         var path = Path.Combine(contentFolder, fileName);
         if (!File.Exists(path)) path = Path.Combine(contentFolder, "docs", fileName);
+        if (!File.Exists(path)) path = Path.Combine(contentFolder, textFileName);
         return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
     }
 

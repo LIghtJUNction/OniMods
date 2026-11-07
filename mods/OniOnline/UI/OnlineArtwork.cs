@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using HarmonyLib;
 using OniOnline.Runtime;
+using PeterHan.PLib.Core;
 using UnityEngine;
 
 namespace OniOnline.UI
@@ -24,7 +25,7 @@ namespace OniOnline.UI
                     !filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) return null;
                 var runtime = OnlineRuntime.Instance;
                 var directory = runtime == null ? null : AccessTools.Field(typeof(OnlineRuntime), "modPath")?.GetValue(runtime) as string;
-                if (string.IsNullOrEmpty(directory)) directory = Path.GetDirectoryName(typeof(ModInfo).Assembly.Location);
+                if (string.IsNullOrEmpty(directory)) directory = PUtil.GetModPath(typeof(ModInfo).Assembly);
                 if (string.IsNullOrEmpty(directory)) return null;
                 var path = Path.Combine(directory, "assets", filename);
                 Sprite cached;

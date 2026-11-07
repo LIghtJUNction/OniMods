@@ -12,7 +12,7 @@ import time
 import uuid
 
 from step_instance import check_first_headless
-from verify_instances import digest, inspect_instance, load_backend, native_clock, require
+from verify_instances import digest, inspect_instance, load_backend, loaded_consumer, native_clock, require
 
 
 def same_run(actual, expected):
@@ -167,11 +167,9 @@ def main():
                 "Load the exact approved disposable save and pause it before MCP acceptance")
         paths = controller.paths(args.name)
         assemblies = json.loads((paths["control"] / "instance-assemblies.json").read_text())["assemblies"]
-        mcp = [entry for entry in assemblies if Path(entry.get("location", "")).name == "OniMcp.dll"]
-        expected_mcp = preparation["mcp_payload_sha256"]["OniMcp.dll"]
-        require(len(mcp) == 1 and mcp[0].get("sha256") == expected_mcp
-                and Path(mcp[0]["location"]).resolve().is_relative_to(paths["user"].resolve())
-                and digest(Path(mcp[0]["location"])) == expected_mcp,
+        mcp = loaded_consumer(assemblies, paths["user"], "OniMcp")
+        expected_mcp = preparation["mcp_payload_sha256"]["implementation/OniMcp.dll"]
+        require(mcp.get("sha256") == expected_mcp and digest(Path(mcp["location"])) == expected_mcp,
                 "Actual loaded OniMcp assembly differs from the prepared isolated dependency")
         config = paths["user"] / "OniMcpConfig.json"
         config_hash = digest(config)

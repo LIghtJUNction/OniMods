@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>FixtureConsumer.Bootstrap</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs;PackageVerifier.cs" />
+    <Compile Include="../../sdk/Jlib.Bootstrap/*.cs" Link="Production/%(Filename)%(Extension)" />
+    <ProjectReference Include="GameApiDoubles/GameApiDoubles.csproj" />
+    <ProjectReference Include="Fixtures/Jlib.Good/Jlib.Good.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="Fixtures/Jlib.BadAbi/Jlib.BadAbi.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="Fixtures/Jlib.BadStaticId/Jlib.BadStaticId.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="Fixtures/Jlib.NoRegistrar/Jlib.NoRegistrar.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="Fixtures/Payload/Payload.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="Fixtures/Sibling/Sibling.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="CopyFixtureAssemblies" AfterTargets="Build">
+    <Copy SourceFiles="Fixtures/Jlib.Good/bin/$(Configuration)/net10.0/Jlib.dll" DestinationFolder="$(OutDir)fixtures/good" />
+    <Copy SourceFiles="Fixtures/Jlib.BadAbi/bin/$(Configuration)/net10.0/Jlib.dll" DestinationFolder="$(OutDir)fixtures/bad-abi" />
+    <Copy SourceFiles="Fixtures/Jlib.BadStaticId/bin/$(Configuration)/net10.0/Jlib.dll" DestinationFolder="$(OutDir)fixtures/bad-static-id" />
+    <Copy SourceFiles="Fixtures/Jlib.NoRegistrar/bin/$(Configuration)/net10.0/Jlib.dll" DestinationFolder="$(OutDir)fixtures/no-registrar" />
+    <Copy SourceFiles="Fixtures/Payload/bin/$(Configuration)/net10.0/FixtureConsumer.dll" DestinationFolder="$(OutDir)fixtures/payload" />
+    <Copy SourceFiles="Fixtures/Sibling/bin/$(Configuration)/net10.0/SiblingConsumer.Bootstrap.dll" DestinationFolder="$(OutDir)fixtures/sibling" />
+  </Target>
+</Project>

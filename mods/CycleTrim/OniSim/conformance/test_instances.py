@@ -178,11 +178,19 @@ class NativeMappingAuditTests(unittest.TestCase):
     def test_live_assembly_run_and_pid_must_all_match(self):
         with tempfile.TemporaryDirectory() as directory:
             profile = Path(directory)
-            assembly = profile / "CycleTrim.dll"
+            assembly = profile / "implementation/CycleTrim.dll"
+            assembly.parent.mkdir()
             assembly.write_bytes(b"authored fixture assembly, never executed")
+            bootstrap = profile / "CycleTrim.dll"
+            bootstrap.write_bytes(b"authored bootstrap fixture, never executed")
+            jlib = profile / "Jlib/Jlib.dll"
+            jlib.parent.mkdir()
+            jlib.write_bytes(b"authored shared-library fixture, never executed")
             sha = hashlib.sha256(assembly.read_bytes()).hexdigest()
             status = dict(pid=123, identity="guest1", runNonce="run", assemblyReceipt="instance-assemblies.json")
-            receipt = dict(status, assemblies=[dict(location=str(assembly), sha256=sha)])
+            receipt = dict(status, assemblies=[dict(name="CycleTrim", location=str(assembly), sha256=sha),
+                dict(name="CycleTrim.Bootstrap", location=str(bootstrap), sha256=verify_instances.digest(bootstrap)),
+                dict(name="Jlib", location=str(jlib), sha256=verify_instances.digest(jlib))])
             (profile / "instance-assemblies.json").write_text(json.dumps(receipt))
             controller = SimpleNamespace(read_status=Mock(return_value=status),
                 verify_hashes=Mock(), paths=lambda name: dict(user=profile, control=profile),
@@ -191,9 +199,21 @@ class NativeMappingAuditTests(unittest.TestCase):
             with patch("verify_instances.mapped_native", return_value="native"), \
                  patch("verify_instances.native_threads", return_value=dict(total_threads=1,
                      physics_threads={"123": "onisim-physics"}, cell_workers={})):
-                self.assertEqual(inspect_instance(controller, backend, "guest1", sha, "native")["managed_sha256"], sha)
+                audit = inspect_instance(controller, backend, "guest1", sha, "native")
+                self.assertEqual(audit["managed_sha256"], sha)
+                self.assertEqual(audit["bootstrap_sha256"], verify_instances.digest(bootstrap))
+                self.assertEqual(audit["jlib_sha256"], verify_instances.digest(jlib))
                 with self.assertRaisesRegex(RuntimeError, "not the requested candidate"):
                     inspect_instance(controller, backend, "guest1", "0" * 64, "native")
+                changed = dict(receipt, assemblies=[dict(name="CycleTrim", location=str(bootstrap), sha256=sha)])
+                (profile / "instance-assemblies.json").write_text(json.dumps(changed))
+                with self.assertRaisesRegex(RuntimeError, "canonical instance package"):
+                    inspect_instance(controller, backend, "guest1", sha, "native")
+                for entries in (receipt["assemblies"][:-1], receipt["assemblies"] + [receipt["assemblies"][-1]]):
+                    (profile / "instance-assemblies.json").write_text(json.dumps(dict(receipt, assemblies=entries)))
+                    with self.assertRaisesRegex(RuntimeError, "one successfully loaded standalone Jlib"):
+                        inspect_instance(controller, backend, "guest1", sha, "native")
+                (profile / "instance-assemblies.json").write_text(json.dumps(receipt))
                 backend.ProcessIdentity.capture.side_effect = [(123, 456), (123, 789)]
                 with self.assertRaisesRegex(RuntimeError, "PID was reused"):
                     inspect_instance(controller, backend, "guest1", sha, "native")
@@ -250,8 +270,8 @@ def fixture_package(path):
     header[:6] = b"\x7fELF\x02\x01"
     struct.pack_into("<HH", header, 16, 3, 62)
     with zipfile.ZipFile(path, "w") as archive:
-        for name in ("CycleTrim.dll", "mod.yaml", "mod_info.yaml"):
-            archive.writestr(name, "authored fixture; never executed")
+        for name in ("CycleTrim.dll", "implementation/CycleTrim.dll", "mod.yaml", "mod_info.yaml"):
+            archive.writestr(name, "authored fixture for " + name + "; never executed")
         archive.writestr("OniSim/liboni_sim_core.so", header)
         archive.writestr("../ignored.txt", "Must not escape the allowlist")
     return bytes(header)
@@ -284,6 +304,9 @@ class InstancePreparationTests(unittest.TestCase):
             staged = root / "staged"
             report = prepare_instances.stage_package(package, staged)
             self.assertEqual(report["native_sha256"], hashlib.sha256((staged / "OniSim/liboni_sim_core.so").read_bytes()).hexdigest())
+            self.assertEqual(report["managed_sha256"], verify_instances.digest(staged / "implementation/CycleTrim.dll"))
+            self.assertEqual(report["bootstrap_sha256"], verify_instances.digest(staged / "CycleTrim.dll"))
+            self.assertNotEqual(report["managed_sha256"], report["bootstrap_sha256"])
             self.assertFalse((root / "ignored.txt").exists())
             with self.assertRaisesRegex(RuntimeError, "new staged"):
                 prepare_instances.stage_package(package, staged)
@@ -316,9 +339,13 @@ class InstancePreparationTests(unittest.TestCase):
             save.chmod(0o400)
             package = root / "CycleTrim.zip"
             fixture_package(package)
+            jlib_package = root / "Jlib.zip"
+            with zipfile.ZipFile(jlib_package, "w") as archive:
+                for name in ("Jlib.dll", "mod.yaml", "mod_info.yaml"):
+                    archive.writestr(name, "authored shared library fixture; never loaded")
             group, stage = root / "group", root / "stage"
             args = ["prepare_instances.py", "--harness", str(harness), "--group-root", str(group),
-                    "--stage", str(stage), "--package", str(package), "--game-path", str(game),
+                    "--stage", str(stage), "--package", str(package), "--jlib-package", str(jlib_package), "--game-path", str(game),
                     "--companion", str(companion), "--save", str(save)]
             with patch("sys.argv", args + ["--native", str(root / "absent.so")]):
                 with self.assertRaises(FileNotFoundError):
@@ -332,6 +359,8 @@ class InstancePreparationTests(unittest.TestCase):
             self.assertEqual([i["graphics"] for i in plan["instances"]], ["normal", "headless", "headless", "headless"])
             self.assertEqual([i["threads"] for i in plan["instances"]], [2, 2, 2, 2])
             self.assertEqual(report["game_instances_started"], 0)
+            self.assertEqual(report["jlib_payload_sha256"]["Jlib.dll"], verify_instances.digest(stage / "jlib/Jlib.dll"))
+            self.assertIn("Jlib", {mod["id"] for mod in plan["mods"]})
             self.assertFalse(report["runtime_validated"])
             self.assertEqual(save.read_bytes(), (stage / "Initial.sav").read_bytes())
             self.assertEqual(save.stat().st_mode & 0o777, 0o400)
@@ -341,7 +370,7 @@ class InstancePreparationTests(unittest.TestCase):
 
             mcp_package = root / "OniMcp.zip"
             with zipfile.ZipFile(mcp_package, "w") as archive:
-                for name in ("OniMcp.dll", "mod.yaml", "mod_info.yaml"):
+                for name in ("OniMcp.dll", "implementation/OniMcp.dll", "mod.yaml", "mod_info.yaml"):
                     archive.writestr(name, "authored fixture; never loaded")
                 archive.writestr("OniMcpConfig.json", '{"AuthToken":"must-not-be-imported"}')
             mcp_group, mcp_stage = root / "mcp-group", root / "mcp-stage"
@@ -352,7 +381,7 @@ class InstancePreparationTests(unittest.TestCase):
             with patch("sys.argv", mcp_args), contextlib.redirect_stdout(io.StringIO()):
                 prepare_instances.main()
             mcp_plan = json.loads((mcp_group / "group.json").read_text())
-            self.assertEqual({m["id"] for m in mcp_plan["mods"]}, {"CycleTrim", "OniMcp", "OniHarness.Runtime"})
+            self.assertEqual({m["id"] for m in mcp_plan["mods"]}, {"CycleTrim", "OniMcp", "Jlib", "OniHarness.Runtime"})
             self.assertFalse((mcp_stage / "mcp/OniMcpConfig.json").exists())
             tokens = []
             for instance in mcp_plan["instances"]:

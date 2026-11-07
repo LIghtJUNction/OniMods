@@ -62,3 +62,8 @@ path. Identity-confirmed duplicates across Local, Dev and Workshop are moved to
 - `onim publish` uploads directly to Steam Workshop via the headless Legacy ZIP publisher (or `--gui` for OniUploader); it never uses incompatible SteamCMD directory uploads.
 
 See the [OniMods repository](https://github.com/LIghtJUNction/OniMods) for the full guide, troubleshooting and source.
+
+The source candidate for `onim 0.2.0` adds native Legacy ZIP publishing through
+the game's Steam API. Its real upload acceptance is still pending; see
+[native publishing progress](docs/onim-native-publishing.md). This candidate has
+not been installed or published as a new CLI release.

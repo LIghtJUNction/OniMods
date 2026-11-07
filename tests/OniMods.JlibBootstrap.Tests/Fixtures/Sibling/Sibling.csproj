@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>SiblingConsumer.Bootstrap</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../../sdk/Jlib.Bootstrap/*.cs" Link="Production/%(Filename)%(Extension)" />
+    <ProjectReference Include="../../GameApiDoubles/GameApiDoubles.csproj" />
+  </ItemGroup>
+</Project>

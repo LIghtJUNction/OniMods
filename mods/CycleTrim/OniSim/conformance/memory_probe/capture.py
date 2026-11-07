@@ -10,7 +10,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent))
-from verify_instances import digest, load_backend, native_clock, require
+from verify_instances import digest, load_backend, loaded_consumer, native_clock, require
 from memory_probe.build import verify_receipt
 from memory_probe.core_identity import audit_core
 
@@ -70,11 +70,10 @@ def main():
         library = Path(loaded[0]['location'])
         require(library.resolve().is_relative_to(paths['user'].resolve()) and digest(library) == build['probe_sha256'],
                 'Loaded memory probe differs from the verified private payload')
-        managed = [a for a in receipt['assemblies'] if Path(a.get('location', '')).name == 'CycleTrim.dll']
-        require(len(managed) == 1 and not managed[0].get('error'), 'Require one loaded CycleTrim assembly')
-        managed_path = Path(managed[0]['location'])
+        managed = loaded_consumer(receipt['assemblies'], paths['user'], 'CycleTrim')
+        managed_path = Path(managed['location'])
         require(managed_path.resolve().is_relative_to(paths['user'].resolve())
-                and managed[0].get('sha256') == preparation['managed_sha256']
+                and managed.get('sha256') == preparation['managed_sha256']
                 and digest(managed_path) == preparation['managed_sha256'], 'Loaded CycleTrim differs from preparation')
         core = audit_core(status['pid'], paths['user'], preparation, args.official_library)
         with (paths['control'] / 'memory-capture.lock').open('a+') as lock:

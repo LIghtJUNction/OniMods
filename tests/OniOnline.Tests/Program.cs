@@ -157,6 +157,7 @@ internal static class Program
             if (args.Length == 2 && args[0] == "--check-bundled-valuetuple") return CheckBundledValueTuple(args[1]);
             if (args.Length == 2 && args[0] == "--check-no-probe") return CheckNoProbe(args[1]);
             if (args.Length == 2 && args[0] == "--check-plib") return CheckPLib(args[1]);
+            if (args.Length == 2 && args[0] == "--check-jlib") return CheckJlib(args[1]);
             GameplaySdkTests.Run(Check);
             CompatibilityTests.Run(Check);
             ModSynchronizationTests.Run(Check);
@@ -363,7 +364,7 @@ internal static class Program
             catalog.Get("engine.story", "en-US").Contains("\"This device"), "CSV quoting unescapes story punctuation without displaying delimiters");
     }
 
-    private static int CheckPLib(string path)
+    private static int CheckJlib(string path)
     {
         using (var stream = File.OpenRead(path))
         using (var pe = new PEReader(stream))
@@ -374,9 +375,10 @@ internal static class Program
                 return metadata.GetString(type.Name) == "PUtil" && metadata.GetString(type.Namespace) == "PeterHan.PLib.Core";
             });
             bool options = metadata.TypeDefinitions.Any(h => metadata.GetString(metadata.GetTypeDefinition(h).Name) == "OnlineOptions");
-            bool external = metadata.AssemblyReferences.Any(h => metadata.GetString(metadata.GetAssemblyReference(h).Name) == "PLib");
-            Console.WriteLine("PLib embedded: " + core + "; OniOnline options: " + options + "; external PLib reference: " + external);
-            return core && options && !external ? 0 : 1;
+            bool plib = metadata.AssemblyReferences.Any(h => metadata.GetString(metadata.GetAssemblyReference(h).Name) == "PLib");
+            bool jlib = metadata.AssemblyReferences.Any(h => metadata.GetString(metadata.GetAssemblyReference(h).Name) == "Jlib");
+            Console.WriteLine("PLib embedded: " + core + "; OniOnline options: " + options + "; Jlib reference: " + jlib + "; legacy PLib reference: " + plib);
+            return !core && options && jlib && !plib ? 0 : 1;
         }
     }
 

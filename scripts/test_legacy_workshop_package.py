@@ -243,4 +243,19 @@ unconfirmed_promotion = subprocess.run(
 assert unconfirmed_promotion.returncode != 0
 assert "requires --confirm-promotion-stage" in unconfirmed_promotion.stderr
 assert "[S_API]" not in unconfirmed_promotion.stderr
+
+for dependency_args in (
+    ["--add-jlib-dependency", "--vdf", "/missing.vdf"],
+    ["--parent", "CycleTrim", "--vdf", "/missing.vdf"],
+    ["--add-jlib-dependency", "--verify-jlib-dependency"],
+):
+    rejected = subprocess.run(
+        ["dotnet", str(PUBLISHER), *dependency_args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert "dependency" in rejected.stderr.lower(), rejected.stderr
+    assert "[S_API]" not in rejected.stderr
 print("legacy Workshop package and directory-transport guard passed")

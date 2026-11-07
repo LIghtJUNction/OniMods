@@ -19,6 +19,7 @@ mod remote;
 mod setup;
 mod steam;
 mod uninstall;
+mod workshop;
 
 #[derive(Parser)]
 #[command(name = "onim")]
@@ -97,13 +98,30 @@ enum Commands {
         /// 自动使用最新更新日志作为上传说明，不弹更新说明输入
         #[arg(long)]
         auto_note: bool,
-        /// 禁止所有提示；非交互式纯命令行发布
+        /// 禁止交互提示；非交互式纯命令行发布使用单文件 Legacy ZIP
         #[arg(long, visible_alias = "yes", conflicts_with = "gui")]
         non_interactive: bool,
         /// 仅构建并生成 Workshop VDF，不上传
         #[arg(long, conflicts_with = "gui")]
         dry_run: bool,
+        /// 首次创建条目，先以 Private 创建并验证；不会自动重试创建
+        #[arg(long, conflicts_with = "gui")]
+        create: bool,
+        /// 最终可见性；已有条目默认保持原值，首次创建默认 Private
+        #[arg(long, value_enum, conflicts_with = "gui")]
+        visibility: Option<workshop::Visibility>,
+        /// 固定本次发布账号的 Steam ID，覆盖 onim.toml 的 workshop_owner
+        #[arg(long, conflicts_with = "gui")]
+        expected_owner: Option<u64>,
+        /// 读取既有不可变计划并继续验证；不会重复不确定的写入
+        #[arg(long, conflicts_with_all = ["gui", "dry_run", "create", "preflight"])]
+        resume: Option<PathBuf>,
+        /// 只读检查 Steam 账号和条目，不构建、不上传
+        #[arg(long, conflicts_with_all = ["gui", "dry_run", "create", "resume"])]
+        preflight: bool,
     },
+    #[command(name = "__steam-worker", hide = true)]
+    SteamWorker { request: PathBuf },
     /// 列出所有配置的 Mod
     List,
     /// 检查本机 ONI Mod 开发环境
@@ -186,6 +204,7 @@ fn main() -> Result<()> {
             );
         }
         Commands::Doctor => return doctor::run(cli.config.clone()),
+        Commands::SteamWorker { request } => workshop::worker_main(request),
         _ => {}
     }
 
@@ -278,6 +297,11 @@ fn main() -> Result<()> {
             auto_note,
             non_interactive,
             dry_run,
+            create,
+            visibility,
+            expected_owner,
+            resume,
+            preflight,
         } => {
             let selected = cfg.select_mod(cli.r#mod)?;
             publish::run(
@@ -288,6 +312,11 @@ fn main() -> Result<()> {
                     auto_note,
                     non_interactive,
                     dry_run,
+                    create,
+                    visibility,
+                    expected_owner,
+                    resume,
+                    preflight,
                 },
             )
         }
@@ -361,5 +390,30 @@ mod tests {
         assert!(Cli::try_parse_from(["onim", "workshop", "search", "CycleTrim"]).is_ok());
         assert!(Cli::try_parse_from(["onim", "workshop", "install", "12345"]).is_ok());
         assert!(Cli::try_parse_from(["onim", "workshop", "uninstall", "12345"]).is_ok());
+    }
+
+    #[test]
+    fn native_publication_flags_are_explicit_and_do_not_open_the_gui() {
+        assert!(
+            Cli::try_parse_from([
+                "onim",
+                "publish",
+                "--create",
+                "--visibility",
+                "public",
+                "--yes"
+            ])
+            .is_ok()
+        );
+        assert!(Cli::try_parse_from(["onim", "publish", "--preflight"]).is_ok());
+        for incompatible in ["--create", "--non-interactive", "--preflight", "--dry-run"] {
+            assert!(
+                Cli::try_parse_from(["onim", "publish", "--gui", incompatible]).is_err(),
+                "accepted {incompatible}"
+            );
+        }
+        assert!(
+            Cli::try_parse_from(["onim", "publish", "--resume", "plan.json", "--create"]).is_err()
+        );
     }
 }

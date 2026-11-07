@@ -18,6 +18,9 @@ pub struct ModConfig {
     pub publishedfileid: Option<String>,
     /// 可选的 Steam 创意工坊标题；未配置时使用 mod.yaml 的 title
     pub workshop_title: Option<String>,
+    /// 已在本配置登记的必需前置 Mod 名称；发布时保留其他工坊依赖。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workshop_dependencies: Vec<String>,
 }
 
 impl ModConfig {
@@ -42,6 +45,9 @@ pub struct Config {
     #[serde(default)]
     pub mods: HashMap<String, ModConfig>,
     pub default_mod: Option<String>,
+    /// 发布账号的 Steam ID，防止使用其他已登录账号创建条目。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workshop_owner: Option<u64>,
 }
 
 /// `onim doctor` 所需的非阻断式配置诊断结果。
@@ -409,6 +415,7 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
             game_path,
             mods: HashMap::new(),
             default_mod: None,
+            workshop_owner: None,
         }
     };
 
@@ -535,6 +542,7 @@ mod tests {
             game_path: PathBuf::new(),
             mods: HashMap::new(),
             default_mod: None,
+            workshop_owner: None,
         };
         for name in [
             "",
@@ -592,9 +600,11 @@ mod tests {
                         name: name.map(str::to_string),
                         publishedfileid: None,
                         workshop_title: None,
+                        workshop_dependencies: Vec::new(),
                     },
                 )]),
                 default_mod: Some(key.to_string()),
+                workshop_owner: None,
             };
             assert!(config.select_mod(None).is_err());
             assert!(config.select_mod(Some(key.to_string())).is_err());
@@ -630,6 +640,7 @@ path = "mods/Example"
                     name: None,
                     publishedfileid: None,
                     workshop_title: None,
+                    workshop_dependencies: Vec::new(),
                 },
             ),
             (
@@ -639,6 +650,7 @@ path = "mods/Example"
                     name: None,
                     publishedfileid: None,
                     workshop_title: None,
+                    workshop_dependencies: Vec::new(),
                 },
             ),
         ]);
@@ -647,6 +659,7 @@ path = "mods/Example"
             game_path: PathBuf::new(),
             mods,
             default_mod: None,
+            workshop_owner: None,
         };
 
         let selected = config.select_mod(None)?;

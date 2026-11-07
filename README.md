@@ -117,6 +117,8 @@ Critical operations remain bounded and should be preceded by read-only inspectio
 
 Before opening a pull request:
 
+Shipped mods depend on the standalone [Jlib](https://github.com/LIghtJUNction/Jlib) mod. The source checkout uses the `mods/Jlib` submodule.
+
 ```bash
 onim doctor
 python3 scripts/check_mods.py

@@ -7,6 +7,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopDependency.cs"
+             Link="WorkshopDependency.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/DependencyWriteJournal.cs"
+             Link="DependencyWriteJournal.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/CandidateCreationJournal.cs"
              Link="CandidateCreationJournal.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs"

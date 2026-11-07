@@ -12,7 +12,7 @@
     <ModTitle>CycleTrim</ModTitle>
     <ModDescription>Early experimental performance mod. Rebuilds the underlying algorithms and moves as much computation as possible onto the GPU. Speed first, compatibility later. / 早期实验性性能模组。重构底层算法，把尽可能多的运算搬到 GPU。先加速，再兼容。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.4.0</ModVersion>
+    <ModVersion>0.4.2</ModVersion>
     <Version>$(ModVersion)</Version>
     <ModApiVersion>2</ModApiVersion>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">true</IncludeOniSim>
@@ -21,10 +21,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <ProjectReference Include="..\Jlib\Jlib\Jlib.csproj">
-      <Private>false</Private>
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -97,7 +93,6 @@
     <Delete Files="$(DistPath)source-build-validation.json" />
 
     <ItemGroup>
-      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" Condition="Exists('$(OutputPath)THIRD_PARTY_NOTICES.txt')" />
@@ -109,6 +104,8 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <Copy SourceFiles="$(JlibBootstrapAssembly)" DestinationFiles="$(DistModPath)$(AssemblyName).dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DistModPath)implementation" />
     <ItemGroup Condition="'$(IncludeOniSim)' == 'true'">
       <OniSimNativeFiles Include="$(OutputPath)OniSim/**/*" />
     </ItemGroup>
@@ -124,7 +121,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="'$(IncludeOniSim)' == 'true'" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim scripts/build_onisim_native.py LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim build/Jlib.Consumer.targets sdk/Jlib.Bootstrap mods/Jlib/Jlib mods/Jlib/PLibCore mods/Jlib/PLibActions mods/Jlib/PLibAVC mods/Jlib/PLibBuildings mods/Jlib/PLibDatabase mods/Jlib/PLibLighting mods/Jlib/PLibOptions mods/Jlib/PLibUI mods/Jlib/LICENSE mods/Jlib/UPSTREAM.toml Directory.Build.props.example LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml scripts/build_onisim_native.py" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
@@ -144,4 +141,5 @@
     <Copy SourceFiles="@(OniSimBundleFiles)" DestinationFiles="@(OniSimBundleFiles->'$(OutputPath)OniSim/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
+  <Import Project="../../build/Jlib.Consumer.targets" />
 </Project>

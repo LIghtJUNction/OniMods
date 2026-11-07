@@ -1,5 +1,7 @@
 # OniOnline — 联机框架开发预览
 
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。所有本项目 Mod 共用一份 Jlib，消费者包不再内嵌 PLib/Jlib。
+
 <p align="center">
   <img src="assets/onionline-logo-v1.png" alt="OniOnline" width="320" />
 </p>
@@ -16,7 +18,7 @@ OniOnline 是《缺氧》的联机模组开发框架。安装后默认只有大�
 
 `OnePlanetPerPlayer` 仍在 SDK 里，供单独的玩法模组调用 `RegisterIfMissing()`。框架本身不登记、也不默认选中它。房间 ID、观察世界 ID 和跨存档 PlanetId 仍是不同身份。
 
-从源码安装及分阶段测试见 [构建、安装与测试](docs/build-install-test-zh.md)。游戏始终通过 Steam 启动。OniOnline 内置 PLib，无需另装 PLib；普通玩家无需安装 OniMcp 或 OniHarness。
+从源码安装及分阶段测试见 [构建、安装与测试](docs/build-install-test-zh.md)。游戏始终通过 Steam 启动。OniOnline 需要独立的 Jlib 前置 Mod；普通玩家无需安装 OniMcp 或 OniHarness。
 
 ## 兼容与模组同步
 
@@ -68,7 +70,7 @@ SDK 仍处开发预览，尚未承诺后续二进制兼容。不要随第三方�
 onim -m OniOnline build --release
 ```
 
-产物为 `dist/OniOnline.zip`，包含 **OniOnline.dll** 和 **OniOnline.Framework.dll**。实际安装使用 `onim -m OniOnline install`；它会重新构建 Release，安装前正常保存并退出游戏。开发用 `dev` 安装 Debug，两种路线选一条，不把 Debug 当成 Release 验收。
+产物为 `dist/OniOnline.zip`，包含根加载入口 **OniOnline.dll**、**implementation/OniOnline.dll** 和 **OniOnline.Framework.dll**。实际安装使用 `onim -m OniOnline install`；它会重新构建 Release，安装前正常保存并退出游戏。开发用 `dev` 安装 Debug，两种路线选一条，不把 Debug 当成 Release 验收。
 
 先选受影响模块做局部宿主测试，例如：
 

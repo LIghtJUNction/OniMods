@@ -1,5 +1,7 @@
 # ONI MCP Server
 
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。所有本项目 Mod 共用一份 Jlib，消费者包不再内嵌 PLib/Jlib。
+
 [![ONI MCP Server 预览图](preview.png)](README_EN.md)
 
 ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:8788/mcp/`），提供 `oni://` 资源读取与受控写入入口，面向 AI 客户端做安全联动。
