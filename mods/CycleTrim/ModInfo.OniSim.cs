@@ -24,6 +24,10 @@ namespace CycleTrim
                 Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
             options = options ?? new OniSimOptions();
+            // Aggressive defaults: max OniSim cell workers unless the operator
+            // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS")))
+                Environment.SetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS", "8");
             // OniSim is mandatory: map the Rust SimDLL and keep the multicomponent
             // read-lease shim armed. Official SimDLL is no longer a runtime option.
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,

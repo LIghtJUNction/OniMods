@@ -1,3 +1,7 @@
+## 2026-11-07 — 0.4.6
+
+- Force Unity VSync off and uncapped `targetFrameRate` at load / Game.OnSpawn / graphics apply; re-assert if something restores the default. Default `CYCLETRIM_ONISIM_WORKERS=8` when unset.
+
 ## 2026-11-07 — 0.4.5
 
 - Always map OniSim at startup. Remove the PLib `EnableOniSimExperimental` toggle and the official-SimDLL runtime fallback. `CYCLETRIM_ONISIM_ENABLE=0` remains an emergency kill switch only.

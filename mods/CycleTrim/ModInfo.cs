@@ -14,6 +14,7 @@ namespace CycleTrim
         public override void OnLoad(Harmony harmony)
         {
             PerformanceProbePatch.SetHarmonyId(harmony.Id);
+            FrameRateUnlockPatch.Apply("ModInfo.OnLoad");
             ConfigureOniSim();
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
             base.OnLoad(harmony);
