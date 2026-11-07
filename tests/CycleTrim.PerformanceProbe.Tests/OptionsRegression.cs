@@ -198,7 +198,12 @@ namespace UnityEngine
 
 namespace OniSim.CycleTrim
 {
-    public sealed class LoaderResult { public string Message = "host mapping adapter"; }
+    public enum LoaderState { Disabled, MappedUnverified, Refused }
+    public sealed class LoaderResult
+    {
+        public LoaderState State = LoaderState.Disabled;
+        public string Message = "host mapping adapter";
+    }
     public static class OniSimLoader
     {
         internal static bool LastEnabled;
@@ -207,5 +212,6 @@ namespace OniSim.CycleTrim
             LastEnabled = enabled;
             return new LoaderResult();
         }
+        public static string GetMappedLibraryPath() { return null; }
     }
 }
