@@ -60,6 +60,11 @@ pub(crate) struct PhysicsWorld {
     // multicomponent publication advertises both when mixture_mass > 0.
     pub(crate) mixture_element: Vec<u16>,
     pub(crate) mixture_mass: Vec<f32>,
+    // Dense NHWC gas channels (production promotion of the GPU operator layout).
+    pub(crate) species_mass: Vec<f32>,
+    pub(crate) gas_channel_of_element: Vec<u8>,
+    pub(crate) gas_element_of_channel: [u16; crate::multicomponent_flux::GAS_CHANNELS],
+    pub(crate) gas_channel_count: usize,
 }
 
 fn special(elements: &ElementTable, hash: u32) -> Result<u16> {
@@ -108,7 +113,7 @@ impl PhysicsWorld {
         let sink_element = special(elements, 0xa9360b34)?;
         let vacuum_element = special(elements, 0x2d39bf75)?;
         let boundary_element = special(elements, 0x6d95058c)?;
-        Ok(Self {
+        let mut world = Self {
             width,
             height,
             stride,
@@ -144,7 +149,20 @@ impl PhysicsWorld {
             building_contact_heat_transfer_scale: f32::from_bits(0x3a83126f),
             mixture_element: filled(count, vacuum_element)?,
             mixture_mass: filled(count, 0.0)?,
-        })
+            species_mass: filled(
+                count
+                    .checked_mul(crate::multicomponent_flux::GAS_CHANNELS)
+                    .ok_or_else(|| {
+                        Error::new(Status::ResourceLimit, "species mass capacity overflow")
+                    })?,
+                0.0,
+            )?,
+            gas_channel_of_element: filled(elements.elements.len().max(1), u8::MAX)?,
+            gas_element_of_channel: [0; crate::multicomponent_flux::GAS_CHANNELS],
+            gas_channel_count: 0,
+        };
+        crate::multicomponent_flux::rebuild_gas_channels(&mut world, elements);
+        Ok(world)
     }
 
     pub(crate) fn from_grid(grid: &Grid, elements: &ElementTable) -> Result<Self> {
@@ -176,6 +194,11 @@ impl PhysicsWorld {
             world.backwall_temperature[internal] = grid.backwall_temperature[public];
         }
         world.initialize_boundary();
+        crate::multicomponent_flux::rebuild_gas_channels(&mut world, elements);
+        for public in 0..grid.len() {
+            let internal = world.internal_index(public);
+            crate::multicomponent_flux::ingest_write_cell(&mut world, elements, internal);
+        }
         Ok(world)
     }
 

@@ -115,9 +115,12 @@ fn preflight(
         world.flow.len(),
         world.dirty.len(),
         world.dirty_flags.len(),
+        world.mixture_element.len(),
+        world.mixture_mass.len(),
     ]
     .iter()
     .any(|&length| length != count)
+        || world.species_mass.len() != count * crate::multicomponent_flux::GAS_CHANNELS
         || world.active_mask.len() != world.width * world.height
         || !crate::id_validation::valid_u16::<true>(&world.backwall_element, elements.len())
         || world
@@ -198,6 +201,10 @@ impl<'a> PreparedStep<'a> {
             temperature_phase(world, elements, &mut temperature_events, region);
             world.sync_read_from_write();
             if gas_phase(world, elements, diseases, events, region) {
+                world.sync_read_from_write();
+            }
+            // Aggressive 一格多物: GPU-operator CPU flux over dense gas channels.
+            if crate::multicomponent_flux::step_region(world, elements, events, region) {
                 world.sync_read_from_write();
             }
             // Gas events are already in the main queue. Temperature task events

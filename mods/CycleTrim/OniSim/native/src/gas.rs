@@ -224,6 +224,8 @@ fn coexist_gas_into(
     world.write.element[src] = world.vacuum_element;
     world.mixture_mass[src] = 0.0;
     world.mixture_element[src] = world.vacuum_element;
+    crate::multicomponent_flux::clear_species_cell(world, src);
+    crate::multicomponent_flux::ingest_write_cell(world, tables, dst);
     clear_disease(&mut world.write, src);
     notify(world, events, src);
     notify(world, events, dst);

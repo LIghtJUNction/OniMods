@@ -49,6 +49,7 @@ mod messages_cells;
 #[cfg(test)]
 mod messages_tests;
 mod messages_world;
+mod multicomponent_flux;
 mod multicomponent_publication;
 mod numeric;
 mod offgas;

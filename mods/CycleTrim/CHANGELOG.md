@@ -1,3 +1,8 @@
+## 2026-11-07 — 0.4.8
+
+- Promote the GPU multicomponent operator's CPU upwind flux into the native tick: dense 8-channel gas tensor, pack/unpack through legacy Grid + mixture, run after `gas_phase`.
+- Still no in-process Vulkan handoff (upload/readback was slower than CPU on the flow bench); Poisson pressure remains research-only. Save ABI still stores dominant element + runtime mixture overlay.
+
 ## 2026-11-07 — 0.4.7
 
 - Aggressive multicomponent: publish `FLAG_MULTICOMPONENT_COEXISTENCE`, allow a second gas species per cell when classic `displace_gas` fails, lower parallel gate to 1024 cells / up to 16 workers. Managed shims can leave the LEGACY fail-closed path.
