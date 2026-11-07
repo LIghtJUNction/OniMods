@@ -375,22 +375,30 @@ mod tests {
         let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &vx,
             velocity_y: &vy, solid: &solid, species: &species };
         validate_state(&state, count, channels).unwrap();
-        let mut mass_out = vec![0.0f32; count * channels];
-        let mut enthalpy_out = vec![0.0f32; count * channels];
-        cpu_step(&state, width, height, channels, 0.1, &mut mass_out, &mut enthalpy_out);
+        let mut current_mass = mass.clone();
+        let mut current_enthalpy = enthalpy.clone();
+        let mut next_mass = vec![0.0f32; count * channels];
+        let mut next_enthalpy = vec![0.0f32; count * channels];
+        for _ in 0..100 {
+            let step_state = State { mass: &current_mass, enthalpy: &current_enthalpy,
+                velocity_x: &vx, velocity_y: &vy, solid: &solid, species: &species };
+            cpu_step(&step_state, width, height, channels, 0.1, &mut next_mass, &mut next_enthalpy);
+            std::mem::swap(&mut current_mass, &mut next_mass);
+            std::mem::swap(&mut current_enthalpy, &mut next_enthalpy);
+        }
         for c in 0..channels {
             let before_mass: f64 = (0..count).map(|i| mass[i * channels + c] as f64).sum();
-            let after_mass: f64 = (0..count).map(|i| mass_out[i * channels + c] as f64).sum();
+            let after_mass: f64 = (0..count).map(|i| current_mass[i * channels + c] as f64).sum();
             let before_energy: f64 = (0..count).map(|i| enthalpy[i * channels + c] as f64).sum();
-            let after_energy: f64 = (0..count).map(|i| enthalpy_out[i * channels + c] as f64).sum();
-            assert!((after_mass - before_mass).abs() / before_mass.max(1e-30) < 1e-6, "species mass {c}");
-            assert!((after_energy - before_energy).abs() / before_energy.max(1e-30) < 1e-6, "species enthalpy {c}");
+            let after_energy: f64 = (0..count).map(|i| current_enthalpy[i * channels + c] as f64).sum();
+            assert!((after_mass - before_mass).abs() / before_mass.max(1e-30) < 1e-5, "species mass {c}");
+            assert!((after_energy - before_energy).abs() / before_energy.max(1e-30) < 1e-5, "species enthalpy {c}");
         }
-        assert!(mass_out.iter().chain(enthalpy_out.iter()).all(|v| v.is_finite() && *v >= -1e-7));
+        assert!(current_mass.iter().chain(current_enthalpy.iter()).all(|v| v.is_finite() && *v >= -1e-7));
         for cell in 0..count {
             if solid[cell] != 0 {
-                assert!(mass_out[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0));
-                assert!(enthalpy_out[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0));
+                assert!(current_mass[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0));
+                assert!(current_enthalpy[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0));
             }
         }
     }
