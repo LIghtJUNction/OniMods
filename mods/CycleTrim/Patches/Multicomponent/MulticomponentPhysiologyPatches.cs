@@ -22,7 +22,7 @@ namespace CycleTrim.Patches.Multicomponent
             if (snapshot.Components == null)
                 return;
 
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies component = snapshot.Components[i];
                 if (component.Phase != MulticomponentPhase.Gas
