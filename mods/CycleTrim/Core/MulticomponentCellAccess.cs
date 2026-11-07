@@ -36,8 +36,8 @@ namespace CycleTrim.Core
     }
 
     /// <summary>
-    /// Borrowed per-cell snapshot. The provider owns Components and must keep it
-    /// stable for the duration of the synchronous TryGetCell call chain.
+    /// Borrowed per-cell snapshot. Components is a thread-local reusable buffer;
+    /// consume ComponentCount entries before the next TryGetCell on this thread.
     /// </summary>
     public struct MulticomponentCellSnapshot
     {
