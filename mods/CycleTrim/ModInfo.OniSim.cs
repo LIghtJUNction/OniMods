@@ -1,5 +1,6 @@
 using System;
 using CycleTrim.Core;
+using CycleTrim.Patches;
 using Jlib.Runtime;
 using OniSim.Compatibility;
 using OniSim.CycleTrim;
@@ -24,6 +25,8 @@ namespace CycleTrim
                 Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
             options = options ?? new OniSimOptions();
+            FrameRateUnlockPatch.Configure(options.TargetFrameRate);
+            FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator
             // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).
             if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS")))

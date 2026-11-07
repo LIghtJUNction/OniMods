@@ -10,14 +10,19 @@ namespace CycleTrim.Patches
     /// </summary>
     public static class FrameRateUnlockPatch
     {
-        private const int TargetFrameRate = 500;
+        private static int targetFrameRate = 500;
         private static int nextForceFrame;
+
+        internal static void Configure(int value)
+        {
+            targetFrameRate = System.Math.Max(30, System.Math.Min(1000, value));
+        }
 
         public static void Apply(string reason)
         {
             QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = TargetFrameRate;
-            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=" + TargetFrameRate + ", vSyncCount=0");
+            Application.targetFrameRate = targetFrameRate;
+            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=" + targetFrameRate + ", vSyncCount=0");
         }
 
         [HarmonyPatch(typeof(Game), "OnSpawn")]
@@ -47,13 +52,13 @@ namespace CycleTrim.Patches
             [HarmonyPostfix]
             public static void Postfix()
             {
-                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate >= TargetFrameRate)
+                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate == targetFrameRate)
                     return;
                 int now = Time.frameCount;
                 if (now < nextForceFrame) return;
                 nextForceFrame = now + 60;
                 QualitySettings.vSyncCount = 0;
-                Application.targetFrameRate = TargetFrameRate;
+                Application.targetFrameRate = targetFrameRate;
             }
         }
 

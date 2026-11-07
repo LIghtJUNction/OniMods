@@ -6,6 +6,13 @@ namespace CycleTrim
     [ConfigFile("CycleTrimOptions.json", true)]
     public sealed class OniSimOptions
     {
+        [Option("目标帧率 / Target frame rate",
+            "设置目标帧率（30–1000），默认 500。实际帧率取决于负载；修改后需要重启游戏。",
+            "显示 / Visuals")]
+        [Limit(30, 1000)]
+        [RestartRequired]
+        public int TargetFrameRate { get; set; } = 500;
+
         [Option("物流候选优化 / Pickup candidates",
             "复用拾取候选的路径成本；关闭后使用原版候选选择。默认开启；需要重启游戏。",
             "优化 / Optimizations")]
