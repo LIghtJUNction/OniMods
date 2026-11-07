@@ -63,6 +63,7 @@ fn curl(settings: &Settings, method: &str, payload: Option<&Value>, session: Opt
     let body_path = dir.join(format!("{stem}.json"));
     let header_path = dir.join(format!("{stem}.headers"));
     let output_path = dir.join(format!("{stem}.out"));
+    let auth_path = dir.join(format!("{stem}.curlrc"));
     if let Some(body) = payload { fs::write(&body_path, serde_json::to_vec(body)?)?; }
     let mut cmd = Command::new("curl");
     cmd.args(["--silent", "--show-error", "--max-time", "60", "--request", "POST",
@@ -70,13 +71,20 @@ fn curl(settings: &Settings, method: &str, payload: Option<&Value>, session: Opt
         "--header", &format!("Mcp-Protocol-Version: {PROTOCOL}"),
         "--dump-header"]).arg(&header_path).arg("--output").arg(&output_path);
     if let Some(secret) = std::env::var("ONIM_MCP_SECRET").ok().or_else(|| settings.secret.clone()) {
-        cmd.args(["--header", &format!("Authorization: Bearer {secret}")]);
+        let escaped = secret.replace('\\', "\\\\").replace('"', "\\\"");
+        fs::write(&auth_path, format!("header = \"Authorization: Bearer {escaped}\"\n"))?;
+        #[cfg(unix)] {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&auth_path, fs::Permissions::from_mode(0o600))?;
+        }
+        cmd.arg("--config").arg(&auth_path);
     }
     if let Some(id) = session { cmd.args(["--header", &format!("Mcp-Session-Id: {id}")]); }
     if payload.is_some() { cmd.arg("--data-binary").arg(format!("@{}", body_path.display())); }
     cmd.arg(&settings.url);
     let result = cmd.output().context("failed to execute curl; install curl and ensure it is on PATH")?;
     let _ = fs::remove_file(&body_path);
+    let _ = fs::remove_file(&auth_path);
     if !result.status.success() {
         let _ = fs::remove_file(&header_path); let _ = fs::remove_file(&output_path);
         bail!("HTTP transport failed: {}", String::from_utf8_lossy(&result.stderr).trim());
