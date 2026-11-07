@@ -64,6 +64,11 @@
 
 ## Autonomous Maintenance
 
+### 单分支 (`main`) 迭代策略（硬性规范）
+
+- 主仓库（`OniMods`）及子仓库（如 `mods/Jlib`）统一践行**单分支 (`main`) 迭代策略**（Trunk-Based Development）。
+- 所有日常开发、Bug 修复、性能优化、测试闭环与文档同步均直接在 `main` 分支上推进与验证，**禁止新建或切分 `feature/*`、`experiment/*`、`cursor/*`、`release/*` 等旁路分支**，也不要把 `mods/Jlib` 留在游离 HEAD（detached HEAD）或分叉分支上，彻底消除多分支分叉导致的特性遗漏与合并冲突。
+
 ### 源码改进与上游反馈（明确要求）
 
 - 在开发、测试和实际使用中主动发现问题，并改进源代码；对职责范围内可修复的问题，必须推进修复与验证，不能只记录问题或长期依赖临时绕过。

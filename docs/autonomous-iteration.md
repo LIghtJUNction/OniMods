@@ -6,6 +6,7 @@ it is not a requirement to produce a commit.
 
 ## Select work by state, not by repetition
 
+- **Single-branch (`main`) iteration strategy**: Iterate directly on `main` across `OniMods` and its subrepositories (such as `mods/Jlib`). Do not create or split side branches (`feature/*`, `experiment/*`, `release/*`, `cursor/*`) or leave submodules on detached HEADs. Keep `main` green by running relevant host/contract tests before committing.
 - Read current main, open work, changed files, review findings and CI for the
   exact head SHA. Previous chat reports are leads, not authoritative results.
 - Keep at most one actively implemented PR per role. Reuse an existing PR for

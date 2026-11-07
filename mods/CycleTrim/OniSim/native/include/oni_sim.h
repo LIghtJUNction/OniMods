@@ -122,7 +122,41 @@ typedef struct OniSimConduitTemperatureUpdate {
     int32_t melted_count;
     const int32_t *melted;
 } OniSimConduitTemperatureUpdate;
+
+/* Versioned multicomponent publication extension (Gate C).
+ * Extends GameData without modifying the 496-byte legacy OniSimGameDataUpdate. */
+typedef struct OniSimMulticomponentSpeciesRecord {
+    uint16_t element_id;
+    uint8_t phase;
+    uint8_t reserved;
+    float mass;
+    float temperature;
+    float volume_fraction;
+    float partial_pressure_kpa;
+} OniSimMulticomponentSpeciesRecord;
+
+typedef struct OniSimMulticomponentCellHeader {
+    uint32_t species_offset;
+    uint16_t species_count;
+    uint16_t reserved;
+    float total_mass;
+    float gas_pressure_kpa;
+    float liquid_pressure_kpa;
+    float liquid_volume_fraction;
+} OniSimMulticomponentCellHeader;
+
+typedef struct OniSimMulticomponentUpdate {
+    uint32_t version;
+    uint32_t flags;
+    uint64_t generation;
+    uint32_t cell_count;
+    uint32_t total_species_records;
+    const OniSimMulticomponentCellHeader *cells;
+    const OniSimMulticomponentSpeciesRecord *species;
+} OniSimMulticomponentUpdate;
 #pragma pack(pop)
+
+const OniSimMulticomponentUpdate *ONISIM_GetMulticomponentUpdate(void);
 
 void ConduitTemperatureManager_Initialize(void);
 void ConduitTemperatureManager_Shutdown(void);

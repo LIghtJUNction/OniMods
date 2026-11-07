@@ -199,6 +199,10 @@ internal static class FrameworkPrimitiveTests
 
         map.PurgeExpiredTombstones(now: 16.0);
         check(map.TombstoneCount == 0 && !map.IsTombstoned(1001) && map.TryRegister(1001, entityB), "expired tombstone purges and allows id reuse");
+        check(!map.Unregister(1001, double.NaN, 5.0) && !map.Unregister(1001, 10.0, double.PositiveInfinity) &&
+            map.UnregisterEntity(entityB, 20.0, 5.0) && map.IsTombstoned(1001, 22.0),
+            "identity map rejects non-finite timestamps and supports unregistering by entity instance");
+        map.PurgeExpiredTombstones(now: 26.0);
 
         var entityC = new object();
         var entityD = new object();
@@ -208,7 +212,7 @@ internal static class FrameworkPrimitiveTests
             !map.TryRegister(7, entityD) && !map.TryRegister(7, entityD, now: 5.0),
             "default unregister leaves a 10-second anti-ABA tombstone blocking immediate reuse");
         check(map.TryRegister(7, entityD, now: NetworkIdentityMap<object>.DefaultTombstoneSeconds) &&
-            map.TombstoneCount == 0 && map.Count == 2,
+            map.TombstoneCount == 0 && map.Count == 1,
             "timestamped TryRegister automatically purges an expired tombstone without waiting for PurgeExpiredTombstones");
         check(map.Unregister(7, now: 20.0) && map.TombstoneCount == 1, "unregister at t=20 records tombstone");
         map.Clear(preserveTombstones: true);
@@ -216,9 +220,6 @@ internal static class FrameworkPrimitiveTests
             "Clear(preserveTombstones: true) drops active entities while preserving anti-ABA tombstones");
         map.Clear();
         check(map.Count == 0 && map.TombstoneCount == 0, "default Clear resets both entities and tombstones");
-        check(!map.Unregister(1001, double.NaN, 5.0) && !map.Unregister(1001, 10.0, double.PositiveInfinity) &&
-            map.UnregisterEntity(entityB, 20.0, 5.0) && map.IsTombstoned(1001, 22.0),
-            "identity map rejects non-finite timestamps and supports unregistering by entity instance");
 
         // --- PresenceBoard Tool Drag & Ping Tests ---
         var drag = new ToolDragPresence("player_1", 0, "dig", ToolDragMode.Box, 10, 10, 15, 15, 7, "Sandstone", 0xFF0000FF);
@@ -277,11 +278,12 @@ internal static class FrameworkPrimitiveTests
             "large drift forces immediate snap to authoritative time");
 
         var authInfiniteElapsed = new AnimSnapshot(501, 1234, 1, float.PositiveInfinity, float.PositiveInfinity, 10.0);
-        var correctionInf = AnimReconciler.Evaluate(localSnapshot, authInfiniteElapsed);
+        var correctionInfNudge = AnimReconciler.Evaluate(localSnapshot, authInfiniteElapsed);
+        var correctionInfSnap = AnimReconciler.Evaluate(new AnimSnapshot(501, 1234, 1, 1.0f, 1.0f, 10.0), authInfiniteElapsed);
         var authInfiniteReplay = new AnimSnapshot(501, 9999, 2, float.NegativeInfinity, float.PositiveInfinity, 10.0);
         var correctionInfReplay = AnimReconciler.Evaluate(localSnapshot, authInfiniteReplay);
-        check(!float.IsInfinity(correctionInf.TargetElapsedTime) && !float.IsNaN(correctionInf.TargetElapsedTime) &&
-            correctionInf.TargetElapsedTime == 0f && correctionInf.RecommendedSpeed == 1.0f &&
+        check(!float.IsInfinity(correctionInfNudge.TargetElapsedTime) && !float.IsNaN(correctionInfNudge.TargetElapsedTime) &&
+            correctionInfSnap.Action == AnimCorrectionAction.SnapTime && correctionInfSnap.TargetElapsedTime == 0f && correctionInfSnap.RecommendedSpeed == 1.0f &&
             !float.IsInfinity(correctionInfReplay.TargetElapsedTime) && correctionInfReplay.TargetElapsedTime == 0f,
             "infinite elapsed time and speed are sanitized to finite non-negative bounds");
 
