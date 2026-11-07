@@ -17,7 +17,11 @@ gameplay semantics are equivalent.
 
 - `Elements_CreateInteractions` is parsed and its rule records are retained in
   state, but `do_gas_interaction` and `do_gas_interaction_pair` have no caller
-  in the fixed-step pipeline. Gas obliteration/reaction is therefore not active.
+  in the Rust fixed-step pipeline. Static inspection of the pinned official
+  control flow also found no incoming call to the legacy three-argument helper.
+  Whether these helpers belong in the active simulation path is unresolved;
+  do not add a guessed phase call without a positive official call-site or a
+  differential behavior fixture.
 - The current source has no passing overall four-worker scaling gate. Worker
   creation and differential correctness do not prove a performance win.
 - The current source snapshot has no corresponding full-game graphical,
