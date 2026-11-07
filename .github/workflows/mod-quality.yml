@@ -79,7 +79,8 @@ jobs:
         run: |
           dotnet pack mods/Jlib/Jlib/Jlib.csproj -c Release \
             -p:TargetFrameworks=netstandard2.1 \
-            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.99.1 --profile minimal
       - name: Test onim CLI regressions
