@@ -1,6 +1,7 @@
 using System;
 using CycleTrim.Core;
 using Jlib.Runtime;
+using OniSim.Compatibility;
 using OniSim.CycleTrim;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
@@ -34,6 +35,27 @@ namespace CycleTrim
                 options.ConduitAnimation, options.EnableMulticomponentShim);
             LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
+
+            if (options.EnableMulticomponentShim && result.State == LoaderState.MappedUnverified)
+            {
+                try
+                {
+                    string nativePath = OniSimLoader.GetMappedLibraryPath();
+                    if (!string.IsNullOrWhiteSpace(nativePath))
+                    {
+                        var reader = OniSimPublicationReader.Open(nativePath);
+                        var provider = new OniSimMulticomponentProvider(reader.Acquire, reader.Release);
+                        if (!MulticomponentCellAccess.RegisterProvider(provider))
+                            Console.WriteLine("[CycleTrim] Multicomponent provider was already registered.");
+                        else
+                            Console.WriteLine("[CycleTrim] Multicomponent read-lease provider registered; gameplay remains fail-closed until coexistence data is published.");
+                    }
+                }
+                catch (Exception error)
+                {
+                    Console.WriteLine("[CycleTrim] Multicomponent provider unavailable; original game behavior retained: " + error.Message);
+                }
+            }
         }
 
         partial void RegisterOniSimOptions()
