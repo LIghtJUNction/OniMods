@@ -239,5 +239,19 @@
       }
     ],
     "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence."
-  }
+  },
+  "auxiliary_packages": [
+    {
+      "package": "System.Memory",
+      "version": "4.5.5",
+      "url": "https://api.nuget.org/v3-flatcontainer/system.memory/4.5.5/system.memory.4.5.5.nupkg",
+      "extract": [
+        {
+          "name": "System.Memory.dll",
+          "entry": "lib/net461/System.Memory.dll"
+        }
+      ],
+      "note": "Compile-only Microsoft System.Memory API reference for the net48 compatibility build; not copied into the game Mod package."
+    }
+  ]
 }
