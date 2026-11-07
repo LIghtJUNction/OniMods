@@ -22,20 +22,57 @@
     "upstream_tracking": {
       "branch": "master",
       "files": [
-        {"path":"Lib/0Harmony.dll","pinned_blob_sha":"62cc4174fe6eecfa7e3ce556e69e4c79415e2e5f"},
-        {"path":"Lib/Assembly-CSharp.dll","pinned_blob_sha":"edcc29584194c60aab9e65ce9ac89029373222c7"},
-        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"},
-        {"path":"Lib/Newtonsoft.Json.dll","pinned_blob_sha":"e023edf1badcec2c131f7baaeedd924c556a65eb"},
-        {"path":"Lib/Unity.TextMeshPro.dll","pinned_blob_sha":"f55a43d8867f1dec3747d357d5c364edc99cd11e"},
-        {"path":"Lib/UnityEngine.dll","pinned_blob_sha":"149a152de2df4cee616865df16dddad660856aa0"},
-        {"path":"Lib/UnityEngine.CoreModule.dll","pinned_blob_sha":"1ffea27aa23f6e2ca1aed15dc2b6d19ca8ef29f0"},
-        {"path":"Lib/UnityEngine.UI.dll","pinned_blob_sha":"5a5a457a01f5deae69633185e686522f005288d1"},
-        {"path":"Lib/UnityEngine.UIModule.dll","pinned_blob_sha":"1e5722ad4f3446b31bcfcb9757a7e9ee60ad1459"},
-        {"path":"Lib/UnityEngine.TextRenderingModule.dll","pinned_blob_sha":"8b71c5d64f99afb037fa0430861c07fcc31a6b2b"},
-        {"path":"Lib/UnityEngine.InputLegacyModule.dll","pinned_blob_sha":"c0c31e011e938cc78d7e2b4c0f01fa03365c3ddd"}
+        {
+          "path": "Lib/0Harmony.dll",
+          "pinned_blob_sha": "62cc4174fe6eecfa7e3ce556e69e4c79415e2e5f"
+        },
+        {
+          "path": "Lib/Assembly-CSharp-firstpass.dll",
+          "pinned_blob_sha": "f15b51ffd825ab532268774647d602d17efbf730"
+        },
+        {
+          "path": "Lib/Assembly-CSharp.dll",
+          "pinned_blob_sha": "edcc29584194c60aab9e65ce9ac89029373222c7"
+        },
+        {
+          "path": "Lib/Newtonsoft.Json.dll",
+          "pinned_blob_sha": "e023edf1badcec2c131f7baaeedd924c556a65eb"
+        },
+        {
+          "path": "Lib/Unity.TextMeshPro.dll",
+          "pinned_blob_sha": "f55a43d8867f1dec3747d357d5c364edc99cd11e"
+        },
+        {
+          "path": "Lib/UnityEngine.CoreModule.dll",
+          "pinned_blob_sha": "1ffea27aa23f6e2ca1aed15dc2b6d19ca8ef29f0"
+        },
+        {
+          "path": "Lib/UnityEngine.dll",
+          "pinned_blob_sha": "149a152de2df4cee616865df16dddad660856aa0"
+        },
+        {
+          "path": "Lib/UnityEngine.InputLegacyModule.dll",
+          "pinned_blob_sha": "c0c31e011e938cc78d7e2b4c0f01fa03365c3ddd"
+        },
+        {
+          "path": "Lib/UnityEngine.TextRenderingModule.dll",
+          "pinned_blob_sha": "8b71c5d64f99afb037fa0430861c07fcc31a6b2b"
+        },
+        {
+          "path": "Lib/UnityEngine.UI.dll",
+          "pinned_blob_sha": "5a5a457a01f5deae69633185e686522f005288d1"
+        },
+        {
+          "path": "Lib/UnityEngine.UIModule.dll",
+          "pinned_blob_sha": "1e5722ad4f3446b31bcfcb9757a7e9ee60ad1459"
+        },
+        {
+          "path": "Lib/UnityEngine.UnityWebRequestModule.dll",
+          "pinned_blob_sha": "0f2a338fc1c293dca746467fff238f1f8c534e59"
+        }
       ]
     },
-    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
+    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately. UnityEngine.UnityWebRequestModule.dll is additionally pinned from the same immutable reference commit and tracked upstream by Git blob SHA; it is compile-only because the public mirror targets ONI build 737790, not official build 744825."
   },
   "method_body_source": {
     "repository": "Kupie/ONI_Decomp",
@@ -44,28 +81,109 @@
     "upstream_tracking": {
       "branch": "main",
       "version_marker": "KleiVersion.cs",
-      "contract_files": ["NavGrid.cs", "FetchManager.cs", "Research.cs"]
+      "contract_files": [
+        "NavGrid.cs",
+        "FetchManager.cs",
+        "Research.cs"
+      ]
     },
     "note": "Transient source-only method-body evidence. KleiVersion.cs declares release ChangeList 744825. The mirror has no declared license, so CI verifies provenance and semantics without vendoring or redistributing the decompiled source.",
     "files": [
-      {"name":"NavGrid.cs","path":"Assembly-CSharp/NavGrid.cs","blob_sha":"8db6d7f2e84fda45504d06844722a693e5338f0c"},
-      {"name":"FetchManager.cs","path":"Assembly-CSharp/FetchManager.cs","blob_sha":"85ac7fedf30f9c337b2759a15490974d856fadf5"},
-      {"name":"Research.cs","path":"Assembly-CSharp/Research.cs","blob_sha":"d92cec77f8593c92fdedf7aba2bf435d3eff4857"},
-      {"name":"KleiVersion.cs","path":"Assembly-CSharp/KleiVersion.cs","blob_sha":"2f5b3266033b2868e9b475a55ac208f70eca647a"}
+      {
+        "name": "NavGrid.cs",
+        "path": "Assembly-CSharp/NavGrid.cs",
+        "blob_sha": "8db6d7f2e84fda45504d06844722a693e5338f0c"
+      },
+      {
+        "name": "FetchManager.cs",
+        "path": "Assembly-CSharp/FetchManager.cs",
+        "blob_sha": "85ac7fedf30f9c337b2759a15490974d856fadf5"
+      },
+      {
+        "name": "Research.cs",
+        "path": "Assembly-CSharp/Research.cs",
+        "blob_sha": "d92cec77f8593c92fdedf7aba2bf435d3eff4857"
+      },
+      {
+        "name": "KleiVersion.cs",
+        "path": "Assembly-CSharp/KleiVersion.cs",
+        "blob_sha": "2f5b3266033b2868e9b475a55ac208f70eca647a"
+      }
     ]
   },
   "files": [
-    {"name":"0Harmony.dll","path":"Lib/0Harmony.dll","size":1255936,"sha256":"bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8"},
-    {"name":"Assembly-CSharp.dll","path":"Lib/Assembly-CSharp.dll","size":4593664,"sha256":"1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"},
-    {"name":"Assembly-CSharp-firstpass.dll","path":"Lib/Assembly-CSharp-firstpass.dll","size":1665536,"sha256":"c2f1596bbc441d9b408457032cff8ddd2fab8b75d3768a9210c552931b23cfc7"},
-    {"name":"Newtonsoft.Json.dll","path":"Lib/Newtonsoft.Json.dll","size":176640,"sha256":"e7fdfb49e6140f83ff1fbf4893cc25ad1c1669e72df470c2d284aaa593fe70cf"},
-    {"name":"Unity.TextMeshPro.dll","path":"Lib/Unity.TextMeshPro.dll","size":128512,"sha256":"ab4f936a841c2580571fc9096a9480347790587fcda8b1a45308b01789564f05"},
-    {"name":"UnityEngine.dll","path":"Lib/UnityEngine.dll","size":184832,"sha256":"89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"},
-    {"name":"UnityEngine.CoreModule.dll","path":"Lib/UnityEngine.CoreModule.dll","size":1323520,"sha256":"81c7b8183600ff8d2a36cdadbd73555e75d0b4f99c4d8851bc7be929de786ab1"},
-    {"name":"UnityEngine.UI.dll","path":"Lib/UnityEngine.UI.dll","size":115712,"sha256":"b71fea85d3d4a321ecd88bb787bd1424d4c5a8920b689ec9c938a9ca0560b901"},
-    {"name":"UnityEngine.UIModule.dll","path":"Lib/UnityEngine.UIModule.dll","size":29184,"sha256":"44e9e848f203e02f65cce5b5557a296b7a1bd0227f469ebb7b43a194744a5b56"},
-    {"name":"UnityEngine.TextRenderingModule.dll","path":"Lib/UnityEngine.TextRenderingModule.dll","size":18432,"sha256":"8590e9a5d4dd726924b1fa8a3da4b12167b288b9347f30e36479a1793fb2da94"},
-    {"name":"UnityEngine.InputLegacyModule.dll","path":"Lib/UnityEngine.InputLegacyModule.dll","size":27136,"sha256":"7449a6637ce4af8984aaa57fe26d45848b71c42392392bc85ed16880ff09a0ca"}
+    {
+      "name": "0Harmony.dll",
+      "path": "Lib/0Harmony.dll",
+      "size": 1255936,
+      "sha256": "bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8"
+    },
+    {
+      "name": "Assembly-CSharp-firstpass.dll",
+      "path": "Lib/Assembly-CSharp-firstpass.dll",
+      "size": 1665536,
+      "sha256": "c2f1596bbc441d9b408457032cff8ddd2fab8b75d3768a9210c552931b23cfc7"
+    },
+    {
+      "name": "Assembly-CSharp.dll",
+      "path": "Lib/Assembly-CSharp.dll",
+      "size": 4593664,
+      "sha256": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"
+    },
+    {
+      "name": "Newtonsoft.Json.dll",
+      "path": "Lib/Newtonsoft.Json.dll",
+      "size": 176640,
+      "sha256": "e7fdfb49e6140f83ff1fbf4893cc25ad1c1669e72df470c2d284aaa593fe70cf"
+    },
+    {
+      "name": "Unity.TextMeshPro.dll",
+      "path": "Lib/Unity.TextMeshPro.dll",
+      "size": 128512,
+      "sha256": "ab4f936a841c2580571fc9096a9480347790587fcda8b1a45308b01789564f05"
+    },
+    {
+      "name": "UnityEngine.CoreModule.dll",
+      "path": "Lib/UnityEngine.CoreModule.dll",
+      "size": 1323520,
+      "sha256": "81c7b8183600ff8d2a36cdadbd73555e75d0b4f99c4d8851bc7be929de786ab1"
+    },
+    {
+      "name": "UnityEngine.dll",
+      "path": "Lib/UnityEngine.dll",
+      "size": 184832,
+      "sha256": "89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"
+    },
+    {
+      "name": "UnityEngine.InputLegacyModule.dll",
+      "path": "Lib/UnityEngine.InputLegacyModule.dll",
+      "size": 27136,
+      "sha256": "7449a6637ce4af8984aaa57fe26d45848b71c42392392bc85ed16880ff09a0ca"
+    },
+    {
+      "name": "UnityEngine.TextRenderingModule.dll",
+      "path": "Lib/UnityEngine.TextRenderingModule.dll",
+      "size": 18432,
+      "sha256": "8590e9a5d4dd726924b1fa8a3da4b12167b288b9347f30e36479a1793fb2da94"
+    },
+    {
+      "name": "UnityEngine.UI.dll",
+      "path": "Lib/UnityEngine.UI.dll",
+      "size": 115712,
+      "sha256": "b71fea85d3d4a321ecd88bb787bd1424d4c5a8920b689ec9c938a9ca0560b901"
+    },
+    {
+      "name": "UnityEngine.UIModule.dll",
+      "path": "Lib/UnityEngine.UIModule.dll",
+      "size": 29184,
+      "sha256": "44e9e848f203e02f65cce5b5557a296b7a1bd0227f469ebb7b43a194744a5b56"
+    },
+    {
+      "name": "UnityEngine.UnityWebRequestModule.dll",
+      "path": "Lib/UnityEngine.UnityWebRequestModule.dll",
+      "size": 33792,
+      "sha256": "a81e73189b055faf7405f419588c8604017ba1eb7302330516d5e1d17ce83d5f"
+    }
   ],
   "auxiliary_unity_modules": {
     "package": "UnityEngine.Modules",
@@ -74,8 +192,16 @@
     "size": 3386574,
     "sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
     "extract": [
-      {"name":"UnityEngine.IMGUIModule.dll","size":88576,"sha256":"3fe2afaf000557ec559b485ba664d7de7c3f9190e1747518dc35cdd980b092b4"},
-      {"name":"UnityEngine.ScreenCaptureModule.dll","size":10752,"sha256":"e1749ad46587104019dfe18328954fa9c0c24a2748fcbc1da5ed1fdf593e3e2c"}
+      {
+        "name": "UnityEngine.IMGUIModule.dll",
+        "size": 88576,
+        "sha256": "3fe2afaf000557ec559b485ba664d7de7c3f9190e1747518dc35cdd980b092b4"
+      },
+      {
+        "name": "UnityEngine.ScreenCaptureModule.dll",
+        "size": 10752,
+        "sha256": "e1749ad46587104019dfe18328954fa9c0c24a2748fcbc1da5ed1fdf593e3e2c"
+      }
     ],
     "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims."
   }
