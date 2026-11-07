@@ -94,7 +94,8 @@ struct Report {
 }
 
 fn main() -> Result<(), String> {
-    let width_height = [(96usize, 96usize), (256usize, 384usize)];
+    // Include the padded dimensions observed in the current ONI runtime.
+    let width_height = [(96usize, 96usize), (256usize, 384usize), (738usize, 306usize)];
     let channels = 4usize;
     let dt = 0.02f32;
     let pressure_iterations = std::env::var("ONISIM_PRESSURE_ITERATIONS")
@@ -115,6 +116,7 @@ fn main() -> Result<(), String> {
         let mut expected_enthalpy = vec![0.0f32; fixture.enthalpy.len()];
         cpu_step(&fixture.state(), width, height, channels, dt, &mut expected, &mut expected_enthalpy);
         let mut actual = vec![0.0f32; fixture.mass.len()];
+        let mut actual_enthalpy = vec![0.0f32; fixture.enthalpy.len()];
         let gauge_cell = fixture.solid.iter().position(|&value| value == 0)
             .ok_or("fixture has no fluid cells")?;
 
@@ -142,7 +144,7 @@ fn main() -> Result<(), String> {
                 pressure_iterations,
                 1.0,
             )?;
-            transport.readback_current(&mut actual)?;
+            transport.readback_state(&mut actual, &mut actual_enthalpy)?;
             let elapsed = started.elapsed().as_secs_f64() * 1e6;
             if sample >= 5 {
                 samples.push(elapsed);
@@ -151,6 +153,12 @@ fn main() -> Result<(), String> {
                 let error = (f64::from(reference) - f64::from(candidate)).abs();
                 max_abs = max_abs.max(error);
                 max_rel = max_rel.max(error / f64::from(reference).abs().max(1e-4));
+            }
+            for (&reference, &candidate) in expected_enthalpy.iter().zip(&actual_enthalpy) {
+                let error = (f64::from(reference) - f64::from(candidate)).abs();
+                if error / f64::from(reference).abs().max(1e-4) > 1e-4 {
+                    return Err(format!("resident transport enthalpy parity failed for {width}x{height}"));
+                }
             }
         }
         if max_rel > 1e-4 {

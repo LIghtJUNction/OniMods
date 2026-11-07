@@ -256,6 +256,15 @@ impl MulticomponentGpu {
             return Err("resident run requires valid uploaded state, positive steps/dt and matching outputs".into());
         }
         self.dispatch_resident(steps, dt)?;
+        self.readback_state(mass_output, enthalpy_output)
+    }
+
+    /// Read both current tensors together after any resident operator chain.
+    pub fn readback_state(&mut self, mass_output: &mut [f32], enthalpy_output: &mut [f32]) -> Result<(), String> {
+        let values = self.count * self.channels;
+        if !self.uploaded || mass_output.len() != values || enthalpy_output.len() != values {
+            return Err("readback requires uploaded state and matching output tensors".into());
+        }
         let (mass_final, enthalpy_final) = if self.current_is_a {
             (&self.mass_a, &self.enthalpy_a)
         } else {
