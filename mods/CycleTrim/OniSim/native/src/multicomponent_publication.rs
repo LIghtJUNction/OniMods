@@ -74,23 +74,43 @@ pub(crate) struct MulticomponentBuffers {
     validation_error: Option<Error>,
 }
 
+const MAX_SPECIES_PER_CELL: usize = 4;
+
 impl MulticomponentBuffers {
     pub(crate) fn new(count: usize) -> Result<Self> {
+        let species_cap = count
+            .checked_mul(MAX_SPECIES_PER_CELL)
+            .ok_or_else(|| Error::new(Status::ResourceLimit, "multicomponent species capacity overflow"))?;
         Ok(Self {
             cells: filled(count, OniSimMulticomponentCellHeader::default())?.into_boxed_slice(),
-            species: filled(count, OniSimMulticomponentSpeciesRecord::default())?.into_boxed_slice(),
+            species: filled(species_cap, OniSimMulticomponentSpeciesRecord::default())?
+                .into_boxed_slice(),
             species_len: 0,
-            flags: FLAG_LEGACY_SINGLE_ELEMENT,
+            // Aggressive: advertise coexistence so managed shims leave the
+            // fail-closed LEGACY gate. Cells may still hold one species until
+            // the mixture overlay fills a second record.
+            flags: FLAG_MULTICOMPONENT_COEXISTENCE,
             validation_error: None,
         })
     }
 
     pub(crate) fn update_from_grid(&mut self, grid: &Grid, elements: &ElementTable) {
+        self.update_from_grid_with_mixture(grid, elements, None, None);
+    }
+
+    pub(crate) fn update_from_grid_with_mixture(
+        &mut self,
+        grid: &Grid,
+        elements: &ElementTable,
+        mixture_element: Option<&[u16]>,
+        mixture_mass: Option<&[f32]>,
+    ) {
         self.species_len = 0;
-        self.flags = FLAG_LEGACY_SINGLE_ELEMENT;
+        self.flags = FLAG_MULTICOMPONENT_COEXISTENCE;
         self.validation_error = None;
 
-        if self.cells.len() != grid.len() || self.species.len() < grid.len() {
+        let species_cap = self.cells.len().saturating_mul(MAX_SPECIES_PER_CELL);
+        if self.cells.len() != grid.len() || self.species.len() < species_cap {
             self.validation_error = Some(Error::new(
                 Status::InvalidState,
                 "multicomponent buffers do not match grid cell count",
@@ -109,7 +129,20 @@ impl MulticomponentBuffers {
                 ));
                 return;
             }
-            if mass == 0.0 {
+
+            let mix_mass = mixture_mass.and_then(|m| m.get(cell).copied()).unwrap_or(0.0);
+            let mix_element = mixture_element
+                .and_then(|m| m.get(cell).copied())
+                .unwrap_or(0);
+            if !mix_mass.is_finite() || mix_mass < 0.0 {
+                self.validation_error = Some(Error::new(
+                    Status::InvalidState,
+                    format!("cell {cell} contains invalid mixture mass"),
+                ));
+                return;
+            }
+
+            if mass == 0.0 && mix_mass == 0.0 {
                 self.cells[cell] = OniSimMulticomponentCellHeader {
                     species_offset: next_species as u32,
                     species_count: 0,
@@ -122,52 +155,99 @@ impl MulticomponentBuffers {
                 continue;
             }
 
-            let element_index = grid.element[cell] as usize;
-            let Some(element) = elements.elements.get(element_index) else {
-                self.validation_error = Some(Error::new(
-                    Status::InvalidState,
-                    format!("cell {cell} references missing element index {element_index}"),
-                ));
-                return;
-            };
-            let phase = element.record.state & 3;
-            if phase == 0 || phase > 3 {
-                self.validation_error = Some(Error::new(
-                    Status::InvalidState,
-                    format!("cell {cell} has positive mass but invalid phase {phase}"),
-                ));
-                return;
+            let species_offset = next_species;
+            let mut species_count = 0u16;
+            let mut total_mass = 0.0f32;
+
+            if mass > 0.0 {
+                let element_index = grid.element[cell] as usize;
+                let Some(element) = elements.elements.get(element_index) else {
+                    self.validation_error = Some(Error::new(
+                        Status::InvalidState,
+                        format!("cell {cell} references missing element index {element_index}"),
+                    ));
+                    return;
+                };
+                let phase = element.record.state & 3;
+                if phase == 0 || phase > 3 {
+                    self.validation_error = Some(Error::new(
+                        Status::InvalidState,
+                        format!("cell {cell} has positive mass but invalid phase {phase}"),
+                    ));
+                    return;
+                }
+                if next_species >= self.species.len() {
+                    self.validation_error = Some(Error::new(
+                        Status::ResourceLimit,
+                        "multicomponent species table exhausted",
+                    ));
+                    return;
+                }
+                self.species[next_species] = OniSimMulticomponentSpeciesRecord {
+                    element_id: grid.element[cell],
+                    phase,
+                    reserved: 0,
+                    mass,
+                    temperature,
+                    volume_fraction: 0.0,
+                    partial_pressure_kpa: 0.0,
+                };
+                next_species += 1;
+                species_count += 1;
+                total_mass += mass;
             }
 
-            // The legacy Grid has no cell volume, mixture composition, or
-            // liquid column depth. Do not fabricate EOS/hydrostatic values.
-            // Zero means "not provided"; the LEGACY_SINGLE_ELEMENT flag keeps
-            // gameplay consumers on their original path until a real solver
-            // publishes validated thermodynamic fields.
-            let volume_fraction = 0.0;
-            let gas_pressure_kpa = 0.0;
-            let liquid_pressure_kpa = 0.0;
-            let liquid_volume_fraction = 0.0;
+            if mix_mass > 0.0 {
+                let element_index = mix_element as usize;
+                let Some(element) = elements.elements.get(element_index) else {
+                    self.validation_error = Some(Error::new(
+                        Status::InvalidState,
+                        format!("cell {cell} mixture references missing element index {element_index}"),
+                    ));
+                    return;
+                };
+                let phase = element.record.state & 3;
+                if phase == 0 || phase > 3 {
+                    self.validation_error = Some(Error::new(
+                        Status::InvalidState,
+                        format!("cell {cell} mixture has invalid phase {phase}"),
+                    ));
+                    return;
+                }
+                if next_species >= self.species.len() {
+                    self.validation_error = Some(Error::new(
+                        Status::ResourceLimit,
+                        "multicomponent species table exhausted",
+                    ));
+                    return;
+                }
+                self.species[next_species] = OniSimMulticomponentSpeciesRecord {
+                    element_id: mix_element,
+                    phase,
+                    reserved: 0,
+                    mass: mix_mass,
+                    temperature,
+                    volume_fraction: 0.0,
+                    partial_pressure_kpa: 0.0,
+                };
+                next_species += 1;
+                species_count += 1;
+                total_mass += mix_mass;
+            }
 
-            self.species[next_species] = OniSimMulticomponentSpeciesRecord {
-                element_id: grid.element[cell],
-                phase,
-                reserved: 0,
-                mass,
-                temperature,
-                volume_fraction,
-                partial_pressure_kpa: gas_pressure_kpa,
-            };
             self.cells[cell] = OniSimMulticomponentCellHeader {
-                species_offset: next_species as u32,
-                species_count: 1,
-                reserved: CELL_FLAG_HAS_SPECIES,
-                total_mass: mass,
-                gas_pressure_kpa,
-                liquid_pressure_kpa,
-                liquid_volume_fraction,
+                species_offset: species_offset as u32,
+                species_count,
+                reserved: if species_count == 0 {
+                    0
+                } else {
+                    CELL_FLAG_HAS_SPECIES
+                },
+                total_mass,
+                gas_pressure_kpa: 0.0,
+                liquid_pressure_kpa: 0.0,
+                liquid_volume_fraction: 0.0,
             };
-            next_species += 1;
         }
         self.species_len = next_species;
     }
@@ -317,7 +397,7 @@ pub(crate) fn write_image(
     put_u32(output, 20, species_count as u32);
     put_u16(output, 24, CELL_SIZE as u16);
     put_u16(output, 26, SPECIES_SIZE as u16);
-    put_u32(output, 28, FLAG_LEGACY_SINGLE_ELEMENT);
+    put_u32(output, 28, FLAG_MULTICOMPONENT_COEXISTENCE);
 
     let mut next_species = 0usize;
     for cell in 0..grid.len() {
@@ -394,7 +474,7 @@ mod tests {
     }
 
     #[test]
-    fn publishes_checked_sparse_legacy_projection() {
+    fn publishes_checked_sparse_coexistence_projection() {
         let grid = grid();
         let elements = elements();
         let mut image = vec![0; image_len(&grid).unwrap()];
@@ -406,7 +486,7 @@ mod tests {
         assert_eq!(u32::from_le_bytes(image[20..24].try_into().unwrap()), 2);
         assert_eq!(
             u32::from_le_bytes(image[28..32].try_into().unwrap()),
-            FLAG_LEGACY_SINGLE_ELEMENT
+            FLAG_MULTICOMPONENT_COEXISTENCE
         );
         let first_cell = HEADER_SIZE;
         let second_cell = HEADER_SIZE + CELL_SIZE;
@@ -453,7 +533,7 @@ mod tests {
         buffers.update_from_grid(&grid, &elements);
         let desc = buffers.descriptor(77).unwrap();
         assert_eq!(desc.version, UPDATE_VERSION);
-        assert_eq!(desc.flags, FLAG_LEGACY_SINGLE_ELEMENT);
+        assert_eq!(desc.flags, FLAG_MULTICOMPONENT_COEXISTENCE);
         assert_eq!(desc.generation, 77);
         assert_eq!(desc.cell_count, 2);
         assert_eq!(desc.total_species_records, 2);

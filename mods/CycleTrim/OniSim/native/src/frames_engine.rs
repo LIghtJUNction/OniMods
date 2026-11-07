@@ -160,9 +160,20 @@ impl Engine {
             self.world.accumulated_flow.fill(0.0);
         }
         output.presentation.update(&self.world, &self.elements)?;
-        output
-            .multicomponent
-            .update_from_grid(&output.grid, &self.elements);
+        let public_cells = output.grid.len();
+        let mut mix_element = vec![0u16; public_cells];
+        let mut mix_mass = vec![0.0f32; public_cells];
+        for public in 0..public_cells {
+            let internal = self.world.internal_index(public);
+            mix_element[public] = self.world.mixture_element[internal];
+            mix_mass[public] = self.world.mixture_mass[internal];
+        }
+        output.multicomponent.update_from_grid_with_mixture(
+            &output.grid,
+            &self.elements,
+            Some(&mix_element),
+            Some(&mix_mass),
+        );
         output.grid.set_num_frames(frame_count);
         output.events.publish_to(&mut output.grid)?;
         for (index, pointer) in output.presentation.pointers().into_iter().enumerate() {

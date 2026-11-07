@@ -55,6 +55,11 @@ pub(crate) struct PhysicsWorld {
     pub(crate) legacy_thermal_boundaries: bool,
     pub(crate) building_heat_transfer_scale: f32,
     pub(crate) building_contact_heat_transfer_scale: f32,
+    // Aggressive gas coexistence overlay: second species per padded cell.
+    // Legacy Grid ABI still publishes the dominant element/mass only; the
+    // multicomponent publication advertises both when mixture_mass > 0.
+    pub(crate) mixture_element: Vec<u16>,
+    pub(crate) mixture_mass: Vec<f32>,
 }
 
 fn special(elements: &ElementTable, hash: u32) -> Result<u16> {
@@ -137,6 +142,8 @@ impl PhysicsWorld {
             legacy_thermal_boundaries: false,
             building_heat_transfer_scale: f32::from_bits(0x3a83126f),
             building_contact_heat_transfer_scale: f32::from_bits(0x3a83126f),
+            mixture_element: filled(count, vacuum_element)?,
+            mixture_mass: filled(count, 0.0)?,
         })
     }
 

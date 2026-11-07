@@ -146,7 +146,88 @@ pub(crate) fn displace_gas(
             return true;
         }
     }
+    // Aggressive: if classic displacement cannot find a same-element or vacuum
+    // sink, coexist into a neighboring different gas instead of deleting work.
+    for n in 0..4 {
+        let Some(dst) = cardinal[(seed + n) & 3] else {
+            continue;
+        };
+        if coexist_gas_into(world, tables, diseases, events, src, dst) {
+            return true;
+        }
+    }
     false
+}
+
+/// Merge `src` gas into `dst` as a second species when `dst` already holds a
+/// different gas. Dominant mass stays on the legacy Grid element/mass fields.
+fn coexist_gas_into(
+    world: &mut PhysicsWorld,
+    tables: &ElementTable,
+    _diseases: &DiseaseTable,
+    events: &mut EventQueues,
+    src: usize,
+    dst: usize,
+) -> bool {
+    if src >= world.write.mass.len() || dst >= world.write.mass.len() || src == dst {
+        return false;
+    }
+    let src_mass = world.write.mass[src];
+    let src_element = world.write.element[src];
+    if src_mass <= 0.0 || tables.elements[src_element as usize].record.state & 3 != 1 {
+        return false;
+    }
+    let dst_element = world.write.element[dst];
+    let dst_mass = world.write.mass[dst];
+    if dst_mass <= 0.0
+        || dst_element == src_element
+        || dst_element == world.vacuum_element
+        || tables.elements[dst_element as usize].record.state & 3 != 1
+        || world.write.properties[dst] & 1 != 0
+    {
+        return false;
+    }
+    // Only one mixture slot for now. Refuse rather than silently drop mass.
+    if world.mixture_mass[dst] > 0.0 && world.mixture_element[dst] != src_element {
+        return false;
+    }
+
+    let src_temperature = world.write.temperature[src];
+    let dst_temperature = world.write.temperature[dst];
+    let mix_add = src_mass;
+    let existing_mix = if world.mixture_element[dst] == src_element {
+        world.mixture_mass[dst]
+    } else {
+        0.0
+    };
+    let new_mix = existing_mix + mix_add;
+
+    // Keep the heavier species on the legacy single-element ABI fields.
+    if dst_mass >= new_mix {
+        world.mixture_element[dst] = src_element;
+        world.mixture_mass[dst] = new_mix;
+        let total = dst_mass + new_mix;
+        world.write.temperature[dst] =
+            (dst_temperature * dst_mass + src_temperature * mix_add) / total;
+    } else {
+        // Promote incoming gas to primary; demote previous primary into mixture.
+        world.mixture_element[dst] = dst_element;
+        world.mixture_mass[dst] = dst_mass;
+        world.write.element[dst] = src_element;
+        world.write.mass[dst] = new_mix;
+        let total = dst_mass + new_mix;
+        world.write.temperature[dst] =
+            (dst_temperature * dst_mass + src_temperature * mix_add) / total;
+    }
+
+    world.write.mass[src] = 0.0;
+    world.write.element[src] = world.vacuum_element;
+    world.mixture_mass[src] = 0.0;
+    world.mixture_element[src] = world.vacuum_element;
+    clear_disease(&mut world.write, src);
+    notify(world, events, src);
+    notify(world, events, dst);
+    true
 }
 
 // ELF 0x36170: use the first directed rule and retain the full neighbor requirement.

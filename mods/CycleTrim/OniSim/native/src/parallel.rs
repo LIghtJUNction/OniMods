@@ -3,7 +3,9 @@ use std::sync::OnceLock;
 
 use rayon::ThreadPool;
 
-pub(crate) const MIN_PARALLEL_CELLS: usize = 8192;
+// Aggressive: parallelize smaller regions; large late-game maps already passed the
+// old 8192 gate, early colonies were stuck serial for no good reason.
+pub(crate) const MIN_PARALLEL_CELLS: usize = 1024;
 pub(crate) const CHUNK_CELLS: usize = 2048;
 
 pub(crate) fn pool(work: usize) -> Option<&'static ThreadPool> {
@@ -19,7 +21,7 @@ pub(crate) fn pool(work: usize) -> Option<&'static ThreadPool> {
             .filter(|&value| value > 0)
             .unwrap_or(available)
             .min(available)
-            .min(8);
+            .min(16);
         if workers <= 1 {
             return None;
         }

@@ -1,3 +1,8 @@
+## 2026-11-07 — 0.4.7
+
+- Aggressive multicomponent: publish `FLAG_MULTICOMPONENT_COEXISTENCE`, allow a second gas species per cell when classic `displace_gas` fails, lower parallel gate to 1024 cells / up to 16 workers. Managed shims can leave the LEGACY fail-closed path.
+- Does not yet replace the full Grid ABI or GPU Poisson solver; save format still stores the dominant element only.
+
 ## 2026-11-07 — 0.4.6
 
 - Force Unity VSync off and uncapped `targetFrameRate` at load / Game.OnSpawn / graphics apply; re-assert if something restores the default. Default `CYCLETRIM_ONISIM_WORKERS=8` when unset.
