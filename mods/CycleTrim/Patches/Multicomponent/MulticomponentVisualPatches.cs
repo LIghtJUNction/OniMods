@@ -27,7 +27,7 @@ namespace CycleTrim.Patches.Multicomponent
             b = 0;
             a = 0;
 
-            if (snapshot.Components == null || snapshot.Components.Length == 0)
+            if (snapshot.Components == null || snapshot.ComponentCount == 0)
                 return;
 
             float gasMass = 0f;
@@ -40,7 +40,7 @@ namespace CycleTrim.Patches.Multicomponent
             float liquidG = 0f;
             float liquidB = 0f;
 
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Mass <= 0f || item.Element == null || item.Element.substance == null)
