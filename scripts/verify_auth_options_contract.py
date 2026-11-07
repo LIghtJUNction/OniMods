@@ -88,7 +88,19 @@ def main() -> int:
     assert "Application.OpenURL(ProjectSupportUrl)" in create_options
     assert 'ProjectSupportUrl = "https://donate.lmm.best/?project=onimcp"' in options
 
-    assert '<PackageReference Include="PLib" Version="4.25.0"' in project
+    # OniMcp now consumes the shared Jlib project instead of the legacy PLib
+    # NuGet package. Accept either dependency form, but require exactly one
+    # supported provider so the options contract cannot silently lose PLib.
+    legacy_plib = '<PackageReference Include="PLib" Version="4.25.0"' in project
+    shared_jlib = bool(re.search(
+        r'<ProjectReference Include="[^"]*Jlib/Jlib/Jlib\\.csproj"',
+        project,
+        re.I,
+    ))
+    assert legacy_plib ^ shared_jlib, (
+        "OniMcp must reference exactly one supported PLib provider: "
+        "legacy PLib 4.25.0 or shared Jlib.csproj"
+    )
     assert "Disabled by default" in settings
     dispatch = method_body(server, "private void ProcessRequest")
     assert dispatch.find("TryHandleSettingsRequest") < dispatch.find("ValidateAuth")
