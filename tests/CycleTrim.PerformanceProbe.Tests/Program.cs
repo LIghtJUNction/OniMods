@@ -37,6 +37,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 BusyRefreshGateRegression.Run();
                 OptionsRegression.Run();
                 FetchLayoutControlRegression.Run();
+                MulticomponentRegression.Run();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();

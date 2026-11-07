@@ -1,3 +1,0 @@
-'DiseaseMerge.optimized_eq_general' depends on axioms: [propext, Quot.sound]
-'DiseaseMerge.same_species_nonpositive_clears' depends on axioms: [propext]
-'DiseaseMerge.same_species_positive_preserves_metadata' depends on axioms: [propext, Quot.sound]

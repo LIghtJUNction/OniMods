@@ -79,4 +79,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate isolated variable-density Poisson reference
-        run: python3 -m unittest discover -s mods/CycleTrim/OniSim/pressure-projection/reference -p 'test_*.py' -v
+        run: python3 -m unittest discover -s mods/CycleTrim/OniSim/gpu/reference -p 'test_*.py' -v

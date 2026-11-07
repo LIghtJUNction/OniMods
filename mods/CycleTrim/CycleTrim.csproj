@@ -111,9 +111,10 @@
     </ItemGroup>
     <Copy SourceFiles="@(OniSimNativeFiles)" DestinationFiles="@(OniSimNativeFiles->'$(DistModPath)OniSim/%(RecursiveDir)%(Filename)%(Extension)')" />
     <ItemGroup>
-      <OniSimValidation Include="$(MSBuildProjectDirectory)/OniSim/PARALLEL-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/RUNTIME-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/PROGRESS.md;$(MSBuildProjectDirectory)/OniSim/PERFORMANCE.md" />
+      <OniSimValidation Include="$(MSBuildProjectDirectory)/OniSim/docs/parallel-validation.md;$(MSBuildProjectDirectory)/OniSim/docs/runtime-validation.md;$(MSBuildProjectDirectory)/OniSim/docs/progress.md;$(MSBuildProjectDirectory)/OniSim/docs/performance.md" />
     </ItemGroup>
-    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim" Condition="'$(IncludeOniSim)' == 'true'" />
+    <MakeDir Directories="$(DistModPath)OniSim/docs" Condition="'$(IncludeOniSim)' == 'true'" />
+    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim/docs" Condition="'$(IncludeOniSim)' == 'true'" />
     <MakeDir Directories="$(DistModPath)OniSim/conformance/results" Condition="'$(IncludeOniSim)' == 'true'" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/OniSim/conformance/README.md" DestinationFolder="$(DistModPath)OniSim/conformance" Condition="'$(IncludeOniSim)' == 'true'" />
     <ItemGroup>

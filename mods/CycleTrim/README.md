@@ -27,7 +27,7 @@
 
 ### 1. 原版旧算法（串行网格遍历 + 排挤分支）
 - **串行供受体质量迁移**（受 `ElementRecord.flow` 控制）：
-  $$\Delta m = \operatorname{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
+  $$\Delta m = \text{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
 - **排挤仲裁（Displacement）**：当新物质试图进入已被占据的格子时，执行 `displace_gas` / `liquid_displacement`，沿邻格进行深度与空间分支搜索。
 - **伴随状态维护**：单次迁移量硬截断在供体质量的 $12.5\%$，同步搬运离散温度与病菌计数，改变目标格材料身份并处理 Vacuum / Sink。
 - **硬件局限**：严苛的时序依赖和分支跳转导致现代 CPU 宽向量指令（AVX）难以对齐，并在 GPU 上引发严重的线程束分化（Warp Divergence）与缓存颠簸。
@@ -102,9 +102,9 @@ $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \te
 
 OniSim 是 CycleTrim 的实验性原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包，但运行时默认保留官方 SimDLL，不接管游戏物理管线。只有在 PLib 设置页显式开启新的“EnableOniSimExperimental”选项并重启后，才会尝试映射；旧版 `EnableOniSim` 配置键不会沿用，避免历史默认开启值在升级后继续接管。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
 
-疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/PARALLEL-VALIDATION.md`](OniSim/PARALLEL-VALIDATION.md)。
+疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
 
-历史二进制的隔离实测曾通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/RUNTIME-VALIDATION.md`](OniSim/RUNTIME-VALIDATION.md)；这些回执只适用于记录中的精确二进制，不代表当前源码已通过游戏验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
+历史二进制的隔离实测曾通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)；这些回执只适用于记录中的精确二进制，不代表当前源码已通过游戏验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
 
 Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。运行时默认不接管，必须通过新的 `EnableOniSimExperimental` 选项显式开启并按 PLib 提示重启 ONI。`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭，`1` 仅在 PLib 选项开启时允许加载。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内 `.so`；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 

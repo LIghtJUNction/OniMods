@@ -160,6 +160,9 @@ impl Engine {
             self.world.accumulated_flow.fill(0.0);
         }
         output.presentation.update(&self.world, &self.elements)?;
+        output
+            .multicomponent
+            .update_from_grid(&output.grid, &self.elements);
         output.grid.set_num_frames(frame_count);
         output.events.publish_to(&mut output.grid)?;
         for (index, pointer) in output.presentation.pointers().into_iter().enumerate() {

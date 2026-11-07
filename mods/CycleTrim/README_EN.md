@@ -24,7 +24,7 @@ As a core tenet of CycleTrim's simulation rebuild, the fluid pipeline is evolvin
 
 ### 1. Legacy Vanilla Sweep (serial grid sweep + arbitration displacement)
 - **Serial donor-receiver mass exchange** (governed by `ElementRecord.flow`):
-  $$\Delta m = \operatorname{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
+  $$\Delta m = \text{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
 - **Displacement arbitration**: When incoming mass targets an occupied cell, `displace_gas` / `liquid_displacement` executes recursive multi-directional spatial searches.
 - **Coupled state updates**: Clamps single-step transfers to $12.5\%$ donor mass, transfers discrete temperature and disease counts, alters cell element identity, and handles Vacuum / Sink logic.
 - **Hardware constraints**: Heavy branching and sequential cell order inhibit wide vectorization (AVX) on CPUs and cause catastrophic warp divergence and memory thrashing on GPUs.

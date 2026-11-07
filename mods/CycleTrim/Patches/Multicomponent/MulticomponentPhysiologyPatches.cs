@@ -8,23 +8,25 @@ namespace CycleTrim.Patches.Multicomponent
     /// published a validated cell snapshot. Otherwise the original method runs.
     /// </summary>
     [HarmonyPatch(typeof(GasBreatherFromWorldProvider), "GetBreathableCellMass")]
-    internal static class MulticomponentBreathingPatch
+    public static class MulticomponentBreathingPatch
     {
-        [HarmonyPrefix]
-        private static bool Prefix(int cell, ref SimHashes elementID, ref float __result)
+        public static void EvaluateBreathableCell(
+            MulticomponentCellSnapshot snapshot,
+            out SimHashes elementID,
+            out float breathableMass)
         {
-            MulticomponentCellSnapshot snapshot;
-            if (!MulticomponentCellAccess.TryGetCell(cell, out snapshot))
-                return true;
-
-            float breathableMass = 0f;
+            breathableMass = 0f;
             float dominantBreathableMass = 0f;
-            SimHashes dominantBreathableElement = SimHashes.Vacuum;
+            elementID = SimHashes.Vacuum;
+
+            if (snapshot.Components == null)
+                return;
 
             for (int i = 0; i < snapshot.Components.Length; i++)
             {
                 MulticomponentSpecies component = snapshot.Components[i];
                 if (component.Phase != MulticomponentPhase.Gas
+                    || component.Element == null
                     || !component.Element.HasTag(GameTags.Breathable)
                     || component.Mass <= 0f)
                     continue;
@@ -33,12 +35,19 @@ namespace CycleTrim.Patches.Multicomponent
                 if (component.Mass > dominantBreathableMass)
                 {
                     dominantBreathableMass = component.Mass;
-                    dominantBreathableElement = component.Element.id;
+                    elementID = component.Element.id;
                 }
             }
+        }
 
-            elementID = dominantBreathableElement;
-            __result = breathableMass;
+        [HarmonyPrefix]
+        private static bool Prefix(int cell, ref SimHashes elementID, ref float __result)
+        {
+            MulticomponentCellSnapshot snapshot;
+            if (!MulticomponentCellAccess.TryGetCell(cell, out snapshot))
+                return true;
+
+            EvaluateBreathableCell(snapshot, out elementID, out __result);
             return false;
         }
     }

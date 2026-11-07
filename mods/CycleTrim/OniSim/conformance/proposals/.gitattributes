@@ -1,3 +1,0 @@
-# Unified diffs encode an empty context line with one space. Preserve the exact
-# archived proposal bytes and hashes; ordinary source keeps normal whitespace checks.
-*.patch whitespace=-blank-at-eol

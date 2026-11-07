@@ -51,7 +51,7 @@ def verify(dist):
     conformance = []
     expected_cases = {case["name"] for case in cases()}
     expected_messages = {int(value) for value in re.findall(r"\| `(-?\d+)` \|",
-        (MOD / "OniSim/OFFICIAL-MESSAGES.md").read_text())}
+        (MOD / "OniSim/docs/official-messages.md").read_text())}
     require(len(expected_messages) == 62, "Re-audit the pinned official message catalogue")
     with zipfile.ZipFile(dist / "Jlib.zip") as dependency:
         jlib = sha(dependency.read("Jlib.dll"))
@@ -132,7 +132,7 @@ def verify(dist):
                 "Graphical runtime cleanup or preservation is incomplete")
         require(graphics["probe_source_sha256"] == TEXTURE_PROBE.source_hashes(),
                 "Graphical probe source identity is incomplete or changed since observation")
-        for name in ("PROGRESS.md", "RUNTIME-VALIDATION.md", "PARALLEL-VALIDATION.md", "PERFORMANCE.md", "conformance/README.md"):
+        for name in ("docs/progress.md", "docs/runtime-validation.md", "docs/parallel-validation.md", "docs/performance.md", "conformance/README.md"):
             require(package.read("OniSim/" + name) == (MOD / "OniSim" / name).read_bytes(),
                     f"Packaged document is stale: {name}")
         for name in LICENSE_FILES:

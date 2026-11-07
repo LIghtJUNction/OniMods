@@ -1,3 +1,0 @@
-usage: check_mods.py [-h] [--static-only] [--dotnet DOTNET]
-                     [--skip-synthetic-performance]
-check_mods.py: error: Linux conformance regressions require the pinned OniHarness submodule; run git submodule update --init tools/OniHarness

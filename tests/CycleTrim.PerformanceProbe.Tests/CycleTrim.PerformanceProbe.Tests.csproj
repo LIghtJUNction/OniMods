@@ -19,5 +19,13 @@
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/MulticomponentCellAccess.cs" Link="MulticomponentCellAccess.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/OniSimMulticomponentProvider.cs" Link="OniSimMulticomponentProvider.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPhysiologyPatches.cs" Link="MulticomponentPhysiologyPatches.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentVisualPatches.cs" Link="MulticomponentVisualPatches.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPlantPatches.cs" Link="MulticomponentPlantPatches.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentNavigationPatches.cs" Link="MulticomponentNavigationPatches.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentBuildingPatches.cs" Link="MulticomponentBuildingPatches.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentHoverPatches.cs" Link="MulticomponentHoverPatches.cs" />
   </ItemGroup>
 </Project>

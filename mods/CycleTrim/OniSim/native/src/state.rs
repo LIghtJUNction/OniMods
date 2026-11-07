@@ -8,6 +8,7 @@ use crate::frames_data::GameData;
 use crate::frames_engine::Engine;
 use crate::grid::Grid;
 use crate::mass_components::MassComponents;
+use crate::multicomponent_publication::OniSimMulticomponentUpdate;
 use crate::radiation::RadiationEmitters;
 use crate::status::{Error, Result, Status};
 use crate::tables::{DiseaseTable, ElementTable};
@@ -47,6 +48,7 @@ pub(crate) struct State {
     pub(crate) radiation_emitters: RadiationEmitters,
     pub(crate) queued_component_commands: usize,
     pub(crate) borrowed_ranges: Vec<(usize, usize)>,
+    pub(crate) multicomponent_update: Option<Result<OniSimMulticomponentUpdate>>,
     pub(crate) save_image: Option<Vec<u8>>,
     pub(crate) fault: Option<String>,
 }
@@ -98,6 +100,18 @@ impl State {
             || self.borrowed_ranges.iter().any(|&(pointer, bytes)| {
                 bytes != 0 && crate::bytes::overlaps(start, length, pointer, bytes)
             })
+            || self
+                .multicomponent_update
+                .as_ref()
+                .and_then(|res| res.as_ref().ok())
+                .is_some_and(|update| {
+                    crate::bytes::overlaps(
+                        start,
+                        length,
+                        std::ptr::from_ref(update) as usize,
+                        std::mem::size_of::<OniSimMulticomponentUpdate>(),
+                    )
+                })
             || self.save_image.as_ref().is_some_and(|image| {
                 image.capacity() != 0
                     && crate::bytes::overlaps(
@@ -220,9 +234,12 @@ impl State {
         let mut old = GameData::new(grid)?;
         output.grid.started = true;
         old.grid.started = true;
+        old.multicomponent
+            .update_from_grid(grid, self.elements.as_ref().unwrap());
+        let initial_multicomponent = old.multicomponent.descriptor(self.generation);
         let initial_pointers = old.presentation.pointers();
         let mut initial_ranges = Vec::new();
-        initial_ranges.try_reserve_exact(34).map_err(|_| {
+        initial_ranges.try_reserve_exact(36).map_err(|_| {
             Error::new(
                 Status::ResourceLimit,
                 "could not reserve borrowed buffer ranges",
@@ -259,6 +276,7 @@ impl State {
                 self.engine = Some(engine);
                 self.worker = Some(worker);
                 self.borrowed_ranges = initial_ranges;
+                self.multicomponent_update = Some(initial_multicomponent);
                 let grid = self.grid.as_mut().unwrap();
                 // FrameSync::initGameData initially copies CellSOA only. The
                 // GameData backwall vectors keep their constructor sentinels
@@ -331,6 +349,7 @@ impl State {
             data.grid.set_texture_pointer(index, pointer);
         }
         data.fill_borrowed_ranges(&mut self.borrowed_ranges);
+        self.multicomponent_update = Some(data.multicomponent.descriptor(self.generation));
         let grid = self.grid.as_mut().unwrap();
         grid.copy_from(&data.grid);
         self.scheduler.free_slots.append(&mut data.retired_slots);
@@ -380,6 +399,7 @@ impl State {
         self.radiation_emitters = RadiationEmitters::default();
         self.queued_component_commands = 0;
         self.borrowed_ranges.clear();
+        self.multicomponent_update = None;
         self.save_image = None;
         self.fault = None;
         if changed {

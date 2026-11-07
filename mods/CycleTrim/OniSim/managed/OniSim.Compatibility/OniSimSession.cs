@@ -232,6 +232,20 @@ namespace OniSim.Compatibility
             });
         }
 
+        public IntPtr GetMulticomponentUpdatePointer()
+        {
+            return Locked(() =>
+            {
+                if (api.GetMulticomponentUpdate == null)
+                    throw new NotSupportedException("Native library does not expose the optional multicomponent update API.");
+                IntPtr pointer = api.GetMulticomponentUpdate();
+                CheckOperation(0, 0);
+                if (pointer == IntPtr.Zero)
+                    throw new InvalidDataException("Native multicomponent update descriptor is null.");
+                return pointer;
+            });
+        }
+
         public GridView GetGridView() { return Locked(NewView); }
 
         internal byte[] GetDescriptor(ulong generation)

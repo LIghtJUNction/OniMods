@@ -13,7 +13,7 @@ pub(crate) enum Status {
     BufferTooSmall = 6,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Error {
     pub(crate) status: Status,
     pub(crate) message: String,

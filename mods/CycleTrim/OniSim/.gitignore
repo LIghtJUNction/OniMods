@@ -1,2 +1,9 @@
 # Preserve prior delivery receipts and local test snapshots without shipping them.
 /history/
+/lean-lab/results/
+/lean-lab/proof/*.olean
+/lean-lab/proof/*.log
+/lean-lab/proof/lean-version.txt
+/lean-lab/proof/verification.json
+/transport-lab/source-identity.json
+/transport-lab/proof/*.log

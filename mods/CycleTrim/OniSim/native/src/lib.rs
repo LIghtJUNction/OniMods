@@ -356,6 +356,25 @@ pub unsafe extern "C" fn ONISIM_CopyMulticomponentImage(destination: *mut u8, ca
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn ONISIM_GetMulticomponentUpdate(
+) -> *const multicomponent_publication::OniSimMulticomponentUpdate {
+    boundary(std::ptr::null(), || {
+        let state = state::lock()?;
+        let _ = state.initialized_grid()?;
+        let update = state.multicomponent_update.as_ref().ok_or_else(|| {
+            Error::new(
+                Status::InvalidState,
+                "Start is required before reading multicomponent publication",
+            )
+        })?;
+        match update {
+            Ok(descriptor) => Ok(std::ptr::from_ref(descriptor)),
+            Err(error) => Err(error.clone()),
+        }
+    })
+}
+
+#[unsafe(no_mangle)]
 /// # Safety
 /// `size` must designate a writable i32 exclusively for this call. The returned
 /// image is borrowed until the next BeginSave, EndSave or session shutdown.

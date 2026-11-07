@@ -7,10 +7,10 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 
 当前源代码快照已接入 inline thermal command queue，47 项 Release Rust 测试通过。该结果只证明对应源码的单元测试；
 不代表整局 FPS、RSS 或单/四线程加速。四线程整体性能门禁仍未通过；当前快照没有对应的真实游戏验收，旧二进制的运行回执不能替代。
-详见 [PROGRESS.md](PROGRESS.md)。
+详见 [docs/progress.md](docs/progress.md)。
 
 质量搜索的 FIFO 去重及早期热／气体实验的整合范围，见
-[Transport 整合记录](transport-lab/INTEGRATION-20261106.md)。历史实验与当前生产回归分别验证，
+[transport-lab/README.md](transport-lab/README.md)。历史实验与当前生产回归分别验证，
 原始计时和退化结果保留在实验目录。
 
 ## 当前结构
@@ -28,15 +28,15 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 - 原生存档、世界初始化、挖掘和质量命令、CPU 贴图输出已接线，行为对照继续扩展。
 - 帧命令在封帧时移交所有权，按官方各阶段顺序处理。
 - 调度已接入 Step 批次、双 GameData、ready 屏障与异步工作线程，完整调度等价性仍待验收。
-  细节见 [FRAME-SYNC.md](FRAME-SYNC.md)。
+  细节见 [docs/frame-sync.md](docs/frame-sync.md)。
 - C# 独立调用层提供长度边界、错误检查、会话生命周期和借用指针视图。
   CycleTrim 的 PLib 设置使用新的 `EnableOniSimExperimental` 字段显式 opt-in，默认关闭；
   旧版 `EnableOniSim` 配置键不再读取，避免历史默认开启值在升级后继续接管。修改后需要重启。
   `CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭。真实游戏完整兼容性尚未验收。
-- 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。验收与复现见 [PARALLEL-VALIDATION.md](PARALLEL-VALIDATION.md)。
+- 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。验收与复现见 [docs/parallel-validation.md](docs/parallel-validation.md)。
 - 疾病发射器的菱形遍历经过 Lean 4.19 证明和 65,040 个差分场景验证；该组件基准在记录的场景中快 13.894 倍，不代表整局性能提升。详见 [lean-lab/README.md](lean-lab/README.md)。
 
-本轮实际运行结果与边界见 [RUNTIME-VALIDATION.md](RUNTIME-VALIDATION.md)。`gameReady=false`、`runtimeValidated=false`
+本轮实际运行结果与边界见 [docs/runtime-validation.md](docs/runtime-validation.md)。`gameReady=false`、`runtimeValidated=false`
 保留到对应验收完成。支持某个消息编号也不代表其所有行为已验证。
 
 ## 来源边界
@@ -52,11 +52,12 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 
 | 内容 | 入口 |
 | --- | --- |
-| FFI 与指针生命周期 | [PROTOCOL.md](PROTOCOL.md) |
-| 62 个官方消息及输入输出布局 | [OFFICIAL-MESSAGES.md](OFFICIAL-MESSAGES.md) |
-| 帧批次、可见区域、组件输出时机 | [FRAME-SYNC.md](FRAME-SYNC.md) |
-| 物理阶段与并行约束 | [SIMULATION.md](SIMULATION.md) |
-| 原生存档格式 | [SAVE-FORMAT.md](SAVE-FORMAT.md) |
+| FFI 与指针生命周期 | [docs/protocol.md](docs/protocol.md) |
+| 62 个官方消息及输入输出布局 | [docs/official-messages.md](docs/official-messages.md) |
+| 帧批次、可见区域、组件输出时机 | [docs/frame-sync.md](docs/frame-sync.md) |
+| 物理阶段与并行约束 | [docs/simulation.md](docs/simulation.md) |
+| 原生存档格式 | [docs/save-format.md](docs/save-format.md) |
+| 多组分发布架构 | [docs/multicomponent-publication.md](docs/multicomponent-publication.md) |
 | C 调用声明 | [oni_sim.h](native/include/oni_sim.h) |
 | 官方二进制指纹和 16 个导出 | [official-abi.json](official-abi.json) |
 
@@ -74,8 +75,6 @@ CycleTrim 在支持的 Linux x64 环境默认保留官方 SimDLL，不接管游�
 显式开启 `EnableOniSimExperimental` 并重启后才会尝试映射；`CYCLETRIM_ONISIM_ENABLE=0`
 可在启动前强制关闭。在完成多场景、长时与原版对照验收前，不要把它当作已验证的原版替代品。
 
-`development-build.json` 与 `first-run.json` 记录旧源码快照；退役的 OSB1 协议保存在 [history/](history/)。这些都是历史材料，不能代表当前源码。
-
 ## Rust 工具链与依赖
 
 `rust-toolchain.toml` 固定 Rust 1.99.1，原生库与 Lean 对照工程均使用
@@ -85,5 +84,4 @@ CycleTrim 在支持的 Linux x64 环境默认保留官方 SimDLL，不接管游�
 
 2026-10-21 使用新版 Cargo 联网更新两个锁文件的解析结果，均为 0 项升级：
 Rayon 1.12.0 及其间接依赖已经是最新的 Rust 1.99 兼容版本。
-迁移与验证记录见 `conformance/results/linux-744825-rust2024.json`；
-内存专项结果见 [PERFORMANCE.md](PERFORMANCE.md)。新候选仍需独立游戏验收。
+内存专项结果见 [docs/performance.md](docs/performance.md)。新候选仍需独立游戏验收。

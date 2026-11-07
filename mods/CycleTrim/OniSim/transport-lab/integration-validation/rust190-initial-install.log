@@ -1,5 +1,0 @@
-info: syncing channel updates for 1.90.0-x86_64-unknown-linux-gnu
-info: latest update on 2025-09-18 for version 1.90.0 (1159e78c4 2025-09-14)
-info: downloading 4 components
-info: rolling back changes
-error: failed to extract package: No space left on device (os error 28)

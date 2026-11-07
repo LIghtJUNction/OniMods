@@ -188,6 +188,12 @@ static_assert(sizeof(OniSimBuildingTemperatureInfo) == 8, "Building heat layout"
 static_assert(sizeof(OniSimConduitTemperatureUpdate) == 36, "Conduit layout");
 static_assert(offsetof(OniSimConduitTemperatureUpdate, temperatures) == 4,
               "Conduit temperature pointer offset");
+static_assert(sizeof(OniSimMulticomponentSpeciesRecord) == 20,
+              "Multicomponent species layout");
+static_assert(sizeof(OniSimMulticomponentCellHeader) == 24,
+              "Multicomponent cell header layout");
+static_assert(sizeof(OniSimMulticomponentUpdate) == 40,
+              "Multicomponent update layout");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(OniSimEventSpan) == 12, "OniSim event span layout");
 _Static_assert(sizeof(OniSimGameDataUpdate) == 496, "OniSim grid layout");
@@ -195,6 +201,12 @@ _Static_assert(sizeof(OniSimBuildingTemperatureInfo) == 8, "Building heat layout
 _Static_assert(sizeof(OniSimConduitTemperatureUpdate) == 36, "Conduit layout");
 _Static_assert(offsetof(OniSimConduitTemperatureUpdate, temperatures) == 4,
                "Conduit temperature pointer offset");
+_Static_assert(sizeof(OniSimMulticomponentSpeciesRecord) == 20,
+               "Multicomponent species layout");
+_Static_assert(sizeof(OniSimMulticomponentCellHeader) == 24,
+               "Multicomponent cell header layout");
+_Static_assert(sizeof(OniSimMulticomponentUpdate) == 40,
+               "Multicomponent update layout");
 #endif
 
 #endif
