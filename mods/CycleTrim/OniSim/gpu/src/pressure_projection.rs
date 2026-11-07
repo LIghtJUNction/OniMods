@@ -33,7 +33,7 @@ impl PressureProjectionGpu{
   let u_count=height.checked_mul(width+1).ok_or("u-face count overflow")?;
   let v_count=(height+1).checked_mul(width).ok_or("v-face count overflow")?;
   if [cells,u_count,v_count].iter().any(|&n|n>u32::MAX as usize){return Err("pressure grid exceeds u32 shader indexing".into());}
-  let device=&context.device;let queue=&context.queue;let info=context.adapter.clone();let limits=device.limits();
+  let device=&context.device;let info=context.adapter.clone();let limits=device.limits();
   let largest=[cells,u_count,v_count].into_iter().max().unwrap()*4;
   if largest as u64>limits.max_storage_buffer_binding_size as u64
    ||(width+1).div_ceil(8)>limits.max_compute_workgroups_per_dimension as usize
@@ -181,7 +181,7 @@ impl PressureProjectionGpu{
    return Err("invalid shared pressure projection parameters".into());
   }
   let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),
-   omega.to_bits(),0,gauge_cell as u32,channels as u32,cell_volume.to_bits(),mass_scale_kg_per_game_unit.to_bits(),0,0,0,0];
+   omega.to_bits(),0,gauge_cell as u32,channels as u32,cell_volume.to_bits(),mass_scale_kg_per_game_unit.to_bits(),0,0,0,0,0];
   self.queue.write_buffer(&self.params_red,0,bytemuck::cast_slice(&params));
   let mut black=params;black[6]=1;
   self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
