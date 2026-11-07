@@ -1,9 +1,11 @@
-## Unreleased — pickup highlight hot paths
+## Unreleased — pickup and liquid-overlay hot paths
 
-- Scope resource-category and resource-entry hover highlighting to the visible `pickupablesLayer` partition instead of enumerating the entire world inventory. Track only controllers highlighted by each UI element so exit clears the exact prior set, including items that moved off-screen.
-- Reuse pickupable-to-animation-controller references through weak-key caches, refreshing destroyed Unity components. Reuse `KBatchedAnimController` lookups in the shared overlay highlight loop; unsupported IL shapes retain the original lookup.
-- The vanilla `HighlightColour` setter already avoids dirtying unchanged values via `SetHighlightColour`; no duplicate equality guard was added.
-- Runtime game validation and before/after colony benchmarks remain pending.
+- Preserve resource-panel semantics: enumerate the same `WorldInventory.GetPickupables(tag)` collection as vanilla, but cache `Pickupable` → `KAnimControllerBase` references with weak keys and clear only controllers highlighted by the current UI element.
+- If the optimized hover pass fails after partial work, roll back its partial highlights and let vanilla own both pointer-enter and pointer-exit, preventing stuck highlights.
+- Cache `KBatchedAnimController` lookup in `OverlayModes.Mode.UpdateHighlightTypeOverlay`; unsupported IL shapes retain the original call.
+- Optimize `PropertyTextures.UpdateLiquid` without changing cell order or output bytes: read invariant `LiquidMaxMass` once per update and remove the overwritten `LiquidAmountOffset` calculation.
+- The original `HighlightColour` setter already suppresses unchanged values; no duplicate equality guard was added.
+- Pinned-reference compile and release safety checks are required; ONI runtime and before/after colony benchmarks remain pending.
 
 ## 2026-11-07 — 0.4.8
 
