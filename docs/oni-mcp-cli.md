@@ -10,7 +10,7 @@ Download the platform archive from [GitHub Releases](https://github.com/LIghtJUN
 
 ```sh
 oni-mcp set-url http://localhost:8788/mcp/
-oni-mcp set-secret "$ONIM_MCP_SECRET"
+printf '%s' "$ONIM_MCP_SECRET" | oni-mcp set-secret -
 oni-mcp status
 ```
 
