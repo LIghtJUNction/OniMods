@@ -77,6 +77,8 @@ fn main()->Result<(),String>{
    let error=(*a as f64-*b as f64).abs();
    max_abs=max_abs.max(error);max_rel=max_rel.max(error/(*a as f64).abs().max(1e-3));
   }
+  if max_rel>1e-4{return Err(format!("CPU/GPU face parity failed for {w}x{h}: max scaled relative error {max_rel:e}"));}
+  if after>=before{return Err(format!("pressure projection did not reduce divergence for {w}x{h}: {before:e} -> {after:e}"));}
   rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
  }
  println!("{}",serde_json::to_string_pretty(&Report{stage:"Stage 2 Vulkan Poisson pressure projection",adapter:adapter_name,vendor,device_type,backend,warmup:5,samples:31,rows}).map_err(|e|e.to_string())?);
