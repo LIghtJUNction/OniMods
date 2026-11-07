@@ -73,6 +73,7 @@ fn poisson_residual(f:&Fixture,w:usize,h:usize,p:&[f32],dt:f32)->f64 {
  }}
  nr.sqrt()/dr.sqrt().max(1e-30)
 }
+
 fn initial_faces(f:&Fixture,w:usize,h:usize)->(Vec<f32>,Vec<f32>){
  let mut u=vec![0.0;h*(w+1)];let mut v=vec![0.0;(h+1)*w];
  for y in 0..h{for x in 1..w{let a=y*w+x-1;let b=a+1;if f.solid[a]==0&&f.solid[b]==0{u[y*(w+1)+x]=0.5*(f.ux[a]+f.ux[b]);}}}

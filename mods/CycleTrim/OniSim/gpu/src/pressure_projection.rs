@@ -1,5 +1,5 @@
 //! GPU-resident variable-density finite-volume pressure projection.
-use std::{sync::mpsc, time::Duration};
+use std::{sync::{mpsc, Arc}, time::Duration};
 const SHADER:&str=include_str!("pressure_projection.wgsl");
 
 #[derive(Clone,Copy)]
@@ -11,7 +11,7 @@ pub struct ProjectionOutput{
  pub iterations:usize,pub adapter:wgpu::AdapterInfo,
 }
 pub struct PressureProjectionGpu{
- device:wgpu::Device,queue:wgpu::Queue,
+ device:Arc<wgpu::Device>,queue:Arc<wgpu::Queue>,
  prepare_u:wgpu::ComputePipeline,prepare_v:wgpu::ComputePipeline,
  divergence:wgpu::ComputePipeline,rbgs:wgpu::ComputePipeline,
  project_u:wgpu::ComputePipeline,project_v:wgpu::ComputePipeline,
@@ -23,25 +23,22 @@ pub struct PressureProjectionGpu{
 }
 impl PressureProjectionGpu{
  pub async fn new(width:usize,height:usize)->Result<Self,String>{
+  let context=Arc::new(crate::gpu_context::GpuContext::new().await?);
+  Self::new_with_context(context,width,height).await
+ }
+ pub async fn new_with_context(context:Arc<crate::gpu_context::GpuContext>,width:usize,height:usize)->Result<Self,String>{
   if width<2||height<2{return Err("pressure grid must be at least 2x2".into());}
   let cells=width.checked_mul(height).ok_or("cell count overflow")?;
   let u_count=height.checked_mul(width+1).ok_or("u-face count overflow")?;
   let v_count=(height+1).checked_mul(width).ok_or("v-face count overflow")?;
   if [cells,u_count,v_count].iter().any(|&n|n>u32::MAX as usize){return Err("pressure grid exceeds u32 shader indexing".into());}
-  let instance=wgpu::Instance::new(wgpu::InstanceDescriptor{backends:wgpu::Backends::VULKAN,..wgpu::InstanceDescriptor::new_without_display_handle()});
-  let mut adapters=instance.enumerate_adapters(wgpu::Backends::VULKAN).await;
-  let preferred=adapters.iter().position(|a|a.get_info().device_type==wgpu::DeviceType::DiscreteGpu)
-   .or_else(||adapters.iter().position(|a|a.get_info().device_type==wgpu::DeviceType::IntegratedGpu))
-   .ok_or("no hardware Vulkan adapter available")?;
-  let adapter=adapters.swap_remove(preferred);
-  let info=adapter.get_info();let limits=adapter.limits();
+  let device=&context.device;let queue=&context.queue;let info=context.adapter.clone();let limits=device.limits();
   let largest=[cells,u_count,v_count].into_iter().max().unwrap()*4;
   if largest as u64>limits.max_storage_buffer_binding_size as u64
    ||(width+1).div_ceil(8)>limits.max_compute_workgroups_per_dimension as usize
    ||(height+1).div_ceil(8)>limits.max_compute_workgroups_per_dimension as usize{
    return Err("pressure grid exceeds Vulkan storage or dispatch limits".into());
   }
-  let(device,queue)=adapter.request_device(&wgpu::DeviceDescriptor{label:Some("OniSim pressure projection"),required_limits:wgpu::Limits::default(),..Default::default()}).await.map_err(|e|e.to_string())?;
   let scope=device.push_error_scope(wgpu::ErrorFilter::Validation);
   let shader=device.create_shader_module(wgpu::ShaderModuleDescriptor{label:Some("OniSim pressure projection WGSL"),source:wgpu::ShaderSource::Wgsl(SHADER.into())});
   let make_pipeline=|label:&'static str,entry_point:&'static str|{
@@ -88,7 +85,7 @@ impl PressureProjectionGpu{
    bind(&project_v,&[5,7,9,10],&params_red),
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
-  Ok(Self{device,queue,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
+  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
    density,velocity_x,velocity_y,solid,u_faces,v_faces,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }

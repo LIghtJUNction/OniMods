@@ -1,4 +1,4 @@
-use std::{sync::mpsc, time::Duration};
+use std::{sync::{mpsc, Arc}, time::Duration};
 const SHADER: &str = include_str!("multicomponent_flux.wgsl");
 
 pub struct State<'a> {
@@ -6,26 +6,27 @@ pub struct State<'a> {
     pub solid: &'a [u32], pub drift_y: &'a [f32],
 }
 pub struct MulticomponentGpu {
-    device: wgpu::Device, queue: wgpu::Queue, pipeline: wgpu::ComputePipeline,
+    device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, pipeline: wgpu::ComputePipeline,
     groups: [wgpu::BindGroup; 2], mass_a: wgpu::Buffer, mass_b: wgpu::Buffer,
     velocity_x: wgpu::Buffer, velocity_y: wgpu::Buffer, solid: wgpu::Buffer,
     drift_y: wgpu::Buffer, params: wgpu::Buffer, readback: wgpu::Buffer,
-    width: usize, height: usize, channels: usize, count: usize, uploaded: bool, max_cfl_rate: f32,
+    width: usize, height: usize, channels: usize, count: usize, uploaded: bool, current_is_a: bool, max_cfl_rate: f32,
     pub adapter: wgpu::AdapterInfo,
 }
 impl MulticomponentGpu {
     pub async fn new(width: usize, height: usize, channels: usize) -> Result<Self,String> {
+        let context = Arc::new(crate::gpu_context::GpuContext::new().await?);
+        Self::new_with_context(context, width, height, channels).await
+    }
+
+    pub async fn new_with_context(context: Arc<crate::gpu_context::GpuContext>, width: usize, height: usize, channels: usize) -> Result<Self,String> {
         let count=width.checked_mul(height).ok_or("grid overflow")?;
         let values=count.checked_mul(channels).ok_or("tensor overflow")?;
         if width==0 || height==0 || channels==0 || values>u32::MAX as usize { return Err("invalid grid dimensions".into()); }
-        let instance=wgpu::Instance::new(wgpu::InstanceDescriptor{backends:wgpu::Backends::VULKAN,..wgpu::InstanceDescriptor::new_without_display_handle()});
-        let adapter=instance.enumerate_adapters(wgpu::Backends::VULKAN).await.into_iter()
-            .find(|a|matches!(a.get_info().device_type,wgpu::DeviceType::DiscreteGpu|wgpu::DeviceType::IntegratedGpu))
-            .ok_or("no hardware Vulkan adapter available")?;
-        let info=adapter.get_info();
+        let device=&context.device;
+        let info=context.adapter.clone();
         let max_bytes=(values.max(count).max(channels)*4) as u64;
-        if max_bytes>adapter.limits().max_storage_buffer_binding_size as u64 { return Err("tensor exceeds Vulkan storage-buffer limit".into()); }
-        let (device,queue)=adapter.request_device(&wgpu::DeviceDescriptor{label:Some("OniSim multicomponent stage 1"),required_limits:wgpu::Limits::default(),..Default::default()}).await.map_err(|e|e.to_string())?;
+        if max_bytes>device.limits().max_storage_buffer_binding_size as u64 { return Err("tensor exceeds Vulkan storage-buffer limit".into()); }
         let scope=device.push_error_scope(wgpu::ErrorFilter::Validation);
         let shader=device.create_shader_module(wgpu::ShaderModuleDescriptor{label:Some("multicomponent finite-volume flux"),source:wgpu::ShaderSource::Wgsl(SHADER.into())});
         let pipeline=device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor{label:Some("multicomponent flux pipeline"),layout:None,module:&shader,entry_point:Some("main"),compilation_options:Default::default(),cache:None});
@@ -48,10 +49,31 @@ impl MulticomponentGpu {
         };
         let groups=[create_group(&mass_a,&mass_b),create_group(&mass_b,&mass_a)];
         if let Some(e)=scope.pop().await{return Err(e.to_string());}
-        Ok(Self{device,queue,pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,max_cfl_rate:0.0,adapter:info})
+        Ok(Self{device:context.device.clone(),queue:context.queue.clone(),pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,current_is_a:true,max_cfl_rate:0.0,adapter:info})
     }
+
+    /// Current device-local NHWC mass tensor after the most recent dispatch.
+    pub fn current_mass_buffer(&self) -> &wgpu::Buffer {
+        if self.current_is_a { &self.mass_a } else { &self.mass_b }
+    }
+
+    /// Shared cell-centred velocity buffers, suitable for another operator on the same GpuContext.
+    pub fn velocity_buffers(&self) -> (&wgpu::Buffer, &wgpu::Buffer) {
+        (&self.velocity_x, &self.velocity_y)
+    }
+
+    /// Shared solid-cell mask for other operators on the same GpuContext.
+    pub fn solid_buffer(&self) -> &wgpu::Buffer {
+        &self.solid
+    }
+
+    pub fn dimensions(&self) -> (usize, usize, usize) {
+        (self.width, self.height, self.channels)
+    }
+
     pub fn upload(&mut self,state:&State<'_>)->Result<(),String>{
         self.uploaded=false;
+        self.current_is_a=true;
         if state.mass.len()!=self.count*self.channels||state.velocity_x.len()!=self.count||state.velocity_y.len()!=self.count||state.solid.len()!=self.count||state.drift_y.len()!=self.channels{return Err("input tensor dimensions mismatch".into());}
         if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
             || state.velocity_x.iter().chain(state.velocity_y).chain(state.drift_y).any(|v| !v.is_finite()) {
@@ -77,12 +99,14 @@ impl MulticomponentGpu {
         if !self.uploaded||steps==0||output.len()!=self.count*self.channels||!dt.is_finite()||dt<=0.0||dt*self.max_cfl_rate>1.0{return Err("resident run requires valid uploaded state, positive steps/dt and matching output".into());}
         self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,dt.to_bits()]));
         let mut encoder=self.device.create_command_encoder(&Default::default());
-        for step in 0..steps{
+        for _ in 0..steps{
+            let group=if self.current_is_a{&self.groups[0]}else{&self.groups[1]};
             let mut pass=encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);pass.set_bind_group(0,&self.groups[step&1],&[]);
+            pass.set_pipeline(&self.pipeline);pass.set_bind_group(0,group,&[]);
             pass.dispatch_workgroups((self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8),1);
+            self.current_is_a=!self.current_is_a;
         }
-        let final_buffer=if steps&1==1{&self.mass_b}else{&self.mass_a};
+        let final_buffer=if self.current_is_a{&self.mass_a}else{&self.mass_b};
         encoder.copy_buffer_to_buffer(final_buffer,0,&self.readback,0,(output.len()*4) as u64);
         let submission=self.queue.submit([encoder.finish()]);
         let(send,receive)=mpsc::sync_channel(1);
