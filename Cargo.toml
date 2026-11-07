@@ -1,6 +1,6 @@
 [package]
 name = "onim"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 license-file = "LICENSE"
 description = "Command-line toolkit for creating, building, installing, and managing Oxygen Not Included mods."

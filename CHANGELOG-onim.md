@@ -1,5 +1,9 @@
 # onim Changelog
 
+## 0.1.11 - 2026-11-07
+
+- Enforce prerequisite load order in `mods.json` so shared libraries like `LIghtJUNction.Jlib` load before consumer mods (`LIghtJUNction.CycleTrim`, `LIghtJUNction.OniMcp`).
+
 ## 0.1.10 - 2026-11-07
 
 - Enforce one active installation per Mod `staticID` across Local, Dev, and Steam Workshop.
