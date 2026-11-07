@@ -11,7 +11,7 @@ namespace CycleTrim
             "Use CycleTrim's native simulation core for the game's SimDLL imports. Changes require restarting ONI. / 使用 CycleTrim 原生仿真核心替代游戏的 SimDLL；修改后需要重启游戏。",
             "Simulation / 仿真")]
         [RestartRequired]
-        public bool EnableOniSim { get; set; } = true;
+        public bool EnableOniSim { get; set; }
 
         [Option("物流候选优化 / Pickup candidates",
             "复用拾取候选的路径成本；关闭后使用原版候选选择。需要重启游戏。",
