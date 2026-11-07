@@ -112,3 +112,48 @@ pub fn cpu_step(state:&State<'_>,width:usize,height:usize,channels:usize,dt:f32,
         }
     }}
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wgsl_shader_validates() {
+        let module = naga::front::wgsl::parse_str(SHADER).expect("WGSL parser");
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        ).validate(&module).expect("WGSL validation");
+    }
+
+    #[test]
+    fn cpu_reference_conserves_each_species_and_respects_walls() {
+        let (width, height, channels) = (19usize, 13usize, 4usize);
+        let count = width * height;
+        let mut solid = vec![0u32; count];
+        for x in 0..width { solid[x] = 1; solid[(height - 1) * width + x] = 1; }
+        for y in 0..height { solid[y * width] = 1; solid[y * width + width - 1] = 1; }
+        for y in 4..7 { for x in 8..11 { solid[y * width + x] = 1; } }
+        let mut mass = vec![0.0f32; count * channels];
+        for cell in 0..count {
+            if solid[cell] == 0 {
+                for c in 0..channels { mass[cell * channels + c] = ((cell * 17 + c * 13) % 97) as f32 / 97.0; }
+            }
+        }
+        let vx = vec![0.015f32; count];
+        let vy = vec![-0.01f32; count];
+        let drift = [-0.002f32, -0.001, 0.001, 0.002];
+        let state = State { mass: &mass, velocity_x: &vx, velocity_y: &vy, solid: &solid, drift_y: &drift };
+        let mut output = vec![0.0f32; count * channels];
+        cpu_step(&state, width, height, channels, 0.1, &mut output);
+        for c in 0..channels {
+            let before: f64 = (0..count).map(|i| mass[i * channels + c] as f64).sum();
+            let after: f64 = (0..count).map(|i| output[i * channels + c] as f64).sum();
+            assert!((after - before).abs() / before.max(1e-30) < 1e-6, "species {c}");
+        }
+        assert!(output.iter().all(|v| v.is_finite() && *v >= -1e-7));
+        for cell in 0..count {
+            if solid[cell] != 0 { assert!(output[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0)); }
+        }
+    }
+}
