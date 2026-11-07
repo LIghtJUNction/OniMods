@@ -213,6 +213,8 @@ namespace OniSim.Compatibility
         {
             return Locked(() =>
             {
+                if (api.CopyMulticomponentImage == null)
+                    throw new NotSupportedException("Native library does not expose the optional multicomponent publication API.");
                 int required = api.CopyMulticomponentImage(IntPtr.Zero, 0);
                 CheckOperation(0, 0);
                 if (required < MulticomponentImage.HeaderSize || required > 512 * 1024 * 1024)
