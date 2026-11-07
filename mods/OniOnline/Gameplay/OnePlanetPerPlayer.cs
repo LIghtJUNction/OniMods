@@ -3,11 +3,19 @@ using OniOnline.Sdk;
 
 namespace OniOnline.Gameplay
 {
-    // The bundled mode uses exactly the extension point offered to other mods.
-    public sealed class OnePlanetPerPlayer : IGameplayRules
+    // Reusable admission helper for a separate gameplay mod. The framework does not register it.
+    public sealed class OnePlanetPerPlayer : IGameplayRules, IGameplayCapabilityContract
     {
-        public string Id { get { return GameplayFramework.BuiltInId; } }
+        public const string RulesId = "onionline.one-planet-per-player";
+        public string Id { get { return RulesId; } }
         public string Version { get { return "1"; } }
+        public IEnumerable<string> Capabilities { get { return new[] { GameplayFramework.WorldsCapability }; } }
+        public IEnumerable<string> RequiredCapabilities { get { return new[] { GameplayFramework.WorldsCapability }; } }
+        public static void RegisterIfMissing()
+        {
+            if (System.Array.IndexOf(GameplayFramework.RegisteredIds, RulesId) >= 0) return;
+            GameplayFramework.Register(new OnePlanetPerPlayer());
+        }
         public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current)
         {
             foreach (var claim in current)

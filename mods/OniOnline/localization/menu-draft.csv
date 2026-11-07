@@ -1,11 +1,11 @@
 key,zh-CN,zh-TW,en
 mode.online,联机,連線,Online
-menu.browse_lobbies,浏览星系,瀏覽星系,Browse star systems
-menu.create_room,创建星系,建立星系,Create star system
-menu.join_room,加入星系,加入星系,Join system
-menu.join_by_code,使用星系码加入,使用星系代碼加入,Join by system code
+menu.browse_lobbies,浏览大厅,瀏覽大廳,Browse lobbies
+menu.create_room,创建大厅,建立大廳,Create lobby
+menu.join_room,加入大厅,加入大廳,Join lobby
+menu.join_by_code,使用大厅码加入,使用大廳代碼加入,Join by lobby code
 menu.join_by_address,IP 与端口直连,IP 與連接埠直連,Join by IP and port
-room.copy_code,复制星系码,複製星系代碼,Copy system code
+room.copy_code,复制大厅码,複製大廳代碼,Copy lobby code
 room.password,星系密码,星系密碼,System password
 room.continue_alone,继续游戏,繼續遊戲,Continue
 room.player_name,玩家名字,玩家名稱,Player name
@@ -70,10 +70,10 @@ permissions.take_resources,取用物资,取用物資,Take resources
 permissions.build,施工,施工,Construction
 permissions.deconstruct,拆除,拆除,Deconstruction
 ui.close,关闭,關閉,Close
-ui.phase1_notice,每位玩家经营自己的星球。,每位玩家經營自己的星球。,Each player manages their own planet.
+ui.phase1_notice,在大厅里和朋友聊天。,在大廳裡和朋友聊天。,Chat with friends in the lobby.
 ui.enabled,已开启,已啟用,Enabled
 ui.disabled,已关闭,已停用,Disabled
-ui.room_name,星系名称,星系名稱,Star system name
+ui.room_name,大厅名称,大廳名稱,Lobby name
 ui.port,端口,連接埠,Port
 ui.optional,可留空,可留空,Optional
 ui.refresh,刷新,重新整理,Refresh
@@ -97,22 +97,22 @@ ui.slow_connection,网络较慢，正在等待数据,網路較慢，正在等待
 ui.synchronizing,正在同步,正在同步,Synchronizing
 ui.waiting_for_sync,等待同步完成,等待同步完成,Waiting for synchronization
 ui.not_connected,未连接,未連線,Not connected
-ui.no_players,尚未加入星系,尚未加入星系,Not in a system
-ui.no_rooms,暂无星系。可刷新列表或使用星系码直连。,暫無星系。可重新整理列表或使用星系代碼直連。,No systems found. Refresh or join using a system code.
-ui.lobby_subtitle,与朋友在星海相遇,與朋友在星海相遇,Meet friends among the stars
+ui.no_players,尚未加入大厅,尚未加入大廳,Not in a lobby
+ui.no_rooms,暂无大厅。可刷新列表或使用大厅码直连。,暫無大廳。可重新整理列表或使用大廳代碼直連。,No lobbies found. Refresh or join using a lobby code.
+ui.lobby_subtitle,加入大厅，和朋友聊天,加入大廳，和朋友聊天,Join a lobby and chat with friends
 ui.profile,玩家,玩家,Player
 ui.connection,连接方式,連線方式,Connection
-ui.room_settings,星系设置,星系設定,Star system settings
-ui.room_list,可加入的星系,可加入的星系,Available star systems
-ui.direct_join,星系码直连,星系代碼直連,Join by code
-ui.join_hint,粘贴星系码或输入 IP:端口,貼上星系代碼或輸入 IP:連接埠,Paste a system code or enter IP:port
-ui.empty_title,暂无星系,暫無星系,No systems found
-ui.empty_hint,刷新查找星系，或使用星系码加入。,重新整理尋找星系，或使用星系代碼加入。,Refresh the list or join with a system code.
-ui.members,星系成员,星系成員,System members
+ui.room_settings,大厅设置,大廳設定,Lobby settings
+ui.room_list,可加入的大厅,可加入的大廳,Available lobbies
+ui.direct_join,大厅码直连,大廳代碼直連,Join by code
+ui.join_hint,粘贴大厅码或输入 IP:端口,貼上大廳代碼或輸入 IP:連接埠,Paste a lobby code or enter IP:port
+ui.empty_title,暂无大厅,暫無大廳,No lobbies found
+ui.empty_hint,刷新查找大厅，或使用大厅码加入。,重新整理尋找大廳，或使用大廳代碼加入。,Refresh the list or join with a lobby code.
+ui.members,大厅成员,大廳成員,Lobby members
 ui.invite,邀请朋友,邀請朋友,Invite friends
-ui.chat_title,星系聊天,星系聊天,System chat
+ui.chat_title,聊天,聊天,Chat
 ui.chat_empty,暂无消息,暫無訊息,No messages yet
-ui.host,星系主人,星系主人,Host
+ui.host,房主,房主,Host
 ui.you,你,你,You
 ui.open_slot,等待朋友加入,等待朋友加入,Waiting for a friend
 ui.room_tag,联机星系,連線星系,Online system
@@ -129,7 +129,7 @@ error.protocol_mismatch,联机协议版本不兼容，请双方安装相同测�
 error.invalid_packet,收到无效网络消息,收到無效網路訊息,Invalid network message
 error.handshake_required,连接验证未完成,連線驗證未完成,Connection handshake required
 error.connection_rejected,星系拒绝了连接,星系拒絕了連線,Connection rejected
-error.room_full,星系已满,星系已滿,System is full
+error.room_full,大厅已满,大廳已滿,Lobby is full
 error.host_only,该操作仅允许星系主人执行,此操作僅允許星系主人執行,Only the host can perform this action
 error.chat_rate_limited,消息发送过快,訊息傳送過快,Chat rate limit exceeded
 error.invalid_chat_or_rate,消息为空或过长或发送太快,訊息為空或過長或傳送太快,Message is empty or too long or sent too quickly
@@ -155,7 +155,7 @@ error.lan_discovery_unavailable,局域网发现不可用；仍可复制星系码
 error.dependencies_required,需要有效玩家名并启用 CycleTrim 与眼冒金星,需要有效玩家名稱並啟用 CycleTrim 與眼冒金星,A valid player name and active CycleTrim and Spaced Out! are required
 time.local_pause,先解除本地暂停，再同意恢复,先解除本機暫停，再同意恢復,Release local pause before voting
 ui.player_offline,离线,離線,Offline
-room.public_steam,公开星系,公開星系,Public systems
+room.public_steam,公开大厅,公開大廳,Public lobbies
 room.waiting,等待中,等待中,Waiting
 room.in_progress,游戏中,遊戲中,In progress
 room.join_running,中途加入,中途加入,Join game
@@ -405,6 +405,15 @@ options.voice_enabled,启用星系语音,啟用星系語音,Enable system voice
 options.voice_enabled_hint,只在按住说话键时采集麦克风。默认 Ctrl+V；在游戏设置 → 控制 → 模组中改键。关闭后停止录音和播放，立即生效。,只在按住說話鍵時擷取麥克風。預設 Ctrl+V；可在遊戲設定 → 控制 → 模組中改鍵。關閉後停止錄音與播放，立即生效。,Capture the microphone only while push-to-talk is held. Default Ctrl+V; rebind in game Options > Controls > Mods. Disable to stop capture and playback immediately.
 options.voice_volume,星系语音播放音量,星系語音播放音量,System voice playback volume
 options.voice_volume_hint,其他玩家语音的播放音量（0–100）。0 为静音，不改变游戏或直播音量，立即生效。,其他玩家語音的播放音量（0–100）。0 為靜音，不改變遊戲或直播音量，立即生效。,Other players’ voice volume (0–100). Zero mutes playback without changing game or stream volume. Applies immediately.
+options.category_gameplay,🎮 联机玩法管理,🎮 連線玩法管理,🎮 Gameplay Management
+options.dev_guide,📖 联机玩法开发指南,📖 連線玩法開發指南,📖 Online Gameplay Dev Guide
+options.dev_guide_hint,在浏览器中打开 OniOnline 联机玩法与 SDK 开发文档（涵盖 NuGet 引用与将 OniOnline 设为前置 Mod 的规范）。,在瀏覽器中開啟 OniOnline 連線玩法與 SDK 開發文件（涵蓋 NuGet 引用與將 OniOnline 設為前置 Mod 的規範）。,Open OniOnline gameplay & SDK developer documentation in your browser (covers NuGet references and declaring OniOnline as a prerequisite mod).
+options.builtin_gameplay,内置玩法是聊天,內建玩法是聊天,Built-in gameplay is chat
+options.builtin_gameplay_hint,框架自带的玩法只有大厅聊天。其他玩法需要单独安装对应模组。,框架自帶的玩法只有大廳聊天。其他玩法需要單獨安裝對應模組。,The framework ships with lobby chat. Other gameplay requires its own mod.
+options.active_gameplay,首选联机玩法 ID,首選連線玩法 ID,Preferred Gameplay ID
+options.active_gameplay_hint,创建或加入大厅时使用的玩法标识。默认为 onionline.chat。安装其他玩法模组后，填入该模组注册的玩法 ID。,建立或加入大廳時使用的玩法標識。預設為 onionline.chat。安裝其他玩法模組後，填入該模組註冊的玩法 ID。,Gameplay id used when hosting or joining. Default: onionline.chat. After installing another gameplay mod, enter the id it registers.
+options.disabled_gameplays,禁用的玩法 ID 列表,禁用的玩法 ID 清單,Disabled Gameplay IDs
+options.disabled_gameplays_hint,需要禁用的玩法 ID（多个以分号或逗号分隔）。被禁用的玩法将无法在房间中使用。,需要禁用的玩法 ID（多個以分號或逗號分隔）。被禁用的玩法將無法在房間中使用。,Gameplay IDs to disable (separated by semicolons or commas). Disabled gameplays cannot be selected or used in rooms.
 error.voice_steam_unavailable,语音需要 Steam 已连接，并且麦克风可用,語音需要 Steam 已連線，而且麥克風可用,Voice requires Steam to be connected and an available microphone
 error.voice_capture_failed,无法采集麦克风，请检查系统录音设备与权限,無法擷取麥克風，請檢查系統錄音裝置與權限,Microphone capture failed; check the recording device and permissions
 error.voice_decode_failed,收到的语音无法播放，请确认双方模组版本一致,收到的語音無法播放，請確認雙方模組版本一致,Could not play received voice; ensure both players use the same mod version
@@ -479,9 +488,9 @@ system.create_failed,无法开放星系,無法開放星系,Could Not Open System
 system.join_failed,无法加入星系,無法加入星系,Could Not Join System
 system.retry,重试,重試,Retry
 browser.joinable,可加入,可加入,Joinable
-browser.searching,正在寻找星系…,正在尋找星系…,Looking for systems…
-browser.password_required,需要星系密码,需要星系密碼,System password required
-mode.online_description,与其他玩家共同建立星系，各自经营一颗星球。,與其他玩家共同建立星系，各自經營一顆星球。,"Build a star system with other players, each managing their own planet."
-browser.invalid_code,星系码无效。,星系代碼無效。,Invalid system code.
-browser.connection_failed,暂时无法连接星系。,暫時無法連線星系。,Could not connect to the system.
+browser.searching,正在寻找大厅…,正在尋找大廳…,Looking for lobbies…
+browser.password_required,需要大厅密码,需要大廳密碼,Lobby password required
+mode.online_description,此入口只在已安装并选中需要星球的玩法模组时使用。,此入口只在已安裝並選中需要星球的玩法模組時使用。,This entry appears only after a gameplay mod that uses planets is installed and selected.
+browser.invalid_code,大厅码无效。,大廳代碼無效。,Invalid lobby code.
+browser.connection_failed,暂时无法连接大厅。,暫時無法連線大廳。,Could not connect to the lobby.
 error.native_browser_unavailable,暂时无法打开星系列表。,暫時無法開啟星系列表。,Could not open the system browser.

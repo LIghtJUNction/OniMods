@@ -9,7 +9,7 @@
 | 独立 Framework/SDK | `sdk/OniOnline.Framework/`、`mods/OniOnline/Sdk/`、`mods/OniOnline/Gameplay/` | 玩法注册、认证消息、状态频道、存档槽、准入合同 | Unity 对象、原生写入、DLC 判断 |
 | 网络会话 | `mods/OniOnline/Network/` | RoomSession、能力协商、聊天、重连、速率/预算边界 | 直接创建世界或替代原生保存 |
 | 模组同步 | `mods/OniOnline/Runtime/NativeModCatalog*`、`SteamModContentSync*`、`Sdk/ModSync*` | 入场清单、来源/版本/摘要、加载状态、运行中状态 | 自动公开 Local/Dev 模组、把下载回调当成加载 |
-| Gameplay/世界 | `mods/OniOnline/Multiplayer/`、`Runtime/OnlineRuntime.cs` | 一人一星球、授权观察、状态路由、原生能力门 | 通过消息直接修改其他星球 |
+| Gameplay/世界 | `mods/OniOnline/Multiplayer/`、`Runtime/OnlineRuntime.cs` | 玩法声明 `onionline.worlds.v1` 后的星球登记、授权观察、状态路由、原生能力门。默认聊天不启动这些服务 | 通过消息直接修改其他星球；把一人一星球重新注册成框架默认玩法 |
 | Native/UI | `mods/OniOnline/UI/`、`Patches/` | 原生控件、入口分流、HUD 通讯、加入/失败对话框 | 网页式面板、在开局前展示 HUD |
 
 ## 关键合同
@@ -21,7 +21,7 @@
 - 未知状态 schema 要保留最后正确状态并隔离新数据；不能把未知数据当成空状态写回存档。
 - `NativeAdapterGuard` 只允许已登记游戏构建和能力进入原生调用。未知构建返回 `native_adapter_unavailable`，不读取、不写入、不破坏现有存档。
 - `NativeChatEntry` 的入口属于殖民地 HUD；它只在 `NativeGameplayUi.Ready` 且联机会话存在时出现。重连期间保留入口，窗口显示重连状态并禁用发送。
-- “浏览星系”和“创建星系”是两个职责。浏览页不得创建房间；创建必须从新游戏的联机类型进入原生开局流程。
+- 大厅和聊天是框架能力。默认玩法是 `onionline.chat`。浏览页可以创建聊天房间。星球开局和星图只属于声明 `onionline.worlds.v1` 的玩法模组。
 
 ## 设计变更时的检查
 

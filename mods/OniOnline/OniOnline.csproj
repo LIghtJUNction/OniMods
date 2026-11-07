@@ -4,7 +4,7 @@
     <AssemblyName>OniOnline</AssemblyName>
     <RootNamespace>OniOnline</RootNamespace>
     <LangVersion>7.3</LangVersion>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <NuGetAudit>false</NuGetAudit>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -33,7 +33,7 @@
     <Reference Include="Unity.TextMeshPro"><HintPath>$(OniManagedPath)/Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs/SDK.md;docs/FRAMEWORK-COMPATIBILITY.md;docs/SDK-MOD-SYNC.md;docs/MOD-CONTENT-SYNC.md;docs/build-install-test-zh.md;docs/steam-description-zh.md;docs/steam-description-en.md;localization/menu-draft.csv;assets/online-background-concept.png;assets/online-card-v2.png;assets/online-lobby-v2.png;assets/onionline-logo-v1.png;assets/onionline-icon-v1.png;preview.png;assets/ART.md;README.md;DESIGN.md;STAR-SYSTEMS.md;PERMISSIONS.md;CYCLETRIM-INTEGRATION.md;PHASE1-VALIDATION.md;THIRD_PARTY_NOTICES.txt;mod.yaml;mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="docs/SDK.md;docs/FRAMEWORK-COMPATIBILITY.md;docs/SDK-MOD-SYNC.md;docs/MOD-CONTENT-SYNC.md;docs/build-install-test-zh.md;docs/steam-description-zh.md;docs/steam-description-en.md;localization/menu-draft.csv;translations/strings.pot;translations/zh_cn.po;translations/zh_tw.po;translations/en.po;assets/online-background-concept.png;assets/online-card-v2.png;assets/online-lobby-v2.png;assets/onionline-logo-v1.png;assets/onionline-icon-v1.png;preview.png;assets/ART.md;README.md;PERMISSIONS.md;CYCLETRIM-INTEGRATION.md;THIRD_PARTY_NOTICES.txt;mod.yaml;mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <PropertyGroup Condition="'$(OnlineRuntimeProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);ONIONLINE_RUNTIME_PROBE</DefineConstants>

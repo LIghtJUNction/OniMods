@@ -1,11 +1,11 @@
 ---
 name: oni-online-framework
-description: "Develop, review, test, and package the OniOnline multiplayer framework, SDK, native adapter, mod synchronization, and built-in one-planet-per-player mode. Use for OniOnline code or delivery work; not for ordinary ONI gameplay advice or unrelated CycleTrim changes."
+description: "Develop, review, test, and package the OniOnline multiplayer framework, SDK, native adapter, mod synchronization, lobby, and built-in chat. Use for OniOnline code or delivery work; not for ordinary ONI gameplay advice or unrelated CycleTrim changes."
 ---
 
 # OniOnline 联机框架
 
-用于维护 `/home/lightjunction/Documents/GITHUB/OniMods` 中的 OniOnline 联机框架。它覆盖独立 SDK、ONI 原生适配、入场模组对齐、运行中注册状态同步、内置“一名玩家控制一颗星球”玩法，以及原生风格的浏览、开局和通讯界面。
+用于维护 `/home/lightjunction/Documents/GITHUB/OniMods` 中的 OniOnline 联机框架。它覆盖独立 SDK、ONI 原生适配、入场模组对齐、运行中注册状态同步、大厅、内置聊天，以及给其他玩法模组用的原生界面。一人一星球不是内置玩法。
 
 如果任务是开发独立的第三方玩法程序集，而不是修改框架核心、原生适配或正式包，改用 [`oni-online-sdk`](../oni-online-sdk/SKILL.md)，以免把玩法业务和宿主实现混在一起。
 
@@ -25,8 +25,8 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 2. 基础会话按协议、玩法、能力和模组合同协商。游戏构建号、DLC、CycleTrim 版本是适配信息，不是基础联机的简单相等门槛；未知原生构建必须 fail closed，只保留安全的框架能力。
 3. 入场前模组同步必须同时核对模组 ID、来源、版本、受控内容摘要和实际加载状态。`Required`、`ClientOnly`、`Optional` 的用途不能混用；下载完成不等于已安装、已启用或已加载。
 4. 运行中状态只能通过 SDK 显式注册的频道同步。每个频道要有权威端、schema、epoch/generation、快照/增量、权限、预算、缺口恢复和未知 schema 隔离；旧准入代次不能继续写入新会话。
-5. 内置玩法保持一名玩家一颗星球。房间 ID、观察世界 ID 和跨存档永久 PlanetId 是不同身份；重连和重新绑定不能复制星球，也不能把观察权限当成迁移权限。
-6. 主菜单的“浏览星系”只负责浏览和加入；“新游戏 → 生存模式 → 联机”负责创建。殖民地 HUD 的原生管理栏直接打开“通讯”，快捷键默认 `Ctrl+T`；主菜单、创建、载入和初始复制人选择期间不显示联机 HUD。
+5. 内置玩法只有 `onionline.chat`。框架不注册、不默认选中 `OnePlanetPerPlayer`。玩法模组自己 `Register`，并在需要星球登记和世界同步时声明 `onionline.worlds.v1`。房间 ID、观察世界 ID 和跨存档永久 PlanetId 是不同身份；重连和重新绑定不能复制星球，也不能把观察权限当成迁移权限。
+6. 主菜单的“浏览大厅”负责查找、加入和创建聊天房间。星系开局和星图只在当前玩法声明 `onionline.worlds.v1` 时出现。殖民地 HUD 的原生管理栏直接打开“通讯”，快捷键默认 `Ctrl+T`；主菜单、创建、载入和初始复制人选择期间不显示联机 HUD。
 7. UI 复用 ONI 原生控件、字体、外框和声音。不要加入网页式灰框、巨大悬浮按钮、霓虹边框或把实现细节塞进玩家文案。
 
 详细合同按需读取：

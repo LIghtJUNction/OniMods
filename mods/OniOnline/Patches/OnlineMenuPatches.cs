@@ -15,6 +15,7 @@ namespace OniOnline.Patches
         {
             try
             {
+                ModInfo.UpdateOptionTexts();
                 var original = AccessTools.Field(typeof(MainMenu), "Button_NewGame").GetValue(__instance) as KButton;
                 if (original == null || original.transform.parent.Find("OniOnlineBrowseLobbies") != null) return;
                 var clone = UnityEngine.Object.Instantiate(original.gameObject, original.transform.parent, false);
@@ -27,6 +28,15 @@ namespace OniOnline.Patches
                     label.SetText(OnlineText.Get("menu.browse_lobbies"));
             }
             catch (Exception error) { Debug.LogWarning("[OniOnline] Main menu integration failed: " + error.GetType().Name); }
+        }
+    }
+
+    [HarmonyPatch(typeof(Localization), nameof(Localization.Initialize))]
+    internal static class LocalizationInitializePatch
+    {
+        private static void Postfix()
+        {
+            try { ModInfo.UpdateOptionTexts(); } catch { }
         }
     }
 

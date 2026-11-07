@@ -14,6 +14,12 @@ namespace OniOnline.Runtime
 
         internal static string Get(string key)
         {
+            if (string.IsNullOrEmpty(key)) return "";
+            if (Strings.TryGet(new StringKey("STRINGS.ONIONLINE." + key.ToUpperInvariant()), out var entry)
+                && !string.IsNullOrEmpty(entry?.String))
+            {
+                return entry.String;
+            }
             return catalog == null ? key : catalog.Get(key, Localization.GetLocale()?.Code ?? Localization.GetCurrentLanguageCode());
         }
 

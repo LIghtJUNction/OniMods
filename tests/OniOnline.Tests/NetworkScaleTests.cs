@@ -7,6 +7,7 @@ using System.Net;
 using System.Threading;
 using OniOnline.Core;
 using OniOnline.Multiplayer;
+using OniOnline.Gameplay;
 using OniOnline.Network;
 
 // These are protocol peers running production session/coordinator code. They are
@@ -37,7 +38,8 @@ internal static class NetworkScaleTests
         {
             InitialTransport = transport;
             Session = new RoomSession(transport, new SessionProfile
-            { Name = "Protocol peer", GameVersion = "744825", CycleTrimVersion = "0.3.2", SpacedOut = true },
+            { Name = "Protocol peer", GameVersion = "744825", CycleTrimVersion = "0.3.2", SpacedOut = true,
+                GameplayId = OnePlanetPerPlayer.RulesId },
                 "", "Network matrix system", reconnect, options ?? new SessionOptions { RetryJitter = () => 0.5 });
             System = new StarSystemCoordinator(Session, Source);
         }
@@ -114,6 +116,7 @@ internal static class NetworkScaleTests
     internal static void Run(Action<bool, string> assertion)
     {
         check = assertion;
+        OnePlanetPerPlayer.RegisterIfMissing();
         PagedPublicationIsAtomic();
         LargeRoomLosesTailPages();
         FaultMatrix();

@@ -17,6 +17,19 @@ internal static class OnlineOptionsTests
         OnlineInputGateTests.Run(check);
         check(defaults.PreferSteamLobbies && defaults.DefaultLanPort == 27140 && defaults.ChatFontSize == 18,
             "network defaults and readable chat size retain existing behavior");
+        check(defaults.ActiveGameplayId == OniOnline.Sdk.GameplayFramework.BuiltInId &&
+            OniOnline.Sdk.GameplayFramework.IsEnabled(OniOnline.Sdk.GameplayFramework.BuiltInId),
+            "gameplay options default to built-in chat");
+        var disabledGameplay = new OnlineOptions { DisabledGameplays = OniOnline.Sdk.GameplayFramework.BuiltInId }.Normalize();
+        check(!OniOnline.Sdk.GameplayFramework.IsEnabled(OniOnline.Sdk.GameplayFramework.BuiltInId),
+            "disabled gameplay list can turn off built-in chat");
+        var reenabledGameplay = new OnlineOptions().Normalize();
+        check(reenabledGameplay.ActiveGameplayId == OniOnline.Sdk.GameplayFramework.BuiltInId &&
+            OniOnline.Sdk.GameplayFramework.IsEnabled(OniOnline.Sdk.GameplayFramework.BuiltInId),
+            "clearing the disable list turns built-in chat back on");
+        defaults.OpenDevGuide?.Invoke(null);
+        check(UnityEngine.Application.LastOpenedUrl != null && UnityEngine.Application.LastOpenedUrl.Contains("SDK.md"),
+            "OpenDevGuide opens the SDK developer documentation URL");
         var session = defaults.CreateSessionOptions();
         check(session.HandshakeTimeoutSeconds == 30 && session.PeerTimeoutSeconds == 30 &&
             session.ReconnectWindowSeconds == 300 && session.SeatReservationSeconds == 300 && session.ChatHistoryLimit == 100,

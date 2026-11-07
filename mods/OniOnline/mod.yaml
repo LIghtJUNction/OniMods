@@ -1,3 +1,3 @@
 title: "OniOnline"
-description: "OniOnline 0.4.0 development preview: a multiplayer framework with an independent SDK and a built-in one-player-per-planet mode. Includes mod alignment, registered mod-state synchronization and permission-based observation. CycleTrim and Spaced Out! are not fixed prerequisites; native features require an available adapter. Full colony transfers, rocket visits and offline hosting are not implemented."
+description: "OniOnline 0.5.0 development preview: a multiplayer framework. The built-in gameplay is lobby chat. Other gameplay mods register their own rules. Includes mod alignment and registered mod-state synchronization. CycleTrim and Spaced Out! are not fixed prerequisites."
 staticID: "LIghtJUNction.OniOnline"

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
+using OniOnline.Gameplay;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
 
@@ -191,8 +192,9 @@ internal static class NativeInterestPeer
             using (var sha = SHA256.Create())
                 run.ProtocolHash = Convert.ToHexString(sha.ComputeHash(File.ReadAllBytes(typeof(NativeInterestPeer).Assembly.Location))).ToLowerInvariant();
             Func<IRoomTransport> connect = () => new MeteredTransport(TcpRoomTransport.Join(run.Host, run.Port), run.Meter);
+            OnePlanetPerPlayer.RegisterIfMissing();
             run.Session = new RoomSession(connect(), new SessionProfile { Name = "Harness observer " + Guid.NewGuid().ToString("N").Substring(0, 6),
-                GameVersion = run.Build, CycleTrimVersion = run.CtVersion, SpacedOut = true }, "", "Native interest protocol test", reconnect: connect);
+                GameVersion = run.Build, CycleTrimVersion = run.CtVersion, SpacedOut = true, GameplayId = OnePlanetPerPlayer.RulesId }, "", "Native interest protocol test", reconnect: connect);
             run.Stars = new StarSystemCoordinator(run.Session, new PreviewSource());
             Func<string, SystemMember> member = planet => run.Stars.State?.Members.FirstOrDefault(m => m.Connected && m.Planet?.PlanetId == planet);
             Func<string, string> authority = planet => member(planet)?.PeerId;

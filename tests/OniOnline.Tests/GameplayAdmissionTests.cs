@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
+using OniOnline.Gameplay;
 using OniOnline.Sdk;
 
 internal static class GameplayAdmissionTests
@@ -41,7 +42,7 @@ internal static class GameplayAdmissionTests
             {
                 int index = i;
                 Rooms[i] = new RoomSession(i == 0 ? Network.Host : Network.Connect(), new SessionProfile { Name = "Admission" + i,
-                    GameVersion = "744825", GameplayId = GameplayFramework.BuiltInId }, "", "Admission fixture");
+                    GameVersion = "744825", GameplayId = OnePlanetPerPlayer.RulesId }, "", "Admission fixture");
                 Systems[i] = new StarSystemCoordinator(Rooms[i], Sources[i], peer => Allowed(index, peer), peer => Generation(index, peer));
                 var store = GameplayStateStore.Load(0, null);
                 Sdk[i] = new GameplaySession(Rooms[i], () => Systems[index].State, () => store, peer => Allowed(index, peer));
@@ -102,6 +103,7 @@ internal static class GameplayAdmissionTests
     }
     internal static void Run(Action<bool, string> check)
     {
+        OnePlanetPerPlayer.RegisterIfMissing();
         SdkBarrier(check);
         PendingAdmission(check);
         ExistingPlanet(check);

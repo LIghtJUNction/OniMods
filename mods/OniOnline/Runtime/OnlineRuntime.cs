@@ -270,7 +270,7 @@ namespace OniOnline.Runtime
             OnlineInputControls.Attach(this);
 
             LogLoadedAssembly();
-            Debug.Log("[OniOnline] Preview loaded: native star map, Planetary Engine entry, public rooms and independent local time; observations only, no colony migration.");
+            Debug.Log("[OniOnline] Framework loaded: lobby, chat and gameplay SDK. Built-in gameplay is chat.");
         }
 
         private static void LogLoadedAssembly()
@@ -428,7 +428,7 @@ namespace OniOnline.Runtime
                 }
                 else Attach(TcpRoomTransport.Join(address.Host, address.Port), profile, password,
                     "oni://" + (address.Host.Contains(":") ? "[" + address.Host + "]" : address.Host) + ":" + address.Port);
-                awaitingSystemPreview = true;
+                awaitingSystemPreview = GameplayFramework.UsesWorlds(profile.Capabilities);
             });
         }
 
@@ -447,7 +447,8 @@ namespace OniOnline.Runtime
                 boundColony = next.IsHost ? OnlineColonyState.Current : null;
                 if (boundColony != null) BindModeration(next, boundColony, false);
                 var candidateSync = modSync;
-                if (NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
+                bool worldsRequested = GameplayFramework.UsesWorlds(profile.Capabilities);
+                if (worldsRequested && NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
                     worlds = new WorldCoordinator(next, peer => candidateSync.IsReady(peer) &&
                         candidateSync.SupportsNativeCapability(peer, SessionCapabilities.NativePlanetV1),
                         candidateSync.AdmissionGenerationFor);
@@ -473,7 +474,7 @@ namespace OniOnline.Runtime
             GameplayFramework.Bind(new GameplaySession(next, () => Multiplayer?.StarSystem.State,
                 () => OnlineColonyState.Current?.GameplayState, modSync.IsReady, modSync.AdmissionGenerationFor));
             ModSynchronization.Changed += () => { Revision++; GameplayFramework.Current?.Notify(); };
-            if (NativeAdapterAvailability.Supports(SessionCapabilities.NativeStarMapV1))
+            if (worlds != null && NativeAdapterAvailability.Supports(SessionCapabilities.NativeStarMapV1))
             {
                 StarMapDirectory = new StarMapDirectorySession(next, () => {
                     if (ModSynchronization?.LocalReady != true) return new StarMapEntry[0];
@@ -820,6 +821,8 @@ namespace OniOnline.Runtime
 
         internal void SelectOnline(ClusterCategorySelectionScreen screen)
         {
+            if (!GameplayFramework.UsesWorlds(GameplayFramework.SelectedCapabilities))
+            { BrowseSystems(); return; }
             if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativePlanetV1))
             { Error = "native_adapter_unavailable"; Revision++; return; }
             if (!Enabled) SetEnabled(true);
@@ -1210,7 +1213,7 @@ namespace OniOnline.Runtime
             {
                 CancelNativeNavigation();
                 if (Session?.IsHost == true) Leave();
-                awaitingSystemPreview = Session?.Joined == true && !Session.IsHost;
+                awaitingSystemPreview = Session?.Joined == true && !Session.IsHost && Multiplayer != null;
             }
             planetEntryDialog?.Dispose(); planetEntryDialog = null;
             HideWindow(); HideChat(); CloseSystemMap(); CloseWorkPlans(); CloseTeam(); Multiplayer?.CloseWorldView(); category = null;

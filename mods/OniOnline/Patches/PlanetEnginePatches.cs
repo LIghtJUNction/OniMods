@@ -1,5 +1,6 @@
 using HarmonyLib;
 using OniOnline.Runtime;
+using OniOnline.Sdk;
 using OniOnline.UI;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace OniOnline.Patches
     {
         private static void Postfix(ClusterMapScreen __instance, bool show)
         {
-            if (OnlineRuntime.Instance == null) return;
+            if (OnlineRuntime.Instance == null || !GameplayFramework.UsesWorlds(GameplayFramework.SelectedCapabilities)) return;
             if (show) StarSystemPanel.Attach(__instance);
             else __instance.GetComponent<StarSystemPanel>()?.CloseOnlineView();
         }
@@ -26,7 +27,8 @@ namespace OniOnline.Patches
             __instance.Subscribe((int)GameHashes.RefreshUserMenu, _ =>
             {
                 var runtime = OnlineRuntime.Instance;
-                if (runtime == null || Game.Instance == null || Game.Instance.userMenu == null) return;
+                if (runtime == null || Game.Instance == null || Game.Instance.userMenu == null ||
+                    !GameplayFramework.UsesWorlds(GameplayFramework.SelectedCapabilities)) return;
                 Game.Instance.userMenu.AddButton(__instance.gameObject,
                     new KIconButtonMenu.ButtonInfo("action_research", OnlineText.Get("engine.title"),
                         () => runtime.OpenStarMap(true), tooltipText: OnlineText.Get("engine.tooltip")), 30);

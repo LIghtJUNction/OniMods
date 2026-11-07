@@ -1,6 +1,7 @@
 #if ONIONLINE_NATIVE_CONTEXT_GATE_TESTS
 using System;
 using System.Net;
+using OniOnline.Gameplay;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
 using OniOnline.Runtime;
@@ -29,8 +30,9 @@ internal static class NativeWorkContextAdmissionTests
 
     public static int Main()
     {
+        OnePlanetPerPlayer.RegisterIfMissing();
         using (var session = new RoomSession(TcpRoomTransport.Host(IPAddress.Loopback, 0),
-            new SessionProfile { Name = "Authority", GameVersion = "744825" }, "", "Fixture"))
+            new SessionProfile { Name = "Authority", GameVersion = "744825", GameplayId = OnePlanetPerPlayer.RulesId }, "", "Fixture"))
         {
             var source = new Source();
             using (var system = new StarSystemCoordinator(session, source))

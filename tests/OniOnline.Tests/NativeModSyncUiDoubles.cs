@@ -8,6 +8,12 @@ using OniOnline.Core;
 // They do not model Unity rendering, native pause ownership or input handling.
 namespace UnityEngine
 {
+    internal static class Application
+    {
+        internal static string LastOpenedUrl;
+        internal static void OpenURL(string url) { LastOpenedUrl = url; }
+    }
+
     internal class Object
     {
         internal static void Destroy(GameObject value) { value.Destroyed = true; }

@@ -1,0 +1,2479 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OniOnline\n"
+"Application: Oxygen Not Included\n"
+"POT Version: 2.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. STRINGS.ONIONLINE.MODE.ONLINE
+msgctxt "STRINGS.ONIONLINE.MODE.ONLINE"
+msgid "Online"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MENU.BROWSE_LOBBIES
+msgctxt "STRINGS.ONIONLINE.MENU.BROWSE_LOBBIES"
+msgid "Browse lobbies"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MENU.CREATE_ROOM
+msgctxt "STRINGS.ONIONLINE.MENU.CREATE_ROOM"
+msgid "Create lobby"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MENU.JOIN_ROOM
+msgctxt "STRINGS.ONIONLINE.MENU.JOIN_ROOM"
+msgid "Join lobby"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MENU.JOIN_BY_CODE
+msgctxt "STRINGS.ONIONLINE.MENU.JOIN_BY_CODE"
+msgid "Join by system code"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MENU.JOIN_BY_ADDRESS
+msgctxt "STRINGS.ONIONLINE.MENU.JOIN_BY_ADDRESS"
+msgid "Join by IP and port"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.COPY_CODE
+msgctxt "STRINGS.ONIONLINE.ROOM.COPY_CODE"
+msgid "Copy system code"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.PASSWORD
+msgctxt "STRINGS.ONIONLINE.ROOM.PASSWORD"
+msgid "System password"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.CONTINUE_ALONE
+msgctxt "STRINGS.ONIONLINE.ROOM.CONTINUE_ALONE"
+msgid "Continue"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.PLAYER_NAME
+msgctxt "STRINGS.ONIONLINE.ROOM.PLAYER_NAME"
+msgid "Player name"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.CLAIM_PLANET
+msgctxt "STRINGS.ONIONLINE.ROOM.CLAIM_PLANET"
+msgid "Choose my asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.PLANET_OWNER
+msgctxt "STRINGS.ONIONLINE.ROOM.PLANET_OWNER"
+msgid "Controlled by"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.ENABLE_ONLINE
+msgctxt "STRINGS.ONIONLINE.SETTINGS.ENABLE_ONLINE"
+msgid "Enable online play"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.NETWORK
+msgctxt "STRINGS.ONIONLINE.SETTINGS.NETWORK"
+msgid "Network settings"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.LAN
+msgctxt "STRINGS.ONIONLINE.SETTINGS.LAN"
+msgid "LAN"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.STEAM_P2P
+msgctxt "STRINGS.ONIONLINE.SETTINGS.STEAM_P2P"
+msgid "Steam P2P"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.CUSTOM_RELAY
+msgctxt "STRINGS.ONIONLINE.SETTINGS.CUSTOM_RELAY"
+msgid "Custom relay server"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SETTINGS.FOG_OF_WAR
+msgctxt "STRINGS.ONIONLINE.SETTINGS.FOG_OF_WAR"
+msgid "Fog of war"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.OWN_ONLY
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.OWN_ONLY"
+msgid "Only my commands"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.ALLOWED_PLAYERS
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.ALLOWED_PLAYERS"
+msgid "Allowed players"
+msgstr ""
+
+#. STRINGS.ONIONLINE.COMBAT.ATTACK_TARGET
+msgctxt "STRINGS.ONIONLINE.COMBAT.ATTACK_TARGET"
+msgid "Choose attack target"
+msgstr ""
+
+#. STRINGS.ONIONLINE.COMBAT.RETALIATE
+msgctxt "STRINGS.ONIONLINE.COMBAT.RETALIATE"
+msgid "Retaliate automatically"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.PAUSE_ALL
+msgctxt "STRINGS.ONIONLINE.TIME.PAUSE_ALL"
+msgid "Pause all asteroids"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.VOTE_RESUME
+msgctxt "STRINGS.ONIONLINE.TIME.VOTE_RESUME"
+msgid "Approve resuming"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.VOTE_SPEED
+msgctxt "STRINGS.ONIONLINE.TIME.VOTE_SPEED"
+msgid "Approve speed change"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.PAUSE
+msgctxt "STRINGS.ONIONLINE.TIME.PAUSE"
+msgid "Pause system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.RESUME_VOTE
+msgctxt "STRINGS.ONIONLINE.TIME.RESUME_VOTE"
+msgid "Approve resume"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.SPEED_VOTE
+msgctxt "STRINGS.ONIONLINE.TIME.SPEED_VOTE"
+msgid "Approve {0}× speed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.PAUSED
+msgctxt "STRINGS.ONIONLINE.TIME.PAUSED"
+msgid "Online game paused"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.RUNNING
+msgctxt "STRINGS.ONIONLINE.TIME.RUNNING"
+msgid "System running"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.WAITING_PLAYERS
+msgctxt "STRINGS.ONIONLINE.TIME.WAITING_PLAYERS"
+msgid "Waiting for other players to enter their colonies"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.VOTE_COUNT
+msgctxt "STRINGS.ONIONLINE.TIME.VOTE_COUNT"
+msgid "Resume votes: {0}/{1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.SYNCING
+msgctxt "STRINGS.ONIONLINE.TIME.SYNCING"
+msgid "Waiting for system state"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.OWNER_OFFLINE
+msgctxt "STRINGS.ONIONLINE.TIME.OWNER_OFFLINE"
+msgid "Asteroid owner offline; waiting for reconnection"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.OPEN
+msgctxt "STRINGS.ONIONLINE.WORLD.OPEN"
+msgid "Asteroids"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.TITLE
+msgctxt "STRINGS.ONIONLINE.WORLD.TITLE"
+msgid "Asteroid view"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.SHARING
+msgctxt "STRINGS.ONIONLINE.WORLD.SHARING"
+msgid "Share my asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.SHARING_HINT
+msgctxt "STRINGS.ONIONLINE.WORLD.SHARING_HINT"
+msgid "Share explored areas with system members. Unexplored cells remain hidden."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.READ_ONLY
+msgctxt "STRINGS.ONIONLINE.WORLD.READ_ONLY"
+msgid "Planet view"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.NO_WORLDS
+msgctxt "STRINGS.ONIONLINE.WORLD.NO_WORLDS"
+msgid "No asteroids available to view"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.SELECT_WORLD
+msgctxt "STRINGS.ONIONLINE.WORLD.SELECT_WORLD"
+msgid "Choose an asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.NOT_SHARED
+msgctxt "STRINGS.ONIONLINE.WORLD.NOT_SHARED"
+msgid "Asteroid not shared"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.WAITING
+msgctxt "STRINGS.ONIONLINE.WORLD.WAITING"
+msgid "Waiting for asteroid data"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.RECONNECTING
+msgctxt "STRINGS.ONIONLINE.WORLD.RECONNECTING"
+msgid "Connection interrupted; waiting to reconnect"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.CONNECTED
+msgctxt "STRINGS.ONIONLINE.WORLD.CONNECTED"
+msgid "Data connection active"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.LOCAL
+msgctxt "STRINGS.ONIONLINE.WORLD.LOCAL"
+msgid "Local asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.LAST_RECEIVED
+msgctxt "STRINGS.ONIONLINE.WORLD.LAST_RECEIVED"
+msgid "Last received: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.INSPECT_HINT
+msgctxt "STRINGS.ONIONLINE.WORLD.INSPECT_HINT"
+msgid "Select a cell to inspect it"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.UNKNOWN_CELL
+msgctxt "STRINGS.ONIONLINE.WORLD.UNKNOWN_CELL"
+msgid "Unexplored; no information available."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.CELL_DETAILS
+msgctxt "STRINGS.ONIONLINE.WORLD.CELL_DETAILS"
+msgid "X {0} · Y {1}  {2} · {3} kg · {4} °C"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.DUPES
+msgctxt "STRINGS.ONIONLINE.WORLD.DUPES"
+msgid "Duplicants: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.REFRESH
+msgctxt "STRINGS.ONIONLINE.WORLD.REFRESH"
+msgid "Refresh"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.INVALID_SNAPSHOT
+msgctxt "STRINGS.ONIONLINE.WORLD.INVALID_SNAPSHOT"
+msgid "Could not read asteroid data"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DEPENDENCY.CYCLETRIM_REQUIRED
+msgctxt "STRINGS.ONIONLINE.DEPENDENCY.CYCLETRIM_REQUIRED"
+msgid "CycleTrim must be installed and enabled"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DEPENDENCY.SPACED_OUT_REQUIRED
+msgctxt "STRINGS.ONIONLINE.DEPENDENCY.SPACED_OUT_REQUIRED"
+msgid "Spaced Out! DLC must be active"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DEPENDENCY.CAPABILITY_MISSING
+msgctxt "STRINGS.ONIONLINE.DEPENDENCY.CAPABILITY_MISSING"
+msgid "CycleTrim lacks a required capability for this system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.HOSTING.TRUSTED_NODE
+msgctxt "STRINGS.ONIONLINE.HOSTING.TRUSTED_NODE"
+msgid "Trusted simulation host"
+msgstr ""
+
+#. STRINGS.ONIONLINE.HOSTING.ACTIVE
+msgctxt "STRINGS.ONIONLINE.HOSTING.ACTIVE"
+msgid "Offline simulation hosting active"
+msgstr ""
+
+#. STRINGS.ONIONLINE.HOSTING.SYNCING
+msgctxt "STRINGS.ONIONLINE.HOSTING.SYNCING"
+msgid "Synchronizing latest state"
+msgstr ""
+
+#. STRINGS.ONIONLINE.HOSTING.RETURN_CONTROL
+msgctxt "STRINGS.ONIONLINE.HOSTING.RETURN_CONTROL"
+msgid "Resume hosting my asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.DUPE_COMMANDS
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.DUPE_COMMANDS"
+msgid "Duplicant command permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.ASTEROID_ACCESS
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.ASTEROID_ACCESS"
+msgid "Asteroid access permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.VISITOR
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.VISITOR"
+msgid "Visitor"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.COLLABORATOR
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.COLLABORATOR"
+msgid "Collaborator"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.CARETAKER
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.CARETAKER"
+msgid "Colony caretaker"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.ACCEPT_WORK
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.ACCEPT_WORK"
+msgid "Allow work for other players"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.USE_FACILITIES
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.USE_FACILITIES"
+msgid "Use shared facilities"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.TAKE_RESOURCES
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.TAKE_RESOURCES"
+msgid "Take resources"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.BUILD
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.BUILD"
+msgid "Construction"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PERMISSIONS.DECONSTRUCT
+msgctxt "STRINGS.ONIONLINE.PERMISSIONS.DECONSTRUCT"
+msgid "Deconstruction"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CLOSE
+msgctxt "STRINGS.ONIONLINE.UI.CLOSE"
+msgid "Close"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PHASE1_NOTICE
+msgctxt "STRINGS.ONIONLINE.UI.PHASE1_NOTICE"
+msgid "Each player manages their own planet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ENABLED
+msgctxt "STRINGS.ONIONLINE.UI.ENABLED"
+msgid "Enabled"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.DISABLED
+msgctxt "STRINGS.ONIONLINE.UI.DISABLED"
+msgid "Disabled"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ROOM_NAME
+msgctxt "STRINGS.ONIONLINE.UI.ROOM_NAME"
+msgid "Lobby name"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PORT
+msgctxt "STRINGS.ONIONLINE.UI.PORT"
+msgid "Port"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.OPTIONAL
+msgctxt "STRINGS.ONIONLINE.UI.OPTIONAL"
+msgid "Optional"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.REFRESH
+msgctxt "STRINGS.ONIONLINE.UI.REFRESH"
+msgid "Refresh"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CANCEL
+msgctxt "STRINGS.ONIONLINE.UI.CANCEL"
+msgid "Cancel"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ROOM_CODE
+msgctxt "STRINGS.ONIONLINE.UI.ROOM_CODE"
+msgid "System code appears after creating or joining"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.START_GAME
+msgctxt "STRINGS.ONIONLINE.UI.START_GAME"
+msgid "Start game"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ENTER_GAME
+msgctxt "STRINGS.ONIONLINE.UI.ENTER_GAME"
+msgid "Continue setup"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.LEAVE
+msgctxt "STRINGS.ONIONLINE.UI.LEAVE"
+msgid "Leave system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CHAT_PLACEHOLDER
+msgctxt "STRINGS.ONIONLINE.UI.CHAT_PLACEHOLDER"
+msgid "Enter a message…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.SEND
+msgctxt "STRINGS.ONIONLINE.UI.SEND"
+msgid "Send"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CONNECTING
+msgctxt "STRINGS.ONIONLINE.UI.CONNECTING"
+msgid "Connecting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CONNECTED
+msgctxt "STRINGS.ONIONLINE.UI.CONNECTED"
+msgid "Connected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.RECONNECTING
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECTING"
+msgid "Reconnecting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.NEXT_RETRY
+msgctxt "STRINGS.ONIONLINE.UI.NEXT_RETRY"
+msgid "Retrying in {0}s"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.RECONNECTED
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECTED"
+msgid "Connection restored"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.RECONNECT_FAILED
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_FAILED"
+msgid "Could not reconnect"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CONNECTION_QUALITY
+msgctxt "STRINGS.ONIONLINE.UI.CONNECTION_QUALITY"
+msgid "Connection status"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.LATENCY
+msgctxt "STRINGS.ONIONLINE.UI.LATENCY"
+msgid "Latency {0} ms"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PACKET_LOSS
+msgctxt "STRINGS.ONIONLINE.UI.PACKET_LOSS"
+msgid "Packet loss {0}%"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.SLOW_CONNECTION
+msgctxt "STRINGS.ONIONLINE.UI.SLOW_CONNECTION"
+msgid "Slow connection; waiting for data"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.SYNCHRONIZING
+msgctxt "STRINGS.ONIONLINE.UI.SYNCHRONIZING"
+msgid "Synchronizing"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.WAITING_FOR_SYNC
+msgctxt "STRINGS.ONIONLINE.UI.WAITING_FOR_SYNC"
+msgid "Waiting for synchronization"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.NOT_CONNECTED
+msgctxt "STRINGS.ONIONLINE.UI.NOT_CONNECTED"
+msgid "Not connected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.NO_PLAYERS
+msgctxt "STRINGS.ONIONLINE.UI.NO_PLAYERS"
+msgid "Not in a system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.NO_ROOMS
+msgctxt "STRINGS.ONIONLINE.UI.NO_ROOMS"
+msgid "No systems found. Refresh or join using a system code."
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.LOBBY_SUBTITLE
+msgctxt "STRINGS.ONIONLINE.UI.LOBBY_SUBTITLE"
+msgid "Join a lobby and chat with friends"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PROFILE
+msgctxt "STRINGS.ONIONLINE.UI.PROFILE"
+msgid "Player"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CONNECTION
+msgctxt "STRINGS.ONIONLINE.UI.CONNECTION"
+msgid "Connection"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ROOM_SETTINGS
+msgctxt "STRINGS.ONIONLINE.UI.ROOM_SETTINGS"
+msgid "Star system settings"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ROOM_LIST
+msgctxt "STRINGS.ONIONLINE.UI.ROOM_LIST"
+msgid "Available star systems"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.DIRECT_JOIN
+msgctxt "STRINGS.ONIONLINE.UI.DIRECT_JOIN"
+msgid "Join by code"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.JOIN_HINT
+msgctxt "STRINGS.ONIONLINE.UI.JOIN_HINT"
+msgid "Paste a system code or enter IP:port"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.EMPTY_TITLE
+msgctxt "STRINGS.ONIONLINE.UI.EMPTY_TITLE"
+msgid "No lobbies found"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.EMPTY_HINT
+msgctxt "STRINGS.ONIONLINE.UI.EMPTY_HINT"
+msgid "Refresh the list or join with a system code."
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.MEMBERS
+msgctxt "STRINGS.ONIONLINE.UI.MEMBERS"
+msgid "Lobby members"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.INVITE
+msgctxt "STRINGS.ONIONLINE.UI.INVITE"
+msgid "Invite friends"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CHAT_TITLE
+msgctxt "STRINGS.ONIONLINE.UI.CHAT_TITLE"
+msgid "Chat"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.CHAT_EMPTY
+msgctxt "STRINGS.ONIONLINE.UI.CHAT_EMPTY"
+msgid "No messages yet"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.HOST
+msgctxt "STRINGS.ONIONLINE.UI.HOST"
+msgid "Host"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.YOU
+msgctxt "STRINGS.ONIONLINE.UI.YOU"
+msgid "You"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.OPEN_SLOT
+msgctxt "STRINGS.ONIONLINE.UI.OPEN_SLOT"
+msgid "Waiting for a friend"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.ROOM_TAG
+msgctxt "STRINGS.ONIONLINE.UI.ROOM_TAG"
+msgid "Online system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PREVIEW
+msgctxt "STRINGS.ONIONLINE.UI.PREVIEW"
+msgid "Development preview"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PASSWORD_HINT
+msgctxt "STRINGS.ONIONLINE.UI.PASSWORD_HINT"
+msgid "Also enter the password here when joining"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.WAIT_HOST
+msgctxt "STRINGS.ONIONLINE.UI.WAIT_HOST"
+msgid "Waiting for the host to start"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.ONLINE_DISABLED
+msgctxt "STRINGS.ONIONLINE.ERROR.ONLINE_DISABLED"
+msgid "Enable online play first"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_NAME
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_NAME"
+msgid "Player name must contain 1 to 32 characters"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_ROOM_NAME
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_ROOM_NAME"
+msgid "System name must contain 1 to 64 characters"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_ADDRESS
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_ADDRESS"
+msgid "Invalid system code or IP and port"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PASSWORD_TOO_LONG
+msgctxt "STRINGS.ONIONLINE.ERROR.PASSWORD_TOO_LONG"
+msgid "Password is limited to 128 characters"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.WRONG_PASSWORD
+msgctxt "STRINGS.ONIONLINE.ERROR.WRONG_PASSWORD"
+msgid "Incorrect system password"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PROTOCOL_MISMATCH
+msgctxt "STRINGS.ONIONLINE.ERROR.PROTOCOL_MISMATCH"
+msgid "Incompatible network protocol. Both players must install the same test version."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_PACKET
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_PACKET"
+msgid "Invalid network message"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HANDSHAKE_REQUIRED
+msgctxt "STRINGS.ONIONLINE.ERROR.HANDSHAKE_REQUIRED"
+msgid "Connection handshake required"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CONNECTION_REJECTED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECTION_REJECTED"
+msgid "Connection rejected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.ROOM_FULL
+msgctxt "STRINGS.ONIONLINE.ERROR.ROOM_FULL"
+msgid "Lobby is full"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HOST_ONLY
+msgctxt "STRINGS.ONIONLINE.ERROR.HOST_ONLY"
+msgid "Only the host can perform this action"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CHAT_RATE_LIMITED
+msgctxt "STRINGS.ONIONLINE.ERROR.CHAT_RATE_LIMITED"
+msgid "Chat rate limit exceeded"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_CHAT_OR_RATE
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_CHAT_OR_RATE"
+msgid "Message is empty or too long or sent too quickly"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.ALREADY_CONNECTED
+msgctxt "STRINGS.ONIONLINE.ERROR.ALREADY_CONNECTED"
+msgid "Leave the current system first"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.ALREADY_IN_GAME
+msgctxt "STRINGS.ONIONLINE.ERROR.ALREADY_IN_GAME"
+msgid "A colony is already running; it will not be replaced automatically"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CONNECT_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECT_FAILED"
+msgid "Could not connect; check the address and firewall"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.LISTEN_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.LISTEN_FAILED"
+msgid "System listener failed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HOST_DISCONNECTED
+msgctxt "STRINGS.ONIONLINE.ERROR.HOST_DISCONNECTED"
+msgid "Connection to the host was lost"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.RECONNECTING
+msgctxt "STRINGS.ONIONLINE.ERROR.RECONNECTING"
+msgid "Connection interrupted; reconnecting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.RECONNECT_EXPIRED
+msgctxt "STRINGS.ONIONLINE.ERROR.RECONNECT_EXPIRED"
+msgid "Reconnect timed out; join the system again"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.RESUME_INVALID
+msgctxt "STRINGS.ONIONLINE.ERROR.RESUME_INVALID"
+msgid "Could not restore the connection; join the system again"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HOST_LEFT
+msgctxt "STRINGS.ONIONLINE.ERROR.HOST_LEFT"
+msgid "The host has left the system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HOST_CHANGED
+msgctxt "STRINGS.ONIONLINE.ERROR.HOST_CHANGED"
+msgid "The host has changed; join the system again"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CHAT_QUEUE_FULL
+msgctxt "STRINGS.ONIONLINE.ERROR.CHAT_QUEUE_FULL"
+msgid "Too many pending messages; wait for the connection to recover"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CHAT_DELIVERY_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.CHAT_DELIVERY_FAILED"
+msgid "Message could not be delivered"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CHAT_HISTORY_EXPIRED
+msgctxt "STRINGS.ONIONLINE.ERROR.CHAT_HISTORY_EXPIRED"
+msgid "Some messages sent while disconnected are no longer available"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CONNECTION_CLOSED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECTION_CLOSED"
+msgid "Connection closed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_FAILED"
+msgid "Network operation failed; check connection settings"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.STEAM_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.STEAM_UNAVAILABLE"
+msgid "Steam networking is unavailable; LAN direct connection is available"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.STEAM_SEND_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.STEAM_SEND_FAILED"
+msgid "Steam message delivery failed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.STEAM_LOBBY_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.STEAM_LOBBY_FAILED"
+msgid "Steam system operation failed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.LAN_DISCOVERY_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.LAN_DISCOVERY_UNAVAILABLE"
+msgid "LAN discovery unavailable; direct system-code connection still works"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.DEPENDENCIES_REQUIRED
+msgctxt "STRINGS.ONIONLINE.ERROR.DEPENDENCIES_REQUIRED"
+msgid "A valid player name and active CycleTrim and Spaced Out! are required"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.LOCAL_PAUSE
+msgctxt "STRINGS.ONIONLINE.TIME.LOCAL_PAUSE"
+msgid "Release local pause before voting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PLAYER_OFFLINE
+msgctxt "STRINGS.ONIONLINE.UI.PLAYER_OFFLINE"
+msgid "Offline"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.PUBLIC_STEAM
+msgctxt "STRINGS.ONIONLINE.ROOM.PUBLIC_STEAM"
+msgid "Public lobbies"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.WAITING
+msgctxt "STRINGS.ONIONLINE.ROOM.WAITING"
+msgid "Waiting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.IN_PROGRESS
+msgctxt "STRINGS.ONIONLINE.ROOM.IN_PROGRESS"
+msgid "In progress"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.JOIN_RUNNING
+msgctxt "STRINGS.ONIONLINE.ROOM.JOIN_RUNNING"
+msgid "Join game"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ROOM.FULL
+msgctxt "STRINGS.ONIONLINE.ROOM.FULL"
+msgid "Full"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.HOME
+msgctxt "STRINGS.ONIONLINE.SYSTEM.HOME"
+msgid "My star system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.DEFAULT_NAME
+msgctxt "STRINGS.ONIONLINE.SYSTEM.DEFAULT_NAME"
+msgid "{0}'s System"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.MAP
+msgctxt "STRINGS.ONIONLINE.SYSTEM.MAP"
+msgid "Systems and travel"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.OPEN
+msgctxt "STRINGS.ONIONLINE.SYSTEM.OPEN"
+msgid "Open my star system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.BROWSE
+msgctxt "STRINGS.ONIONLINE.SYSTEM.BROWSE"
+msgid "Find other star systems"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.CHAT
+msgctxt "STRINGS.ONIONLINE.SYSTEM.CHAT"
+msgid "Communications"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.OFFLINE
+msgctxt "STRINGS.ONIONLINE.SYSTEM.OFFLINE"
+msgid "You are home. Your colony continues without opening a system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TIME.INDEPENDENT
+msgctxt "STRINGS.ONIONLINE.TIME.INDEPENDENT"
+msgid "Each asteroid runs and pauses independently"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENGINE.TITLE
+msgctxt "STRINGS.ONIONLINE.ENGINE.TITLE"
+msgid "Planetary Engine"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENGINE.TOOLTIP
+msgctxt "STRINGS.ONIONLINE.ENGINE.TOOLTIP"
+msgid "Read the Planetary Engine article in the in-game database."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENGINE.STORY
+msgctxt "STRINGS.ONIONLINE.ENGINE.STORY"
+msgid "A folded page is tucked inside the printing pod manual. It reads: \"This device may also be used to adjust planetary position.\" The fine print says: \"Please remain inside the planet.\""
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENGINE.PREVIEW
+msgctxt "STRINGS.ONIONLINE.ENGINE.PREVIEW"
+msgid "Communicate with system members and share explored regions. Each player manages their own planet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENGINE.CHART_HELP
+msgctxt "STRINGS.ONIONLINE.ENGINE.CHART_HELP"
+msgid "To create or browse systems use the multiplayer entry in the native star map. This article is informational and does not consume a Printing Pod reward."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.PREFER_STEAM
+msgctxt "STRINGS.ONIONLINE.OPTIONS.PREFER_STEAM"
+msgid "Prefer Steam public systems"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.PREFER_STEAM_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.PREFER_STEAM_HINT"
+msgid "Prefer Steam discovery at startup. Disable to default to LAN; manual switching remains available."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.LAN_PORT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.LAN_PORT"
+msgid "Default LAN port"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.LAN_PORT_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.LAN_PORT_HINT"
+msgid "Initial hosting port (1–65535). The system can override it. Requires a game restart."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.HANDSHAKE_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.HANDSHAKE_TIMEOUT"
+msgid "Join handshake timeout (seconds)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.HANDSHAKE_TIMEOUT_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.HANDSHAKE_TIMEOUT_HINT"
+msgid "Wait for authentication after connecting (15–120 seconds). Increase for slow networks. Applies to new connections."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.PEER_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.PEER_TIMEOUT"
+msgid "Peer timeout (seconds)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.PEER_TIMEOUT_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.PEER_TIMEOUT_HINT"
+msgid "Treat an authenticated peer as disconnected after this silence (15–180 seconds). Default 30. Applies to new connections."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.RECONNECT_WINDOW
+msgctxt "STRINGS.ONIONLINE.OPTIONS.RECONNECT_WINDOW"
+msgid "Reconnect grace period (seconds)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.RECONNECT_WINDOW_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.RECONNECT_WINDOW_HINT"
+msgid "Retry disconnected sessions and retain host seats for 30–1800 seconds. Never shorter than peer timeout. Applies to new connections; the host controls seat retention."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.CHAT_HISTORY
+msgctxt "STRINGS.ONIONLINE.OPTIONS.CHAT_HISTORY"
+msgid "Chat history limit"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.CHAT_HISTORY_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.CHAT_HISTORY_HINT"
+msgid "Keep the latest 20–500 messages in memory per system. Applies to new connections. Joining players can recover only the host's retained history; chat is not saved to disk."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.CHAT_FONT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.CHAT_FONT"
+msgid "Chat message font size"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.CHAT_FONT_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.CHAT_FONT_HINT"
+msgid "Message body font size (14–28). Does not change message length limits. Requires a game restart."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.TITLE
+msgctxt "STRINGS.ONIONLINE.MODERATION.TITLE"
+msgid "System member management"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.MANAGE
+msgctxt "STRINGS.ONIONLINE.MODERATION.MANAGE"
+msgid "Manage"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.REASON
+msgctxt "STRINGS.ONIONLINE.MODERATION.REASON"
+msgid "Reason (optional; up to 128 characters)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.KICK
+msgctxt "STRINGS.ONIONLINE.MODERATION.KICK"
+msgid "Kick from system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.BAN
+msgctxt "STRINGS.ONIONLINE.MODERATION.BAN"
+msgid "Kick and ban"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.BANS
+msgctxt "STRINGS.ONIONLINE.MODERATION.BANS"
+msgid "Bans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.UNBAN
+msgctxt "STRINGS.ONIONLINE.MODERATION.UNBAN"
+msgid "Unban"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.CLOSE
+msgctxt "STRINGS.ONIONLINE.MODERATION.CLOSE"
+msgid "Close"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.EMPTY
+msgctxt "STRINGS.ONIONLINE.MODERATION.EMPTY"
+msgid "No bans in this system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.SCOPE_STEAM
+msgctxt "STRINGS.ONIONLINE.MODERATION.SCOPE_STEAM"
+msgid "Bans use the Steam account verified by the connection. Once a colony is loaded, bans are stored with it. Save the game to keep changes. Player saves are preserved."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODERATION.SCOPE_LAN
+msgctxt "STRINGS.ONIONLINE.MODERATION.SCOPE_LAN"
+msgid "LAN only revokes known system credentials; a fresh identity can rejoin. There is no account ban. Records last until this system closes. Saves are preserved."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLAYER_KICKED
+msgctxt "STRINGS.ONIONLINE.ERROR.PLAYER_KICKED"
+msgid "The host removed you from the system. Your local colony can continue."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLAYER_BANNED
+msgctxt "STRINGS.ONIONLINE.ERROR.PLAYER_BANNED"
+msgid "The host has banned you from this system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.MODERATION_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.MODERATION_FAILED"
+msgid "Could not apply the action; the member may have left or the ban list is full."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.SELECT
+msgctxt "STRINGS.ONIONLINE.PLANET.SELECT"
+msgid "Choose another asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.PLAYER_COUNT
+msgctxt "STRINGS.ONIONLINE.UI.PLAYER_COUNT"
+msgid "{0} players"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_SYSTEM_FULL
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_SYSTEM_FULL"
+msgid "No arrival positions remain in this system. You can continue browsing."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.SELECTED
+msgctxt "STRINGS.ONIONLINE.PLANET.SELECTED"
+msgid "Selected asteroid:"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.NONE
+msgctxt "STRINGS.ONIONLINE.PLANET.NONE"
+msgid "Not ready"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.OWNED_NAME
+msgctxt "STRINGS.ONIONLINE.PLANET.OWNED_NAME"
+msgid "{0}'s {1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.REMOTE_VIEW
+msgctxt "STRINGS.ONIONLINE.PLANET.REMOTE_VIEW"
+msgid "View this asteroid with its owner-approved visibility. Unshared interiors remain hidden."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.RETURN_HOME
+msgctxt "STRINGS.ONIONLINE.PLANET.RETURN_HOME"
+msgid "Return to my system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.CLOSE_SYSTEM
+msgctxt "STRINGS.ONIONLINE.PLANET.CLOSE_SYSTEM"
+msgid "Close public system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.HOME_READY
+msgctxt "STRINGS.ONIONLINE.PLANET.HOME_READY"
+msgid "Your computer simulates your asteroid. Its identity is stored in your native save."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.ADMITTED
+msgctxt "STRINGS.ONIONLINE.PLANET.ADMITTED"
+msgid "Asteroid admitted. Select a member to observe their authorized map."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET.WAITING
+msgctxt "STRINGS.ONIONLINE.PLANET.WAITING"
+msgid "Waiting for asteroid admission. Chat is available."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_INVALID_MANIFEST
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_INVALID_MANIFEST"
+msgid "Invalid asteroid identity or size; admission was not registered."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_IDENTITY_VERSION
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_IDENTITY_VERSION"
+msgid "The online identity version in this save is unsupported."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_NOT_READY
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_NOT_READY"
+msgid "Load your colony and select an asteroid first."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_DUPLICATE_BRANCH
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_DUPLICATE_BRANCH"
+msgid "This asteroid or its online branch is already in the system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_SELECTION_LOCKED
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_SELECTION_LOCKED"
+msgid "Return home before selecting another asteroid."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_OWNER_ALREADY_ADMITTED
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_OWNER_ALREADY_ADMITTED"
+msgid "You already have a planet in this system. Leave the original connection first."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_COLONY_CHANGED
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_COLONY_CHANGED"
+msgid "A different colony was loaded; the previous system connection was closed."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.PLAYERS
+msgctxt "STRINGS.ONIONLINE.MAP.PLAYERS"
+msgid "Players and asteroids"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.CHOOSE_POSITION
+msgctxt "STRINGS.ONIONLINE.MAP.CHOOSE_POSITION"
+msgid "Select an empty hex for the rift exit"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.POSITION
+msgctxt "STRINGS.ONIONLINE.MAP.POSITION"
+msgid "Rift exit: {0} / {1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.CREATE_PLANET
+msgctxt "STRINGS.ONIONLINE.MAP.CREATE_PLANET"
+msgid "Create a new asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.LOAD_PLANET
+msgctxt "STRINGS.ONIONLINE.MAP.LOAD_PLANET"
+msgid "Choose an existing save"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.RIFT_ARRIVE
+msgctxt "STRINGS.ONIONLINE.MAP.RIFT_ARRIVE"
+msgid "Bring my asteroid through the rift"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.OBSERVE
+msgctxt "STRINGS.ONIONLINE.MAP.OBSERVE"
+msgid "Observe selected asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.INITIALIZING
+msgctxt "STRINGS.ONIONLINE.MAP.INITIALIZING"
+msgid "Waiting for asteroid initialization"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MAP.PREVIEW
+msgctxt "STRINGS.ONIONLINE.MAP.PREVIEW"
+msgid "Previewing this system. Select a landing to bring your own asteroid."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_CHOOSE_POSITION
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_CHOOSE_POSITION"
+msgid "Select an empty position and wait for host confirmation first."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_INVALID_POSITION
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_INVALID_POSITION"
+msgid "The landing is outside this system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PLANET_POSITION_TAKEN
+msgctxt "STRINGS.ONIONLINE.ERROR.PLANET_POSITION_TAKEN"
+msgid "Another player claimed this position. Select another hex."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.LEFT_ROOM
+msgctxt "STRINGS.ONIONLINE.ERROR.LEFT_ROOM"
+msgid "Returned to your home system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.LEAVE_UNCONFIRMED
+msgctxt "STRINGS.ONIONLINE.ERROR.LEAVE_UNCONFIRMED"
+msgid "Departure was not confirmed. No other system was joined; try again later."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.TITLE
+msgctxt "STRINGS.ONIONLINE.WORK.TITLE"
+msgid "Task plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.MINE
+msgctxt "STRINGS.ONIONLINE.WORK.MINE"
+msgid "My plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.MEMBER
+msgctxt "STRINGS.ONIONLINE.WORK.MEMBER"
+msgid "Member plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.MERGED
+msgctxt "STRINGS.ONIONLINE.WORK.MERGED"
+msgid "Merged orders"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.PERSONAL
+msgctxt "STRINGS.ONIONLINE.WORK.PERSONAL"
+msgid "Personal plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.HINT
+msgctxt "STRINGS.ONIONLINE.WORK.HINT"
+msgid "Your plans appear immediately. Confirmed plans enter the merged view. Viewing another member requires permission."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.CONFIRMED
+msgctxt "STRINGS.ONIONLINE.WORK.CONFIRMED"
+msgid "Confirmed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.CANCEL_PLAN
+msgctxt "STRINGS.ONIONLINE.WORK.CANCEL_PLAN"
+msgid "Cancel task"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.CANCELLING
+msgctxt "STRINGS.ONIONLINE.WORK.CANCELLING"
+msgid "Cancelling…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.CANCELLED
+msgctxt "STRINGS.ONIONLINE.WORK.CANCELLED"
+msgid "Cancelled; refreshing"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.CANCEL_REJECTED
+msgctxt "STRINGS.ONIONLINE.WORK.CANCEL_REJECTED"
+msgid "Cancel failed; refresh and retry"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.DIG
+msgctxt "STRINGS.ONIONLINE.WORK.DIG"
+msgid "Dig"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.DRAFT
+msgctxt "STRINGS.ONIONLINE.WORK.DRAFT"
+msgid "Local draft"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.PENDING
+msgctxt "STRINGS.ONIONLINE.WORK.PENDING"
+msgid "Syncing…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.UNCONFIRMED
+msgctxt "STRINGS.ONIONLINE.WORK.UNCONFIRMED"
+msgid "Awaiting confirmation"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.WORK.UNAVAILABLE"
+msgid "Online execution unavailable"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.REJECTED
+msgctxt "STRINGS.ONIONLINE.WORK.REJECTED"
+msgid "Rejected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.EMPTY
+msgctxt "STRINGS.ONIONLINE.WORK.EMPTY"
+msgid "No plans in this view, or viewing is not authorized."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.PROPOSE_DIG
+msgctxt "STRINGS.ONIONLINE.WORK.PROPOSE_DIG"
+msgid "Plan a dig"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.NAVIGATION
+msgctxt "STRINGS.ONIONLINE.ART.NAVIGATION"
+msgid "Scroll to zoom · Right-drag to pan · Click a hex"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.PLAYERS_COUNT
+msgctxt "STRINGS.ONIONLINE.ART.PLAYERS_COUNT"
+msgid "{0} members"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.SYSTEM_MAP
+msgctxt "STRINGS.ONIONLINE.ART.SYSTEM_MAP"
+msgid "System chart"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.PREVIOUS_PAGE
+msgctxt "STRINGS.ONIONLINE.ART.PREVIOUS_PAGE"
+msgid "Previous page"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.NEXT_PAGE
+msgctxt "STRINGS.ONIONLINE.ART.NEXT_PAGE"
+msgid "Next page"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ART.WAITING_LANDING
+msgctxt "STRINGS.ONIONLINE.ART.WAITING_LANDING"
+msgid "Landing not selected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORLD.TRANSFER_BUSY
+msgctxt "STRINGS.ONIONLINE.WORLD.TRANSFER_BUSY"
+msgid "Map transfer busy; waiting for capacity"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.TITLE
+msgctxt "STRINGS.ONIONLINE.TEAM.TITLE"
+msgid "Team and shared control"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.CREATE
+msgctxt "STRINGS.ONIONLINE.TEAM.CREATE"
+msgid "Create team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ACCEPT
+msgctxt "STRINGS.ONIONLINE.TEAM.ACCEPT"
+msgid "Accept invitation"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.LEAVE
+msgctxt "STRINGS.ONIONLINE.TEAM.LEAVE"
+msgid "Leave team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.PLAYERS
+msgctxt "STRINGS.ONIONLINE.TEAM.PLAYERS"
+msgid "Members and online players"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.PERMISSIONS
+msgctxt "STRINGS.ONIONLINE.TEAM.PERMISSIONS"
+msgid "Separate permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.SELECT_PLAYER
+msgctxt "STRINGS.ONIONLINE.TEAM.SELECT_PLAYER"
+msgid "Select a player"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.INVITE
+msgctxt "STRINGS.ONIONLINE.TEAM.INVITE"
+msgid "Invite to team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.VIEW_PLANS
+msgctxt "STRINGS.ONIONLINE.TEAM.VIEW_PLANS"
+msgid "View other members’ plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ISSUE_TASKS
+msgctxt "STRINGS.ONIONLINE.TEAM.ISSUE_TASKS"
+msgid "Publish tasks such as digging"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.COMMAND_DUPES
+msgctxt "STRINGS.ONIONLINE.TEAM.COMMAND_DUPES"
+msgid "Command duplicants (unavailable)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ADMINISTRATOR
+msgctxt "STRINGS.ONIONLINE.TEAM.ADMINISTRATOR"
+msgid "Administrator"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.TRANSFER
+msgctxt "STRINGS.ONIONLINE.TEAM.TRANSFER"
+msgid "Hand over administration"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.MEMBER
+msgctxt "STRINGS.ONIONLINE.TEAM.MEMBER"
+msgid "Team member"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.NONMEMBER
+msgctxt "STRINGS.ONIONLINE.TEAM.NONMEMBER"
+msgid "Outside the team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ONLINE
+msgctxt "STRINGS.ONIONLINE.TEAM.ONLINE"
+msgid "Online"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.OFFLINE
+msgctxt "STRINGS.ONIONLINE.TEAM.OFFLINE"
+msgid "Offline · permissions retained"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.OFFLINE_MEMBER
+msgctxt "STRINGS.ONIONLINE.TEAM.OFFLINE_MEMBER"
+msgid "Offline member"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.PREVIOUS
+msgctxt "STRINGS.ONIONLINE.TEAM.PREVIOUS"
+msgid "Previous"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.NEXT
+msgctxt "STRINGS.ONIONLINE.TEAM.NEXT"
+msgid "Next"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.STATE_NONE
+msgctxt "STRINGS.ONIONLINE.TEAM.STATE_NONE"
+msgid "Outside the team. The host can create a team for its loaded planet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.STATE_RUNNING
+msgctxt "STRINGS.ONIONLINE.TEAM.STATE_RUNNING"
+msgid "Host simulation running · {0} team members online"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.STATE_STOPPED
+msgctxt "STRINGS.ONIONLINE.TEAM.STATE_STOPPED"
+msgid "Host simulation unavailable. New team commands are paused."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.STATE_WAITING
+msgctxt "STRINGS.ONIONLINE.TEAM.STATE_WAITING"
+msgid "Waiting for a team member to come online."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.STATE_INVITED
+msgctxt "STRINGS.ONIONLINE.TEAM.STATE_INVITED"
+msgid "You are invited. Accepting does not automatically grant task or duplicant permissions."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.PERMISSION_HINT
+msgctxt "STRINGS.ONIONLINE.TEAM.PERMISSION_HINT"
+msgid "Permissions are separate. Going offline retains permissions and accepted tasks; leaving the team revokes permissions."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.LAST_ADMINISTRATOR
+msgctxt "STRINGS.ONIONLINE.TEAM.LAST_ADMINISTRATOR"
+msgid "The last administrator must hand over administration before leaving."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.PENDING
+msgctxt "STRINGS.ONIONLINE.TEAM.PENDING"
+msgid "Request sent. Waiting for the host to confirm."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ADMIN_ONLY
+msgctxt "STRINGS.ONIONLINE.TEAM.ADMIN_ONLY"
+msgid "Only team administrators can invite players or change member permissions."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.NATIVE_NOTICE
+msgctxt "STRINGS.ONIONLINE.TEAM.NATIVE_NOTICE"
+msgid "Duplicant permissions can be configured. Direct commands are not available yet; authorized digs use normal local duplicant behavior."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.HOST_NOTICE
+msgctxt "STRINGS.ONIONLINE.TEAM.HOST_NOTICE"
+msgid "Teams currently manage only the host’s loaded planet. Guest planet hosting is not available yet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_HOST_NATIVE
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_HOST_NATIVE"
+msgid "A loaded and admitted host planet is required."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_AUTHORITY_CHANGED
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_AUTHORITY_CHANGED"
+msgid "The planet or save changed. The old team is inactive; create a new system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_BUDGET
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_BUDGET"
+msgid "Too many team requests. Wait for pending requests to finish."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_DENIED
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_DENIED"
+msgid "The host rejected this change. Check your administrator role, invitation, and permissions."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_UNAVAILABLE"
+msgid "The team is unavailable. Wait for the connection or host planet to recover."
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.ALLOW_MAP
+msgctxt "STRINGS.ONIONLINE.WORK.ALLOW_MAP"
+msgid "Share map"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.ALLOW_PLANS
+msgctxt "STRINGS.ONIONLINE.WORK.ALLOW_PLANS"
+msgid "Share plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.ALLOW_TASKS
+msgctxt "STRINGS.ONIONLINE.WORK.ALLOW_TASKS"
+msgid "Allow orders"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.ERROR_RECEIPT_BUDGET
+msgctxt "STRINGS.ONIONLINE.TEAM.ERROR_RECEIPT_BUDGET"
+msgid "This team cannot accept further management changes. Create a new system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.TEMPERATURE
+msgctxt "STRINGS.ONIONLINE.VIEW.TEMPERATURE"
+msgid "Temperature"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.WAITING_REGION
+msgctxt "STRINGS.ONIONLINE.VIEW.WAITING_REGION"
+msgid "Loading visible region…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.REGION_LIVE
+msgctxt "STRINGS.ONIONLINE.VIEW.REGION_LIVE"
+msgid "Live region · read only"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.REGION
+msgctxt "STRINGS.ONIONLINE.VIEW.REGION"
+msgid "X {0} Y {1} · {2}×{3}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.WAITING_DETAILS
+msgctxt "STRINGS.ONIONLINE.VIEW.WAITING_DETAILS"
+msgid "Loading cell details…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VIEW.CELL_PENDING
+msgctxt "STRINGS.ONIONLINE.VIEW.CELL_PENDING"
+msgid "X {0} · Y {1} · Loading details…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.WORK.RESULT_UNCERTAIN
+msgctxt "STRINGS.ONIONLINE.WORK.RESULT_UNCERTAIN"
+msgid "Some order results are uncertain. The final execution state cannot yet be confirmed."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.MEMBERS_TAB
+msgctxt "STRINGS.ONIONLINE.TEAM.MEMBERS_TAB"
+msgid "Member permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.MY_DUPES_TAB
+msgctxt "STRINGS.ONIONLINE.TEAM.MY_DUPES_TAB"
+msgid "My duplicants"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DUPE_DELEGATION
+msgctxt "STRINGS.ONIONLINE.TEAM.DUPE_DELEGATION"
+msgid "Delegation by the original owner"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.SELECT_OWNED_DUPE
+msgctxt "STRINGS.ONIONLINE.TEAM.SELECT_OWNED_DUPE"
+msgid "Select one of your duplicants"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.OWNED_DUPE_COUNT
+msgctxt "STRINGS.ONIONLINE.TEAM.OWNED_DUPE_COUNT"
+msgid "Your registered duplicants on this planet: {0}. Shared with the team: {1}."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.NO_OWNED_DUPES
+msgctxt "STRINGS.ONIONLINE.TEAM.NO_OWNED_DUPES"
+msgid "You have no registered duplicants on this planet. Other owners must delegate their own duplicants."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.REGISTERED_DUPE_NUMBER
+msgctxt "STRINGS.ONIONLINE.TEAM.REGISTERED_DUPE_NUMBER"
+msgid "Registered duplicant {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DUPE_DELEGATED
+msgctxt "STRINGS.ONIONLINE.TEAM.DUPE_DELEGATED"
+msgid "Shared with the team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DUPE_NOT_DELEGATED
+msgctxt "STRINGS.ONIONLINE.TEAM.DUPE_NOT_DELEGATED"
+msgid "Not delegated to the team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DELEGATE_SELECTED
+msgctxt "STRINGS.ONIONLINE.TEAM.DELEGATE_SELECTED"
+msgid "Share this duplicant with the team"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.REVOKE_SELECTED
+msgctxt "STRINGS.ONIONLINE.TEAM.REVOKE_SELECTED"
+msgid "Revoke this duplicant’s team delegation"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DELEGATE_ALL_OWNED
+msgctxt "STRINGS.ONIONLINE.TEAM.DELEGATE_ALL_OWNED"
+msgid "Share all my registered duplicants"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.REVOKE_ALL_OWNED
+msgctxt "STRINGS.ONIONLINE.TEAM.REVOKE_ALL_OWNED"
+msgid "Revoke all my team delegations"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.CANCEL_DELEGATION_BATCH
+msgctxt "STRINGS.ONIONLINE.TEAM.CANCEL_DELEGATION_BATCH"
+msgid "Stop remaining batch operations"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DELEGATION_BATCH_PENDING
+msgctxt "STRINGS.ONIONLINE.TEAM.DELEGATION_BATCH_PENDING"
+msgid "Requesting changes one duplicant at a time: {0} remaining. Stopping does not undo confirmed changes."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TEAM.DUPE_OWNER_HINT
+msgctxt "STRINGS.ONIONLINE.TEAM.DUPE_OWNER_HINT"
+msgid "Team control requires both the member’s command permission and the owner’s explicit delegation for that duplicant. This changes only your team delegation and preserves ownership. Native commands are not available yet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.HINT
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.HINT"
+msgid "Click or drag to select, then plan a dig. Right-drag to pan."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.LEGEND
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.LEGEND"
+msgid "Slash: draft · Box: syncing · Cross: confirmed · Red: rejected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.PRIORITY
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.PRIORITY"
+msgid "Priority {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.SELECTED
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.SELECTED"
+msgid "{0} cells selected · Priority {1} · Plan a dig to submit"
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.TOO_LARGE
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.TOO_LARGE"
+msgid "Select at most {0} cells per order. Reduce the selection."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.UNEXPLORED
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.UNEXPLORED"
+msgid "The selection includes unexplored cells. Select again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.SOLID_ONLY
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.SOLID_ONLY"
+msgid "Select solid terrain for digging."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.STALE_SELECTION
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.STALE_SELECTION"
+msgid "The observed world changed. Wait for the map, then select again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.LOCAL_DRAFT
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.LOCAL_DRAFT"
+msgid "Local draft kept but not sent. Check permission and connection."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.NOT_AUTHORIZED
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.NOT_AUTHORIZED"
+msgid "Task permission was denied. Your draft remains in My plans."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.NATIVE_CONFLICT
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.NATIVE_CONFLICT"
+msgid "An existing order or construction conflicts with this plan."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.CAPACITY
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.CAPACITY"
+msgid "The plan queue is full. A new draft cannot be added."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.LAYER_DENIED
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.LAYER_DENIED"
+msgid "This plan layer is not authorized. Ask the planet manager for access."
+msgstr ""
+
+#. STRINGS.ONIONLINE.TASKVIEW.WITH_PLANS
+msgctxt "STRINGS.ONIONLINE.TASKVIEW.WITH_PLANS"
+msgid "Observation and task plans"
+msgstr ""
+
+#. STRINGS.ONIONLINE.LOBBY.INSPECT
+msgctxt "STRINGS.ONIONLINE.LOBBY.INSPECT"
+msgid "Inspect system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.LOBBY.NETWORK_SETTINGS
+msgctxt "STRINGS.ONIONLINE.LOBBY.NETWORK_SETTINGS"
+msgid "Connection settings"
+msgstr ""
+
+#. STRINGS.ONIONLINE.CHAT.LATEST
+msgctxt "STRINGS.ONIONLINE.CHAT.LATEST"
+msgid "New messages"
+msgstr ""
+
+#. STRINGS.ONIONLINE.CHAT.SYSTEM
+msgctxt "STRINGS.ONIONLINE.CHAT.SYSTEM"
+msgid "System"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.OVERVIEW
+msgctxt "STRINGS.ONIONLINE.ENTRY.OVERVIEW"
+msgid "System overview"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CAPABILITIES
+msgctxt "STRINGS.ONIONLINE.ENTRY.CAPABILITIES"
+msgid "Keep your colony, talk to other members, share views and work together."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.BROWSE
+msgctxt "STRINGS.ONIONLINE.ENTRY.BROWSE"
+msgid "Browse lobbies"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CHOOSE_SOURCE
+msgctxt "STRINGS.ONIONLINE.ENTRY.CHOOSE_SOURCE"
+msgid "Prepare to join"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.YOUR_ASTEROID
+msgctxt "STRINGS.ONIONLINE.ENTRY.YOUR_ASTEROID"
+msgid "My asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.JOIN
+msgctxt "STRINGS.ONIONLINE.ENTRY.JOIN"
+msgid "Join lobby"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CHOOSE_POSITION_STEP
+msgctxt "STRINGS.ONIONLINE.ENTRY.CHOOSE_POSITION_STEP"
+msgid "1  Choose a hex"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CHOOSE_PLANET_STEP
+msgctxt "STRINGS.ONIONLINE.ENTRY.CHOOSE_PLANET_STEP"
+msgid "2  Choose an asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CONFIRM_STEP
+msgctxt "STRINGS.ONIONLINE.ENTRY.CONFIRM_STEP"
+msgid "3  Join lobby"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.POSITION_READY
+msgctxt "STRINGS.ONIONLINE.ENTRY.POSITION_READY"
+msgid "Reserved hex: {0} / {1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.POSITION_PENDING
+msgctxt "STRINGS.ONIONLINE.ENTRY.POSITION_PENDING"
+msgid "Requesting hex: {0} / {1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.POSITION_RESERVED
+msgctxt "STRINGS.ONIONLINE.ENTRY.POSITION_RESERVED"
+msgid "Hex reserved"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.WAITING_CONFIRMATION
+msgctxt "STRINGS.ONIONLINE.ENTRY.WAITING_CONFIRMATION"
+msgid "Waiting for system…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CONNECTED
+msgctxt "STRINGS.ONIONLINE.ENTRY.CONNECTED"
+msgid "You have joined this system. Select a member's asteroid to see their shared view."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.PREVIEW
+msgctxt "STRINGS.ONIONLINE.ENTRY.PREVIEW"
+msgid "Choose an empty hex, then your asteroid. You can also talk to the members first."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.LEAVING
+msgctxt "STRINGS.ONIONLINE.ENTRY.LEAVING"
+msgid "Leaving system…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.LEAVE_PREVIEW
+msgctxt "STRINGS.ONIONLINE.ENTRY.LEAVE_PREVIEW"
+msgid "Leave this system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.SELECTED_ASTEROID
+msgctxt "STRINGS.ONIONLINE.ENTRY.SELECTED_ASTEROID"
+msgid "Selected asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.NO_PLANET
+msgctxt "STRINGS.ONIONLINE.ENTRY.NO_PLANET"
+msgid "Choose your own asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.KEEP_COLONY
+msgctxt "STRINGS.ONIONLINE.ENTRY.KEEP_COLONY"
+msgid "Your asteroid stays in your save. Chat, shared views and tasks are available; asteroid transfer is not available yet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CHOOSE_POSITION_FIRST
+msgctxt "STRINGS.ONIONLINE.ENTRY.CHOOSE_POSITION_FIRST"
+msgid "Choose an empty hex before creating an asteroid or choosing a save."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CREATE_FIRST
+msgctxt "STRINGS.ONIONLINE.ENTRY.CREATE_FIRST"
+msgid "Use the normal new game setup to choose your asteroid and Duplicants, or load an existing save."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.LOAD_HELP
+msgctxt "STRINGS.ONIONLINE.ENTRY.LOAD_HELP"
+msgid "To choose a different save, return to the main menu using the game menu."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.SELECTED_MEMBER
+msgctxt "STRINGS.ONIONLINE.ENTRY.SELECTED_MEMBER"
+msgid "Selected asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.UNKNOWN_PLAYER
+msgctxt "STRINGS.ONIONLINE.ENTRY.UNKNOWN_PLAYER"
+msgid "System member"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.RECENTER
+msgctxt "STRINGS.ONIONLINE.ENTRY.RECENTER"
+msgid "Center"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.AVAILABLE_ASTEROIDS
+msgctxt "STRINGS.ONIONLINE.ENTRY.AVAILABLE_ASTEROIDS"
+msgid "Choose your asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.CURRENT_SAVE
+msgctxt "STRINGS.ONIONLINE.ENTRY.CURRENT_SAVE"
+msgid "Choose one of the discovered asteroids in your current save for this system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.NO_ASTEROIDS
+msgctxt "STRINGS.ONIONLINE.ENTRY.NO_ASTEROIDS"
+msgid "No asteroid is ready yet. Complete the normal colony setup first."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.SELECTED
+msgctxt "STRINGS.ONIONLINE.ENTRY.SELECTED"
+msgid "Selected"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.ENGINE_MANUAL
+msgctxt "STRINGS.ONIONLINE.ENTRY.ENGINE_MANUAL"
+msgid "Printing pod manual · Addendum"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ENTRY.ENGINE_CHART
+msgctxt "STRINGS.ONIONLINE.ENTRY.ENGINE_CHART"
+msgid "Open system chart"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.MODERATION_STATE_INVALID
+msgctxt "STRINGS.ONIONLINE.ERROR.MODERATION_STATE_INVALID"
+msgid "The saved ban list is invalid. The system cannot be opened. The original data is preserved."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.MODERATION_SAVE_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.MODERATION_SAVE_FAILED"
+msgid "The ban change applies to this system but could not be stored in the colony."
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.MOVE
+msgctxt "STRINGS.ONIONLINE.DUPE.MOVE"
+msgid "Duplicant {0} → ({1}, {2})"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.CANCEL
+msgctxt "STRINGS.ONIONLINE.DUPE.CANCEL"
+msgid "Cancel move"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.ACTIVE
+msgctxt "STRINGS.ONIONLINE.DUPE.ACTIVE"
+msgid "Moving"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.COMPLETED
+msgctxt "STRINGS.ONIONLINE.DUPE.COMPLETED"
+msgid "Arrived"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.REPLACED
+msgctxt "STRINGS.ONIONLINE.DUPE.REPLACED"
+msgid "Replaced by a new order"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.REVOKED
+msgctxt "STRINGS.ONIONLINE.DUPE.REVOKED"
+msgid "Permission revoked · Move stopped"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.DISCONNECTED
+msgctxt "STRINGS.ONIONLINE.DUPE.DISCONNECTED"
+msgid "Disconnected · Move stopped"
+msgstr ""
+
+#. STRINGS.ONIONLINE.DUPE.WORLD_CHANGED
+msgctxt "STRINGS.ONIONLINE.DUPE.WORLD_CHANGED"
+msgid "Original world unloaded"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.LEGEND
+msgctxt "STRINGS.ONIONLINE.NATIVE.LEGEND"
+msgid "Local unregistered {0} · Unexplored {1} · Numbers identify players"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.DISPLAY_ONLY
+msgctxt "STRINGS.ONIONLINE.NATIVE.DISPLAY_ONLY"
+msgid "Local asteroids: display only · Travel unavailable"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.UNREGISTERED
+msgctxt "STRINGS.ONIONLINE.NATIVE.UNREGISTERED"
+msgid "Unregistered asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.UNEXPLORED
+msgctxt "STRINGS.ONIONLINE.NATIVE.UNEXPLORED"
+msgid "Unexplored"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.DISCOVERED
+msgctxt "STRINGS.ONIONLINE.NATIVE.DISCOVERED"
+msgid "Discovered asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.SELECTED
+msgctxt "STRINGS.ONIONLINE.NATIVE.SELECTED"
+msgid "Local native asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.COORDINATES
+msgctxt "STRINGS.ONIONLINE.NATIVE.COORDINATES"
+msgid "Native coordinates ({0}, {1})"
+msgstr ""
+
+#. STRINGS.ONIONLINE.CREATION.ONLINE_TITLE
+msgctxt "STRINGS.ONIONLINE.CREATION.ONLINE_TITLE"
+msgid "Online · Create lobby (Survival)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.REMOTE_LIST
+msgctxt "STRINGS.ONIONLINE.NATIVE.REMOTE_LIST"
+msgid "Select a member to view their planet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.RESERVE_POSITION
+msgctxt "STRINGS.ONIONLINE.NATIVE.RESERVE_POSITION"
+msgid "Reserve position"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.REMOTE_PREVIEW
+msgctxt "STRINGS.ONIONLINE.NATIVE.REMOTE_PREVIEW"
+msgid "System members: chat first, then join with your own asteroid."
+msgstr ""
+
+#. STRINGS.ONIONLINE.CHAT.BUTTON
+msgctxt "STRINGS.ONIONLINE.CHAT.BUTTON"
+msgid "Communications"
+msgstr ""
+
+#. STRINGS.ONIONLINE.CHAT.JOIN_FIRST
+msgctxt "STRINGS.ONIONLINE.CHAT.JOIN_FIRST"
+msgid "Not connected to a star system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.INPUT.CHAT
+msgctxt "STRINGS.ONIONLINE.INPUT.CHAT"
+msgid "OniOnline: Open chat"
+msgstr ""
+
+#. STRINGS.ONIONLINE.INPUT.VOICE
+msgctxt "STRINGS.ONIONLINE.INPUT.VOICE"
+msgid "OniOnline: Push to talk"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VOICE.DISABLED
+msgctxt "STRINGS.ONIONLINE.VOICE.DISABLED"
+msgid "Voice disabled (enable in mod options)"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VOICE.TALKING
+msgctxt "STRINGS.ONIONLINE.VOICE.TALKING"
+msgid "Microphone transmitting"
+msgstr ""
+
+#. STRINGS.ONIONLINE.VOICE.HOLD_HINT
+msgctxt "STRINGS.ONIONLINE.VOICE.HOLD_HINT"
+msgid "Hold {0} to talk"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED
+msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED"
+msgid "Enable system voice"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED_HINT"
+msgid "Capture the microphone only while push-to-talk is held. Default Ctrl+V; rebind in game Options > Controls > Mods. Disable to stop capture and playback immediately."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME
+msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME"
+msgid "System voice playback volume"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME_HINT"
+msgid "Other players’ voice volume (0–100). Zero mutes playback without changing game or stream volume. Applies immediately."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY
+msgctxt "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY"
+msgid "🎮 Gameplay Management"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE
+msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE"
+msgid "📖 Online Gameplay Dev Guide"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT"
+msgid "Open OniOnline gameplay & SDK developer documentation in your browser (covers NuGet references and declaring OniOnline as a prerequisite mod)."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.BUILTIN_GAMEPLAY
+msgctxt "STRINGS.ONIONLINE.OPTIONS.BUILTIN_GAMEPLAY"
+msgid "Built-in gameplay is chat"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.BUILTIN_GAMEPLAY_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.BUILTIN_GAMEPLAY_HINT"
+msgid "The framework ships with lobby chat. Other gameplay requires its own mod."
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.ACTIVE_GAMEPLAY
+msgctxt "STRINGS.ONIONLINE.OPTIONS.ACTIVE_GAMEPLAY"
+msgid "Preferred Gameplay ID"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.DISABLED_GAMEPLAYS
+msgctxt "STRINGS.ONIONLINE.OPTIONS.DISABLED_GAMEPLAYS"
+msgid "Disabled Gameplay IDs"
+msgstr ""
+
+#. STRINGS.ONIONLINE.OPTIONS.DISABLED_GAMEPLAYS_HINT
+msgctxt "STRINGS.ONIONLINE.OPTIONS.DISABLED_GAMEPLAYS_HINT"
+msgid "Gameplay IDs to disable (separated by semicolons or commas). Disabled gameplays cannot be selected or used in rooms."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.VOICE_STEAM_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.VOICE_STEAM_UNAVAILABLE"
+msgid "Voice requires Steam to be connected and an available microphone"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.VOICE_CAPTURE_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.VOICE_CAPTURE_FAILED"
+msgid "Microphone capture failed; check the recording device and permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.VOICE_DECODE_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.VOICE_DECODE_FAILED"
+msgid "Could not play received voice; ensure both players use the same mod version"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INPUT_BINDING_CONFLICT
+msgctxt "STRINGS.ONIONLINE.ERROR.INPUT_BINDING_CONFLICT"
+msgid "Chat or voice key conflicts with another action. Adjust it in Options > Controls."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.VOICE_CAPTURE_OVERFLOW
+msgctxt "STRINGS.ONIONLINE.ERROR.VOICE_CAPTURE_OVERFLOW"
+msgid "Voice buffer overflow. The microphone has stopped; restart the game before trying again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.ROOM_CHART
+msgctxt "STRINGS.ONIONLINE.NATIVE.ROOM_CHART"
+msgid "Current system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.HOME_CHART
+msgctxt "STRINGS.ONIONLINE.NATIVE.HOME_CHART"
+msgid "My system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.SELECT_ASTEROID
+msgctxt "STRINGS.ONIONLINE.NATIVE.SELECT_ASTEROID"
+msgid "Select this asteroid"
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.SELECT_POSITION
+msgctxt "STRINGS.ONIONLINE.NATIVE.SELECT_POSITION"
+msgid "Select an empty hex"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.GAMEPLAY_MISMATCH
+msgctxt "STRINGS.ONIONLINE.ERROR.GAMEPLAY_MISMATCH"
+msgid "The gameplay mode or version differs. Install the same mode to join."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.GAMEPLAY_RULE_FAILED
+msgctxt "STRINGS.ONIONLINE.ERROR.GAMEPLAY_RULE_FAILED"
+msgid "The gameplay rules failed. Planet admission has stopped."
+msgstr ""
+
+#. STRINGS.ONIONLINE.NATIVE.SYSTEM_MENU
+msgctxt "STRINGS.ONIONLINE.NATIVE.SYSTEM_MENU"
+msgid "Star system"
+msgstr ""
+
+#. STRINGS.ONIONLINE.CHAT.SEND_FAILED
+msgctxt "STRINGS.ONIONLINE.CHAT.SEND_FAILED"
+msgid "Message could not be sent."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CAPABILITY_MISMATCH
+msgctxt "STRINGS.ONIONLINE.ERROR.CAPABILITY_MISMATCH"
+msgid "This system requires unavailable multiplayer features."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.INVALID_PROFILE
+msgctxt "STRINGS.ONIONLINE.ERROR.INVALID_PROFILE"
+msgid "Invalid multiplayer profile."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.NATIVE_ADAPTER_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.NATIVE_ADAPTER_UNAVAILABLE"
+msgid "This feature is not supported on this game version."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.MOD_SYNC_CATALOG_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.MOD_SYNC_CATALOG_UNAVAILABLE"
+msgid "Could not verify the current mods."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.MOD_SYNC_RESTART_REQUIRED
+msgctxt "STRINGS.ONIONLINE.ERROR.MOD_SYNC_RESTART_REQUIRED"
+msgid "Mods have changed. Restart the game and try again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.TITLE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.TITLE"
+msgid "Mod Mismatch"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.INTRO
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.INTRO"
+msgid "These mods must match before joining this system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.RESTART
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.RESTART"
+msgid "Restart the game after changing mods."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.PAGE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.PAGE"
+msgid "Page {0}/{1}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.NEXT
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.NEXT"
+msgid "Continue"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.DOWNLOAD
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.DOWNLOAD"
+msgid "Download Mods"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.MANAGE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.MANAGE"
+msgid "Manage Mods"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.BACK
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.BACK"
+msgid "Back"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.MISSING
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.MISSING"
+msgid "Missing mod: {0} ({1})"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.DISABLED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.DISABLED"
+msgid "Disabled mod: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SOURCE_MISMATCH
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SOURCE_MISMATCH"
+msgid "Different mod source: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.VERSION_MISMATCH
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.VERSION_MISMATCH"
+msgid "Different mod version: {0} ({2} → {1})"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.CONTENT_MISMATCH
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.CONTENT_MISMATCH"
+msgid "Different mod content: {0} ({1})"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.UNEXPECTED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.UNEXPECTED"
+msgid "Disable mod: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.DOWNLOADING
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.DOWNLOADING"
+msgid "Downloading mods…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.APPLY_RESTART
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.APPLY_RESTART"
+msgid "Apply and restart"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ACTIVATION_WAIT
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ACTIVATION_WAIT"
+msgid "The mod is still installing or being verified. Try again shortly."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ACTIVATION_FAILED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ACTIVATION_FAILED"
+msgid "The mods could not be enabled safely. Check the Mods menu."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_QUEUED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_QUEUED"
+msgid "Queued"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_CHECKINGWORKSHOP
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_CHECKINGWORKSHOP"
+msgid "Checking Workshop"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_SUBSCRIBING
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_SUBSCRIBING"
+msgid "Subscribing"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_DOWNLOADING
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_DOWNLOADING"
+msgid "Downloading"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_AWAITINGNATIVEINSTALL
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_AWAITINGNATIVEINSTALL"
+msgid "Awaiting game installation"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_AWAITINGACTIVATION
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_AWAITINGACTIVATION"
+msgid "Apply and restart"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_VERIFIED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_VERIFIED"
+msgid "Ready"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_MANUALACTIONREQUIRED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_MANUALACTIONREQUIRED"
+msgid "Adjust in the Mods menu"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.STAGE_FAILED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.STAGE_FAILED"
+msgid "Download failed"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_ITEM
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_ITEM"
+msgid "The Workshop item does not match the requested mod."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_NETWORK
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_NETWORK"
+msgid "The Workshop request could not be completed. Try again later."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_TIMEOUT"
+msgid "The Workshop request timed out. Try again later."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_INSTALL
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_INSTALL"
+msgid "Download finished but the game has not confirmed a matching mod. Check the Mods menu and try again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_LOCAL
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_LOCAL"
+msgid "This mod must be installed or enabled manually."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_CHANGED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_CHANGED"
+msgid "Mod content changed. Restart the game and join again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.ERROR_GENERIC
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.ERROR_GENERIC"
+msgid "Mod synchronization did not finish. Adjust the Mods menu and try again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SUMMARY
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SUMMARY"
+msgid "{0} mods need changes."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_DOWNLOAD
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_DOWNLOAD"
+msgid "Download or update: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_ENABLE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_ENABLE"
+msgid "Enable: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_DISABLE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_DISABLE"
+msgid "Disable: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_MANUAL
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.SUMMARY_MANUAL"
+msgid "Manual changes: {0}"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.DETAILS
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.DETAILS"
+msgid "View Differences"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.OVERVIEW
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.OVERVIEW"
+msgid "Back to Overview"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.MORE
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.MORE"
+msgid "{0} more."
+msgstr ""
+
+#. STRINGS.ONIONLINE.MOD_SYNC.DOWNLOAD_FAILED
+msgctxt "STRINGS.ONIONLINE.MOD_SYNC.DOWNLOAD_FAILED"
+msgid "Download could not start. Adjust mods in the Mods menu and try again."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.TITLE
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.TITLE"
+msgid "Join System"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.LOADED
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.LOADED"
+msgid "Join “{1}” with “{0}”."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.CHOOSE
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.CHOOSE"
+msgid "Choose a planet to join “{0}”."
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.JOIN
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.JOIN"
+msgid "Join"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.CREATE
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.CREATE"
+msgid "New Planet"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.SELECT
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.SELECT"
+msgid "Choose Planet"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.LOAD
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.LOAD"
+msgid "Load Planet"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.BACK
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.BACK"
+msgid "Back"
+msgstr ""
+
+#. STRINGS.ONIONLINE.PLANET_ENTRY.WAITING
+msgctxt "STRINGS.ONIONLINE.PLANET_ENTRY.WAITING"
+msgid "Joining “{0}”…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.CREATE_FAILED
+msgctxt "STRINGS.ONIONLINE.SYSTEM.CREATE_FAILED"
+msgid "Could Not Open System"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.JOIN_FAILED
+msgctxt "STRINGS.ONIONLINE.SYSTEM.JOIN_FAILED"
+msgid "Could Not Join System"
+msgstr ""
+
+#. STRINGS.ONIONLINE.SYSTEM.RETRY
+msgctxt "STRINGS.ONIONLINE.SYSTEM.RETRY"
+msgid "Retry"
+msgstr ""
+
+#. STRINGS.ONIONLINE.BROWSER.JOINABLE
+msgctxt "STRINGS.ONIONLINE.BROWSER.JOINABLE"
+msgid "Joinable"
+msgstr ""
+
+#. STRINGS.ONIONLINE.BROWSER.SEARCHING
+msgctxt "STRINGS.ONIONLINE.BROWSER.SEARCHING"
+msgid "Looking for systems…"
+msgstr ""
+
+#. STRINGS.ONIONLINE.BROWSER.PASSWORD_REQUIRED
+msgctxt "STRINGS.ONIONLINE.BROWSER.PASSWORD_REQUIRED"
+msgid "System password required"
+msgstr ""
+
+#. STRINGS.ONIONLINE.MODE.ONLINE_DESCRIPTION
+msgctxt "STRINGS.ONIONLINE.MODE.ONLINE_DESCRIPTION"
+msgid "Build a star system with other players, each managing their own planet."
+msgstr ""
+
+#. STRINGS.ONIONLINE.BROWSER.INVALID_CODE
+msgctxt "STRINGS.ONIONLINE.BROWSER.INVALID_CODE"
+msgid "Invalid system code."
+msgstr ""
+
+#. STRINGS.ONIONLINE.BROWSER.CONNECTION_FAILED
+msgctxt "STRINGS.ONIONLINE.BROWSER.CONNECTION_FAILED"
+msgid "Could not connect to the system."
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.NATIVE_BROWSER_UNAVAILABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.NATIVE_BROWSER_UNAVAILABLE"
+msgid "Could not open the system browser."
+msgstr ""
+

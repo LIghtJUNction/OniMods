@@ -2,7 +2,7 @@
 
 .NET Standard 2.0 multiplayer framework and SDK. This assembly has no Unity, ONI, PLib or DLC reference.
 
-The `OniOnline` game adapter supplies native UI, save/load, Steam and world access. The bundled `OnePlanetPerPlayer` gameplay uses the same public interfaces as third-party gameplay extensions.
+The `OniOnline` game adapter supplies native UI, save/load, Steam and world access. Its built-in gameplay is chat. `OnePlanetPerPlayer` is an optional rules helper; a gameplay mod registers it and declares `onionline.worlds.v1` before the adapter starts planet services.
 
 API documentation and current limits are included in `docs/SDK.md`, `docs/SDK-MOD-SYNC.md`, and `docs/FRAMEWORK-COMPATIBILITY.md` in the package, or in the [repository documentation](https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniOnline/docs). The API is a development preview.
 

@@ -14,6 +14,14 @@ namespace OniOnline
             PUtil.InitLibrary();
             OnlineText.Load(path);
             OnlineInputControls.RegisterActions();
+            UpdateOptionTexts();
+            // UserMod2.OnLoad patches this assembly once.
+            base.OnLoad(harmony);
+            new POptions().RegisterOptions(this, typeof(OnlineOptions));
+        }
+
+        public static void UpdateOptionTexts()
+        {
             RegisterOptionText("PREFERSTEAM", "prefer_steam");
             RegisterOptionText("LANPORT", "lan_port");
             RegisterOptionText("HANDSHAKE", "handshake_timeout");
@@ -23,9 +31,11 @@ namespace OniOnline
             RegisterOptionText("CHATFONT", "chat_font");
             RegisterOptionText("VOICEENABLED", "voice_enabled");
             RegisterOptionText("VOICEVOLUME", "voice_volume");
-            // UserMod2.OnLoad patches this assembly once.
-            base.OnLoad(harmony);
-            new POptions().RegisterOptions(this, typeof(OnlineOptions));
+            RegisterOptionText("DEVGUIDE", "dev_guide");
+            RegisterOptionText("ONEPLANETPERPLAYER", "builtin_gameplay");
+            RegisterOptionText("ACTIVEGAMEPLAY", "active_gameplay");
+            RegisterOptionText("DISABLEDGAMEPLAYS", "disabled_gameplays");
+            Strings.Add("STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY", OnlineText.Get("options.category_gameplay"));
         }
 
         private static void RegisterOptionText(string name, string key)

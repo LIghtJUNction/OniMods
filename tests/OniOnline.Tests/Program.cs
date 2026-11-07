@@ -341,14 +341,14 @@ internal static class Program
         Check(catalog.Get("ui.send", null) == "Send", "missing locale falls back to English");
         Check(catalog.Get("mode.online", "zh_klei") == "联机" && catalog.Get("mode.online", "zh-Hant") == "連線" &&
             catalog.Get("mode.online", "en-US") == "Online", "Online game category is localized in all three languages");
-        Check(catalog.Get("menu.browse_lobbies", "zh_klei") == "浏览星系" &&
-            catalog.Get("menu.browse_lobbies", "en-US") == "Browse star systems", "browser entry names star systems while creation remains separate");
-        Check(catalog.Get("ui.empty_title", "zh_klei") == "暂无星系" &&
-            catalog.Get("ui.direct_join", "zh_klei") == "星系码直连" &&
-            catalog.Get("ui.members", "en-US") == "System members", "network rooms use star-system terminology in the visible UI");
-        Check(catalog.Get("error.room_full", "zh_klei") == "星系已满" &&
-            catalog.Get("error.room_full", "zh-Hant") == "星系已滿" &&
-            catalog.Get("error.room_full", "en-US") == "System is full", "full-system copy does not invent a four-player limit");
+        Check(catalog.Get("menu.browse_lobbies", "zh_klei") == "浏览大厅" &&
+            catalog.Get("menu.browse_lobbies", "en-US") == "Browse lobbies", "main menu opens the framework lobby");
+        Check(catalog.Get("ui.empty_title", "zh_klei") == "暂无大厅" &&
+            catalog.Get("ui.direct_join", "zh_klei") == "大厅码直连" &&
+            catalog.Get("ui.members", "en-US") == "Lobby members", "lobby copy stays on the framework room, not a planet mode");
+        Check(catalog.Get("error.room_full", "zh_klei") == "大厅已满" &&
+            catalog.Get("error.room_full", "zh-Hant") == "大廳已滿" &&
+            catalog.Get("error.room_full", "en-US") == "Lobby is full", "full-lobby copy does not invent a four-player limit");
         Check(catalog.Get("room.join_running", "en-US") == "Join game", "late-join lobby action is localized");
         Check(catalog.Get("mod_sync.apply_restart", "zh_klei") == "应用并重启" &&
             catalog.Get("mod_sync.apply_restart", "zh-Hant") == "套用並重新啟動" &&

@@ -57,9 +57,21 @@ internal static class GameplaySdkTests
     }
     internal static void Run(Action<bool, string> check)
     {
+        check(GameplayFramework.BuiltInId == "onionline.chat", "built-in gameplay id is chat");
+        check(!GameplayFramework.RegisteredIds.Contains(OnePlanetPerPlayer.RulesId), "one-planet rules stay unregistered until a gameplay mod registers them");
         GameplayFramework.Register(new Mode("test.other-mode"));
         GameplayFramework.Register(new ContractMode("test.contract-mode"));
         check(GameplayFramework.RegisteredIds.Contains(GameplayFramework.BuiltInId), "bundled gameplay is registered through the public SDK");
+        check(GameplayFramework.IsEnabled(GameplayFramework.BuiltInId), "bundled gameplay is enabled by default");
+        check(GameplayFramework.EnabledIds.Contains("test.other-mode"), "registered gameplay is enabled by default");
+        GameplayFramework.SetEnabled("test.other-mode", false);
+        check(!GameplayFramework.IsEnabled("test.other-mode") && !GameplayFramework.EnabledIds.Contains("test.other-mode"),
+            "gameplay can be disabled");
+        bool disabledSelect = false;
+        try { GameplayFramework.Select("test.other-mode"); } catch (InvalidOperationException) { disabledSelect = true; }
+        check(disabledSelect, "selecting a disabled gameplay throws InvalidOperationException");
+        GameplayFramework.SetEnabled("test.other-mode", true);
+        check(GameplayFramework.IsEnabled("test.other-mode"), "disabled gameplay can be re-enabled");
         bool duplicate = false; try { GameplayFramework.Register(new Mode("test.other-mode")); } catch (InvalidOperationException) { duplicate = true; }
         check(duplicate, "duplicate gameplay IDs cannot replace a registered rules implementation");
         GameplayFramework.Select("test.contract-mode");
@@ -67,6 +79,8 @@ internal static class GameplaySdkTests
             GameplayFramework.SelectedRequiredCapabilities.SequenceEqual(new[] { "test.custom-consumer" }),
             "selected gameplay contributes a normalized directional capability contract");
         GameplayFramework.Select(GameplayFramework.BuiltInId);
+        check(GameplayFramework.SelectedCapabilities.Length == 0 && GameplayFramework.SelectedRequiredCapabilities.Length == 0,
+            "built-in chat adds no extra capability contract");
         Lifecycle(check);
         using (var fixture = new Fixture(2, true))
             check(fixture.Rooms[1].LastError == "gameplay_mismatch" && fixture.Rooms[0].Players.Length == 1,
@@ -186,6 +200,8 @@ internal static class GameplaySdkTests
         exposed.PlanetId = "mutated"; exposed.Name = "mutated";
         check(current[0].Planet.PlanetId == "planet-a" && current[0].Planet.Name == null && a.PlanetId == "planet-a",
             "planet admission claims expose defensive snapshots rather than mutable roster state");
+        check(new ChatOnly().ValidatePlanetAdmission(new PlanetClaim("player-b", b), current) == "chat_only",
+            "built-in chat refuses planet admission");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-b", b), current) == null, "different players may own independent native planets");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-b", a), current) == "planet_duplicate_branch", "another player cannot claim an existing planet");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-a", b), current) == "planet_selection_locked", "one player cannot attach a second planet while admitted");

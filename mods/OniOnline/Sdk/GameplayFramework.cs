@@ -51,9 +51,13 @@ namespace OniOnline.Sdk
     public static class GameplayFramework
     {
         public const int ApiVersion = 1;
-        public const string BuiltInId = "onionline.one-planet-per-player";
+        public const string BuiltInId = "onionline.chat";
+        // Gameplay mods that need planet admission and world services declare this.
+        // The adapter does not start those services for chat.
+        public const string WorldsCapability = "onionline.worlds.v1";
         private static readonly Dictionary<string, IGameplayRules> rules = new Dictionary<string, IGameplayRules>(StringComparer.Ordinal);
         private static readonly Dictionary<string, GameplayCapabilityContract> contracts = new Dictionary<string, GameplayCapabilityContract>(StringComparer.Ordinal);
+        private static readonly HashSet<string> disabled = new HashSet<string>(StringComparer.Ordinal);
         private static string selected = BuiltInId;
         private sealed class GameplayCapabilityContract
         {
@@ -61,12 +65,38 @@ namespace OniOnline.Sdk
             internal GameplayCapabilityContract(string[] capabilities, string[] requiredCapabilities)
             { Capabilities = capabilities; RequiredCapabilities = requiredCapabilities; }
         }
-        static GameplayFramework() { Register(new OnePlanetPerPlayer()); }
+        static GameplayFramework() { Register(new ChatOnly()); }
+        public static bool UsesWorlds(IEnumerable<string> capabilities)
+        {
+            if (capabilities == null) return false;
+            foreach (string capability in capabilities)
+                if (capability == WorldsCapability) return true;
+            return false;
+        }
         public static GameplaySession Current { get; private set; }
         public static event System.Action SessionChanged;
         public static string SelectedId { get { return selected; } }
         public static string SelectedVersion { get { return rules[selected].Version; } }
         public static string[] RegisteredIds { get { return rules.Keys.OrderBy(id => id, StringComparer.Ordinal).ToArray(); } }
+        public static string[] EnabledIds { get { return rules.Keys.Where(id => !disabled.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToArray(); } }
+
+        public static bool IsEnabled(string id)
+        { return id != null && rules.ContainsKey(id) && !disabled.Contains(id); }
+
+        public static void SetEnabled(string id, bool enabled)
+        {
+            if (id == null) return;
+            if (enabled)
+            {
+                disabled.Remove(id);
+            }
+            else
+            {
+                disabled.Add(id);
+                if (selected == id)
+                    selected = EnabledIds.FirstOrDefault() ?? BuiltInId;
+            }
+        }
 
         public static void Register(IGameplayRules gameplay)
         {
@@ -85,11 +115,12 @@ namespace OniOnline.Sdk
         {
             if (Current != null) throw new InvalidOperationException("gameplay_session_active");
             if (gameplayId == null || !rules.ContainsKey(gameplayId)) throw new ArgumentException("unknown_gameplay");
+            if (!IsEnabled(gameplayId)) throw new InvalidOperationException("gameplay_disabled");
             selected = gameplayId;
         }
 
         internal static bool Available(string id, string version)
-        { return id != null && rules.TryGetValue(id, out var value) && value.Version == version; }
+        { return id != null && IsEnabled(id) && rules.TryGetValue(id, out var value) && value.Version == version; }
 
         // The adapter merges these with its own native and mod-sync contracts.
         // Copies prevent a gameplay package from changing the selected profile

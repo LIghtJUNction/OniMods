@@ -3,10 +3,13 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework><LangVersion>7.3</LangVersion>
-    <AssemblyName>OniOnline.Framework</AssemblyName><Version>0.4.0</Version><NuGetAudit>false</NuGetAudit>
-    <PackageId>OniOnline.Framework</PackageId><PackageReadmeFile>README.md</PackageReadmeFile>
+    <AssemblyName>OniOnline.Framework</AssemblyName><Version>0.5.0</Version><NuGetAudit>false</NuGetAudit>
+    <PackageId>LIghtJUNction.OniOnline.Framework</PackageId><PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>LIghtJUNction</Authors>
+    <Title>LIghtJUNction.OniOnline.Framework - Multiplayer Framework SDK for Oxygen Not Included</Title>
+    <PackageTags>OxygenNotIncluded;ONI;OniOnline;Multiplayer;SDK;modding</PackageTags>
     <RepositoryUrl>https://github.com/LIghtJUNction/OniMods</RepositoryUrl><PackageProjectUrl>https://github.com/LIghtJUNction/OniMods</PackageProjectUrl>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile><Description>Game-independent networking, gameplay contracts and synchronization for OniOnline.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile><Description>Game-independent networking, gameplay contracts and synchronization framework for Oxygen Not Included multiplayer mods.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile><NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>

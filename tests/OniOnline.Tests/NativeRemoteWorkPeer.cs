@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
+using OniOnline.Gameplay;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
 
@@ -233,8 +234,9 @@ internal static class NativeRemoteWorkPeer
             Directory.CreateDirectory(run.DirectoryPath);
             using (var sha = SHA256.Create()) run.AssemblyHash = Convert.ToHexString(sha.ComputeHash(File.ReadAllBytes(typeof(NativeRemoteWorkPeer).Assembly.Location))).ToLowerInvariant();
             Func<IRoomTransport> connect = () => run.CurrentTransport = new Transport(TcpRoomTransport.Join(run.Host, run.Port), run);
+            OnePlanetPerPlayer.RegisterIfMissing();
             run.Session = new RoomSession(connect(), new SessionProfile { Name = "Harness work " + Guid.NewGuid().ToString("N").Substring(0, 6),
-                GameVersion = run.Build, CycleTrimVersion = run.CtVersion, SpacedOut = true }, "", reconnect: connect);
+                GameVersion = run.Build, CycleTrimVersion = run.CtVersion, SpacedOut = true, GameplayId = OnePlanetPerPlayer.RulesId }, "", reconnect: connect);
             run.Stars = new StarSystemCoordinator(run.Session, new PreviewSource());
             run.Work = new RemoteWorkCoordinator(run.Session, new NoWorld(), new NoNative(),
                 planet => run.Stars.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planet)?.PeerId);

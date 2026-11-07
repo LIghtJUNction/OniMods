@@ -1,8 +1,36 @@
 # OniOnline SDK 1 开发预览
 
-OniOnline 是联机框架，自带 `onionline.one-planet-per-player` 玩法。内置玩法和其他玩法使用同一个 `IGameplayRules` 接口。
+OniOnline 是联机框架。内置玩法只有 `onionline.chat`：它可以加入大厅并聊天，不登记星球。其他玩法使用同一个 `IGameplayRules` 接口，由独立模组注册。
 
-SDK 的发布载体是独立的 **OniOnline.Framework.dll**，目标为 .NET Standard 2.0，不引用 Unity、游戏程序集或 PLib，命名空间为 `OniOnline.Sdk`。开发者引用已经构建的 DLL，不复制或重新编译框架源码，也不要在自己的模组中再打包一份 OniOnline.Framework.dll。这个 API 仍处于开发预览，没有承诺后续二进制兼容性。
+SDK 的发布载体是独立的 **OniOnline.Framework.dll**，目标为 .NET Standard 2.0，不引用 Unity、游戏程序集或 PLib，命名空间为 `OniOnline.Sdk`。框架已正式发布到官方 NuGet（`LIghtJUNction.OniOnline.Framework`）。开发者通过 NuGet 引用已构建的包，不复制或重新编译框架源码，**严禁在自己的模组产物中重复打包 OniOnline.Framework.dll**。这个 API 仍处于开发预览，没有承诺后续二进制兼容性。
+
+## 第三方 Mod 接入规范（NuGet 依赖与前置 Mod 声明）
+
+### 1. 编译期：引入官方 NuGet 包
+在您的玩法 Mod 项目中，通过 NuGet 引入独立框架：
+
+```bash
+dotnet add package LIghtJUNction.OniOnline.Framework --version 0.5.0
+```
+
+或在 `.csproj` 中声明：
+```xml
+<ItemGroup>
+  <PackageReference Include="LIghtJUNction.OniOnline.Framework" Version="0.5.0" PrivateAssets="all" ExcludeAssets="runtime" />
+</ItemGroup>
+```
+> [!IMPORTANT]
+> 必须设置 `ExcludeAssets="runtime"`（或 `Private="false"`），确保您的 Mod 产物 ZIP/目录中**不包含** `OniOnline.Framework.dll`，完全由运行时宿主 OniOnline 提供。
+
+### 2. 运行期：声明 OniOnline 为前置 Mod
+- **Steam 创意工坊**：在您的 Mod 工坊页面右侧【所有者控制】中，点击【添加/移除必需的项目】，将 **OniOnline** 标记为必需前置。
+- **游戏内 Mod 列表**：提示玩家确保 **OniOnline** 处于已启用状态，且排在您的玩法 Mod 前面加载。
+
+### 3. 玩法管理与配置菜单
+在模组加载（`UserMod2.OnLoad` 或 `OnAllModsLoaded`）时，调用 `GameplayFramework.Register(new MyGameplay())` 完成注册。
+- 注册后的玩法会自动出现在 OniOnline 游戏内选项界面的 **【🎮 联机玩法管理】** 中。
+- 玩家可以在配置菜单中自由启用/禁用特定玩法、切换首选房间规则。
+- 配置界面中提供 **【📖 联机玩法开发指南】** 按钮，点击可一键在系统浏览器中打开本文档。
 
 ## 最小调用
 
@@ -14,7 +42,7 @@ GameplayFramework.Select("example.my-gameplay");
 GameplayFramework.SessionChanged += OnSessionChanged;
 ```
 
-实现 `IGameplayRules.ValidatePlanetAdmission`。返回 null 接受；返回简短错误键拒绝。候选玩家身份由传输层提供，星球清单是防御性副本。回调只校验，不创建原生对象。框架始终保留稳定星球身份的唯一性约束，玩法不能通过放行回调制造重复的星球身份。内置规则见 `Gameplay/OnePlanetPerPlayer.cs`：限制一名玩家在当前星系绑定一颗原生星球，允许重连及信息更新，拒绝重复星球和同源分支。
+实现 `IGameplayRules.ValidatePlanetAdmission`。返回 null 接受；返回简短错误键拒绝。候选玩家身份由传输层提供，星球清单是防御性副本。回调只校验，不创建原生对象。框架始终保留稳定星球身份的唯一性约束，玩法不能通过放行回调制造重复的星球身份。聊天玩法直接拒绝登记。`Gameplay/OnePlanetPerPlayer.cs` 是可复用的一人一星球校验，框架不自动注册；玩法模组调用 `OnePlanetPerPlayer.RegisterIfMissing()`，并在能力合同中提供和要求 `GameplayFramework.WorldsCapability`（`onionline.worlds.v1`）。只有声明了这个能力，适配器才会启动星球登记和世界同步。
 
 玩法如果需要额外的联机能力，可以同时实现 `IGameplayCapabilityContract`：
 

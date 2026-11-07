@@ -46,6 +46,22 @@ namespace OniOnline
         [Limit(0, 100)]
         public int VoiceVolume { get; set; } = 100;
 
+        [Option("STRINGS.ONIONLINE.OPTIONS.DEVGUIDE.NAME", "STRINGS.ONIONLINE.OPTIONS.DEVGUIDE.DESC", "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY")]
+        public System.Action<object> OpenDevGuide => _ =>
+        {
+            try
+            {
+                UnityEngine.Application.OpenURL("https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniOnline/docs/SDK.md");
+            }
+            catch (Exception) { }
+        };
+
+        [Option("STRINGS.ONIONLINE.OPTIONS.ACTIVEGAMEPLAY.NAME", "STRINGS.ONIONLINE.OPTIONS.ACTIVEGAMEPLAY.DESC", "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY")]
+        public string ActiveGameplayId { get; set; } = Sdk.GameplayFramework.BuiltInId;
+
+        [Option("STRINGS.ONIONLINE.OPTIONS.DISABLEDGAMEPLAYS.NAME", "STRINGS.ONIONLINE.OPTIONS.DISABLEDGAMEPLAYS.DESC", "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY")]
+        public string DisabledGameplays { get; set; } = "";
+
         public IEnumerable<IOptionsEntry> CreateOptions() { yield break; }
 
         public void OnOptionsChanged() { Saved?.Invoke(Normalize()); }
@@ -59,6 +75,24 @@ namespace OniOnline
             ChatHistoryLimit = Clamp(ChatHistoryLimit, 20, SessionOptions.MaxChatHistoryLimit);
             ChatFontSize = Clamp(ChatFontSize, 14, 28);
             VoiceVolume = Clamp(VoiceVolume, 0, 100);
+            if (string.IsNullOrEmpty(ActiveGameplayId)) ActiveGameplayId = Sdk.GameplayFramework.BuiltInId;
+            if (DisabledGameplays == null) DisabledGameplays = "";
+
+            bool chatDisabled = false;
+            if (!string.IsNullOrEmpty(DisabledGameplays))
+            {
+                foreach (var id in DisabledGameplays.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string trimmed = id.Trim();
+                    if (trimmed == Sdk.GameplayFramework.BuiltInId) chatDisabled = true;
+                    Sdk.GameplayFramework.SetEnabled(trimmed, false);
+                }
+            }
+            Sdk.GameplayFramework.SetEnabled(Sdk.GameplayFramework.BuiltInId, !chatDisabled);
+            if (!string.IsNullOrEmpty(ActiveGameplayId) && Sdk.GameplayFramework.IsEnabled(ActiveGameplayId))
+            {
+                try { Sdk.GameplayFramework.Select(ActiveGameplayId); } catch { }
+            }
             return this;
         }
 

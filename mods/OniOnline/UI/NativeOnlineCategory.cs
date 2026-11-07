@@ -19,6 +19,7 @@ namespace OniOnline.UI
         internal static void Attach(ClusterCategorySelectionScreen screen, OnlineRuntime runtime)
         {
             if (screen == null || runtime == null) return;
+            if (!OniOnline.Sdk.GameplayFramework.UsesWorlds(OniOnline.Sdk.GameplayFramework.SelectedCapabilities)) return;
             var activeSource = DlcManager.IsExpansion1Active() ? screen.spacedOutStyle : screen.vanillaStyle;
             if (activeSource?.button == null) throw Unavailable();
             var parent = activeSource.button.transform.parent;

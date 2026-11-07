@@ -4,6 +4,7 @@ using System.Linq;
 using OniOnline.Core;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
+using OniOnline.Gameplay;
 using OniOnline.Sdk;
 
 internal static class StarSystemTests
@@ -41,7 +42,7 @@ internal static class StarSystemTests
         internal readonly Dictionary<string, long> Generations = new Dictionary<string, long>();
         private readonly string gameplayId;
         internal Peer Host { get { return Peers[0]; } }
-        internal Room(string hostAccount = null, string gameplayId = GameplayFramework.BuiltInId)
+        internal Room(string hostAccount = null, string gameplayId = OnePlanetPerPlayer.RulesId)
         {
             this.gameplayId = gameplayId;
             Network.Host.AccountIdentity = hostAccount;
@@ -83,6 +84,7 @@ internal static class StarSystemTests
     internal static void Run(Action<bool, string> assertion)
     {
         check = assertion;
+        OnePlanetPerPlayer.RegisterIfMissing();
         ReservationAndInitialization();
         PositionRaceAndDuplicateBranch();
         PersistentOwnerAdmission();
