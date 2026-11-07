@@ -90,11 +90,14 @@ def main() -> int:
 
     assert '<Import Project="../../build/Jlib.Consumer.targets" />' in project
     dependencies = (ROOT / "build/Jlib.Consumer.targets").read_text(encoding="utf-8")
-    assert re.search(
-        r'<ProjectReference\b[^>]*Include="[^"]*/mods/Jlib/Jlib/Jlib.csproj"[^>]*Private="false"',
-        dependencies,
-    ), "Jlib must be supplied by the standalone Mod"
-    assert not re.search(r'<PackageReference\b[^>]*Include="(?:PLib|Jlib|LIghtJUNction.Jlib)"', project)
+    shared_jlib = bool(re.search(
+        r'<ProjectReference\b[^>]*Include="[^"]*Jlib/Jlib/Jlib\.csproj"',
+        project + "\n" + dependencies,
+    ))
+    legacy_plib = '<PackageReference Include="PLib" Version="4.25.0"' in project
+    assert shared_jlib and not legacy_plib, (
+        "OniMcp must reference shared Jlib.csproj through the consumer targets, not the legacy PLib package"
+    )
     assert "Disabled by default" in settings
     dispatch = method_body(server, "private void ProcessRequest")
     assert dispatch.find("TryHandleSettingsRequest") < dispatch.find("ValidateAuth")
