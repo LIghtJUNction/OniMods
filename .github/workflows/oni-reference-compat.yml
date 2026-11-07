@@ -81,6 +81,7 @@ jobs:
           --manifest ci/oni-reference-assemblies.json
           --output "$GITHUB_WORKSPACE/.oni-managed"
           --allow-missing-sha256
+          --allow-missing-sha256
       - name: Verify pinned ONI 744825 NavGrid method-body contract
         run: >-
           python3 scripts/verify_cycletrim_navgrid_source_contract.py
