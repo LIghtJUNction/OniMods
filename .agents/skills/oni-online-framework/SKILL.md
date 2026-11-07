@@ -28,6 +28,7 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 5. 内置玩法只有 `onionline.chat`。框架不注册、不默认选中 `OnePlanetPerPlayer`。玩法模组自己 `Register`，并在需要星球登记和世界同步时声明 `onionline.worlds.v1`。房间 ID、观察世界 ID 和跨存档永久 PlanetId 是不同身份；重连和重新绑定不能复制星球，也不能把观察权限当成迁移权限。
 6. 主菜单的“浏览大厅”负责查找、加入和创建聊天房间。星系开局和星图只在当前玩法声明 `onionline.worlds.v1` 时出现。殖民地 HUD 的原生管理栏直接打开“通讯”，快捷键默认 `Ctrl+T`；主菜单、创建、载入和初始复制人选择期间不显示联机 HUD。
 7. UI 复用 ONI 原生控件、字体、外框和声音。不要加入网页式灰框、巨大悬浮按钮、霓虹边框或把实现细节塞进玩家文案。
+8. 接口文档同步不变量：每次对 OniOnline 框架、SDK 或协议能力进行调整或新增底层能力时，必须强制同步维护对应的接口文档（`mods/OniOnline/docs/SDK.md`、`mods/OniOnline/docs/FRAMEWORK-COMPATIBILITY.md`、`references/contracts.md` 等），严禁代码接口演进而文档脱节或缺漏。
 
 详细合同按需读取：
 

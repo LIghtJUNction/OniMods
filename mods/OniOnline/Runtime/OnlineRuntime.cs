@@ -348,6 +348,8 @@ namespace OniOnline.Runtime
             if (!Enabled) throw new InvalidOperationException("online_disabled");
             if (DependencyError != null) throw new InvalidOperationException(DependencyError);
             if (!Protocol.ValidText(Nickname, 32)) throw new ArgumentException("invalid_name");
+            if (!GameplayFramework.IsEnabled(GameplayFramework.SelectedId))
+                throw new InvalidOperationException("gameplay_disabled");
             var gameplayCapabilities = GameplayFramework.SelectedCapabilities;
             var gameplayRequirements = GameplayFramework.SelectedRequiredCapabilities;
             return new SessionProfile { Name = Nickname, GameVersion = GameVersion,

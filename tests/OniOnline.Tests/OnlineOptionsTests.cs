@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using OniOnline;
 using OniOnline.Network;
+using OniOnline.Sdk;
 
 internal static class OnlineOptionsTests
 {
@@ -27,6 +29,7 @@ internal static class OnlineOptionsTests
         check(reenabledGameplay.ActiveGameplayId == OniOnline.Sdk.GameplayFramework.BuiltInId &&
             OniOnline.Sdk.GameplayFramework.IsEnabled(OniOnline.Sdk.GameplayFramework.BuiltInId),
             "clearing the disable list turns built-in chat back on");
+        GameplayToggles(check);
         defaults.OpenDevGuide?.Invoke(null);
         check(UnityEngine.Application.LastOpenedUrl != null && UnityEngine.Application.LastOpenedUrl.Contains("SDK.md"),
             "OpenDevGuide opens the SDK developer documentation URL");
@@ -58,6 +61,49 @@ internal static class OnlineOptionsTests
         HandshakeWaitIsIndependent(check);
         InvalidHistoryLimit(check, 0);
         InvalidHistoryLimit(check, SessionOptions.MaxChatHistoryLimit + 1);
+    }
+
+    private sealed class ToggleRules : IGameplayRules
+    {
+        public string Id { get { return "test.options-toggle"; } }
+        public string Version { get { return "1"; } }
+        public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current) { return null; }
+    }
+
+    private static void GameplayToggles(Action<bool, string> check)
+    {
+        if (!GameplayFramework.RegisteredIds.Contains("test.options-toggle"))
+            GameplayFramework.Register(new ToggleRules());
+        var options = new OnlineOptions().Normalize();
+        var entries = options.CreateOptions().OfType<GameplayToggleEntry>().ToArray();
+        var chat = entries.First(entry => entry.GameplayId == GameplayFramework.BuiltInId);
+        var extra = entries.First(entry => entry.GameplayId == "test.options-toggle");
+        check(!chat.RestartRequired && !extra.RestartRequired,
+            "gameplay checkboxes do not ask for a game restart");
+        chat.ReadFrom(options);
+        extra.ReadFrom(options);
+        check((bool)chat.Value && (bool)extra.Value && entries.Length == GameplayFramework.RegisteredIds.Length,
+            "each registered gameplay appears checked when it is enabled");
+        extra.Value = false;
+        check(extra.WriteTo(options) && options.DisabledGameplays.Split(';').Contains("test.options-toggle"),
+            "clearing a checkbox records that gameplay as disabled");
+        options.OnOptionsChanged();
+        check(!GameplayFramework.IsEnabled("test.options-toggle") && GameplayFramework.IsEnabled(GameplayFramework.BuiltInId) &&
+            GameplayFramework.SelectedId == GameplayFramework.BuiltInId,
+            "confirming the options disables that gameplay immediately");
+        extra.Value = true;
+        check(extra.WriteTo(options) && !OnlineOptions.ParseDisabled(options.DisabledGameplays).Contains("test.options-toggle"),
+            "checking the box removes that gameplay from the disabled list");
+        options.OnOptionsChanged();
+        check(GameplayFramework.IsEnabled("test.options-toggle") && GameplayFramework.SelectedId == GameplayFramework.BuiltInId,
+            "checking the box enables that gameplay without restarting");
+        new OnlineOptions { DisabledGameplays = "test.options-toggle,onionline.chat" }.Normalize();
+        check(!GameplayFramework.IsEnabled("test.options-toggle") && !GameplayFramework.IsEnabled(GameplayFramework.BuiltInId),
+            "a saved comma-separated disable list still turns those gameplays off");
+        new OnlineOptions().Normalize();
+        check(GameplayFramework.IsEnabled("test.options-toggle") && GameplayFramework.IsEnabled(GameplayFramework.BuiltInId) &&
+            GameplayFramework.SelectedId == GameplayFramework.BuiltInId,
+            "an empty disable list turns every registered gameplay back on");
     }
 
     private static SessionProfile Profile(string name)

@@ -29,7 +29,7 @@ dotnet add package LIghtJUNction.OniOnline.Framework --version 0.4.0
 ### 3. 玩法管理与配置菜单
 在模组加载（`UserMod2.OnLoad` 或 `OnAllModsLoaded`）时，调用 `GameplayFramework.Register(new MyGameplay())` 完成注册。
 - 注册后的玩法会自动出现在 OniOnline 游戏内选项界面的 **【🎮 联机玩法管理】** 中。
-- 玩家可以在配置菜单中自由启用/禁用特定玩法、切换首选房间规则。
+- 玩家在【🎮 联机玩法管理】里看到已注册玩法。勾选表示启用，取消勾选表示禁用。点确定后立即生效，不用重启游戏。已经加入的房间继续原来的玩法；下一次创建或加入使用仍勾选、且上次保存过的那一项，若该项已取消勾选，则改用列表里剩下的第一项。
 - 配置界面中提供 **【📖 联机玩法开发指南】** 按钮，点击可一键在系统浏览器中打开本文档。
 
 ## 最小调用
@@ -111,6 +111,66 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 | `onionline.shared-clock.v1` | `SharedClockPolicy` | 必须同时协商共用模拟。任何参与者可以暂停，速度取更新的修订号，只接受 1 到 3。 |
 | `onionline.entity-identity.v1` | `DeterministicNetId`、`NetworkIdentityMap<T>` | 跨进程确定的 64 位实体网络映射。静态建筑与格子由 64 位 FNV-1a 强哈希确定生成（避免 .NET string.GetHashCode 跨进程随机化）；动态实体由主机/席位段和流水号划分，杜绝线性探测冲突。提供防 ABA 复用的死亡墓碑缓冲与双向 O(1) 实体查找。 |
 | `onionline.anim-sync.v1` | `AnimReconciler`、`AnimSyncSharder` | 动画对齐与增量调速。检测动画名称/哈希不符时强制重播（Replay），检测小范围时间漂移时通过推荐微调速度（NudgeSpeed）平滑收敛，避免关键帧硬跳动；大漂移强制校正（SnapTime）。分片器将大量动画实体的同步轮询平摊到多个帧中，消除瞬时流量洪峰。 |
+
+## 接口详细参考 (API Reference)
+
+### 1. 跨进程确定性实体网络标识 (`DeterministicNetId` 与 `NetworkIdentityMap<T>`)
+
+声明能力：`onionline.entity-identity.v1`
+
+解决跨客户端同步中实体标识冲突、跨平台/跨进程哈希不一致以及对象生命周期重建时的 ABA 错位问题。
+
+- **静态实体 ID 生成**：
+  - `DeterministicNetId.ForBuilding(int worldId, int cell, string prefabId, int layer)`：利用 64 位 FNV-1a 强哈希结合世界 ID、网格单元格号、Prefab 标识与所在建筑层计算。返回正数（最高位为 0）。不同客户端输入相同的世界与建筑参数，计算出的 ID 严格一致。
+  - `DeterministicNetId.ForCell(int worldId, int cell, string subCategory)`：计算网格单元及子分类（如挖掘、涂抹等）的确定性静态 ID。
+- **动态实体 ID 生成**：
+  - `DeterministicNetId.ForDynamic(byte peerId, uint sequence, ushort typeTag)`：最高位（bit 63）置 1，高 7 位存储生成席位 ID（0..127），中 16 位存储类型标记（TypeTag），低 32 位存储单调递增流水号。确保动态生成的实体（如掉落物、杂物、临时投射物）在各客户端间天然命名空间隔离，零碰撞。
+  - 辅助解析：`IsDynamic(long id)`、`IsStatic(long id)`、`GetPeerId(long dynamicId)`、`GetTypeTag(long dynamicId)`、`GetSequence(long dynamicId)`。
+- **实体映射表与生命周期管理 (`NetworkIdentityMap<T>`)**：
+  - 双向 O(1) 查找：`TryRegister(long netId, T instance)`、`TryGet(long netId, out T instance)`、`TryGetNetId(T instance, out long netId)`。
+  - 防 ABA 墓碑机制：当实体销毁注销时调用 `Unregister(long netId)`，ID 不会立即回收，而是进入带时间戳的墓碑缓冲区（默认保留 10 秒）。在此期间任何迟到的网络包试图访问该 ID 都会被识别为 `IsTombstoned(netId)` 并安全丢弃，避免实体销毁重建后旧网络包作用到新实体的 ABA 隐患。调用 `PurgeExpiredTombstones()` 可清理过期墓碑。
+
+### 2. 玩家光标与交互态共享 (`PresenceBoard`)
+
+声明能力：`onionline.presence.v1`
+
+负责多玩家协作时的视口焦点、工具拖选交互与战术高亮信号呈现。
+
+- **光标位置与视口 (`PresenceCursor`)**：
+  - `PlayerId`, `WorldId`, `X`, `Y`：记录玩家当前鼠标所在世界与网格坐标。
+  - `TryCursor(PresenceCursor cursor)`、`CursorFor(string playerId)`、`Cursors`（获取全部活跃光标数组）。
+- **拖选工具预览 (`ToolDragPresence`)**：
+  - 支持多玩家正在进行中的交互框选预览（如挖掘框、拆除框、擦水框、电线/管道拉线）。
+  - 包含字段：`PlayerId`, `WorldId`, `ToolId`（如 "dig"、"build"）, `Mode`（`ToolDragMode.Box`, `Line`, `Point`）, `StartX`, `StartY`, `EndX`, `EndY`, `Priority`（1..9 优先级）, `MaterialTag`, `ColorRgba`。
+  - `TryToolDrag(ToolDragPresence drag)`、`ToolDragFor(string playerId)`、`ClearToolDrag(string playerId)`、`ToolDrags`（获取全部活跃拖选数组）。
+- **战术标记与高亮信号 (`PresenceMark` & `PlayerPing`)**：
+  - `PresenceMark`：带递增序号的地块标记，供多端同步静态指示。
+  - `PlayerPing`：带 `Category`（如 "alert"、"look_here"）与 `Timestamp` 的瞬时高亮脉冲，队列自动轮转，上限 32 个。
+  - 玩家断开离开时通过 `Drop(playerId)` 一并清理对应光标、拖选与标记状态。
+
+### 3. 动画增量对齐与分片 (`AnimReconciler` 与 `AnimSyncSharder`)
+
+声明能力：`onionline.anim-sync.v1`
+
+解决多人共享殖民地中复制人和生物动画随网络延迟发生微小相位漂移或错位的问题。
+
+- **状态快照 (`AnimSnapshot`)**：
+  - 包含 `EntityId`, `AnimHash`（动画名称哈希）, `PlayMode`（单次/循环）, `Speed`（播放速度）, `ElapsedTime`（当前已播放秒数）, `Timestamp`（采集时间戳）。
+- **智能平滑校正决策 (`AnimReconciler.Evaluate`)**：
+  - 若两端播放的动画不同（`AnimHash` 不符）：返回 `AnimCorrectionAction.Replay`，强制重置为权威端目标动画。
+  - 若动画一致，根据时延对齐计算期望播放时间后得到绝对时间漂移 `drift`：
+    - 漂移 `<= driftTolerance`（默认 0.15s）：返回 `AnimCorrectionAction.None`，无需任何干预。
+    - 小范围漂移（`driftTolerance < absDrift <= maxNudgeDrift`，默认上限 0.6s）：返回 `AnimCorrectionAction.NudgeSpeed`，平滑微调播放速度（慢了加速 1.15 倍，快了减速 0.85 倍）。肉眼无感知平滑追赶，消除关键帧突变闪烁。
+    - 严重脱节（`absDrift > maxNudgeDrift`）：返回 `AnimCorrectionAction.SnapTime`，硬跳至权威时间点。
+- **实体分片减负 (`AnimSyncSharder`)**：
+  - `GetShard(long entityId, int totalShards)` / `IsEntityInShard(long entityId, int targetShard, int totalShards)`：基于 64 位实体 ID 的正数取模算法，将成百上千个动植物实体均匀分布到 N 帧（如 5 到 10 帧）中分批同步，彻底避免同帧广播造成的瞬时网络尖峰。
+
+## 接口文档维护规范 (Documentation Maintenance Protocol)
+
+维护 OniOnline 项目时，必须遵守以下规范：
+1. **接口变更必同步**：凡是在 `OniOnline.Framework`、`OniOnline.Sdk`、`OniOnline.Network` 中新增、修改或弃用任何公开类型、方法、能力合同或数据结构时，必须在本文件（`SDK.md`）及关联契约文档（`FRAMEWORK-COMPATIBILITY.md`、`contracts.md`）中进行同步更新与详述。
+2. **严禁脱节**：禁止只更新 C# 源代码而不更新接口文档，禁止把接口签名留空或伪造为已实现。
+3. **参数与边界完整**：新增接口文档必须写清命名空间、声明能力键、参数含义、取值范围、异常与防御策略、线程安全边界以及示例用法。
 
 `CommandInFlight` 按命令键去重：权威端答复、超时或准入代次变化之前，同一条命令不会再次发出。这些类型不冻结游戏模拟，也不替玩法拦截 `SimMessages`。模拟冻结仍由声明共用模拟的玩法自己实现；补丁贴不上时拒绝的是该玩法。
 

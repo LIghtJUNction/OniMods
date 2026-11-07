@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using OniOnline.Network;
 using PeterHan.PLib.Options;
+using PeterHan.PLib.UI;
+#if ONIONLINE_MOD
+using UnityEngine;
+#endif
 
 namespace OniOnline
 {
@@ -56,15 +61,27 @@ namespace OniOnline
             catch (Exception) { }
         };
 
-        [Option("STRINGS.ONIONLINE.OPTIONS.ACTIVEGAMEPLAY.NAME", "STRINGS.ONIONLINE.OPTIONS.ACTIVEGAMEPLAY.DESC", "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY")]
+        // Kept for existing config files. The options screen shows one checkbox per
+        // registered gameplay instead of asking the player to type these ids.
         public string ActiveGameplayId { get; set; } = Sdk.GameplayFramework.BuiltInId;
 
-        [Option("STRINGS.ONIONLINE.OPTIONS.DISABLEDGAMEPLAYS.NAME", "STRINGS.ONIONLINE.OPTIONS.DISABLEDGAMEPLAYS.DESC", "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY")]
         public string DisabledGameplays { get; set; } = "";
 
-        public IEnumerable<IOptionsEntry> CreateOptions() { yield break; }
+        public IEnumerable<IOptionsEntry> CreateOptions()
+        {
+            foreach (string id in Sdk.GameplayFramework.RegisteredIds)
+            {
+                string title = id == Sdk.GameplayFramework.BuiltInId
+                    ? "STRINGS.ONIONLINE.OPTIONS.GAMEPLAYCHAT.NAME" : id;
+                yield return new GameplayToggleEntry(id, title, "STRINGS.ONIONLINE.OPTIONS.GAMEPLAYTOGGLE.DESC");
+            }
+        }
 
-        public void OnOptionsChanged() { Saved?.Invoke(Normalize()); }
+        public void OnOptionsChanged()
+        {
+            var normalized = Normalize();
+            Saved?.Invoke(normalized);
+        }
 
         internal OnlineOptions Normalize()
         {
@@ -78,22 +95,41 @@ namespace OniOnline
             if (string.IsNullOrEmpty(ActiveGameplayId)) ActiveGameplayId = Sdk.GameplayFramework.BuiltInId;
             if (DisabledGameplays == null) DisabledGameplays = "";
 
-            bool chatDisabled = false;
-            if (!string.IsNullOrEmpty(DisabledGameplays))
+            var disabled = ParseDisabled(DisabledGameplays);
+            foreach (string id in Sdk.GameplayFramework.RegisteredIds)
+                Sdk.GameplayFramework.SetEnabled(id, !disabled.Contains(id));
+            if (!Sdk.GameplayFramework.IsEnabled(ActiveGameplayId))
             {
-                foreach (var id in DisabledGameplays.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    string trimmed = id.Trim();
-                    if (trimmed == Sdk.GameplayFramework.BuiltInId) chatDisabled = true;
-                    Sdk.GameplayFramework.SetEnabled(trimmed, false);
-                }
+                string fallback = Sdk.GameplayFramework.EnabledIds.FirstOrDefault();
+                if (!string.IsNullOrEmpty(fallback)) ActiveGameplayId = fallback;
             }
-            Sdk.GameplayFramework.SetEnabled(Sdk.GameplayFramework.BuiltInId, !chatDisabled);
-            if (!string.IsNullOrEmpty(ActiveGameplayId) && Sdk.GameplayFramework.IsEnabled(ActiveGameplayId))
+            // An open room keeps its current rules. The next host or join uses the checkbox state.
+            if (Sdk.GameplayFramework.Current == null && Sdk.GameplayFramework.IsEnabled(ActiveGameplayId))
             {
-                try { Sdk.GameplayFramework.Select(ActiveGameplayId); } catch { }
+                try { Sdk.GameplayFramework.Select(ActiveGameplayId); }
+                catch (InvalidOperationException) { }
             }
             return this;
+        }
+
+        internal static HashSet<string> ParseDisabled(string value)
+        {
+            var disabled = new HashSet<string>(StringComparer.Ordinal);
+            if (string.IsNullOrEmpty(value)) return disabled;
+            foreach (string id in value.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string trimmed = id.Trim();
+                if (trimmed.Length > 0) disabled.Add(trimmed);
+            }
+            return disabled;
+        }
+
+        internal static string WithGameplay(string value, string id, bool enabled)
+        {
+            var disabled = ParseDisabled(value);
+            if (enabled) disabled.Remove(id);
+            else disabled.Add(id);
+            return string.Join(";", disabled.OrderBy(item => item, StringComparer.Ordinal));
         }
 
         internal SessionOptions CreateSessionOptions()
@@ -110,5 +146,83 @@ namespace OniOnline
 
         private static int Clamp(int value, int minimum, int maximum)
         { return Math.Max(minimum, Math.Min(maximum, value)); }
+    }
+
+    // One row in the gameplay list. Checked means the gameplay can be used; cleared means it cannot.
+    public sealed class GameplayToggleEntry : IOptionsEntry
+    {
+        private readonly string gameplayId;
+        private bool enabled;
+#if ONIONLINE_MOD
+        private object checkbox;
+#endif
+
+        public string GameplayId { get { return gameplayId; } }
+        public string Category { get { return "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY"; } }
+        public string Format { get { return null; } }
+        public string Title { get; }
+        public string Tooltip { get; }
+        public bool RestartRequired { get { return false; } set { } }
+
+        public object Value
+        {
+            get { return enabled; }
+            set
+            {
+                if (value is bool flag) enabled = flag;
+                Refresh();
+            }
+        }
+
+        public GameplayToggleEntry(string gameplayId, string title, string tooltip)
+        {
+            this.gameplayId = gameplayId;
+            Title = title;
+            Tooltip = tooltip;
+        }
+
+        public void CreateUIEntry(PGridPanel parent, ref int row)
+        {
+#if ONIONLINE_MOD
+            var box = new PCheckBox
+            {
+                OnChecked = (source, state) =>
+                {
+                    enabled = state == PCheckBox.STATE_CHECKED;
+                    Refresh();
+                },
+                ToolTip = gameplayId + "\n" + OptionsEntry.LookInStrings(Tooltip)
+            }.SetKleiBlueStyle();
+            box.AddOnRealize(realized => { checkbox = realized; Refresh(); });
+            OptionsEntry.CreateDefaultUIEntry(this, parent, row, box);
+#endif
+        }
+
+        public void ReadFrom(object settings)
+        {
+            var options = settings as OnlineOptions;
+            if (options == null) return;
+            Value = !OnlineOptions.ParseDisabled(options.DisabledGameplays).Contains(gameplayId);
+        }
+
+        public bool WriteTo(object settings)
+        {
+            var options = settings as OnlineOptions;
+            if (options == null) return false;
+            bool nowEnabled = Value is bool flag && flag;
+            bool wasEnabled = !OnlineOptions.ParseDisabled(options.DisabledGameplays).Contains(gameplayId);
+            if (nowEnabled == wasEnabled) return false;
+            options.DisabledGameplays = OnlineOptions.WithGameplay(options.DisabledGameplays, gameplayId, nowEnabled);
+            return true;
+        }
+
+        private void Refresh()
+        {
+#if ONIONLINE_MOD
+            var widget = checkbox as GameObject;
+            if (widget != null)
+                PCheckBox.SetCheckState(widget, enabled ? PCheckBox.STATE_CHECKED : PCheckBox.STATE_UNCHECKED);
+#endif
+        }
     }
 }

@@ -27,6 +27,24 @@
 
 默认 `SessionCapabilities.Core` 包含会话、玩法消息和星球登记合同。游戏适配器另外声明并要求 `ModSynchronizationV1`，由实际 `ModSyncSession` 完成模组对齐；裸 `RoomSession` 不自动宣称已经安装模组同步服务。能力存在也不能替代模组对齐、权限检查和业务参数校验。
 
+### 已登记能力合同清单
+
+| 能力标识 | 默认模式 | 适用场景 | 对应 SDK / 内部类型 |
+| --- | --- | --- | --- |
+| `onionline.session.v1` | Core (默认) | 基础房间握手、心跳与席位管理 | `RoomSession` |
+| `onionline.gameplay.v1` | Core (默认) | 认证玩法自定义二进制消息收发 | `IGameplayRules`, `GameplaySession` |
+| `onionline.planet-presence.v1` | Core (默认) | 星球存在感及基础席位映射 | `PlanetClaim` |
+| `onionline.mod-sync.v1` | 适配器声明 | 入场模组清单比对与受控内容哈希对齐 | `ModSyncSession`, `ModSyncDeclarations` |
+| `onionline.shared-simulation.v1` | 玩法选配 | 权威快照、分块校验和共用模拟准入 | `SnapshotAdmission`, `ContentDigestBoard` |
+| `onionline.strict-admission.v1` | 玩法选配 | 游戏构建号、DLC 及所有模组版本严格对齐 | `StrictAdmission` |
+| `onionline.presence.v1` | 玩法选配 | 光标、地块标记、工具拖选预览、地图信号 | `PresenceBoard`, `ToolDragPresence`, `PlayerPing` |
+| `onionline.shared-clock.v1` | 玩法选配 | 多人共享游戏暂停与 1..3 档倍速同步 | `SharedClockPolicy` |
+| `onionline.entity-identity.v1` | 玩法选配 | 跨进程确定性 64 位实体 ID 映射与防 ABA 墓碑 | `DeterministicNetId`, `NetworkIdentityMap<T>` |
+| `onionline.anim-sync.v1` | 玩法选配 | 动画状态对齐、智能平滑调速与分片防尖峰 | `AnimReconciler`, `AnimSyncSharder` |
+| `onionline.native-planet.v1` | 原生适配器 | 原生 WorldContainer 星球清单与尺寸读取 | `NativeWorldSource` |
+| `onionline.native-observation.v1` | 原生适配器 | 原生视口瓦片采样与授权观察 | `NativeWorldInterestSource` |
+| `onionline.native-star-map.v1` | 原生适配器 (DLC) | 眼冒金星 DLC 原生星图读取 | `LocalNativeStarMap` |
+
 实现：[SessionCompatibility.cs](../Network/SessionCompatibility.cs)、[RoomSession.cs](../Network/RoomSession.cs)、[Protocol.cs](../Network/Protocol.cs)。
 
 ## 当前原生适配器

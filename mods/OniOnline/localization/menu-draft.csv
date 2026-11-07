@@ -410,10 +410,8 @@ options.dev_guide,📖 联机玩法开发指南,📖 連線玩法開發指南,�
 options.dev_guide_hint,在浏览器中打开 OniOnline 联机玩法与 SDK 开发文档（涵盖 NuGet 引用与将 OniOnline 设为前置 Mod 的规范）。,在瀏覽器中開啟 OniOnline 連線玩法與 SDK 開發文件（涵蓋 NuGet 引用與將 OniOnline 設為前置 Mod 的規範）。,Open OniOnline gameplay & SDK developer documentation in your browser (covers NuGet references and declaring OniOnline as a prerequisite mod).
 options.builtin_gameplay,内置玩法是聊天,內建玩法是聊天,Built-in gameplay is chat
 options.builtin_gameplay_hint,框架自带的玩法只有大厅聊天。其他玩法需要单独安装对应模组。,框架自帶的玩法只有大廳聊天。其他玩法需要單獨安裝對應模組。,The framework ships with lobby chat. Other gameplay requires its own mod.
-options.active_gameplay,首选联机玩法 ID,首選連線玩法 ID,Preferred Gameplay ID
-options.active_gameplay_hint,创建或加入大厅时使用的玩法标识。默认为 onionline.chat。安装其他玩法模组后，填入该模组注册的玩法 ID。,建立或加入大廳時使用的玩法標識。預設為 onionline.chat。安裝其他玩法模組後，填入該模組註冊的玩法 ID。,"Gameplay id used when hosting or joining. Default: onionline.chat. After installing another gameplay mod, enter the id it registers."
-options.disabled_gameplays,禁用的玩法 ID 列表,禁用的玩法 ID 清單,Disabled Gameplay IDs
-options.disabled_gameplays_hint,需要禁用的玩法 ID（多个以分号或逗号分隔）。被禁用的玩法将无法在房间中使用。,需要禁用的玩法 ID（多個以分號或逗號分隔）。被禁用的玩法將無法在房間中使用。,Gameplay IDs to disable (separated by semicolons or commas). Disabled gameplays cannot be selected or used in rooms.
+options.gameplay_chat,聊天,聊天,Chat
+options.gameplay_toggle_hint,勾选启用，取消勾选禁用。确定后立即生效，无需重启。已经加入的房间继续使用原来的玩法。,勾選啟用，取消勾選禁用。確定後立即生效，無需重啟。已經加入的房間繼續使用原來的玩法。,"Check to enable and clear to disable. Applies immediately when confirmed, with no restart. A room you already joined keeps its current gameplay."
 error.voice_steam_unavailable,语音需要 Steam 已连接，并且麦克风可用,語音需要 Steam 已連線，而且麥克風可用,Voice requires Steam to be connected and an available microphone
 error.voice_capture_failed,无法采集麦克风，请检查系统录音设备与权限,無法擷取麥克風，請檢查系統錄音裝置與權限,Microphone capture failed; check the recording device and permissions
 error.voice_decode_failed,收到的语音无法播放，请确认双方模组版本一致,收到的語音無法播放，請確認雙方模組版本一致,Could not play received voice; ensure both players use the same mod version
@@ -423,6 +421,7 @@ native.room_chart,当前星系,目前星系,Current system
 native.home_chart,我的星系,我的星系,My system
 native.select_asteroid,选择此星球,選擇此星球,Select this asteroid
 native.select_position,点选空位,點選空位,Select an empty hex
+error.gameplay_disabled,没有启用的玩法。请在模组选项里勾选至少一项。,沒有啟用的玩法。請在模組選項裡勾選至少一項。,"No gameplay is enabled. Check at least one in the mod options."
 error.gameplay_mismatch,玩法或玩法版本不同，请安装相同玩法后加入。,玩法或玩法版本不同，請安裝相同玩法後加入。,The gameplay mode or version differs. Install the same mode to join.
 error.gameplay_rule_failed,玩法规则暂不可用，已停止星球准入。,玩法規則暫不可用，已停止星球准入。,The gameplay rules failed. Planet admission has stopped.
 native.system_menu,星系,星系,Star system

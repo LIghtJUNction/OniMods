@@ -93,7 +93,9 @@ namespace OniOnline.Sdk
             else
             {
                 disabled.Add(id);
-                if (selected == id)
+                // An open room keeps the rules it already started with. The next
+                // host or join picks another enabled gameplay after that room ends.
+                if (selected == id && Current == null)
                     selected = EnabledIds.FirstOrDefault() ?? BuiltInId;
             }
         }
@@ -161,6 +163,8 @@ namespace OniOnline.Sdk
             // notifying plugins, otherwise an old gameplay can still consume
             // messages after a leave/rejoin or gameplay switch.
             if (previous != null) previous.Dispose();
+            if (Current == null && !IsEnabled(selected))
+                selected = EnabledIds.FirstOrDefault() ?? BuiltInId;
             var handlers = SessionChanged;
             if (handlers == null) return;
             foreach (System.Action handler in handlers.GetInvocationList())

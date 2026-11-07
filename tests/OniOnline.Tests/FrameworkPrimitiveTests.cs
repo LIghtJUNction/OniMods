@@ -197,26 +197,28 @@ internal static class FrameworkPrimitiveTests
         // --- PresenceBoard Tool Drag & Ping Tests ---
         var drag = new ToolDragPresence("player_1", 0, "dig", ToolDragMode.Box, 10, 10, 15, 15, 7, "Sandstone", 0xFF0000FF);
         check(presence.TryToolDrag(drag) && presence.ToolDragFor("player_1") != null &&
-            presence.ToolDragFor("player_1").ToolId == "dig" && presence.ToolDragFor("player_1").Priority == 7,
-            "presence board retains active tool drag state for player");
+            presence.ToolDragFor("player_1").ToolId == "dig" && presence.ToolDragFor("player_1").Priority == 7 &&
+            presence.ToolDrags.Length == 1 && presence.ToolDrags[0].StartX == 10 &&
+            presence.Cursors.Length == 0,
+            "presence board retains active tool drag state for player and exposes collections");
 
         presence.ClearToolDrag("player_1");
-        check(presence.ToolDragFor("player_1") == null, "clear tool drag removes the player drag preview");
+        check(presence.ToolDragFor("player_1") == null && presence.ToolDrags.Length == 0, "clear tool drag removes the player drag preview");
 
         var ping = new PlayerPing("player_1", 0, 12, 12, "alert", 100.5);
         check(presence.TryPing(ping) && presence.Pings.Length == 1 && presence.Pings[0].Category == "alert",
             "presence board retains and rotates pings");
 
         presence.Drop("player_1");
-        check(presence.Pings.Length == 0 && presence.ToolDragFor("player_1") == null,
+        check(presence.Pings.Length == 0 && presence.ToolDragFor("player_1") == null && presence.ToolDrags.Length == 0,
             "player leave removes active tool drags and pings");
 
         // --- AnimReconciler & AnimSyncSharder Tests ---
         var localSnapshot = new AnimSnapshot(501, 1234, 1, 1.0f, 0.50f, 10.0);
         var authMatching = new AnimSnapshot(501, 1234, 1, 1.0f, 0.52f, 10.0);
-        var correctionMatch = AnimReconciler.Evaluate(localSnapshot, authMatching);
+        var correctionMatch = AnimReconciler.Evaluate(localSnapshot, authMatching, float.NaN, -1f);
         check(correctionMatch.Action == AnimCorrectionAction.None,
-            "animation within drift tolerance requires no correction");
+            "animation within drift tolerance requires no correction even with invalid tolerance clamps");
 
         var authDiffAnim = new AnimSnapshot(501, 5678, 2, 1.0f, 0.10f, 10.0);
         var correctionDiff = AnimReconciler.Evaluate(localSnapshot, authDiffAnim);

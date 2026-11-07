@@ -28,6 +28,7 @@ description: "开发或接入基于 OniOnline.Framework 的第三方联机玩法
 1. `OniOnline.Framework` 继续是 .NET Standard 2.0；玩法项目可按游戏 Mod 的目标框架编译，但只能引用打包后的公开 DLL。不要重新编译、复制或随玩法再次打包 `OniOnline.Framework.dll`。
 2. 玩法 ID 和规则版本是稳定的网络合同。所有参与者必须使用兼容版本；游戏构建号、DLC 和 CycleTrim 通过能力协商处理，不能在玩法里偷偷改成无条件硬相等。
 3. `ValidatePlanetAdmission` 只做纯校验，不能创建 Unity 对象、搬迁复制人或直接改别人的星球。框架内置玩法是聊天，会拒绝星球登记。`OnePlanetPerPlayer` 只是可供独立玩法模组注册的校验助手；注册它并声明 `onionline.worlds.v1` 后，适配器才启动世界服务。它不是远端操作权限。
+4. 接口文档同步不变量：任何涉及框架公开接口、基语类型（如 `DeterministicNetId`、`NetworkIdentityMap<T>`、`PresenceBoard`、`AnimReconciliation` 等）、能力协商合同的变更，必须同步维护 `mods/OniOnline/docs/SDK.md` 与 `FRAMEWORK-COMPATIBILITY.md` 等接口文档。
 
 ## 玩法生命周期
 

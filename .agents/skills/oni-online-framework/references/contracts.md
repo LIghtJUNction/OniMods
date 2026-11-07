@@ -31,3 +31,4 @@
 3. 是否让远端消息直接触碰 Unity/原生对象？把它改成经过身份、权限、世界 epoch、准入代次和幂等请求的本地意图。
 4. 是否让 UI 在菜单、创建、载入或初始复制人选择期间出现？检查 `NativeGameplayUi.Ready` 和场景取消路径。
 5. 是否扩大了实机结论？更新验证矩阵，不要把宿主 doubles 或包哈希写成真实 ONI 通过。
+6. 是否修改或新增了框架暴露的类型、方法、契约或底层能力？如果是，必须同步维护 `mods/OniOnline/docs/SDK.md`、`mods/OniOnline/docs/FRAMEWORK-COMPATIBILITY.md` 等对应接口文档，确保公开 API 与文档绝对一致。

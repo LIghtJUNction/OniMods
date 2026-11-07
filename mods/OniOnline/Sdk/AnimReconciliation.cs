@@ -71,6 +71,13 @@ namespace OniOnline.Sdk
                 throw new ArgumentException("entity_id_mismatch");
             }
 
+            if (float.IsNaN(driftTolerance) || driftTolerance < 0f) driftTolerance = DefaultDriftTolerance;
+            if (float.IsNaN(maxNudgeDrift) || maxNudgeDrift < driftTolerance) maxNudgeDrift = Math.Max(driftTolerance, DefaultMaxNudgeDrift);
+
+            float baseSpeed = authoritative.Speed > 0f && !float.IsNaN(authoritative.Speed) && !float.IsInfinity(authoritative.Speed)
+                ? authoritative.Speed
+                : 1.0f;
+
             // 1. If playing different animations, force immediate replay of the authoritative anim
             if (local.AnimHash != authoritative.AnimHash)
             {
@@ -79,14 +86,14 @@ namespace OniOnline.Sdk
                     authoritative.AnimHash,
                     authoritative.PlayMode,
                     authoritative.ElapsedTime,
-                    authoritative.Speed);
+                    baseSpeed);
             }
 
             // 2. Compute time drift accounting for latency timestamp difference if provided
             float latencyElapsed = 0f;
             if (authoritative.Timestamp > 0 && local.Timestamp > authoritative.Timestamp)
             {
-                latencyElapsed = (float)(local.Timestamp - authoritative.Timestamp) * authoritative.Speed;
+                latencyElapsed = (float)(local.Timestamp - authoritative.Timestamp) * baseSpeed;
             }
             float expectedElapsedTime = authoritative.ElapsedTime + latencyElapsed;
             float drift = local.ElapsedTime - expectedElapsedTime;
@@ -101,7 +108,6 @@ namespace OniOnline.Sdk
             // Small drift: nudge playback speed temporarily (e.g. +/- 15%) to smooth out drift without teleporting frames
             if (absDrift <= maxNudgeDrift)
             {
-                float baseSpeed = authoritative.Speed > 0 ? authoritative.Speed : 1.0f;
                 // If local is ahead, slow down slightly; if local is behind, speed up slightly
                 float nudgeFactor = drift > 0 ? 0.85f : 1.15f;
                 return new AnimCorrection(
@@ -118,7 +124,7 @@ namespace OniOnline.Sdk
                 authoritative.AnimHash,
                 authoritative.PlayMode,
                 expectedElapsedTime,
-                authoritative.Speed);
+                baseSpeed);
         }
     }
 

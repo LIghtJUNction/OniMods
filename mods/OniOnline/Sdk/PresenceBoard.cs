@@ -124,6 +124,8 @@ namespace OniOnline.Sdk
         private readonly List<PlayerPing> pings = new List<PlayerPing>();
 
         public bool Enabled { get; set; }
+        public PresenceCursor[] Cursors { get { return cursors.Values.ToArray(); } }
+        public ToolDragPresence[] ToolDrags { get { return toolDrags.Values.ToArray(); } }
         public PresenceMark[] Marks { get { return marks.ToArray(); } }
         public PlayerPing[] Pings { get { return pings.ToArray(); } }
 

@@ -33,8 +33,8 @@ namespace OniOnline
             RegisterOptionText("VOICEVOLUME", "voice_volume");
             RegisterOptionText("DEVGUIDE", "dev_guide");
             RegisterOptionText("ONEPLANETPERPLAYER", "builtin_gameplay");
-            RegisterOptionText("ACTIVEGAMEPLAY", "active_gameplay");
-            RegisterOptionText("DISABLEDGAMEPLAYS", "disabled_gameplays");
+            Strings.Add("STRINGS.ONIONLINE.OPTIONS.GAMEPLAYCHAT.NAME", OnlineText.Get("options.gameplay_chat"));
+            Strings.Add("STRINGS.ONIONLINE.OPTIONS.GAMEPLAYTOGGLE.DESC", OnlineText.Get("options.gameplay_toggle_hint"));
             Strings.Add("STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY", OnlineText.Get("options.category_gameplay"));
         }
 
