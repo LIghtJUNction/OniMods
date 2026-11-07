@@ -146,3 +146,17 @@ Exact bitwise equality with the legacy pressure sweep is not a valid expectation
 for a different continuum model. Exact compatibility remains required for
 unchanged ABI, save encoding, event schema, and all code paths not explicitly
 approved for changed physical behavior.
+
+
+## Stage 2.1 — GPU kernels
+
+The follow-up research branch `experiment/onisim-pressure-wgsl-kernels` adds
+WGSL face preparation, divergence, Red-Black Gauss-Seidel and velocity
+projection entry points, plus a wgpu Vulkan runner and a hardware benchmark.
+See [Stage 2.1 GPU kernel report](../gpu/STAGE-2.1-GPU-KERNELS.md).
+
+This remains an isolated projection API: it uploads density and provisional
+velocity for each call, then keeps the pressure iterations and projection on
+the GPU. It is not yet a full multi-physics GPU-resident game timestep. No
+material-to-density mapping, legacy pressure replacement or GPU performance
+claim is included.

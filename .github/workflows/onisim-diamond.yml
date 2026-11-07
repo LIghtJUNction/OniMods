@@ -69,7 +69,7 @@ jobs:
           toolchain: 1.99.1
       - name: Validate WGSL and run CPU transport invariants
         run: cargo +1.99.1 test --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --lib
-      - name: Compile Vulkan benchmark executable
+      - name: Compile Vulkan benchmark executables
         run: cargo +1.99.1 check --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --all-targets
 
   pressure-projection-reference:
