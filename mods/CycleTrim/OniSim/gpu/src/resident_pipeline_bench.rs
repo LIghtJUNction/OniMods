@@ -1,7 +1,7 @@
 use onisim_gpu::{
     gpu_context::GpuContext,
     multicomponent::{cpu_step, MulticomponentGpu, State},
-    pressure_projection::{PressureProjectionGpu, ProjectionInput},
+    pressure_projection::PressureProjectionGpu,
 };
 use serde::Serialize;
 use std::{hint::black_box, sync::Arc, time::Instant};
@@ -52,14 +52,6 @@ impl Fixture {
             velocity_y: &self.velocity_y,
             solid: &self.solid,
             drift_y: &self.drift_y,
-        }
-    }
-    fn projection_input(&self) -> ProjectionInput<'_> {
-        ProjectionInput {
-            density: &vec![1.0; self.solid.len()],
-            velocity_x: &self.velocity_x,
-            velocity_y: &self.velocity_y,
-            solid: &self.solid,
         }
     }
 }
