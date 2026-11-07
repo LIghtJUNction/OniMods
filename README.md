@@ -36,7 +36,7 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | Component | What it does | Start here |
 | --- | --- | --- |
 | **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
-| **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) |
+| **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) · [Rust CLI](docs/oni-mcp-cli.md) |
 | **CycleTrim** | Early experiment. Next version tries replacing one-element-per-cell flow with a GPU flux kernel. Speed first | [Module docs](mods/CycleTrim/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
 | **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
