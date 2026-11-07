@@ -86,7 +86,7 @@ impl PressureProjectionGpu{
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
   Ok(Self{device:context.device.clone(),queue:context.queue.clone(),prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
-   density,velocity_x,velocity_y,solid,u_faces,v_faces,beta_u,beta_v,rhs,pressure,
+   density,velocity_x,velocity_y,solid,u_faces,v_faces,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }
  pub fn run(&mut self,input:ProjectionInput<'_>,dt:f32,dx:f32,dy:f32,iterations:usize,omega:f32)->Result<ProjectionOutput,String>{
