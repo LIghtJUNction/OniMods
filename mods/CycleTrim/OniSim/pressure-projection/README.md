@@ -193,3 +193,25 @@ still outside the current Poisson solver's positive-density domain and needs
 an explicit free-surface/open-boundary treatment or a separately calibrated
 density-floor policy before gas-to-vacuum projection can be enabled. Liquid
 and solid densities still require their own measured/configured material data.
+
+
+## Stage 2.5 — resident operator handoff
+
+The shared-device branch adds an explicit no-readback path for multi-component
+transport and a pressure-projection entry point that consumes the transport
+mass/velocity/solid buffers directly. Density is computed on GPU from total
+species mass using explicit cell-volume and mass-unit parameters. Projected
+cell velocities are written back to the shared velocity buffers.
+
+Empty fluid cells currently produce zero density and block neighboring faces.
+This is a fail-closed boundary policy; open-vacuum gas flow is still outside
+the supported model. The pressure projection remains experimental.
+
+
+## Stage 2.6 — resident pipeline benchmark
+
+The `resident-pipeline-bench` executable exercises one shared-device
+transport-to-pressure handoff with no CPU readback between operators. It
+reports complete sample time including initial upload and final mass readback,
+plus CPU/GPU transport mass parity. This is an integration benchmark, not a
+full-game tick or long-horizon stability result.
