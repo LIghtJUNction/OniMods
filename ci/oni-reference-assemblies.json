@@ -223,9 +223,11 @@
         "sha256": "e1749ad46587104019dfe18328954fa9c0c24a2748fcbc1da5ed1fdf593e3e2c"
       },
       {
-        "name": "UnityEngine.TextCoreFontEngineModule.dll"
+        "name": "UnityEngine.TextCoreFontEngineModule.dll",
+        "size": 50688,
+        "sha256": "ce2936bb553118faacd6be2e12d664fde83318729d135b464007b55915e6db9d"
       }
     ],
-    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims."
+    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence."
   }
 }
