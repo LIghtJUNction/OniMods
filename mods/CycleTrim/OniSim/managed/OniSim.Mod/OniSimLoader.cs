@@ -92,6 +92,12 @@ namespace OniSim.CycleTrim
             }
         }
 
+        public static string GetMappedLibraryPath()
+        {
+            lock (Gate)
+                return mappedPath;
+        }
+
         private static LoaderResult Mapped()
         {
             return new LoaderResult(LoaderState.MappedUnverified,
