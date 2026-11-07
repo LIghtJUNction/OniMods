@@ -69,7 +69,7 @@ const uint8_t *ONISIM_GetGrid(void);
  * changing simulation state. A negative capacity is always an error.
  * Success returns the written byte count; errors return -1 and set status.
  * An undersized destination is not written. Callers own their output buffers. */
-int32_t ONISIM_CopyGridImage(uint8_t *destination, int32_t capacity);
+int32_t ONISIM_CopyGridImage(uint8_t *destination, int32_t capacity);\n\n/* Versioned OMC1 multicomponent snapshot. ABI v1 explicitly advertises\n * LEGACY_SINGLE_ELEMENT: current production cells still contain at most one\n * species. This copy API is coherent under the native state lock and returns\n * caller-owned bytes; it does not claim GPU/production multicomponent support. */\nint32_t ONISIM_CopyMulticomponentImage(uint8_t *destination, int32_t capacity);
 
 /* Pack=4, Linux x64 GameDataUpdate. Array pointers are native-owned, borrowed
  * only while the session is alive and its grid generation remains current.
