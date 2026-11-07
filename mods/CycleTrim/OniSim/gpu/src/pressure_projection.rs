@@ -67,8 +67,8 @@ impl PressureProjectionGpu{
   let beta_v=make_buffer("v inverse face density",v_count*4,storage);
   let rhs=make_buffer("pressure poisson rhs",cells*4,storage);
   let pressure=make_buffer("pressure solution",cells*4,storage|wgpu::BufferUsages::COPY_SRC);
-  let params_red=make_buffer("red parameters",48,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
-  let params_black=make_buffer("black parameters",48,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_red=make_buffer("red parameters",64,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_black=make_buffer("black parameters",64,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
   let readback=make_buffer("projection readback",(cells+u_count+v_count)*4,wgpu::BufferUsages::MAP_READ|wgpu::BufferUsages::COPY_DST);
   let buffers:[&wgpu::Buffer;10]=[&density,&velocity_x,&velocity_y,&solid,&u_faces,&v_faces,&beta_u,&beta_v,&rhs,&pressure];
   let bind=|pipeline:&wgpu::ComputePipeline,bindings:&[u32],params:&wgpu::Buffer|{
@@ -98,7 +98,7 @@ impl PressureProjectionGpu{
   if !dt.is_finite()||dt<=0.0||!dx.is_finite()||dx<=0.0||!dy.is_finite()||dy<=0.0||iterations==0||!omega.is_finite()||!(0.0<omega&&omega<2.0){return Err("invalid pressure timestep, spacing, iteration count or relaxation".into());}
   if input.density.iter().any(|v|!v.is_finite()||*v<=0.0)||input.velocity_x.iter().chain(input.velocity_y).any(|v|!v.is_finite()){return Err("pressure input contains invalid density or non-finite velocity".into());}
   let gauge=input.solid.iter().position(|&wall|wall==0).ok_or("pressure domain contains no fluid cells")?;
-  let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),omega.to_bits(),0,gauge as u32,1,1.0f32.to_bits(),0,0];
+  let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),omega.to_bits(),0,gauge as u32,1,1.0f32.to_bits(),1.0f32.to_bits(),0,0,0,0,0];
   self.queue.write_buffer(&self.params_red,0,bytemuck::cast_slice(&params));
   let mut black=params;black[6]=1;
   self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
@@ -165,6 +165,7 @@ impl PressureProjectionGpu{
   solid:&wgpu::Buffer,
   channels:usize,
   cell_volume:f32,
+  mass_scale_kg_per_game_unit:f32,
   gauge_cell:usize,
   dt:f32,
   dx:f32,
@@ -172,7 +173,7 @@ impl PressureProjectionGpu{
   iterations:usize,
   omega:f32,
  )->Result<(),String>{
-  if channels==0||channels>u32::MAX as usize||!cell_volume.is_finite()||cell_volume<=0.0{
+  if channels==0||channels>u32::MAX as usize||!cell_volume.is_finite()||cell_volume<=0.0||!mass_scale_kg_per_game_unit.is_finite()||mass_scale_kg_per_game_unit<=0.0{
    return Err("shared state requires positive channel count and cell volume".into());
   }
   if gauge_cell>=self.cells||!dt.is_finite()||dt<=0.0||!dx.is_finite()||dx<=0.0
@@ -180,7 +181,7 @@ impl PressureProjectionGpu{
    return Err("invalid shared pressure projection parameters".into());
   }
   let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),
-   omega.to_bits(),0,gauge_cell as u32,channels as u32,cell_volume.to_bits(),0,0];
+   omega.to_bits(),0,gauge_cell as u32,channels as u32,cell_volume.to_bits(),mass_scale_kg_per_game_unit.to_bits(),0,0,0,0];
   self.queue.write_buffer(&self.params_red,0,bytemuck::cast_slice(&params));
   let mut black=params;black[6]=1;
   self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
