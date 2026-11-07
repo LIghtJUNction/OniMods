@@ -71,3 +71,10 @@ jobs:
         run: cargo +1.99.1 test --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --lib
       - name: Compile Vulkan benchmark executable
         run: cargo +1.99.1 check --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --all-targets
+
+  pressure-projection-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate isolated variable-density Poisson reference
+        run: python3 -m unittest discover -s mods/CycleTrim/OniSim/pressure-projection/reference -p 'test_*.py' -v
