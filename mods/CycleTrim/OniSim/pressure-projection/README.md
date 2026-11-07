@@ -1,0 +1,128 @@
+# OniSim GPU Poisson Pressure Projection — Stage 2 research
+
+## Decision
+
+Investigate replacing the legacy gas/material pressure-transfer sweep with a
+GPU-resident incompressible pressure-projection pipeline. This is a research
+branch only. The production solver, C# ABI, save format, and game dispatch remain
+unchanged until the compatibility gates in this document pass.
+
+The replacement is **not** a source-level substitution. The current algorithm
+changes CellSOA mass and sometimes element identity directly; a Poisson
+projection changes a velocity field. A conservative advection/material adapter
+is therefore required between the new velocity field and OniSim's material
+state.
+
+## Source-derived legacy behavior
+
+The current call order is visible in
+[native/src/simulation_step.rs](../native/src/simulation_step.rs) and
+[native/src/simulation_step_fluid.rs](../native/src/simulation_step_fluid.rs):
+
+1. Each region runs gas pressure first, then gas displacement.
+2. Liquid update and liquid pressure displacement follow as a separate phase.
+3. The frame continues through disease diffusion, components, post-processing,
+   and disease post-processing.
+4. The world carries old/read and active/write CellSOA snapshots, a four-slot
+   per-cell `flow` accumulator, a tick seed, and directional scan state.
+
+The legacy gas/material pressure sweep in
+[native/src/pressure_sweep.rs](../native/src/pressure_sweep.rs) traverses cells
+serially in scan-direction order. For a candidate pair it computes
+
+`flow = clamp(k * (m_a - m_b), -0.125 * m_b, 0.125 * m_a)`
+
+where `k` is the source material's `ElementRecord.flow` for gas, or the
+destination record's flow for non-gas phases. It moves mass between read/write
+CellSOA storage, may replace an empty destination's element identity, transfers
+temperature and disease counts, clears exhausted disease state, handles the
+sink element, and emits substance-change/dirty notifications.
+
+Gas displacement is a separate operation in
+[native/src/gas.rs](../native/src/gas.rs). It checks the old snapshot's mass
+ordering, moves a neighboring gas into a third cell, then replaces the middle
+cell using a fixed 12.5% source-mass amount. Liquid displacement is separate
+again in `fluid::do_liquid_pressure_displacement`; it uses remaining mass after
+directional flow accounting, compares destination/neighbor masses, and can
+displace another liquid before replacing the destination element.
+
+These operations are order-sensitive and material-aware. They are not a
+discretization of `div(beta grad p) = div(u*) / dt`. In particular,
+`ElementRecord.flow` is a transfer coefficient, not a documented density or
+pressure in SI units. The element table separately carries molar mass,
+viscosity, heat capacity, transition data and default pressure.
+
+## Proposed numerical model
+
+Use a finite-volume projection with shared face-normal velocities:
+
+[
+
+abla cdot (eta 
+abla p) = rac{
+abla cdot u^*}{Delta t},
+qquad eta_f = rac{1}{ho_f}
+]
+
+[
+u^{n+1}_f = u^*_f - Delta t,eta_f,(
+abla p)_f.
+]
+
+The first reference uses a cell-centred provisional velocity, arithmetic
+face-density averaging, closed outer walls, zero normal velocity on
+solid-fluid faces, Neumann pressure boundaries, and a zero-mean pressure gauge.
+Red-Black Gauss-Seidel updates one checkerboard color per pass; a device memory
+barrier is required between colors. Pressure, density, face coefficients,
+velocity and solid masks remain device-resident across iterations.
+
+This equation is a candidate for a continuum-flow replacement, not an
+assumption that the game uses SI units. The mapping from material metadata and
+cell mass/temperature to `rho`, cell volume, viscosity and EOS pressure must be
+calibrated against the pinned official game before a production adapter exists.
+
+## Pipeline
+
+1. Snapshot material fields and classify fluid/solid/empty cells.
+2. Construct per-cell density and provisional face velocities using a
+   documented material adapter.
+3. Enforce impermeable outer/solid faces.
+4. Compute finite-volume divergence.
+5. Solve variable-coefficient Poisson pressure using GPU RBGS ping-pong or
+   same-buffer red/black passes with explicit pass ordering.
+6. Correct shared face velocities.
+7. Advect each material mass and its temperature/disease concentrations using
+   conservative shared-face fluxes.
+8. Apply legacy-only material rules (phase transitions, sinks, displacement,
+   interactions, events) through explicit compatibility hooks, not inside the
+   pressure equation.
+9. Publish CellSOA and event changes through the existing boundary.
+
+## Current deliverable
+
+- `reference/pressure_projection_reference.py`: standard-library CPU reference
+  for variable-density finite-volume projection.
+- `reference/test_pressure_projection.py`: numerical tests for divergence
+  reduction, residual, wall impermeability, invalid density and zero-velocity
+  fixed point.
+- `COMPATIBILITY-MATRIX.md`: legacy-to-new behavior map and promotion gates.
+
+The CPU reference validates the mathematical operator only. It does not claim
+that the operator reproduces the official game's pressure behavior.
+
+## Promotion rule
+
+No production switch until:
+- the CPU reference and WGSL kernel agree within a declared tolerance;
+- the Poisson residual and post-projection divergence gates pass on varied
+  geometries and density ratios;
+- material mass, species identity, thermal energy and disease budgets are
+  accounted for;
+- all existing public conformance cases and new pressure-specific gameplay
+  scenarios pass their agreed semantic acceptance envelopes;
+- actual-game save/reload, event, visual and performance acceptance passes.
+
+Exact bitwise equality with the legacy pressure sweep is not a valid expectation
+for a different continuum model. Exact compatibility remains required for
+unchanged ABI, save encoding, event schema, and all code paths not explicitly
+approved for changed physical behavior.
