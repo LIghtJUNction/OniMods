@@ -1,3 +1,4 @@
+using CycleTrim.Core;
 using HarmonyLib;
 
 namespace CycleTrim.Patches.Multicomponent
@@ -13,7 +14,7 @@ namespace CycleTrim.Patches.Multicomponent
         private static bool Prefix(int cell, ref SimHashes elementID, ref float __result)
         {
             MulticomponentCellSnapshot snapshot;
-            if (!CycleTrim.Core.MulticomponentCellAccess.TryGetCell(cell, out snapshot))
+            if (!MulticomponentCellAccess.TryGetCell(cell, out snapshot))
                 return true;
 
             float breathableMass = 0f;
