@@ -24,7 +24,7 @@ namespace CycleTrim
                 Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
             options = options ?? new OniSimOptions();
-            enableOniSim = options.EnableOniSim;
+            enableOniSim = options.EnableOniSimExperimental;
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
