@@ -1,5 +1,15 @@
 mod pressure_sweep;
+use std::cell::RefCell;
 use std::ffi::{c_char, c_void};
+use std::sync::MutexGuard;
+
+thread_local! {
+    // Pins State (and therefore the current GameData publication) while a
+    // managed caller copies one cell's records. Acquire and Release must run
+    // on the same OS thread.
+    static MULTICOMPONENT_READ_LEASE: RefCell<Option<MutexGuard<'static, state::State>>> =
+        const { RefCell::new(None) };
+}
 
 mod bytes;
 mod cell_material;
@@ -356,21 +366,54 @@ pub unsafe extern "C" fn ONISIM_CopyMulticomponentImage(destination: *mut u8, ca
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ONISIM_GetMulticomponentUpdate(
+pub extern "C" fn ONISIM_AcquireMulticomponentUpdate(
 ) -> *const multicomponent_publication::OniSimMulticomponentUpdate {
     boundary(std::ptr::null(), || {
-        let state = state::lock()?;
-        let _ = state.initialized_grid()?;
-        let update = state.multicomponent_update.as_ref().ok_or_else(|| {
-            Error::new(
-                Status::InvalidState,
-                "Start is required before reading multicomponent publication",
-            )
-        })?;
-        match update {
-            Ok(descriptor) => Ok(std::ptr::from_ref(descriptor)),
-            Err(error) => Err(error.clone()),
-        }
+        MULTICOMPONENT_READ_LEASE.with(|lease| {
+            let mut lease = lease.try_borrow_mut().map_err(|_| {
+                Error::new(Status::InvalidState, "multicomponent read lease is already being changed")
+            })?;
+            if lease.is_some() {
+                return Err(Error::new(
+                    Status::InvalidState,
+                    "this thread already owns a multicomponent read lease",
+                ));
+            }
+
+            let state = state::lock()?;
+            let _ = state.initialized_grid()?;
+            let update = state.multicomponent_update.as_ref().ok_or_else(|| {
+                Error::new(
+                    Status::InvalidState,
+                    "Start is required before reading multicomponent publication",
+                )
+            })?;
+            let descriptor = match update {
+                Ok(descriptor) => descriptor,
+                Err(error) => return Err(error.clone()),
+            };
+            let pointer = std::ptr::from_ref(descriptor);
+            *lease = Some(state);
+            Ok(pointer)
+        })
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ONISIM_ReleaseMulticomponentUpdate() {
+    boundary((), || {
+        MULTICOMPONENT_READ_LEASE.with(|lease| {
+            let mut lease = lease.try_borrow_mut().map_err(|_| {
+                Error::new(Status::InvalidState, "multicomponent read lease is already being changed")
+            })?;
+            if lease.take().is_none() {
+                return Err(Error::new(
+                    Status::InvalidState,
+                    "this thread does not own a multicomponent read lease",
+                ));
+            }
+            Ok(())
+        })
     })
 }
 
