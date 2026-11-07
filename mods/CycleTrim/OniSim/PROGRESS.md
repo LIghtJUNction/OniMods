@@ -39,8 +39,8 @@ gameplay semantics are equivalent.
 The fixed-step path currently runs temperature exchange and state transitions,
 gas/liquid pressure traversal, disease diffusion, radiation-region updates,
 component updates and cell post-processing. Post-processing calls partial-melt,
-sublimation/off-gas and unstable-cell paths. The specific gas-interaction rules
-above remain disconnected and must not be marked complete.
+sublimation/off-gas and unstable-cell paths. The helper remains unconnected in Rust; its required role in the pinned
+official simulation is unresolved and must not be guessed or marked complete.
 
 ### Safety and CI
 
