@@ -73,7 +73,8 @@ fn poisson_residual(f:&Fixture,w:usize,h:usize,p:&[f32],dt:f32)->f64 {
  }}
  nr.sqrt()/dr.sqrt().max(1e-30)
 }
-\nfn initial_faces(f:&Fixture,w:usize,h:usize)->(Vec<f32>,Vec<f32>){
+
+fn initial_faces(f:&Fixture,w:usize,h:usize)->(Vec<f32>,Vec<f32>){
  let mut u=vec![0.0;h*(w+1)];let mut v=vec![0.0;(h+1)*w];
  for y in 0..h{for x in 1..w{let a=y*w+x-1;let b=a+1;if f.solid[a]==0&&f.solid[b]==0{u[y*(w+1)+x]=0.5*(f.ux[a]+f.ux[b]);}}}
  for y in 1..h{for x in 0..w{let a=(y-1)*w+x;let b=a+w;if f.solid[a]==0&&f.solid[b]==0{v[y*w+x]=0.5*(f.uy[a]+f.uy[b]);}}}
@@ -101,7 +102,8 @@ fn main()->Result<(),String>{
   }
   if max_rel>1e-4{return Err(format!("CPU/GPU face parity failed for {w}x{h}: max scaled relative error {max_rel:e}"));}
   if after>=before{return Err(format!("pressure projection did not reduce divergence for {w}x{h}: {before:e} -> {after:e}"));}
-  let residual=poisson_residual(&fixture,w,h,&output.pressure,0.2);\n  rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),relative_poisson_residual:residual,max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
+  let residual=poisson_residual(&fixture,w,h,&output.pressure,0.2);
+  rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),relative_poisson_residual:residual,max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
  }
  println!("{}",serde_json::to_string_pretty(&Report{stage:"Stage 2 Vulkan Poisson pressure projection",adapter:adapter_name,vendor,device_type,backend,warmup:5,samples:31,rows}).map_err(|e|e.to_string())?);
  Ok(())
