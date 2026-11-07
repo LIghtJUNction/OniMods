@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <ProjectReference Include="OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj" />
   </ItemGroup>
 
   <ItemGroup>
