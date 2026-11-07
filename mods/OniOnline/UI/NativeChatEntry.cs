@@ -48,7 +48,15 @@ namespace OniOnline.UI
         {
             if (button == null) return;
             var runtime = OnlineRuntime.Instance;
-            bool ready = NativeGameplayUi.Ready && runtime != null && runtime.ChatAvailable;
+            // Solo / no room: hide the communications control without touching
+            // NativeGameplayUi.Ready. Ready used to call FindObjectsByType every
+            // frame and collapsed single-player FPS whenever this button existed.
+            if (runtime == null || !runtime.ChatAvailable)
+            {
+                if (button.gameObject.activeSelf) button.gameObject.SetActive(false);
+                return;
+            }
+            bool ready = NativeGameplayUi.Ready;
             if (button.gameObject.activeSelf != ready) button.gameObject.SetActive(ready);
             string current = OnlineInputControls.ChatBinding;
             if (binding == current) return;

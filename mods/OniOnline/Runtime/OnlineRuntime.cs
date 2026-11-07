@@ -310,7 +310,9 @@ namespace OniOnline.Runtime
 
         internal void ShowChat()
         {
-            if (!NativeGameplayUi.Ready || !ChatAvailable) return;
+            // ChatAvailable is session-gated; check it before Ready so solo play
+            // never pays for gameplay-UI readiness probes.
+            if (!ChatAvailable || !NativeGameplayUi.Ready) return;
             HideWindow();
             if (chatWindow == null) chatWindow = OnlineChatWindow.Create(this);
             chatWindow.FocusComposer();
@@ -1056,12 +1058,26 @@ namespace OniOnline.Runtime
         }
 
 
+        private bool HasIdleFrontendWork
+        {
+            get
+            {
+                return window != null
+                    || browser?.IsOpen == true
+                    || chatWindow != null
+                    || planetEntryDialog != null
+                    || advertiser != null
+                    || scanner != null
+                    || directory != null
+                    || pendingPreviewJoin != null
+                    || colonyEntry.Purpose != ColonyEntryPurpose.None;
+            }
+        }
+
         private void Update()
         {
             try
             {
-                double now = Time.realtimeSinceStartupAsDouble;
-                PrepareModCatalog();
                 var colony = OnlineColonyState.Current;
                 if (colony != null && !ReferenceEquals(lastColony, colony))
                 {
@@ -1075,6 +1091,15 @@ namespace OniOnline.Runtime
                     if (Session == null) RoomName = colony.HomeSystemName;
                     Revision++;
                 }
+
+                // Single-player / offline: do not pump catalogs, lobby search, or
+                // NativeGameplayUi.Ready every frame. Online work resumes when the
+                // player opens lobby UI, starts hosting/joining, or holds a session.
+                if (Session == null && !Busy && !HasIdleFrontendWork)
+                    return;
+
+                double now = Time.realtimeSinceStartupAsDouble;
+                PrepareModCatalog();
                 if (Session != null)
                 {
                     if (Session.IsHost && colony != null && !ReferenceEquals(moderationColony, colony))
@@ -1102,7 +1127,12 @@ namespace OniOnline.Runtime
                     }
                 }
                 UpdatePlanetEntry(now);
-                if (colonyEntry.TryBeginHost(NativeGameplayUi.Ready && colony != null))
+                // Evaluate Ready only while CreateSystem is actually waiting for host begin.
+                // Argument evaluation of Ready&&colony used to scan the scene every frame in solo.
+                if (colonyEntry.WaitingToBeginHost
+                    && colony != null
+                    && NativeGameplayUi.Ready
+                    && colonyEntry.TryBeginHost(true))
                 {
                     if (Session == null) Host(colony);
                     if (Session != null) colonyEntry.CreationConnected();

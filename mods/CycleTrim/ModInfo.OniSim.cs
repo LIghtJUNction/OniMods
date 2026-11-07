@@ -26,17 +26,18 @@ namespace CycleTrim
             }
             options = options ?? new OniSimOptions();
             enableOniSim = options.EnableOniSimExperimental;
+            bool enableMulticomponentShim = enableOniSim;
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
                 options.EnablePerformanceDiagnostics, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
                 options.OptimizeAnimationSymbols, options.OptimizeStateMachineLookups,
-                options.ConduitAnimation, options.EnableMulticomponentShim);
+                options.ConduitAnimation, enableMulticomponentShim);
             LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
 
-            if (options.EnableMulticomponentShim && result.State == LoaderState.MappedUnverified)
+            if (enableMulticomponentShim && result.State == LoaderState.MappedUnverified)
             {
                 try
                 {

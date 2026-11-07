@@ -9,9 +9,11 @@ internal static class ColonyEntryFlowTests
     internal static void Run(Action<bool, string> check)
     {
         var flow = new ColonyEntryFlow();
-        check(!flow.TryBeginHost(true) && !flow.NativeReady(), "a loaded ordinary colony cannot invent online creation intent");
+        check(!flow.TryBeginHost(true) && !flow.NativeReady() && !flow.WaitingToBeginHost,
+            "a loaded ordinary colony cannot invent online creation intent");
         flow.BeginCreation();
-        check(flow.AwaitingNative && !flow.TryBeginHost(false), "online creation waits for native UI readiness");
+        check(flow.AwaitingNative && flow.WaitingToBeginHost && !flow.TryBeginHost(false),
+            "online creation waits for native UI readiness");
         flow.CancelFrontend();
         check(flow.Purpose == ColonyEntryPurpose.None && !flow.TryBeginHost(true),
             "cancelling creation then loading an old colony cannot automatically host it");

@@ -63,7 +63,7 @@ namespace OniMods.JlibBootstrap
                         dialog = KScreenManager.AddChild(Global.Instance.globalCanvas,
                             ScreenPrefabs.Instance.ConfirmDialogScreen.gameObject).GetComponent<ConfirmDialogScreen>();
                         dialog.PopupConfirmDialog(string.Join("\n", messages) +
-                            "\n\nInstall and enable a compatible Jlib, check the affected mod installations, then restart the game to complete startup.",
+                            "\n\nIf this mentions Jlib, install and enable one compatible Jlib. Otherwise check Player.log for [Jlib bootstrap] / FileNotFoundException, repair the mod install, then restart.",
                             () => { }, null, title_text: "Mod startup");
                         dialog.Activate();
                         shown = true;
@@ -96,8 +96,9 @@ namespace OniMods.JlibBootstrap
                 case StartupFailure.MissingLibrary: return "Jlib installation is missing its library.";
                 case StartupFailure.InvalidLibrary: return "Jlib is incompatible or could not be loaded.";
                 case StartupFailure.ConflictingLibrary: return "A conflicting Jlib copy is already loaded. Restart after fixing the mod list.";
-                case StartupFailure.MissingImplementation: return "The mod installation is incomplete.";
+                case StartupFailure.MissingImplementation: return "The mod installation is incomplete (implementation DLL missing).";
                 case StartupFailure.InvalidImplementation: return "The mod implementation could not be verified.";
+                case StartupFailure.StartupFailed: return "The mod failed while starting (often a missing dependency DLL). See Player.log.";
                 default: return "The mod could not start.";
             }
         }

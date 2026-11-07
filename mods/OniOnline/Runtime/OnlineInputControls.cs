@@ -113,9 +113,16 @@ namespace OniOnline.Runtime
                 runtime.Voice?.SetPushToTalk(false);
                 return;
             }
+            // No joined room: skip voice polling entirely in ordinary single-player.
+            var session = runtime.Session;
+            if (session == null || !session.Joined || session.Closed || session.Reconnecting)
+            {
+                voiceGate.ReleaseVoice();
+                runtime.Voice?.SetPushToTalk(false);
+                return;
+            }
             if (!IsActive()) Activate();
-            bool allowed = runtime.VoiceEnabled && ContextAllowsShortcuts && runtime.Session?.Joined == true &&
-                !runtime.Session.Closed && !runtime.Session.Reconnecting;
+            bool allowed = runtime.VoiceEnabled && ContextAllowsShortcuts;
             runtime.Voice?.SetPushToTalk(voiceGate.UpdateVoice(allowed, VoiceBindingHeld));
         }
 

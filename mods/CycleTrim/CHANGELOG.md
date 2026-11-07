@@ -1,3 +1,8 @@
+## 2026-11-07 — 0.4.4
+
+- Package `OniSim.Compatibility.dll` beside `implementation/CycleTrim.dll`. Without it the Jlib bootstrap failed with FileNotFoundException and the dialog misleadingly pointed at Jlib.
+- Merge the Rust SimDLL toggle and GPU multicomponent acceleration toggle into a single unified option ("OniSim 仿真与 GPU 加速 / OniSim simulation & GPU acceleration").
+
 ## 2026-11-07 — 0.4.3
 
 - Fix severe frame drop (1-2 FPS) in late-game saves caused by AsyncPathProber.Manager loop starvation: reset penalty score on throttled navigators (navigators[nav] = 0) to prevent permanent ordering priority monopolization, and bound per-tick skips.

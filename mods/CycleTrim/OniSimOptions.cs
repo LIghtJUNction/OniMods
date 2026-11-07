@@ -7,16 +7,9 @@ namespace CycleTrim
     public sealed class OniSimOptions
     {
         [Option(
-            "Enable multicomponent compatibility shim / 启用多组分兼容垫片",
-            "启用上层多组分兼容补丁。仅当 OniSim 多组分单元数据提供器已就绪时生效；否则安全回退到原版行为。修改后需要重启游戏。",
-            "Simulation / 仿真")]
-        [RestartRequired]
-        public bool EnableMulticomponentShim { get; set; } = true;
-
-        [Option(
-            "Use experimental OniSim simulation core / 使用实验性 OniSim 仿真核心",
-            "Use the experimental, unverified OniSim core for the game's SimDLL imports. Disabled by default; changes require restarting ONI. / 启用尚未完成真实游戏验收的实验性 OniSim 核心，默认关闭；修改后需要重启游戏。",
-            "Simulation / 仿真")]
+            "OniSim 仿真与 GPU 加速 / OniSim simulation & GPU acceleration",
+            "启用实验性 OniSim 核心（Rust SimDLL 与 GPU 多组分并行模拟）。关闭时使用原版官方 SimDLL；修改后需要重启游戏。",
+            "仿真 / Simulation")]
         [RestartRequired]
         public bool EnableOniSimExperimental { get; set; }
 

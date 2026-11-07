@@ -15,6 +15,16 @@ namespace OniOnline.Core
         internal ColonyEntryStage Stage { get; private set; }
         internal bool RequiresLeaveConnection { get { return Stage == ColonyEntryStage.AwaitingDisconnect; } }
         internal bool AwaitingNative { get { return Stage == ColonyEntryStage.AwaitingNative; } }
+        // Host creation is the only path that needs NativeGameplayUi.Ready each frame.
+        // Ordinary single-player colonies never set CreateSystem intent.
+        internal bool WaitingToBeginHost
+        {
+            get
+            {
+                return Purpose == ColonyEntryPurpose.CreateSystem
+                    && Stage == ColonyEntryStage.AwaitingNative;
+            }
+        }
         private bool Joining { get { return Purpose == ColonyEntryPurpose.JoinExisting ||
             Purpose == ColonyEntryPurpose.JoinNew || Purpose == ColonyEntryPurpose.JoinLoad; } }
 
