@@ -232,17 +232,29 @@ namespace OniSim.Compatibility
             });
         }
 
-        public IntPtr GetMulticomponentUpdatePointer()
+        public IntPtr AcquireMulticomponentUpdatePointer()
         {
             return Locked(() =>
             {
-                if (api.GetMulticomponentUpdate == null)
-                    throw new NotSupportedException("Native library does not expose the optional multicomponent update API.");
-                IntPtr pointer = api.GetMulticomponentUpdate();
+                if (api.AcquireMulticomponentUpdate == null || api.ReleaseMulticomponentUpdate == null)
+                    throw new NotSupportedException("Native library does not expose the multicomponent read-lease API.");
+                IntPtr pointer = api.AcquireMulticomponentUpdate();
                 CheckOperation(0, 0);
                 if (pointer == IntPtr.Zero)
                     throw new InvalidDataException("Native multicomponent update descriptor is null.");
                 return pointer;
+            });
+        }
+
+        public void ReleaseMulticomponentUpdate()
+        {
+            Locked(() =>
+            {
+                if (api.ReleaseMulticomponentUpdate == null)
+                    throw new NotSupportedException("Native library does not expose the multicomponent read-lease API.");
+                api.ReleaseMulticomponentUpdate();
+                CheckOperation(0, 0);
+                return true;
             });
         }
 
