@@ -185,3 +185,71 @@ still outside the current Poisson solver's positive-density domain and needs
 an explicit free-surface/open-boundary treatment or a separately calibrated
 density-floor policy before gas-to-vacuum projection can be enabled. Liquid
 and solid densities still require their own measured/configured material data.
+
+
+## Stage 2.5 — resident operator handoff
+
+The shared-device branch adds an explicit no-readback path for multi-component
+transport and a pressure-projection entry point that consumes the transport
+mass/velocity/solid buffers directly. Density is computed on GPU from total
+species mass using explicit cell-volume and mass-unit parameters. Projected
+cell velocities are written back to the shared velocity buffers.
+
+Empty fluid cells currently produce zero density and block neighboring faces.
+This is a fail-closed boundary policy; open-vacuum gas flow is still outside
+the supported model. The pressure projection remains experimental.
+
+
+## Stage 2.6 — resident pipeline benchmark
+
+The `resident-pipeline-bench` executable exercises one shared-device
+transport-to-pressure handoff with no CPU readback between operators. It
+reports complete sample time including initial upload and final mass readback,
+plus CPU/GPU transport mass parity. This is an integration benchmark, not a
+full-game tick or long-horizon stability result.
+
+
+### Reproducible calibration CLI
+
+The `material-eos-calibrate` binary accepts a JSON export of gas records from
+the pinned official element table. The input must include the game build/source
+identity, the SHA-256 of the raw table export, explicit unit scales, a reviewed
+relative-deviation tolerance, and selected gas defaults.
+
+Example schema (values below are placeholders, not ONI measurements):
+
+```json
+{
+  "source": "REPLACE_WITH_GAME_BUILD_AND_ELEMENT_TABLE_EXPORT",
+  "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "units": {
+    "mass_kg_per_game_unit": 1.0,
+    "molar_mass_kg_per_mol_per_game_unit": 0.001,
+    "temperature_kelvin_per_game_unit": 1.0,
+    "temperature_offset_kelvin": 0.0,
+    "pressure_pa_per_game_unit": 1.0
+  },
+  "max_relative_deviation": 0.05,
+  "gases": [
+    {
+      "name": "ExampleGas",
+      "molar_mass": 32.0,
+      "default_mass": 0.032,
+      "default_temperature": 300.0,
+      "default_pressure": 2494.338785445972
+    }
+  ]
+}
+```
+
+Run:
+```sh
+cd mods/CycleTrim/OniSim/gpu
+cargo run --locked --release --bin material-eos-calibrate -- /path/to/official-gas-defaults.json
+```
+
+The tool rejects missing provenance, malformed declared digests, invalid unit
+scales, invalid defaults, and gas records whose inferred volumes exceed the
+chosen consistency envelope. The digest is recorded and format-checked; the
+CLI does not independently hash or verify the source binary/export.
+No example values should be mistaken for official game data.

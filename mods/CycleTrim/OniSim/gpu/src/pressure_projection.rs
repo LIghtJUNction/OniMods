@@ -12,12 +12,13 @@ pub struct ProjectionOutput{
 }
 pub struct PressureProjectionGpu{
  device:Arc<wgpu::Device>,queue:Arc<wgpu::Queue>,
+ density_from_mass:wgpu::ComputePipeline,reconstruct_velocity:wgpu::ComputePipeline,
  prepare_u:wgpu::ComputePipeline,prepare_v:wgpu::ComputePipeline,
  divergence:wgpu::ComputePipeline,rbgs:wgpu::ComputePipeline,
  project_u:wgpu::ComputePipeline,project_v:wgpu::ComputePipeline,
- groups:[wgpu::BindGroup;7],
+ groups:[wgpu::BindGroup;8],
  density:wgpu::Buffer,velocity_x:wgpu::Buffer,velocity_y:wgpu::Buffer,solid:wgpu::Buffer,
- u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
+ u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,beta_u:wgpu::Buffer,beta_v:wgpu::Buffer,rhs:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
  readback:wgpu::Buffer,width:usize,height:usize,cells:usize,u_count:usize,v_count:usize,
  pub adapter:wgpu::AdapterInfo,
 }
@@ -32,7 +33,7 @@ impl PressureProjectionGpu{
   let u_count=height.checked_mul(width+1).ok_or("u-face count overflow")?;
   let v_count=(height+1).checked_mul(width).ok_or("v-face count overflow")?;
   if [cells,u_count,v_count].iter().any(|&n|n>u32::MAX as usize){return Err("pressure grid exceeds u32 shader indexing".into());}
-  let device=&context.device;let queue=&context.queue;let info=context.adapter.clone();let limits=device.limits();
+  let device=&context.device;let info=context.adapter.clone();let limits=device.limits();
   let largest=[cells,u_count,v_count].into_iter().max().unwrap()*4;
   if largest as u64>limits.max_storage_buffer_binding_size as u64
    ||(width+1).div_ceil(8)>limits.max_compute_workgroups_per_dimension as usize
@@ -44,6 +45,8 @@ impl PressureProjectionGpu{
   let make_pipeline=|label:&'static str,entry_point:&'static str|{
    device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor{label:Some(label),layout:None,module:&shader,entry_point:Some(entry_point),compilation_options:Default::default(),cache:None})
   };
+  let density_from_mass=make_pipeline("density from species mass","compute_density_from_species_mass");
+  let reconstruct_velocity=make_pipeline("reconstruct cell velocity","reconstruct_cell_velocity");
   let prepare_u=make_pipeline("prepare u faces","prepare_u_faces");
   let prepare_v=make_pipeline("prepare v faces","prepare_v_faces");
   let divergence=make_pipeline("compute divergence","compute_divergence");
@@ -64,8 +67,8 @@ impl PressureProjectionGpu{
   let beta_v=make_buffer("v inverse face density",v_count*4,storage);
   let rhs=make_buffer("pressure poisson rhs",cells*4,storage);
   let pressure=make_buffer("pressure solution",cells*4,storage|wgpu::BufferUsages::COPY_SRC);
-  let params_red=make_buffer("red parameters",32,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
-  let params_black=make_buffer("black parameters",32,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_red=make_buffer("red parameters",64,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_black=make_buffer("black parameters",64,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
   let readback=make_buffer("projection readback",(cells+u_count+v_count)*4,wgpu::BufferUsages::MAP_READ|wgpu::BufferUsages::COPY_DST);
   let buffers:[&wgpu::Buffer;10]=[&density,&velocity_x,&velocity_y,&solid,&u_faces,&v_faces,&beta_u,&beta_v,&rhs,&pressure];
   let bind=|pipeline:&wgpu::ComputePipeline,bindings:&[u32],params:&wgpu::Buffer|{
@@ -83,10 +86,11 @@ impl PressureProjectionGpu{
    bind(&rbgs,&[3,6,7,8,9,10],&params_black),
    bind(&project_u,&[4,6,9,10],&params_red),
    bind(&project_v,&[5,7,9,10],&params_red),
+   bind(&reconstruct_velocity,&[1,2,3,4,5,10],&params_red),
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
-  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
-   density,velocity_x,velocity_y,solid,u_faces,v_faces,pressure,
+  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),density_from_mass,reconstruct_velocity,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
+   density,velocity_x,velocity_y,solid,u_faces,v_faces,beta_u,beta_v,rhs,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }
  pub fn run(&mut self,input:ProjectionInput<'_>,dt:f32,dx:f32,dy:f32,iterations:usize,omega:f32)->Result<ProjectionOutput,String>{
@@ -94,7 +98,7 @@ impl PressureProjectionGpu{
   if !dt.is_finite()||dt<=0.0||!dx.is_finite()||dx<=0.0||!dy.is_finite()||dy<=0.0||iterations==0||!omega.is_finite()||!(0.0<omega&&omega<2.0){return Err("invalid pressure timestep, spacing, iteration count or relaxation".into());}
   if input.density.iter().any(|v|!v.is_finite()||*v<=0.0)||input.velocity_x.iter().chain(input.velocity_y).any(|v|!v.is_finite()){return Err("pressure input contains invalid density or non-finite velocity".into());}
   let gauge=input.solid.iter().position(|&wall|wall==0).ok_or("pressure domain contains no fluid cells")?;
-  let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),omega.to_bits(),0,gauge as u32];
+  let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),omega.to_bits(),0,gauge as u32,1,1.0f32.to_bits(),1.0f32.to_bits(),0,0,0,0,0];
   self.queue.write_buffer(&self.params_red,0,bytemuck::cast_slice(&params));
   let mut black=params;black[6]=1;
   self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
@@ -127,6 +131,10 @@ impl PressureProjectionGpu{
    let mut pass=encoder.begin_compute_pass(&Default::default());pass.set_pipeline(&self.project_v);pass.set_bind_group(0,&self.groups[6],&[]);
    pass.dispatch_workgroups((self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8),1);
   }
+  {
+   let mut pass=encoder.begin_compute_pass(&Default::default());pass.set_pipeline(&self.reconstruct_velocity);pass.set_bind_group(0,&self.groups[7],&[]);
+   pass.dispatch_workgroups((self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8),1);
+  }
   let u_offset=(self.cells*4)as u64;let v_offset=((self.cells+self.u_count)*4)as u64;
   encoder.copy_buffer_to_buffer(&self.pressure,0,&self.readback,0,(self.cells*4)as u64);
   encoder.copy_buffer_to_buffer(&self.u_faces,0,&self.readback,u_offset,(self.u_count*4)as u64);
@@ -144,6 +152,95 @@ impl PressureProjectionGpu{
   self.readback.unmap();
   Ok(ProjectionOutput{pressure,u_faces,v_faces,iterations,adapter:self.adapter.clone()})
  }
+
+ /// Run the projection directly against another operator's device-local state.
+ /// The mass tensor is NHWC; density is computed on the GPU as total mass / cell_volume.
+ /// The updated cell-centred velocity is written back into the supplied velocity buffers.
+ /// Empty cells produce zero density and block adjacent faces; open-vacuum flow is not modelled.
+ pub fn run_with_shared_state(
+  &mut self,
+  mass:&wgpu::Buffer,
+  velocity_x:&wgpu::Buffer,
+  velocity_y:&wgpu::Buffer,
+  solid:&wgpu::Buffer,
+  channels:usize,
+  cell_volume:f32,
+  mass_scale_kg_per_game_unit:f32,
+  gauge_cell:usize,
+  dt:f32,
+  dx:f32,
+  dy:f32,
+  iterations:usize,
+  omega:f32,
+ )->Result<(),String>{
+  if channels==0||channels>u32::MAX as usize||!cell_volume.is_finite()||cell_volume<=0.0||!mass_scale_kg_per_game_unit.is_finite()||mass_scale_kg_per_game_unit<=0.0{
+   return Err("shared state requires positive channel count and cell volume".into());
+  }
+  if gauge_cell>=self.cells||!dt.is_finite()||dt<=0.0||!dx.is_finite()||dx<=0.0
+   ||!dy.is_finite()||dy<=0.0||iterations==0||!omega.is_finite()||!(0.0<omega&&omega<2.0){
+   return Err("invalid shared pressure projection parameters".into());
+  }
+  let params=[self.width as u32,self.height as u32,dt.to_bits(),dx.to_bits(),dy.to_bits(),
+   omega.to_bits(),0,gauge_cell as u32,channels as u32,cell_volume.to_bits(),mass_scale_kg_per_game_unit.to_bits(),0,0,0,0,0];
+  self.queue.write_buffer(&self.params_red,0,bytemuck::cast_slice(&params));
+  let mut black=params;black[6]=1;
+  self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
+
+  let bind_shared=|pipeline:&wgpu::ComputePipeline,bindings:&[u32],params_buffer:&wgpu::Buffer|{
+   let entries:Vec<_>=bindings.iter().map(|&binding|{
+    let resource=match binding{
+     0=>self.density.as_entire_binding(),
+     1=>velocity_x.as_entire_binding(),
+     2=>velocity_y.as_entire_binding(),
+     3=>solid.as_entire_binding(),
+     4=>self.u_faces.as_entire_binding(),
+     5=>self.v_faces.as_entire_binding(),
+     6=>self.beta_u.as_entire_binding(),
+     7=>self.beta_v.as_entire_binding(),
+     8=>self.rhs.as_entire_binding(),
+     9=>self.pressure.as_entire_binding(),
+     10=>params_buffer.as_entire_binding(),
+     11=>mass.as_entire_binding(),
+     _=>unreachable!("unknown pressure projection binding"),
+    };
+    wgpu::BindGroupEntry{binding,resource}
+   }).collect();
+   self.device.create_bind_group(&wgpu::BindGroupDescriptor{
+    label:Some("shared OniSim pressure projection bindings"),
+    layout:&pipeline.get_bind_group_layout(0),entries:&entries,
+   })
+  };
+  let groups=[
+   bind_shared(&self.density_from_mass,&[0,3,10,11],&self.params_red),
+   bind_shared(&self.prepare_u,&[0,1,3,4,6,10],&self.params_red),
+   bind_shared(&self.prepare_v,&[0,2,3,5,7,10],&self.params_red),
+   bind_shared(&self.divergence,&[3,4,5,8,9,10],&self.params_red),
+   bind_shared(&self.rbgs,&[3,6,7,8,9,10],&self.params_red),
+   bind_shared(&self.rbgs,&[3,6,7,8,9,10],&self.params_black),
+   bind_shared(&self.project_u,&[4,6,9,10],&self.params_red),
+   bind_shared(&self.project_v,&[5,7,9,10],&self.params_red),
+   bind_shared(&self.reconstruct_velocity,&[1,2,3,4,5,10],&self.params_red),
+  ];
+  let mut encoder=self.device.create_command_encoder(&Default::default());
+  let dispatch=|encoder:&mut wgpu::CommandEncoder,pipeline:&wgpu::ComputePipeline,group:&wgpu::BindGroup,x:u32,y:u32|{
+   let mut pass=encoder.begin_compute_pass(&Default::default());
+   pass.set_pipeline(pipeline);pass.set_bind_group(0,group,&[]);pass.dispatch_workgroups(x,y,1);
+  };
+  dispatch(&mut encoder,&self.density_from_mass,&groups[0],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(&mut encoder,&self.prepare_u,&groups[1],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(&mut encoder,&self.prepare_v,&groups[2],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
+  dispatch(&mut encoder,&self.divergence,&groups[3],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  for _ in 0..iterations{
+   dispatch(&mut encoder,&self.rbgs,&groups[4],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+   dispatch(&mut encoder,&self.rbgs,&groups[5],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  }
+  dispatch(&mut encoder,&self.project_u,&groups[6],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(&mut encoder,&self.project_v,&groups[7],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
+  dispatch(&mut encoder,&self.reconstruct_velocity,&groups[8],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  self.queue.submit([encoder.finish()]);
+  Ok(())
+ }
+
 }
 #[cfg(test)]
 mod tests{

@@ -95,8 +95,11 @@ impl MulticomponentGpu {
         self.queue.write_buffer(&self.drift_y,0,bytemuck::cast_slice(state.drift_y));
         self.uploaded=true;Ok(())
     }
-    pub fn run_steps_and_readback(&mut self,steps:usize,dt:f32,output:&mut[f32])->Result<(),String>{
-        if !self.uploaded||steps==0||output.len()!=self.count*self.channels||!dt.is_finite()||dt<=0.0||dt*self.max_cfl_rate>1.0{return Err("resident run requires valid uploaded state, positive steps/dt and matching output".into());}
+    /// Advance the current device-local mass tensor without copying it to the CPU.
+    pub fn dispatch_resident(&mut self, steps:usize, dt:f32)->Result<(),String>{
+        if !self.uploaded||steps==0||!dt.is_finite()||dt<=0.0||dt*self.max_cfl_rate>1.0{
+            return Err("resident dispatch requires uploaded state, positive steps/dt and the validated CFL bound".into());
+        }
         self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,dt.to_bits()]));
         let mut encoder=self.device.create_command_encoder(&Default::default());
         for _ in 0..steps{
@@ -106,7 +109,17 @@ impl MulticomponentGpu {
             pass.dispatch_workgroups((self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8),1);
             self.current_is_a=!self.current_is_a;
         }
+        self.queue.submit([encoder.finish()]);
+        Ok(())
+    }
+
+    /// Read the current mass tensor only when a CPU consumer actually needs it.
+    pub fn readback_current(&mut self,output:&mut[f32])->Result<(),String>{
+        if !self.uploaded||output.len()!=self.count*self.channels{
+            return Err("readback requires uploaded state and a matching output tensor".into());
+        }
         let final_buffer=if self.current_is_a{&self.mass_a}else{&self.mass_b};
+        let mut encoder=self.device.create_command_encoder(&Default::default());
         encoder.copy_buffer_to_buffer(final_buffer,0,&self.readback,0,(output.len()*4) as u64);
         let submission=self.queue.submit([encoder.finish()]);
         let(send,receive)=mpsc::sync_channel(1);
@@ -115,6 +128,11 @@ impl MulticomponentGpu {
         receive.recv_timeout(Duration::from_secs(2)).map_err(|e|e.to_string())?.map_err(|e|e.to_string())?;
         {let view=self.readback.get_mapped_range(..).map_err(|e|e.to_string())?;output.copy_from_slice(bytemuck::cast_slice(&view));}
         self.readback.unmap();Ok(())
+    }
+
+    pub fn run_steps_and_readback(&mut self,steps:usize,dt:f32,output:&mut[f32])->Result<(),String>{
+        self.dispatch_resident(steps,dt)?;
+        self.readback_current(output)
     }
 }
 fn bind(binding:u32,buffer:&wgpu::Buffer)->wgpu::BindGroupEntry<'_>{wgpu::BindGroupEntry{binding,resource:buffer.as_entire_binding()}}

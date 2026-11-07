@@ -30,3 +30,11 @@ path = "src/multicomponent_bench.rs"
 [[bin]]
 name = "pressure-projection-bench"
 path = "src/pressure_projection_bench.rs"
+
+[[bin]]
+name = "resident-pipeline-bench"
+path = "src/resident_pipeline_bench.rs"
+
+[[bin]]
+name = "material-eos-calibrate"
+path = "src/material_eos_calibrate.rs"

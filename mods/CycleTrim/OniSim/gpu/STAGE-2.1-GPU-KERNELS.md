@@ -76,3 +76,46 @@ No production pressure sweep is replaced. Gas three-cell displacement, liquid di
 3. Numerical strength: CPU reference tests pass; GPU parity and residual thresholds remain open.
 4. Evaluation completeness: add GPU/CPU corrected-face parity, irregular geometry, high density-ratio and long-run tests.
 5. Method soundness: the density-to-material mapping and compatibility adapter are still unresolved; do not promote this into production.
+
+
+## Stage 2.5 — resident transport/pressure buffer handoff
+
+The GPU crate now exposes the current multi-component mass buffer, cell velocity
+buffers and solid mask. `MulticomponentGpu::dispatch_resident` advances the
+NHWC mass tensor without readback; `readback_current` is an explicit separate
+operation.
+
+`PressureProjectionGpu::run_with_shared_state` accepts those buffers from an
+operator created with the same `GpuContext`. It computes cell density on the
+GPU as total species mass × explicit mass-unit scale / cell volume, performs
+face preparation, divergence, RBGS and projection, then reconstructs
+cell-centred velocity directly into the shared transport velocity buffers.
+There is no CPU readback or re-upload between these two operator calls.
+
+Boundary: a zero-mass fluid cell produces zero density and closes adjacent
+faces. This is safe fail-closed behavior, not a gas-to-vacuum flow model.
+The caller must supply a valid fluid gauge cell, a calibrated cell volume and
+mass scale, and a conservative CFL bound. The legacy game still does not use
+this experimental pipeline.
+
+
+## Stage 2.6 — one-submission resident coupling benchmark
+
+A new `resident-pipeline-bench` executable creates one shared `GpuContext`,
+uploads the initial multi-component state once per sample, dispatches one
+conservative transport step, runs the pressure projection directly against the
+transport mass/velocity/solid buffers, then performs one final mass readback.
+The pressure projection computes density from species mass on the GPU using
+explicit cell-volume and mass-unit scales.
+
+Run:
+```sh
+cd mods/CycleTrim/OniSim/gpu
+rtk proxy cargo run --locked --release --bin resident-pipeline-bench
+```
+
+The benchmark covers 96×96×4 and 256×384×4, five warmups and 31 samples. It
+reports median/P95 end-to-end time and CPU/GPU transport mass parity. The
+pressure iteration count defaults to 32 and can be set with
+`ONISIM_PRESSURE_ITERATIONS`. The benchmark is a one-transport-step followed
+by pressure projection; it is not yet a long-run coupled stability test.
