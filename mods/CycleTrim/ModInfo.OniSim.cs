@@ -12,7 +12,7 @@ namespace CycleTrim
     {
         partial void ConfigureOniSim()
         {
-            bool enableOniSim = true;
+            bool enableOniSim = false;
             OniSimOptions options = null;
             try
             {
