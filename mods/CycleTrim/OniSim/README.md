@@ -22,7 +22,7 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 - 直接使用官方消息布局，没有额外消息封包协议或 C# 全图镜像。
 - 源码已包含气液、热传导、相变、疾病、辐射、质量组件和热量组件。
 - 2026-11-07 静态路由审计在源码中找到全部 62 个官方消息 ID：59 个进入生命周期、世界、地块或组件处理器；`SetVisibleCells`、`ToggleProfiler`、`RadiationSickness` 这 3 个按固定版本官方派发注册表缺席证据作为 no-op。ID 被识别不等于行为已通过差分验证。
-- `Elements_CreateInteractions` 已解析并保存规则，但 `do_gas_interaction` / `do_gas_interaction_pair` 目前没有固定步进调用点；气体湮灭反应仍是明确缺口。
+- `Elements_CreateInteractions` 已解析并保存规则，但 `do_gas_interaction` / `do_gas_interaction_pair` 目前没有固定步进调用点。对固定版本官方控制流的静态检查也没有找到旧三参数 helper 的入边；是否需要把它接入主循环尚未证实，不能仅凭函数存在就猜测调用时机。
 - 原生存档、世界初始化、挖掘和质量命令、CPU 贴图输出已接线，行为对照继续扩展。
 - 帧命令在封帧时移交所有权，按官方各阶段顺序处理。
 - 调度已接入 Step 批次、双 GameData、ready 屏障与异步工作线程，完整调度等价性仍待验收。
