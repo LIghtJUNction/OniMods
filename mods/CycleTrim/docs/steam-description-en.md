@@ -18,37 +18,10 @@ This is still early development. The order is fixed: speed first, compatibility 
 The stock simulation stores one element and one mass in each cell. When two substances meet, they cannot share the cell, so the old substance has to be pushed somewhere else. That push searches neighbor cells, branches, and then decides who gets in first. Wide CPU vectors and GPUs are built for the same multiply-add on every cell. They stall on that kind of divergence.
 
 [b]1. Legacy Vanilla Sweep (serial grid sweep + arbitration displacement):[/b]
-[code]
-// Serial donor-receiver mass exchange (governed by ElementRecord.flow):
-Δm = clamp(k * (m_a - m_b), -0.125 * m_b, 0.125 * m_a)
+Serial donor-receiver mass exchange hard-clamped to 12.5% of donor mass, combined with recursive displace_gas / displace_liquid neighbor searches. Heavy branching and strict order-dependence destroy CPU cache locality and cause GPU warp divergence.
 
-// Associated behavior:
-- Single-step transfer hard-clamped to 12.5% of donor mass
-- Triggers displace_gas / displace_liquid neighbor searches and spatial displacement
-- Transfers discrete temperatures and disease counts, alters identity, and manages Vacuum / Sink
-- Heavy branching and strict order-dependence destroy CPU cache locality and cause GPU warp divergence
-[/code]
-
-[b]2. New GPU Numerical Pipeline (variable-density Poisson projection + multicomponent flux):[/b]
-[code]
-// Step 1: Multicomponent conservative face-flux transport (uniform vector MACs per cell)
-M_c(t + Δt) = M_c(t) - Δt * div(F_c)
-
-// Step 2: Finite-volume provisional divergence (Divergence Kernel)
-div(u*) = (u(y, x+1) - u(y, x)) / Δx + (v(y+1, x) - v(y, x)) / Δy
-RHS = div(u*) / Δt
-
-// Step 3: Variable-density Poisson solve (Red-Black Gauss-Seidel with SOR iterations)
-div(β * grad(p)) = div(u*) / Δt,  where face permeability β_face = 2 / (ρ_1 + ρ_2)
-p_i^(k+1) = p_i^(k) + ω * [ (Σ_{j} β_ij * p_j - RHS_i) / (Σ_{j} β_ij) - p_i^(k) ]
-Split into Red Pass ((x+y)%2 == 0) and Black Pass ((x+y)%2 == 1) with pipeline memory barriers.
-
-// Step 4: Divergence-free velocity projection (Velocity Projection Kernel)
-u_face^(n+1) = u_face^* - Δt * β_u * (p_right - p_left) / Δx
-v_face^(n+1) = v_face^* - Δt * β_v * (p_bottom - p_top) / Δy
-
-// Boundary conditions: Solid walls & domain outer boundaries enforce u_normal = 0 and Neumann β = 0
-[/code]
+[b]2. New GPU Numerical Pipeline (under research):[/b]
+Variable-density continuous Poisson pressure projection (Red-Black Gauss-Seidel with SOR iterations) combined with multicomponent face-flux transport, eliminating neighbor displacement divergence via GPU memory barriers and divergence-free projection.
 
 This build is not that algorithm yet. OniSim is still one element per cell. The pressure solve does not become a single multiply. The Stage 2 mathematical reference (residual 1e-7, divergence decay, zero-velocity fixed point, and semantic comparator tests) has passed in an isolated experimental branch. The production kernel remains segregated, and disease, buildings, and the save format do not move in the same step. Speed first, followed by strict behavioral compatibility validation.
 
