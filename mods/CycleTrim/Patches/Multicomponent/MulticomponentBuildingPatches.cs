@@ -23,7 +23,7 @@ namespace CycleTrim.Patches.Multicomponent
                 return false;
 
             float availableMass = 0f;
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Mass <= 0f || item.Element == null)
@@ -65,7 +65,7 @@ namespace CycleTrim.Patches.Multicomponent
                 return false;
 
             float phaseMass = 0f;
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Mass <= 0f)
