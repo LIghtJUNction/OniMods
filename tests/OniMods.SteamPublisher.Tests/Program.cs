@@ -898,7 +898,7 @@ static void RunFirstPublicationJournalCase(string directory, string planSha)
     outOfOrder.RecordCallback("k_EResultOK", createdId, false);
     outOfOrder.RecordPublicVerified();
     ExpectFirstPublicationJournalBlocked(outOfOrder.Path, planSha);
-    Console.WriteLine($"{FirstPublicationPlan.Name} first-publication one-shot creation, ordered verification and exclusive public intent passed");
+    Console.WriteLine($"{"First-publication"} first-publication one-shot creation, ordered verification and exclusive public intent passed");
 }
 
 static void ExpectFirstPublicationJournalBlocked(string path, string planSha)

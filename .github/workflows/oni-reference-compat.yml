@@ -120,7 +120,8 @@ jobs:
         run: >-
           dotnet build mods/CycleTrim/CycleTrim.csproj
           --configuration Release
-          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
+          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
       - name: Verify compiled CycleTrim release safety guards
@@ -132,6 +133,11 @@ jobs:
           -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
+      - name: Pack shared Jlib package for host regressions
+        run: |
+          dotnet pack mods/Jlib/Jlib/Jlib.csproj -c Release \
+            -p:TargetFrameworks=netstandard2.1 \
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
       - name: Run source and host regressions
         run: python3 scripts/check_mods.py --skip-synthetic-performance
       - name: Extract Harmony target API surface

@@ -35,7 +35,7 @@ internal sealed class FirstPublicationJournal
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var state = Read(stream, planSha256);
         if (!state.PublicVerified)
-            throw new InvalidOperationException("Workshop dependencies require a publicly verified first-publication item");
+            throw new InvalidOperationException("First publication is not publicly verified");
         return state.Id;
     }
 
