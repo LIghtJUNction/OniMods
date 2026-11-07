@@ -81,3 +81,21 @@ The existing conformance harness compares all public arrays, 29 ordered event
 lists, textures, frame counts and save roundtrips exactly. Keep it unchanged as
 the exact baseline. Add a separate semantic comparison for intentionally changed
 pressure behavior; never weaken the existing exact harness globally.
+
+
+## Semantic snapshot reporting
+
+The isolated `reference/semantic_compare.py` consumes the existing fixture
+`case.json`, official-reference snapshot JSON and candidate snapshot JSON.
+It reports per-material mass totals, a sensible-energy proxy
+(`mass × specific_heat_capacity × temperature`), disease counts, changed
+CellSOA fields, event-count deltas and presentation texture word differences.
+
+The energy figure is explicitly a proxy: it does not include latent heat,
+phase-change enthalpy, building heat exchange or all game-specific thermal
+rules. It must not be described as total conserved energy.
+
+The comparator intentionally emits `UNASSESSED`. A reviewed policy must set
+fixture-specific tolerances and approved transitions before any semantic PASS
+can be issued. This prevents a generic threshold from hiding a broken sink,
+species identity, disease or gameplay behavior.
