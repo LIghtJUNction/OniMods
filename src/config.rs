@@ -398,8 +398,20 @@ impl Config {
 }
 
 pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
+    load_with_validation(explicit_path, true)
+}
+
+pub fn load_lenient(explicit_path: Option<PathBuf>) -> Result<Config> {
+    load_with_validation(explicit_path, false)
+}
+
+fn load_with_validation(explicit_path: Option<PathBuf>, validate_game: bool) -> Result<Config> {
     let (config_path, repo_root) = resolve_config_location(explicit_path)?;
-    let game_path = read_game_path_from_props(&repo_root)?;
+    let game_path = match read_game_path_from_props(&repo_root) {
+        Ok(path) => path,
+        Err(_err) if !validate_game => PathBuf::new(),
+        Err(err) => return Err(err),
+    };
 
     let cfg: Config = if config_path.exists() {
         let content = std::fs::read_to_string(&config_path)
@@ -432,7 +444,9 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
         }
     }
 
-    cfg.validate()?;
+    if validate_game {
+        cfg.validate()?;
+    }
     Ok(cfg)
 }
 

@@ -56,7 +56,7 @@ fn save(path: &PathBuf, settings: &Settings) -> Result<()> {
     }
     Ok(())
 }
-fn curl(settings: &Settings, method: &str, payload: Option<&Value>, session: Option<&str>) -> Result<(u16, String, String)> {
+fn curl(settings: &Settings, _method: &str, payload: Option<&Value>, session: Option<&str>) -> Result<(u16, String, String)> {
     let nonce = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let stem = format!("oni-mcp-{}-{nonce}", std::process::id());
     let dir = std::env::temp_dir();

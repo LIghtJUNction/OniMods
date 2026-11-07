@@ -110,6 +110,9 @@ enum Commands {
         /// 最终可见性；已有条目默认保持原值，首次创建默认 Private
         #[arg(long, value_enum, conflicts_with = "gui")]
         visibility: Option<workshop::Visibility>,
+        /// 同时更新工坊条目的预览图（默认仅在首次发布时上传预览图）
+        #[arg(long, conflicts_with = "gui")]
+        update_preview: bool,
         /// 固定本次发布账号的 Steam ID，覆盖 onim.toml 的 workshop_owner
         #[arg(long, conflicts_with = "gui")]
         expected_owner: Option<u64>,
@@ -208,7 +211,10 @@ fn main() -> Result<()> {
         _ => {}
     }
 
-    let cfg = config::load(cli.config)?;
+    let cfg = match &cli.command {
+        Commands::Workshop { .. } | Commands::List => config::load_lenient(cli.config)?,
+        _ => config::load(cli.config)?,
+    };
 
     match cli.command {
         Commands::Build { release, all } => {
@@ -299,6 +305,7 @@ fn main() -> Result<()> {
             dry_run,
             create,
             visibility,
+            update_preview,
             expected_owner,
             resume,
             preflight,
@@ -314,6 +321,7 @@ fn main() -> Result<()> {
                     dry_run,
                     create,
                     visibility,
+                    update_preview,
                     expected_owner,
                     resume,
                     preflight,

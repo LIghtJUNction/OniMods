@@ -143,7 +143,7 @@ internal static partial class SteamWorkshopPublisher
             // PreviewFile is a local file. The RemoteStorage update API requires
             // a Steam Cloud filename; stage and share it before updating.
             var previewBytes = File.ReadAllBytes(metadata.PreviewFile);
-            var previewName = $"onim_{WorkshopTarget.WorkshopId}_preview.png";
+            var previewName = $"onim_{WorkshopTarget.WorkshopId}_preview_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}{Path.GetExtension(metadata.PreviewFile).ToLowerInvariant()}";
             Require(SteamRemoteStorage.FileWrite(
                 previewName, previewBytes, previewBytes.Length), "Preview FileWrite");
             var previewShare = WaitForCall<RemoteStorageFileShareResult_t>(

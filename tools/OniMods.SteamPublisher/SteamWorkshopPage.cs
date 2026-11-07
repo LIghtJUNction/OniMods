@@ -90,7 +90,7 @@ internal static class SteamWorkshopPage
         var bytes = File.ReadAllBytes(preview);
         if (bytes.Length is 0 or > 10 * 1024 * 1024)
             throw new ArgumentException("Preview must be between 1 byte and 10 MiB");
-        var cloudName = $"onim_{id}_preview{extension}";
+        var cloudName = $"onim_{id}_preview_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}{extension}";
         Require(SteamRemoteStorage.FileWrite(cloudName, bytes, bytes.Length), "Preview FileWrite");
         var shared = Wait<RemoteStorageFileShareResult_t>(
             SteamRemoteStorage.FileShare(cloudName), "Workshop preview share");

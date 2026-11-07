@@ -18,6 +18,7 @@ pub struct PublishOptions {
     pub expected_owner: Option<u64>,
     pub resume: Option<PathBuf>,
     pub preflight: bool,
+    pub update_preview: bool,
 }
 
 fn uploader_path() -> Option<PathBuf> {
@@ -373,6 +374,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         expected_owner,
         resume,
         preflight,
+        update_preview,
     } = options;
     if let Some(path) = resume {
         return crate::workshop::resume(&path);
@@ -500,7 +502,15 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         );
     }
 
-    run_headless_publisher(cfg, selected, &vdf, &title, &publishedfileid, &dist_mod)?;
+    run_headless_publisher(
+        cfg,
+        selected,
+        &vdf,
+        &title,
+        &publishedfileid,
+        &dist_mod,
+        update_preview,
+    )?;
     Ok(())
 }
 
@@ -511,6 +521,7 @@ fn run_headless_publisher(
     title: &str,
     publishedfileid: &str,
     dist_mod: &Path,
+    update_preview: bool,
 ) -> Result<()> {
     if publishedfileid.is_empty() || publishedfileid == "0" {
         anyhow::bail!(
@@ -538,6 +549,10 @@ fn run_headless_publisher(
         .env("ONIM_PUBLISH_TITLE_CONTAINS", title)
         .env("ONIM_PUBLISH_STATIC_ID", &static_id)
         .env("ONIM_PUBLISH_WORKSHOP_ID", publishedfileid);
+
+    if update_preview {
+        cmd.arg("--update-preview");
+    }
 
     let status = cmd.status().context("执行 OniMods.SteamPublisher 失败")?;
     if !status.success() {

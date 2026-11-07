@@ -16,6 +16,10 @@ const PUBLISHER_FILES: &[EmbeddedFile] = &[
         contents: include_str!("../tools/OniMods.SteamPublisher/CandidateCreationJournal.cs"),
     },
     EmbeddedFile {
+        relative_path: "DependencyWriteJournal.cs",
+        contents: include_str!("../tools/OniMods.SteamPublisher/DependencyWriteJournal.cs"),
+    },
+    EmbeddedFile {
         relative_path: "consumer/steam_appid.txt",
         contents: include_str!("../tools/OniMods.SteamPublisher/consumer/steam_appid.txt"),
     },
@@ -70,6 +74,10 @@ const PUBLISHER_FILES: &[EmbeddedFile] = &[
         ),
     },
     EmbeddedFile {
+        relative_path: "SteamWorkshopDependency.cs",
+        contents: include_str!("../tools/OniMods.SteamPublisher/SteamWorkshopDependency.cs"),
+    },
+    EmbeddedFile {
         relative_path: "SteamWorkshopFirstPublication.cs",
         contents: include_str!("../tools/OniMods.SteamPublisher/SteamWorkshopFirstPublication.cs"),
     },
@@ -98,6 +106,14 @@ const PUBLISHER_FILES: &[EmbeddedFile] = &[
     EmbeddedFile {
         relative_path: "VerifiedCandidateRecord.cs",
         contents: include_str!("../tools/OniMods.SteamPublisher/VerifiedCandidateRecord.cs"),
+    },
+    EmbeddedFile {
+        relative_path: "WorkshopDependency.cs",
+        contents: include_str!("../tools/OniMods.SteamPublisher/WorkshopDependency.cs"),
+    },
+    EmbeddedFile {
+        relative_path: "WorkshopDependencyRunner.cs",
+        contents: include_str!("../tools/OniMods.SteamPublisher/WorkshopDependencyRunner.cs"),
     },
     EmbeddedFile {
         relative_path: "WorkshopMetadata.cs",
@@ -252,7 +268,12 @@ mod tests {
                 .iter()
                 .any(|file| file.relative_path == "SteamWorkshopPage.cs")
         );
-        assert_eq!(PUBLISHER_FILES.len(), 27);
+        assert!(
+            PUBLISHER_FILES
+                .iter()
+                .any(|file| file.relative_path == "WorkshopDependencyRunner.cs")
+        );
+        assert_eq!(PUBLISHER_FILES.len(), 31);
     }
 
     #[test]
