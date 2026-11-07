@@ -4,7 +4,7 @@
 //! scales and validate the inferred effective cell volume against real tables.
 const GAS_CONSTANT: f64 = 8.314_462_618_153_24;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct GasDefaults {
     pub molar_mass: f64,
     pub default_mass: f64,
@@ -12,7 +12,7 @@ pub struct GasDefaults {
     pub default_pressure: f64,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct UnitScale {
     pub mass_kg_per_game_unit: f64,
     pub molar_mass_kg_per_mol_per_game_unit: f64,
@@ -21,13 +21,13 @@ pub struct UnitScale {
     pub pressure_pa_per_game_unit: f64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct GasState {
     pub density_kg_m3: f64,
     pub pressure_pa: f64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct VolumeCalibration {
     pub effective_cell_volume_m3: f64,
     pub max_relative_deviation: f64,
