@@ -345,6 +345,11 @@ fn bind(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
     wgpu::BindGroupEntry { binding, resource: buffer.as_entire_binding() }
 }
 
+/// Checked CPU fallback for the gas transport operator.
+///
+/// Validation is completed before either output slice is modified. The CFL
+/// bound matches the GPU dispatch guard, so callers cannot accidentally run
+/// an unstable CPU-only step when the GPU path would reject the same input.
 pub fn cpu_step(
     state: &State<'_>,
     width: usize,
@@ -353,7 +358,20 @@ pub fn cpu_step(
     dt: f32,
     mass_output: &mut [f32],
     enthalpy_output: &mut [f32],
-) {
+) -> Result<(), String> {
+    let count = width.checked_mul(height).ok_or("grid dimensions overflow")?;
+    let values = count.checked_mul(channels).ok_or("tensor dimensions overflow")?;
+    if width == 0 || height == 0 || channels == 0
+        || mass_output.len() != values || enthalpy_output.len() != values {
+        return Err("CPU step requires nonzero dimensions and matching output tensors".into());
+    }
+    if !dt.is_finite() || dt <= 0.0 {
+        return Err("CPU step requires a finite positive timestep".into());
+    }
+    let max_rate = validate_state(state, count, channels)?;
+    if !((dt * max_rate).is_finite()) || dt * max_rate > 1.0 {
+        return Err("CPU step exceeds the validated CFL bound".into());
+    }
     let idx = |x: usize, y: usize, c: usize| (y * width + x) * channels + c;
     mass_output.copy_from_slice(state.mass);
     enthalpy_output.copy_from_slice(state.enthalpy);
@@ -399,6 +417,7 @@ pub fn cpu_step(
             }
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -451,7 +470,7 @@ mod tests {
         for _ in 0..100 {
             let step_state = State { mass: &current_mass, enthalpy: &current_enthalpy,
                 velocity_x: &vx, velocity_y: &vy, solid: &solid, species: &species };
-            cpu_step(&step_state, width, height, channels, 0.1, &mut next_mass, &mut next_enthalpy);
+            cpu_step(&step_state, width, height, channels, 0.1, &mut next_mass, &mut next_enthalpy).unwrap();
             std::mem::swap(&mut current_mass, &mut next_mass);
             std::mem::swap(&mut current_enthalpy, &mut next_enthalpy);
         }
@@ -470,6 +489,30 @@ mod tests {
                 assert!(current_enthalpy[cell * channels..(cell + 1) * channels].iter().all(|v| *v == 0.0));
             }
         }
+    }
+
+    #[test]
+    fn cpu_step_rejects_invalid_timestep_cfl_and_shapes_without_mutating_outputs() {
+        let mass = [1.0f32];
+        let enthalpy = [300.0f32];
+        let velocity_x = [2.0f32];
+        let velocity_y = [0.0f32];
+        let solid = [0u32];
+        let species = [SpeciesInfo {
+            element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0,
+        }];
+        let state = State {
+            mass: &mass, enthalpy: &enthalpy, velocity_x: &velocity_x,
+            velocity_y: &velocity_y, solid: &solid, species: &species,
+        };
+        let mut mass_out = [77.0f32];
+        let mut enthalpy_out = [88.0f32];
+
+        assert!(cpu_step(&state, 1, 1, 1, f32::NAN, &mut mass_out, &mut enthalpy_out).is_err());
+        assert!(cpu_step(&state, 1, 1, 1, 1.0, &mut mass_out, &mut enthalpy_out).is_err());
+        assert!(cpu_step(&state, 2, 1, 1, 0.1, &mut mass_out, &mut enthalpy_out).is_err());
+        assert_eq!(mass_out, [77.0]);
+        assert_eq!(enthalpy_out, [88.0]);
     }
 
     #[test]
