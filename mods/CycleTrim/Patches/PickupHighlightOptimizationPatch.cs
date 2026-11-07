@@ -123,22 +123,29 @@ namespace CycleTrim.Patches
             };
             try
             {
-                Grid.GetVisibleExtents(out int minX, out int minY, out int maxX, out int maxY);
-                if (GameScenePartitioner.Instance == null || GameScenePartitioner.Instance.pickupablesLayer == null
-                    || maxX < minX || maxY < minY)
+                // Preserve vanilla's all-world semantics: the resource panel
+                // intentionally highlights matching items even when the camera
+                // is panned later. Cache component resolution, not visibility.
+                ICollection<Pickupable> pickupables =
+                    ClusterManager.Instance.activeWorld.worldInventory.GetPickupables(context.Tag);
+                if (pickupables != null)
                 {
-                    state.UseVanilla = true;
-                    return true;
+                    foreach (Pickupable pickupable in pickupables)
+                    {
+                        if (pickupable == null)
+                            continue;
+                        var controller = GetController(pickupable);
+                        if (controller == null || !context.Seen.Add(controller))
+                            continue;
+                        controller.HighlightColour = context.Colour;
+                        context.Highlighted.Add(controller);
+                    }
                 }
-                GameScenePartitioner.Instance.VisitEntries<VisitContext>(
-                    minX, minY, maxX - minX, maxY - minY,
-                    GameScenePartitioner.Instance.pickupablesLayer, VisitPickupable, context);
             }
             catch (Exception error)
             {
-                // The visitor may have highlighted a prefix of the result set.
-                // Roll it back before vanilla takes over, then let vanilla own
-                // both the enter and matching exit for this UI element.
+                // Roll back a partially completed pass before vanilla takes
+                // over; vanilla must also own the matching pointer-exit event.
                 for (int i = 0; i < context.Highlighted.Count; i++)
                 {
                     var controller = context.Highlighted[i];
@@ -146,10 +153,9 @@ namespace CycleTrim.Patches
                         controller.HighlightColour = Color.black;
                 }
                 state.UseVanilla = true;
-                Console.WriteLine("[CycleTrim] Pickup hover partition query failed; using vanilla: " + error.Message);
+                Console.WriteLine("[CycleTrim] Pickup hover cache failed; using vanilla: " + error.Message);
                 return true;
             }
-
             state.Highlighted.AddRange(context.Highlighted);
             return false;
         }
