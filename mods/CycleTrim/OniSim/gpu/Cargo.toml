@@ -26,3 +26,7 @@ path = "src/bench.rs"
 [[bin]]
 name = "multicomponent-bench"
 path = "src/multicomponent_bench.rs"
+
+[[bin]]
+name = "pressure-projection-bench"
+path = "src/pressure_projection_bench.rs"
