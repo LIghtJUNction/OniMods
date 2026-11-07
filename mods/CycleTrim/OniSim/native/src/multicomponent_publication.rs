@@ -139,20 +139,15 @@ impl MulticomponentBuffers {
                 return;
             }
 
-            let (volume_fraction, gas_pressure_kpa, liquid_pressure_kpa, liquid_volume_fraction) =
-                match phase {
-                    1 => (1.0, mass * 101.325, 0.0, 0.0),
-                    2 => {
-                        let max_mass = element.record.max_mass;
-                        let frac = if max_mass.is_finite() && max_mass > 0.0 {
-                            (mass / max_mass).clamp(0.0, 1.0)
-                        } else {
-                            1.0
-                        };
-                        (frac, 0.0, mass * 9.806_65, frac)
-                    }
-                    _ => (1.0, 0.0, 0.0, 0.0),
-                };
+            // The legacy Grid has no cell volume, mixture composition, or
+            // liquid column depth. Do not fabricate EOS/hydrostatic values.
+            // Zero means "not provided"; the LEGACY_SINGLE_ELEMENT flag keeps
+            // gameplay consumers on their original path until a real solver
+            // publishes validated thermodynamic fields.
+            let volume_fraction = 0.0;
+            let gas_pressure_kpa = 0.0;
+            let liquid_pressure_kpa = 0.0;
+            let liquid_volume_fraction = 0.0;
 
             self.species[next_species] = OniSimMulticomponentSpeciesRecord {
                 element_id: grid.element[cell],
@@ -470,13 +465,17 @@ mod tests {
         assert_eq!(cells[0].total_mass, 1.25);
         assert_eq!(species[0].element_id, 1);
         assert_eq!(species[0].phase, 1);
-        assert_eq!(species[0].volume_fraction, 1.0);
+        assert_eq!(species[0].volume_fraction, 0.0);
+        assert_eq!(species[0].partial_pressure_kpa, 0.0);
+        assert_eq!(cells[0].gas_pressure_kpa, 0.0);
         assert_eq!(cells[1].species_offset, 1);
         assert_eq!(cells[1].species_count, 1);
-        assert_eq!(cells[1].liquid_volume_fraction, 0.25);
+        assert_eq!(cells[1].liquid_volume_fraction, 0.0);
+        assert_eq!(cells[1].liquid_pressure_kpa, 0.0);
         assert_eq!(species[1].element_id, 2);
         assert_eq!(species[1].phase, 2);
-        assert_eq!(species[1].volume_fraction, 0.25);
+        assert_eq!(species[1].volume_fraction, 0.0);
+        assert_eq!(species[1].partial_pressure_kpa, 0.0);
     }
 
     #[test]
