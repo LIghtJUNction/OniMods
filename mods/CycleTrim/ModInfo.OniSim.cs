@@ -1,8 +1,10 @@
 using System;
 using CycleTrim.Core;
+using Jlib.Runtime;
 using OniSim.CycleTrim;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
+using UnityEngine;
 
 namespace CycleTrim
 {
@@ -38,11 +40,14 @@ namespace CycleTrim
         {
             try
             {
+                if (mod != null)
+                    JlibApi.RegisterConsumer(typeof(ModInfo).Assembly, mod);
                 new POptions().RegisterOptions(this, typeof(OniSimOptions));
+                Debug.Log("[CycleTrim] Registered mod options for " + (mod == null ? "?" : mod.staticID));
             }
             catch (Exception error)
             {
-                Console.WriteLine("[CycleTrim][OniSim] PLib options dialog registration failed: " + error.Message);
+                Debug.LogWarning("[CycleTrim] PLib options dialog registration failed: " + error);
             }
         }
     }

@@ -46,3 +46,4 @@ __pycache__
 .codegraph/
 .memsearch/
 .agent_backups/
+.geg/

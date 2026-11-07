@@ -1,3 +1,7 @@
 [submodule "tools/OniHarness"]
 	path = tools/OniHarness
 	url = https://github.com/LIghtJUNction/OniHarness.git
+[submodule "mods/Jlib"]
+	path = mods/Jlib
+	url = https://github.com/LIghtJUNction/Jlib.git
+	branch = release/jlib-0.1.0

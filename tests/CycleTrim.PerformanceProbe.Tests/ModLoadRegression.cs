@@ -30,10 +30,14 @@ namespace CycleTrim.PerformanceProbe.Tests
 // production ModInfo, rather than a copied initialization policy, is exercised.
 namespace KMod
 {
-    public sealed class Mod { }
+    public sealed class Mod {
+        public string staticID { get; set; }
+    }
 
     public class UserMod2
     {
+        public Mod mod;
+
         public virtual void OnLoad(HarmonyLib.Harmony harmony)
         {
             harmony.PatchAll();

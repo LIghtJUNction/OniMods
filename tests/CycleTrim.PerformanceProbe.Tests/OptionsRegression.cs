@@ -167,6 +167,25 @@ namespace PeterHan.PLib.Options
     }
 }
 
+namespace Jlib.Runtime
+{
+    public static class JlibApi
+    {
+        public static void RegisterConsumer(System.Reflection.Assembly implementation, KMod.Mod owner)
+        {
+        }
+    }
+}
+
+namespace UnityEngine
+{
+    public static class Debug
+    {
+        public static void Log(object message) { }
+        public static void LogWarning(object message) { }
+    }
+}
+
 namespace OniSim.CycleTrim
 {
     public sealed class LoaderResult { public string Message = "host mapping adapter"; }

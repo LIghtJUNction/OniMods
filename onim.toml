@@ -18,3 +18,8 @@ workshop_title = "CycleTrim"
 path = "mods/OniOnline"
 publishedfileid = "3835145552"
 workshop_title = "OniOnline"
+
+[mods.Jlib]
+path = "mods/Jlib/Jlib"
+publishedfileid = "3835083839"
+workshop_title = "Jlib"

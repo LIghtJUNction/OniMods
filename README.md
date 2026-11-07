@@ -34,6 +34,7 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) |
 | **CycleTrim** | Targets measured simulation hot paths with focused performance patches | [Module docs](mods/CycleTrim/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
+| **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
 
 The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules.
@@ -98,6 +99,7 @@ Critical operations remain bounded and should be preceded by read-only inspectio
 │   ├── OniMcp/                  MCP server mod
 │   ├── CycleTrim/               measured performance patches
 │   ├── OniOnline/               multiplayer experiments
+│   ├── Jlib/                    shared prerequisite library (submodule)
 │   └── OniModTemplate/          reusable mod scaffold
 ├── docs/                        architecture, testing and publishing notes
 ├── scripts/                     verification helpers
