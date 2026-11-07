@@ -57,7 +57,7 @@
 
 ### OniSim 原生仿真内核
 
-OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包；Steam 发布包通过三平台 CI 合并全部原生库，并在启动阶段尝试把 `Assembly-CSharp` 的 `SimDLL` 导入映射到 OniSim。PLib 的 CycleTrim Mod 设置中“Use OniSim simulation core”默认开启；关闭后重启 ONI，启动时就会保留原版 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
+OniSim 是 CycleTrim 的实验性原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包，但运行时默认保留官方 SimDLL，不接管游戏物理管线。只有在 PLib 设置页显式开启新的“EnableOniSimExperimental”选项并重启后，才会尝试映射；旧版 `EnableOniSim` 配置键不会沿用，避免历史默认开启值在升级后继续接管。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
 
 疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/PARALLEL-VALIDATION.md`](OniSim/PARALLEL-VALIDATION.md)。
 
