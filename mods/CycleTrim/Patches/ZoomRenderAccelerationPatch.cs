@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -11,7 +10,6 @@ namespace CycleTrim.Patches
     /// 彻底击碎大地图缩放（Bigger Camera Zoom Out）及材料概览（F4 / TileMode）下帧率跌至个位数（6~9 FPS）的瓶颈：
     /// 1. KBatchedAnimController.UpdateAnim 全局实例级时间片分帧（静止物体 87.5% 帧完全跳过，时间步补偿）；
     /// 2. TileMode.Update（材料视图）与 ConduitMode.Update 遍历全图上万个物体的极端降频调度；
-    /// 3. PropertyTextures 全图 100,000 格多通道纹理扫描降频；
     /// </summary>
     public static class ZoomRenderAccelerationPatch
     {
@@ -112,32 +110,6 @@ namespace CycleTrim.Patches
             }
         }
 
-        /// <summary>
-        /// 全图 100,000 格 PropertyTextures 属性纹理生成的降频调度。
-        /// </summary>
-        [HarmonyPatch]
-        public static class PropertyTexturesLODPatch
-        {
-            public static MethodBase TargetMethod()
-            {
-                return AccessTools.Method(typeof(PropertyTextures), "UpdateProperty");
-            }
 
-            [HarmonyPrefix]
-            public static bool Prefix()
-            {
-                float zoom = GetCurrentZoom();
-                if (zoom <= 35f)
-                    return true;
-
-                int factor = zoom > 75f ? 4 : 2;
-                if ((Time.frameCount % factor) != 0)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-        }
     }
 }
