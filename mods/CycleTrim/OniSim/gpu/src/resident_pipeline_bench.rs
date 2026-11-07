@@ -113,7 +113,7 @@ fn main() -> Result<(), String> {
         ))?;
         let mut expected = vec![0.0f32; fixture.mass.len()];
         let mut expected_enthalpy = vec![0.0f32; fixture.enthalpy.len()];
-        cpu_step(&fixture.state(), width, height, channels, dt, &mut expected, &mut expected_enthalpy);
+        cpu_step(&fixture.state(), width, height, channels, dt, &mut expected, &mut expected_enthalpy)?;
         let mut actual = vec![0.0f32; fixture.mass.len()];
         let gauge_cell = fixture.solid.iter().position(|&value| value == 0)
             .ok_or("fixture has no fluid cells")?;
