@@ -179,7 +179,7 @@ mod tests {
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
 
         grid.element[0] = 0;
-        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
+        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
     }
 
     #[test]
@@ -188,12 +188,12 @@ mod tests {
         let elements = elements();
         let mut image = vec![0; image_len(&grid).unwrap()];
         grid.mass[0] = f32::NAN;
-        assert_eq!(image_len(&grid).unwrap_err().status, Status::InvalidState);
+        assert_eq!(image_len(&grid).unwrap_err().status as i32, Status::InvalidState as i32);
         grid.mass[0] = -1.0;
-        assert_eq!(image_len(&grid).unwrap_err().status, Status::InvalidState);
+        assert_eq!(image_len(&grid).unwrap_err().status as i32, Status::InvalidState as i32);
         grid.mass[0] = 1.0;
         grid.temperature[0] = f32::INFINITY;
-        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
+        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
     }
 
     #[test]
