@@ -192,7 +192,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                     new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 0.4f, 300f, 0.15f, 40f),
                     new MulticomponentSpecies(pollutedO2, MulticomponentPhase.Gas, 0.8f, 300f, 0.30f, 80f)
                 },
-                2.7f, 270f, 0f, 0f);
+                3, 2.7f, 270f, 0f, 0f);
 
             SimHashes breathableElement;
             float breathableMass;
@@ -207,7 +207,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                     new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 1.5f, 300f, 0.75f, 150f),
                     new MulticomponentSpecies(co2, MulticomponentPhase.Gas, 0.5f, 300f, 0.25f, 50f)
                 },
-                2.0f, 200f, 0f, 0f);
+                2, 2.0f, 200f, 0f, 0f);
             byte r, g, b, a;
             MulticomponentVisualPatches.ComputeBlendedGasColor(twoGasBlend, true, out r, out g, out b, out a);
             Check(r == 125 && g == 160 && b == 196 && a == 255, "MulticomponentVisualPatches computes mass-weighted RGBA gas blend");
@@ -232,7 +232,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                     new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 1.5f, 300f, 0.13f, 150f),
                     new MulticomponentSpecies(co2, MulticomponentPhase.Gas, 10.0f, 300f, 0.87f, 1000f)
                 },
-                11.5f, 1150f, 0f, 0f);
+                2, 11.5f, 1150f, 0f, 0f);
             Check(MulticomponentPlantPatches.EvaluateCellAtmosphere(
                 overpressureBlend,
                 elem => elem.id == SimHashes.Oxygen,
@@ -260,7 +260,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                     new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 0.5f, 293f, 0.99f, 50f),
                     new MulticomponentSpecies(water, MulticomponentPhase.Liquid, 10.0f, 293f, 0.01f, 0f)
                 },
-                10.5f, 50f, 98f, 0.01f);
+                2, 10.5f, 50f, 98f, 0.01f);
             Check(MulticomponentBuildingPatches.EvaluateElementAvailable(
                 traceDropletCell, ElementConsumer.Configuration.Element, SimHashes.Oxygen, 0.25f),
                 "ElementConsumer finds Oxygen component in mixed cell");
@@ -268,7 +268,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 traceDropletCell, ConduitType.Gas, 2.0f, isSolidOrClosed: false),
                 "trace liquid droplet (1% volume) does not false-overpressure gas vent");
             Check(!MulticomponentBuildingPatches.EvaluateVentOutputValid(
-                new MulticomponentCellSnapshot(traceDropletCell.Components, 10.5f, 50f, 98f, 0.96f),
+                new MulticomponentCellSnapshot(traceDropletCell.Components, 2, 10.5f, 50f, 98f, 0.96f),
                 ConduitType.Gas, 2.0f, isSolidOrClosed: false),
                 "flooded cell (96% liquid volume) blocks gas vent");
 
