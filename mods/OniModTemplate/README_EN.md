@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This is a minimal Oxygen Not Included mod template for quickly creating a new mod project.
+This is a minimal Oxygen Not Included mod template for quickly creating a new mod project. The template comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim takes a mod straight through development, testing, and Workshop publishing: `onim dev` tries it in game, `onim build` packs it, and `onim publish` sends it to Steam.
 
 - It provides a standard layout for `onim init` scaffolding.
 - Place your Harmony patches under `Patches/`.

@@ -1,16 +1,57 @@
 # CycleTrim
 
-A disruptive, experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
+A disruptive, experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later.
+
+The next version will experiment with removing one-element-per-cell flow. A cell becomes a fixed set of component masses, updated by face flux, with no search for a cell that can accept the displaced element. That kernel is the one to try on the GPU. The 0.4.0 build and OniSim still use one element per cell. The argument, the limits, and the next step are in [next cell representation](docs/next-cell-representation.md).
+
+The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
 
 This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing: `onim dev` tries it in game, `onim build` packs it, and `onim publish` sends it to Steam.
 
 ## Index (summary page)
 
+- [Next version: replace one element per cell](docs/next-cell-representation.md)
+- [Algorithm evolution and mathematical models (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#algorithm-evolution-from-per-cell-displacement-to-gpu-poisson-pressure-projection-stage-221)
 - [What it does](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#what-it-does)
 - [Usage](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#usage)
 - [Compatibility](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#compatibility)
 - [Benchmark summary](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#benchmark-summary)
 - [Detailed docs and logs](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#detailed-docs-and-notes)
+
+## Algorithm evolution: from per-cell displacement to GPU Poisson pressure projection (Stage 2/2.1)
+
+As a core tenet of CycleTrim's simulation rebuild, the fluid pipeline is evolving from vanilla's **discrete spatial displacement** to **GPU-resident continuous Poisson pressure projection**.
+
+### 1. Legacy Vanilla Sweep (serial grid sweep + arbitration displacement)
+- **Serial donor-receiver mass exchange** (governed by `ElementRecord.flow`):
+  $$\Delta m = \operatorname{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
+- **Displacement arbitration**: When incoming mass targets an occupied cell, `displace_gas` / `liquid_displacement` executes recursive multi-directional spatial searches.
+- **Coupled state updates**: Clamps single-step transfers to $12.5\%$ donor mass, transfers discrete temperature and disease counts, alters cell element identity, and handles Vacuum / Sink logic.
+- **Hardware constraints**: Heavy branching and sequential cell order inhibit wide vectorization (AVX) on CPUs and cause catastrophic warp divergence and memory thrashing on GPUs.
+
+### 2. New GPU Continuous Poisson Projection (Stage 2/2.1 WGSL Kernels)
+The new formulation treats fluid as a variable-density finite-volume continuum executed entirely in GPU compute passes:
+
+- **Step 1: Multicomponent Conservative Face-Flux Transport (Transport Kernel)**
+  $$M_c(t + \Delta t) = M_c(t) - \Delta t \cdot \nabla \cdot F_c$$
+  Identical fused multiply-accumulates (MAC) on every cell without empty-cell searches.
+- **Step 2: Finite-Volume Divergence & RHS (Divergence Kernel)**
+  $$\nabla \cdot u^* = \frac{u(y, x+1) - u(y, x)}{\Delta x} + \frac{v(y+1, x) - v(y, x)}{\Delta y}, \quad \text{RHS} = \frac{\nabla \cdot u^*}{\Delta t}$$
+- **Step 3: Variable-Density Poisson Pressure Solve (RBGS Pressure Kernel)**
+  $$\nabla \cdot \left(\beta \nabla p\right) = \frac{\nabla \cdot u^*}{\Delta t}, \quad \text{where face permeability } \beta_f = \frac{1}{\rho_f} = \frac{2}{\rho_1 + \rho_2}$$
+  Iterated via Red-Black Gauss-Seidel with Successive Over-Relaxation (SOR):
+  $$p_i^{(k+1)} = p_i^{(k)} + \omega \left( \frac{\sum_{j \in \mathcal{N}(i)} \beta_{ij} p_j - \text{RHS}_i}{\sum_{j \in \mathcal{N}(i)} \beta_{ij}} - p_i^{(k)} \right)$$
+  Dispatched in alternating Red Passes $((x+y) \bmod 2 = 0)$ and Black Passes $((x+y) \bmod 2 = 1)$ separated by pipeline memory barriers.
+- **Step 4: Divergence-Free Velocity Projection (Velocity Projection Kernel)**
+  $$u_f^{n+1} = u_f^* - \Delta t \cdot \beta_u \cdot \frac{p_{right} - p_{left}}{\Delta x}$$
+  $$v_f^{n+1} = v_f^* - \Delta t \cdot \beta_v \cdot \frac{p_{bottom} - p_{top}}{\Delta y}$$
+- **Boundary conditions**: Impermeable solid and outer boundaries strictly enforce normal velocity $u_n = 0$, Neumann zero-gradient $\frac{\partial p}{\partial n} = 0 \iff \beta = 0$.
+
+### 3. GPU Closed-Loop Pipeline Vision
+$$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
+The complete physical loop remains resident in GPU Device Memory, leaving the CPU to manage high-level entity interactions, state publishing, and gameplay queries.
+
+> **Status**: The Stage 2 CPU mathematical reference (residual $10^{-7}$, divergence decay, zero-velocity fixed point, and semantic comparators) and Stage 2.1 WGSL kernels (7 GPU operator tests and benchmark harness) are completed. The production solver remains isolated until full behavioral compatibility is validated.
 
 ## What it does
 

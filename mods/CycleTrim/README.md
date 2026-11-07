@@ -2,18 +2,59 @@
 
 **前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。消费者包不再内嵌一份 Jlib。
 
-极具颠覆性的实验性性能优化 Mod，目前仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
+极具颠覆性的实验性性能优化 Mod，目前仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。
+
+下个版本会实验拆掉「一格一物」：格子改成固定的一小组分质量，用界面通量平流，不再搜索空格把旧物质挤走，并把这个核放到 GPU 上测。当前 0.4.0 和 OniSim 仍是一格一物。分析、界限和下一步写在 [下个版本：实验替换一格一物](docs/next-cell-representation.md)。
+
+下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
 
 本模组来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 是这个仓库里的工具，把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
 
 ## 快速索引（本页为总览）
 
+- [下个版本：实验替换一格一物](docs/next-cell-representation.md)
+- [算法演进与数学模型 (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#算法演进从一格一物排挤到-gpu-泊松压力投影-stage-221)
 - [核心优化](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#核心功能简要)
 - [架构与优化原理](../../docs/architecture-and-principles.md)
 - [安装与运行](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#使用方式)
 - [验证与兼容性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#兼容与说明)
 - [性能实测摘要](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#性能实测摘要)
 - [详细说明与日志](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#详细说明与日志)
+
+## 算法演进：从一格一物排挤到 GPU 泊松压力投影 (Stage 2/2.1)
+
+作为 CycleTrim 底层物理重构的核心方向，模拟管线正在从原版的**离散状态排挤**演进为**GPU 驻留连续流体泊松投影**。
+
+### 1. 原版旧算法（串行网格遍历 + 排挤分支）
+- **串行供受体质量迁移**（受 `ElementRecord.flow` 控制）：
+  $$\Delta m = \operatorname{clamp}\left(k \cdot (m_a - m_b), \, -0.125 \cdot m_b, \, 0.125 \cdot m_a\right)$$
+- **排挤仲裁（Displacement）**：当新物质试图进入已被占据的格子时，执行 `displace_gas` / `liquid_displacement`，沿邻格进行深度与空间分支搜索。
+- **伴随状态维护**：单次迁移量硬截断在供体质量的 $12.5\%$，同步搬运离散温度与病菌计数，改变目标格材料身份并处理 Vacuum / Sink。
+- **硬件局限**：严苛的时序依赖和分支跳转导致现代 CPU 宽向量指令（AVX）难以对齐，并在 GPU 上引发严重的线程束分化（Warp Divergence）与缓存颠簸。
+
+### 2. 新版 GPU 连续流体泊松投影算法（Stage 2/2.1 WGSL 内核）
+新算法基于变密度有限体积连续流体模型，并实现为全流程 GPU 驻留算子：
+
+- **步骤 1：多组分守恒界面通量输运（Multicomponent Transport Kernel）**
+  $$M_c(t + \Delta t) = M_c(t) - \Delta t \cdot \nabla \cdot F_c$$
+  每个格子执行完全相同的向量乘加（MAC），彻底消除排挤搜索与抢占仲裁。
+- **步骤 2：有限体积中间速度场散度（Divergence Kernel）**
+  $$\nabla \cdot u^* = \frac{u(y, x+1) - u(y, x)}{\Delta x} + \frac{v(y+1, x) - v(y, x)}{\Delta y}, \quad \text{RHS} = \frac{\nabla \cdot u^*}{\Delta t}$$
+- **步骤 3：变密度泊松方程与红黑高斯-赛德尔求解（RBGS Pressure Kernel）**
+  $$\nabla \cdot \left(\beta \nabla p\right) = \frac{\nabla \cdot u^*}{\Delta t}, \quad \text{其中界面渗透率 } \beta_f = \frac{1}{\rho_f} = \frac{2}{\rho_1 + \rho_2}$$
+  使用带松弛因子的红黑棋盘格（Red-Black Gauss-Seidel with SOR）多 Pass 并行迭代：
+  $$p_i^{(k+1)} = p_i^{(k)} + \omega \left( \frac{\sum_{j \in \mathcal{N}(i)} \beta_{ij} p_j - \text{RHS}_i}{\sum_{j \in \mathcal{N}(i)} \beta_{ij}} - p_i^{(k)} \right)$$
+  分为 Red Pass $((x+y) \bmod 2 = 0)$ 与 Black Pass $((x+y) \bmod 2 = 1)$ 分步调度，管线屏障保证内存可见性。
+- **步骤 4：无散速度场投影修正（Velocity Projection Kernel）**
+  $$u_f^{n+1} = u_f^* - \Delta t \cdot \beta_u \cdot \frac{p_{right} - p_{left}}{\Delta x}$$
+  $$v_f^{n+1} = v_f^* - \Delta t \cdot \beta_v \cdot \frac{p_{bottom} - p_{top}}{\Delta y}$$
+- **边界条件**：固体壁面与封闭外边界严格强制法向速度 $u_n = 0$，Neumann 齐次边界 $\frac{\partial p}{\partial n} = 0 \iff \beta = 0$。
+
+### 3. GPU 闭环流水线愿景
+$$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
+完整物理循环完全驻留在 GPU Device Memory，CPU 仅保留状态快照、接口与上层游戏发布。
+
+> **阶段说明**：Stage 2 的 CPU 数值参考（残差 $10^{-7}$、散度收敛、零速度不动点等 6 项测试）与 Stage 2.1 的 WGSL 核心算子（7 项 GPU Operator 测试及 Benchmark）均已就绪。生产管线保持隔离，先加速并完成严格行为兼容性验收后才推进生产替换。
 
 ## 核心功能（简要）
 

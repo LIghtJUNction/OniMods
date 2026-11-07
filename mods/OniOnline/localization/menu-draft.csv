@@ -405,8 +405,8 @@ options.voice_enabled,启用星系语音,啟用星系語音,Enable system voice
 options.voice_enabled_hint,只在按住说话键时采集麦克风。默认 Ctrl+V；在游戏设置 → 控制 → 模组中改键。关闭后停止录音和播放，立即生效。,只在按住說話鍵時擷取麥克風。預設 Ctrl+V；可在遊戲設定 → 控制 → 模組中改鍵。關閉後停止錄音與播放，立即生效。,Capture the microphone only while push-to-talk is held. Default Ctrl+V; rebind in game Options > Controls > Mods. Disable to stop capture and playback immediately.
 options.voice_volume,星系语音播放音量,星系語音播放音量,System voice playback volume
 options.voice_volume_hint,其他玩家语音的播放音量（0–100）。0 为静音，不改变游戏或直播音量，立即生效。,其他玩家語音的播放音量（0–100）。0 為靜音，不改變遊戲或直播音量，立即生效。,Other players’ voice volume (0–100). Zero mutes playback without changing game or stream volume. Applies immediately.
-options.category_gameplay,🎮 联机玩法管理,🎮 連線玩法管理,🎮 Gameplay Management
-options.dev_guide,📖 联机玩法开发指南,📖 連線玩法開發指南,📖 Online Gameplay Dev Guide
+options.category_gameplay,联机玩法管理,連線玩法管理,Gameplay Management
+options.dev_guide,联机玩法开发指南,連線玩法開發指南,Online Gameplay Dev Guide
 options.dev_guide_hint,在浏览器中打开 OniOnline 联机玩法与 SDK 开发文档（涵盖 NuGet 引用与将 OniOnline 设为前置 Mod 的规范）。,在瀏覽器中開啟 OniOnline 連線玩法與 SDK 開發文件（涵蓋 NuGet 引用與將 OniOnline 設為前置 Mod 的規範）。,Open OniOnline gameplay & SDK developer documentation in your browser (covers NuGet references and declaring OniOnline as a prerequisite mod).
 options.builtin_gameplay,内置玩法是聊天,內建玩法是聊天,Built-in gameplay is chat
 options.builtin_gameplay_hint,框架自带的玩法只有大厅聊天。其他玩法需要单独安装对应模组。,框架自帶的玩法只有大廳聊天。其他玩法需要單獨安裝對應模組。,The framework ships with lobby chat. Other gameplay requires its own mod.

@@ -42,6 +42,12 @@
 - 面临复杂模块选型与高阶基地决策时，Agent 可可选查阅 `oni-skills/guides/`，遵循大牛心法（如开局默认禁用自动消毒、防爆温、防爆管原则）。
 - 欢迎随官方版本迭代与社区共同完善。
 
+## 游戏反编译源码基准 (Decompiled Source)
+
+- 原版《缺氧》托管层（Assembly-CSharp.dll）完整反编译源码统一部署在仓库根目录的 **`decompiled/`** 目录（包含 3,962 个 `.cs` 文件）。
+- `decompiled/` 目录已受 `.gitignore` 保护，严禁提交任何文件到 git 仓库中。
+- 所有 Agent 在分析、检索、引用或排查游戏原版逻辑（如 `Grid.*`、渲染、复制人生理、建筑、自然演化等）时，**统一使用 `decompiled/` 目录下的 `.cs` 源码进行静态检索（如 `rg` / `geg`）**，禁止随意生成零散的反编译临时文件夹或重复动态反编译。
+
 ## Steam Workshop 发布（硬性禁止）
 
 - **禁止使用 SteamCMD 上传发布模组。** 它的 `+workshop_build_item` + `contentfolder`

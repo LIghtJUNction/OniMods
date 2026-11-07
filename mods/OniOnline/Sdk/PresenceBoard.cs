@@ -22,6 +22,28 @@ namespace OniOnline.Sdk
 
         internal static bool ValidPlayer(string playerId)
         { return !string.IsNullOrWhiteSpace(playerId) && playerId.Length <= 64 && playerId.IndexOfAny(new[] { '\r', '\n' }) < 0; }
+
+        internal static bool ValidToken(string token, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(token) || token.Length > maxLength) return false;
+            for (int i = 0; i < token.Length; i++)
+            {
+                char c = token[i];
+                if (c <= 32 || c > 126) return false;
+            }
+            return true;
+        }
+
+        internal static bool ValidOptionalText(string text, int maxLength)
+        {
+            if (text == null || text.Length > maxLength) return false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c < 32 || c == 127) return false;
+            }
+            return true;
+        }
     }
 
     public sealed class PresenceMark
@@ -69,9 +91,14 @@ namespace OniOnline.Sdk
             int startX, int startY, int endX, int endY, int priority = 5,
             string materialTag = "", uint colorRgba = 0xFFFFFFFF)
         {
-            if (!PresenceCursor.ValidPlayer(playerId)) throw new ArgumentException("invalid_presence_player");
-            if (string.IsNullOrEmpty(toolId) || toolId.Length > 32) throw new ArgumentException("invalid_tool_id");
+            if (!PresenceCursor.ValidPlayer(playerId)) throw new ArgumentException("invalid_presence_player", nameof(playerId));
+            if (!PresenceCursor.ValidToken(toolId, 32)) throw new ArgumentException("invalid_tool_id", nameof(toolId));
+            if (mode < ToolDragMode.Box || mode > ToolDragMode.Point) throw new ArgumentOutOfRangeException(nameof(mode));
             if (priority < 1 || priority > 9) throw new ArgumentOutOfRangeException(nameof(priority), "priority must be 1..9");
+
+            string normalizedMaterial = materialTag ?? string.Empty;
+            if (!PresenceCursor.ValidOptionalText(normalizedMaterial, 64))
+                throw new ArgumentException("invalid_material_tag", nameof(materialTag));
 
             PlayerId = playerId;
             WorldId = worldId;
@@ -82,7 +109,7 @@ namespace OniOnline.Sdk
             EndX = endX;
             EndY = endY;
             Priority = priority;
-            MaterialTag = materialTag ?? string.Empty;
+            MaterialTag = normalizedMaterial;
             ColorRgba = colorRgba;
         }
     }
@@ -98,8 +125,10 @@ namespace OniOnline.Sdk
 
         public PlayerPing(string playerId, int worldId, int x, int y, string category = "look", double timestamp = 0)
         {
-            if (!PresenceCursor.ValidPlayer(playerId)) throw new ArgumentException("invalid_presence_player");
-            if (category == null || category.Length > 32) throw new ArgumentException("invalid_ping_category");
+            if (!PresenceCursor.ValidPlayer(playerId)) throw new ArgumentException("invalid_presence_player", nameof(playerId));
+            if (!PresenceCursor.ValidToken(category, 32)) throw new ArgumentException("invalid_ping_category", nameof(category));
+            if (double.IsNaN(timestamp) || double.IsInfinity(timestamp) || timestamp < 0.0)
+                throw new ArgumentOutOfRangeException(nameof(timestamp));
 
             PlayerId = playerId;
             WorldId = worldId;

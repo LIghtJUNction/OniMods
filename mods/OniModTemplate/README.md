@@ -12,7 +12,7 @@
 
 ## 项目用途
 
-这是一个基础的 ONI Mod 模板项目，用于快速搭建新 Mod。
+这是一个基础的 ONI Mod 模板项目，用于快速搭建新 Mod。模板来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
 
 - 用 `onim init` 创建 mod 时，模板提供默认目录结构和构建配置。
 - 在 `Patches/` 目录放你自己的补丁代码。

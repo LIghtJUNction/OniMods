@@ -48,7 +48,7 @@ namespace OniMods.JlibBootstrap
                 phase = "abi_contract";
                 var api = library.GetType("Jlib.Runtime.JlibApi", false);
                 if (api == null || !ReferenceEquals(api.Assembly, library) || !Constant(api, "AbiVersion", typeof(int), AbiVersion) ||
-                    !Constant(api, "StaticId", typeof(string), StaticId)) return false;
+                    !Constant(api, "StaticId", typeof(string), StaticId) || !ValidVersionConstant(api, "Version")) return false;
                 registerConsumer = api.GetMethod("RegisterConsumer", BindingFlags.Public | BindingFlags.Static,
                     null, new[] { typeof(Assembly), typeof(Mod) }, null);
                 if (registerConsumer == null || registerConsumer.ReturnType != typeof(void) || registerConsumer.ContainsGenericParameters)
@@ -66,6 +66,15 @@ namespace OniMods.JlibBootstrap
             var field = type == null ? null : type.GetField(name, BindingFlags.Public | BindingFlags.Static);
             return field != null && field.IsLiteral && !field.IsInitOnly && field.FieldType == valueType &&
                 Equals(field.GetRawConstantValue(), expected);
+        }
+
+        private static bool ValidVersionConstant(Type type, string name)
+        {
+            var field = type == null ? null : type.GetField(name, BindingFlags.Public | BindingFlags.Static);
+            if (field == null || !field.IsLiteral || field.IsInitOnly || field.FieldType != typeof(string))
+                return false;
+            var raw = field.GetRawConstantValue() as string;
+            return !string.IsNullOrWhiteSpace(raw) && Version.TryParse(raw.Trim(), out _);
         }
 
         internal static bool SamePath(Assembly assembly, string expected)

@@ -200,6 +200,26 @@ internal static class FrameworkPrimitiveTests
         map.PurgeExpiredTombstones(now: 16.0);
         check(map.TombstoneCount == 0 && !map.IsTombstoned(1001) && map.TryRegister(1001, entityB), "expired tombstone purges and allows id reuse");
 
+        var entityC = new object();
+        var entityD = new object();
+        check(map.TryRegister(7, entityC) && map.Unregister(7) &&
+            map.TombstoneCount == 1 && map.IsTombstoned(7) && map.IsTombstoned(7, 0.0) &&
+            !map.IsTombstoned(7, NetworkIdentityMap<object>.DefaultTombstoneSeconds) &&
+            !map.TryRegister(7, entityD) && !map.TryRegister(7, entityD, now: 5.0),
+            "default unregister leaves a 10-second anti-ABA tombstone blocking immediate reuse");
+        check(map.TryRegister(7, entityD, now: NetworkIdentityMap<object>.DefaultTombstoneSeconds) &&
+            map.TombstoneCount == 0 && map.Count == 2,
+            "timestamped TryRegister automatically purges an expired tombstone without waiting for PurgeExpiredTombstones");
+        check(map.Unregister(7, now: 20.0) && map.TombstoneCount == 1, "unregister at t=20 records tombstone");
+        map.Clear(preserveTombstones: true);
+        check(map.Count == 0 && map.TombstoneCount == 1 && !map.TryRegister(7, entityC),
+            "Clear(preserveTombstones: true) drops active entities while preserving anti-ABA tombstones");
+        map.Clear();
+        check(map.Count == 0 && map.TombstoneCount == 0, "default Clear resets both entities and tombstones");
+        check(!map.Unregister(1001, double.NaN, 5.0) && !map.Unregister(1001, 10.0, double.PositiveInfinity) &&
+            map.UnregisterEntity(entityB, 20.0, 5.0) && map.IsTombstoned(1001, 22.0),
+            "identity map rejects non-finite timestamps and supports unregistering by entity instance");
+
         // --- PresenceBoard Tool Drag & Ping Tests ---
         var drag = new ToolDragPresence("player_1", 0, "dig", ToolDragMode.Box, 10, 10, 15, 15, 7, "Sandstone", 0xFF0000FF);
         check(presence.TryToolDrag(drag) && presence.ToolDragFor("player_1") != null &&
@@ -207,6 +227,14 @@ internal static class FrameworkPrimitiveTests
             presence.ToolDrags.Length == 1 && presence.ToolDrags[0].StartX == 10 &&
             presence.Cursors.Length == 0,
             "presence board retains active tool drag state for player and exposes collections");
+        bool invalidDragRejected = false;
+        try { new ToolDragPresence("player_1", 0, "dig", (ToolDragMode)99, 0, 0, 1, 1); } catch (ArgumentOutOfRangeException) { invalidDragRejected = true; }
+        bool invalidPingRejected = false;
+        try { new PlayerPing("player_1", 0, 1, 1, "   ", 0); } catch (ArgumentException) { invalidPingRejected = true; }
+        bool nanPingRejected = false;
+        try { new PlayerPing("player_1", 0, 1, 1, "alert", double.NaN); } catch (ArgumentOutOfRangeException) { nanPingRejected = true; }
+        check(invalidDragRejected && invalidPingRejected && nanPingRejected,
+            "tool drag and player ping validate mode, non-whitespace category, and finite timestamp");
 
         presence.ClearToolDrag("player_1");
         check(presence.ToolDragFor("player_1") == null && presence.ToolDrags.Length == 0, "clear tool drag removes the player drag preview");
@@ -248,6 +276,15 @@ internal static class FrameworkPrimitiveTests
         check(correctionSnap.Action == AnimCorrectionAction.SnapTime && Math.Abs(correctionSnap.TargetElapsedTime - 2.50f) < 0.001f,
             "large drift forces immediate snap to authoritative time");
 
+        var authInfiniteElapsed = new AnimSnapshot(501, 1234, 1, float.PositiveInfinity, float.PositiveInfinity, 10.0);
+        var correctionInf = AnimReconciler.Evaluate(localSnapshot, authInfiniteElapsed);
+        var authInfiniteReplay = new AnimSnapshot(501, 9999, 2, float.NegativeInfinity, float.PositiveInfinity, 10.0);
+        var correctionInfReplay = AnimReconciler.Evaluate(localSnapshot, authInfiniteReplay);
+        check(!float.IsInfinity(correctionInf.TargetElapsedTime) && !float.IsNaN(correctionInf.TargetElapsedTime) &&
+            correctionInf.TargetElapsedTime == 0f && correctionInf.RecommendedSpeed == 1.0f &&
+            !float.IsInfinity(correctionInfReplay.TargetElapsedTime) && correctionInfReplay.TargetElapsedTime == 0f,
+            "infinite elapsed time and speed are sanitized to finite non-negative bounds");
+
         int shardA = AnimSyncSharder.GetShard(100, 5);
         int shardB = AnimSyncSharder.GetShard(101, 5);
         check(shardA >= 0 && shardA < 5 && shardB >= 0 && shardB < 5, "animation sharder bounds shards between 0 and N-1");
@@ -275,6 +312,40 @@ internal static class FrameworkPrimitiveTests
             !CellBatchCodec.TryDecodeCells(new byte[5], out cWorld, out cCells, out cTool, out cPriority, out cMat),
             "cell batch codec rejects truncated or invalid payloads safely");
 
+        int[] maxBatchCells = Enumerable.Range(1000, CellBatchCodec.MaximumCellsPerBatch).ToArray();
+        byte[] maxBatchPayload = CellBatchCodec.EncodeCells(2, maxBatchCells, "DigTool", 6, "Granite");
+        check(maxBatchPayload.Length <= CellBatchCodec.MaximumPayloadSize &&
+            CellBatchCodec.TryDecodeCells(maxBatchPayload, out cWorld, out cCells, out cTool, out cPriority, out cMat) &&
+            cWorld == 2 && cPriority == 6 && cTool == "DigTool" && cMat == "Granite" && cCells.SequenceEqual(maxBatchCells),
+            "cell batch codec compresses 4096 contiguous cells within the 4096-byte payload limit using ZigZag VarInt deltas");
+
+        byte[] trailingBox = boxPayload.Concat(new byte[] { 0xFF }).ToArray();
+        byte[] trailingCells = cellsPayload.Concat(new byte[] { 0xFF }).ToArray();
+        check(!CellBatchCodec.TryDecodeBox(trailingBox, out bWorld, out bStartX, out bStartY, out bEndX, out bEndY, out bTool, out bPriority, out bMat) &&
+            !CellBatchCodec.TryDecodeCells(trailingCells, out cWorld, out cCells, out cTool, out cPriority, out cMat),
+            "cell batch codec rejects payloads with trailing garbage bytes");
+
+        bool negativeCellRejected = false;
+        try { CellBatchCodec.EncodeCells(0, new[] { 10, -1 }, "DigTool"); } catch (ArgumentOutOfRangeException) { negativeCellRejected = true; }
+        bool outOfRangeCoordRejected = false;
+        try { CellBatchCodec.EncodeBox(0, 40000, 0, 10, 10, "DigTool"); } catch (ArgumentOutOfRangeException) { outOfRangeCoordRejected = true; }
+        bool oversizedMaterialRejected = false;
+        try { CellBatchCodec.EncodeBox(0, 0, 0, 10, 10, "DigTool", 5, new string('M', CellBatchCodec.MaximumMaterialTagLength + 1)); } catch (ArgumentException) { oversizedMaterialRejected = true; }
+        check(negativeCellRejected && outOfRangeCoordRejected && oversizedMaterialRejected,
+            "cell batch codec rejects negative cell indices, out-of-range Int16 box coordinates, and oversized material tags");
+
+        int[] grid64x64 = Enumerable.Range(0, 64).SelectMany(y => Enumerable.Range(0, 64).Select(x => y * 256 + x)).ToArray();
+        byte[] gridPayload = CellBatchCodec.EncodeCells(0, grid64x64, "mop", 6, "Water");
+        int[] decodedGrid;
+        check(gridPayload.Length <= CellBatchCodec.MaximumPayloadSize &&
+            CellBatchCodec.TryDecodeCells(gridPayload, out cWorld, out decodedGrid, out cTool, out cPriority, out cMat) &&
+            decodedGrid.SequenceEqual(grid64x64),
+            "64x64 2D grid of 4096 cells compresses via RLE + ZigZag VarInt deltas and round-trips");
+
+        byte[] spoofedStringLength = new byte[] { (byte)CellBatchType.Box, 0, 0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0x80, 0x80, 0x80, 0x04, (byte)'a' };
+        check(!CellBatchCodec.TryDecodeBox(spoofedStringLength, out bWorld, out bStartX, out bStartY, out bEndX, out bEndY, out bTool, out bPriority, out bMat),
+            "codec rejects spoofed multi-megabyte string length prefix before allocating");
+
         // --- ResearchProgression Tests ---
         var research = new ResearchProgression();
         check(research.TrySelectTech("BasicFarming", 1, "host_player") && research.ActiveTechId == "BasicFarming" && research.CurrentRevision == 1,
@@ -290,16 +361,36 @@ internal static class FrameworkPrimitiveTests
             "duplicate or currently active tech cannot be queued");
 
         float totalPoints;
-        check(research.TryAddPoints("AdvancedResearch", "basic", 15.5f, out totalPoints) && totalPoints == 15.5f,
+        check(research.TryAddPoints("AdvancedResearch", "basic", 10.0f, out totalPoints) && totalPoints == 10.0f,
             "monotonic research point addition records points correctly");
-        check(research.TryAddPoints("AdvancedResearch", "basic", 5.0f, out totalPoints) && totalPoints == 20.5f,
+        byte[] snapshotAt10 = research.ExportState();
+        check(snapshotAt10[0] == ResearchProgression.SnapshotFormatVersion,
+            "research snapshot starts with format version byte");
+        check(research.TryAddPoints("AdvancedResearch", "basic", 5.0f, out totalPoints) && totalPoints == 15.0f,
             "additional research points accumulate monotonically");
+        check(!research.TryImportState(snapshotAt10) && research.GetPoints("AdvancedResearch", "basic") == 15.0f,
+            "same-revision stale snapshot with fewer points is rejected and cannot roll back progress");
+        check(research.TryAddPoints("AdvancedResearch", "basic", 5.5f, out totalPoints) && totalPoints == 20.5f,
+            "research points continue accumulating monotonically after stale import rejection");
         check(!research.TryAddPoints("AdvancedResearch", "basic", -1.0f, out totalPoints) &&
             !research.TryAddPoints("AdvancedResearch", "basic", float.NaN, out totalPoints),
             "invalid or negative research points are strictly rejected");
 
+        var overflowCheck = new ResearchProgression();
+        float maxTotal;
+        check(overflowCheck.TryAddPoints("MaxTech", "basic", float.MaxValue, out maxTotal) && maxTotal == float.MaxValue &&
+            !overflowCheck.TryAddPoints("MaxTech", "basic", float.MaxValue, out maxTotal) &&
+            !float.IsInfinity(overflowCheck.GetPoints("MaxTech", "basic")) &&
+            overflowCheck.GetPoints("MaxTech", "basic") == float.MaxValue,
+            "research point addition rejects float overflow to infinity and preserves finite total");
+
         byte[] exportedState = research.ExportState();
-        check(exportedState != null && exportedState.Length > 0, "research progression exports compact binary snapshot");
+        check(exportedState != null && exportedState.Length > 0 && exportedState.SequenceEqual(research.ExportState()),
+            "research progression exports deterministic compact binary snapshot");
+
+        byte[] badVersionState = (byte[])exportedState.Clone();
+        badVersionState[0] = 99;
+        check(!research.TryImportState(badVersionState), "snapshot with unsupported format version is rejected");
 
         var replicaResearch = new ResearchProgression();
         check(replicaResearch.TryImportState(exportedState) &&
@@ -309,9 +400,28 @@ internal static class FrameworkPrimitiveTests
             replicaResearch.GetPoints("AdvancedResearch", "basic") == 20.5f,
             "replica research successfully imports and restores authoritative progression snapshot");
 
+        byte[] trailingResearch = exportedState.Concat(new byte[] { 0x00 }).ToArray();
+        check(!replicaResearch.TryImportState(trailingResearch) && replicaResearch.CurrentRevision == 2,
+            "research snapshot import fails closed on trailing garbage bytes without mutating state");
+
+        using (var badMs = new MemoryStream())
+        using (var badWriter = new BinaryWriter(badMs, Encoding.UTF8))
+        {
+            badWriter.Write(ResearchProgression.SnapshotFormatVersion);
+            badWriter.Write(10L);
+            CellBatchCodec.WriteBoundedString(badMs, "Invalid;Tech");
+            CellBatchCodec.WriteBoundedString(badMs, "host_player");
+            badWriter.Write((ushort)0);
+            badWriter.Write((ushort)0);
+            badWriter.Write((ushort)0);
+            check(!replicaResearch.TryImportState(badMs.ToArray()) && replicaResearch.ActiveTechId == "AdvancedResearch",
+                "snapshot with invalid active tech token is rejected without mutating existing state");
+        }
+
         check(research.TryUnlock("AdvancedResearch") && research.IsUnlocked("AdvancedResearch") &&
-            research.ActiveTechId == string.Empty && !research.TryEnqueueTech("AdvancedResearch"),
-            "unlocking a tech marks it completed and clears from active/queue");
+            research.ActiveTechId == string.Empty && !research.TryEnqueueTech("AdvancedResearch") &&
+            !research.TrySelectTech("AdvancedResearch", 3, "peer_2"),
+            "unlocking a tech marks it completed, clears from active/queue, and prevents re-selecting");
 
         // --- SessionCompatibility Helpers ---
         var capsWithNew = new[] { SessionCapabilities.CellBatchV1, SessionCapabilities.ResearchSyncV1 };

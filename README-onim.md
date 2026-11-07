@@ -2,6 +2,8 @@
 
 `onim` is a command-line toolkit for creating and developing Oxygen Not Included mods. It creates the project layout, builds the C# mod, installs development builds, and publishes to Steam Workshop directly via the headless Legacy ZIP publisher.
 
+The whole path is three commands: `onim dev` tries a mod in game, `onim build` packs it, and `onim publish` sends it to Steam. Source: [OniMods](https://github.com/LIghtJUNction/OniMods).
+
 ## Install
 
 ```sh

@@ -28,9 +28,9 @@ dotnet add package LIghtJUNction.OniOnline.Framework --version 0.4.0
 
 ### 3. 玩法管理与配置菜单
 在模组加载（`UserMod2.OnLoad` 或 `OnAllModsLoaded`）时，调用 `GameplayFramework.Register(new MyGameplay())` 完成注册。
-- 注册后的玩法会自动出现在 OniOnline 游戏内选项界面的 **【🎮 联机玩法管理】** 中。
-- 玩家在【🎮 联机玩法管理】里看到已注册玩法。勾选表示启用，取消勾选表示禁用。点确定后立即生效，不用重启游戏。已经加入的房间继续原来的玩法；下一次创建或加入使用仍勾选、且上次保存过的那一项，若该项已取消勾选，则改用列表里剩下的第一项。
-- 配置界面中提供 **【📖 联机玩法开发指南】** 按钮，点击可一键在系统浏览器中打开本文档。
+- 注册后的玩法会自动出现在 OniOnline 游戏内选项界面的 **【联机玩法管理】** 中。
+- 玩家在【联机玩法管理】里看到已注册玩法。勾选表示启用，取消勾选表示禁用。点确定后立即生效，不用重启游戏。已经加入的房间继续原来的玩法；下一次创建或加入使用仍勾选、且上次保存过的那一项，若该项已取消勾选，则改用列表里剩下的第一项。
+- 配置界面中提供 **【联机玩法开发指南】** 按钮，点击可一键在系统浏览器中打开本文档。
 
 ## 最小调用
 
@@ -118,85 +118,156 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 
 ### 1. 跨进程确定性实体网络标识 (`DeterministicNetId` 与 `NetworkIdentityMap<T>`)
 
-声明能力：`onionline.entity-identity.v1`
+- **命名空间**：`OniOnline.Sdk`
+- **声明能力**：`onionline.entity-identity.v1`
 
 解决跨客户端同步中实体标识冲突、跨平台/跨进程哈希不一致以及对象生命周期重建时的 ABA 错位问题。
 
-- **静态实体 ID 生成**：
-  - `DeterministicNetId.ForBuilding(int worldId, int cell, string prefabId, int layer)`：利用 64 位 FNV-1a 强哈希结合世界 ID、网格单元格号、Prefab 标识与所在建筑层计算。返回正数（最高位为 0）。不同客户端输入相同的世界与建筑参数，计算出的 ID 严格一致。
-  - `DeterministicNetId.ForCell(int worldId, int cell, string subCategory)`：计算网格单元及子分类（如挖掘、涂抹等）的确定性静态 ID。
-- **动态实体 ID 生成**：
-  - `DeterministicNetId.ForDynamic(byte peerId, uint sequence, ushort typeTag)`：最高位（bit 63）置 1，高 7 位存储生成席位 ID（0..127），中 16 位存储类型标记（TypeTag），低 32 位存储单调递增流水号。确保动态生成的实体（如掉落物、杂物、临时投射物）在各客户端间天然命名空间隔离，零碰撞。
-  - 辅助解析：`IsDynamic(long id)`、`IsStatic(long id)`、`GetPeerId(long dynamicId)`、`GetTypeTag(long dynamicId)`、`GetSequence(long dynamicId)`。
+- **静态实体 ID 生成 (`DeterministicNetId`)**：
+  - `ForBuilding(int worldId, int cell, string prefabId, int layer)`：利用 64 位 FNV-1a 强哈希（偏移基数 `14695981039346656037`，素数 `1099511628211`）按固定小端字节序混合世界 ID、网格单元格号、Prefab 标识与建筑层，并清除 bit 63 保证返回正数（`IsStatic(id) == true`）。若 `prefabId` 为空或 null 则抛出 `ArgumentException`。
+  - `ForCell(int worldId, int cell, string subCategory)`：计算网格单元及子分类（如 `"dig"`、`"mop"`）的确定性静态正数 ID。
+- **动态实体 ID 生成 (`DeterministicNetId`)**：
+  - `ForDynamic(byte peerId, uint sequence, ushort typeTag)`：位域布局如下：
+    - `bit 63`：动态实体标志位（固定置 `1`）
+    - `bit 55..62`：保留位（固定为 `0`）
+    - `bit 48..54`：7 位生成席位 ID（`peerId`，取值范围 `0..127`，超出抛出 `ArgumentOutOfRangeException`）
+    - `bit 32..47`：16 位类型标记（`typeTag`，`ushort`）
+    - `bit 0..31`：32 位单调递增流水号（`sequence`，`uint`）
+  - 辅助解析：`IsDynamic(long id)`、`IsStatic(long id)`、`GetPeerId(long dynamicId)`、`GetTypeTag(long dynamicId)`、`GetSequence(long dynamicId)`（对非动态 ID 调用后三者抛出 `ArgumentException`）。
 - **实体映射表与生命周期管理 (`NetworkIdentityMap<T>`)**：
-  - 双向 O(1) 查找：`TryRegister(long netId, T instance)`、`TryGetEntity(long netId, out T instance)`、`TryGetId(T instance, out long netId)`。
-  - 防 ABA 墓碑机制：当实体销毁注销时调用 `Unregister(long netId)`，ID 不会立即回收，而是进入带时间戳的墓碑缓冲区（默认保留 10 秒）。在此期间任何迟到的网络包试图访问该 ID 都会被识别为 `IsTombstoned(netId)` 或 `IsTombstoned(netId, now)` 并安全丢弃，避免实体销毁重建后旧网络包作用到新实体的 ABA 隐患。调用 `PurgeExpiredTombstones(now)` 可清理过期墓碑，`Clear()` 重置全部映射与墓碑。
+  - 双向 O(1) 查找：`TryRegister(long id, T entity)`、`TryRegister(long id, T entity, double now)`、`TryGetEntity(long id, out T entity)`、`TryGetId(T entity, out long id)`。`entity` 为 null 时 `TryRegister` 抛出 `ArgumentNullException`。
+  - 防 ABA 墓碑机制：`Unregister(long id, double now = 0.0, double tombstoneSeconds = DefaultTombstoneSeconds)` 与 `UnregisterEntity(T entity, double now = 0.0, double tombstoneSeconds = DefaultTombstoneSeconds)` 在注销实体时默认保留 `DefaultTombstoneSeconds`（`10.0` 秒）的墓碑到期时间 `now + tombstoneSeconds`（若传入负数、`NaN` 或无穷大时间戳/时长则返回 `false`）。
+  - 墓碑查询与重注册：墓碑有效期内 `IsTombstoned(id)` 与 `IsTombstoned(id, now)` 返回 `true`，`TryRegister` 拒绝复用该 ID。墓碑到期后（`now >= expiry`），调用带时间戳的重载 `TryRegister(id, entity, now)` 会自动清除该 ID 的过期墓碑并完成注册；不带 `now` 的 `TryRegister(id, entity)` 则在显式调用 `PurgeExpiredTombstones(now)` 清理过期墓碑后允许复用。`Clear(bool preserveTombstones = false)` 用于清空活跃实体映射（默认同时清空墓碑；传入 `preserveTombstones: true` 可在仅重建实体列表时保留防 ABA 墓碑）。
+- **线程安全边界**：`DeterministicNetId` 为纯静态无状态方法，可任意线程调用；`NetworkIdentityMap<T>` 内部字典不加锁，非线程安全，必须在 `RoomSession.Pump` 所在的 Unity 主线程单线程调用。
+- **示例用法**：
+
+```csharp
+long id = DeterministicNetId.ForBuilding(worldId: 0, cell: 1024, prefabId: "OxygenDiffuser", layer: 1);
+var map = new NetworkIdentityMap<object>();
+map.TryRegister(id, diffuserInstance, now: 10.0);
+
+// 建筑拆除时默认留下 10 秒防 ABA 墓碑（到期时间 22.0）
+map.Unregister(id, now: 12.0);
+bool blocked = map.TryRegister(id, rebuiltInstance, now: 15.0); // false：墓碑未到期
+bool reused = map.TryRegister(id, rebuiltInstance, now: 22.5);  // true：已到期，自动清理并登记
+```
 
 ### 2. 玩家光标与交互态共享 (`PresenceBoard`)
 
-声明能力：`onionline.presence.v1`
+- **命名空间**：`OniOnline.Sdk`
+- **声明能力**：`onionline.presence.v1`
 
-负责多玩家协作时的视口焦点、工具拖选交互与战术高亮信号呈现。
+负责多玩家协作时的视口焦点、工具拖选交互与战术高亮信号呈现。未启用（`Enabled == false`）时所有写入返回 `false`。
 
 - **光标位置与视口 (`PresenceCursor`)**：
-  - `PlayerId`, `WorldId`, `X`, `Y`：记录玩家当前鼠标所在世界与网格坐标。
-  - `TryCursor(PresenceCursor cursor)`、`CursorFor(string playerId)`、`Cursors`（获取全部活跃光标数组）。
+  - `PlayerId`（`1..64` 字符，不含换行符，非法抛出 `ArgumentException`）、`WorldId`、`X`、`Y`。
+  - `TryCursor(PresenceCursor cursor)`（最多保留 `MaximumPlayers = 16` 名玩家的最新光标）、`CursorFor(string playerId)`、`Cursors`（返回快照数组）。
 - **拖选工具预览 (`ToolDragPresence`)**：
-  - 支持多玩家正在进行中的交互框选预览（如挖掘框、拆除框、擦水框、电线/管道拉线）。
-  - 包含字段：`PlayerId`, `WorldId`, `ToolId`（如 "dig"、"build"）, `Mode`（`ToolDragMode.Box`, `Line`, `Point`）, `StartX`, `StartY`, `EndX`, `EndY`, `Priority`（1..9 优先级）, `MaterialTag`, `ColorRgba`。
-  - `TryToolDrag(ToolDragPresence drag)`、`ToolDragFor(string playerId)`、`ClearToolDrag(string playerId)`、`ToolDrags`（获取全部活跃拖选数组）。
+  - 字段：`PlayerId`, `WorldId`, `ToolId`（`1..32` 字符，非法抛出 `ArgumentException`）, `Mode`（`ToolDragMode.Box`, `Line`, `Point`）, `StartX`, `StartY`, `EndX`, `EndY`, `Priority`（`1..9`，超出抛出 `ArgumentOutOfRangeException`）, `MaterialTag`, `ColorRgba`。
+  - `TryToolDrag(ToolDragPresence drag)`、`ToolDragFor(string playerId)`、`ClearToolDrag(string playerId)`、`ToolDrags`。
 - **战术标记与高亮信号 (`PresenceMark` & `PlayerPing`)**：
-  - `PresenceMark`：带递增序号的地块标记，供多端同步静态指示。
-  - `PlayerPing`：带 `Category`（如 "alert"、"look_here"）与 `Timestamp` 的瞬时高亮脉冲，队列自动轮转，上限 32 个。
-  - 玩家断开离开时通过 `Drop(playerId)` 清理单人状态；退出房间或重连时调用 `Clear()` 一键清空全量板载状态。
+  - `PresenceMark`：带单调递增正序号 `Sequence`（`<= 0` 抛出 `ArgumentException`），同一玩家旧序号被 `TryMark` 拒绝，全局上限 `MaximumMarks = 32` 个。
+  - `PlayerPing`：带 `Category`（`0..32` 字符，超长或 null 抛出 `ArgumentException`）与 `Timestamp`，队列自动轮转，上限 `MaximumPings = 32` 个。
+  - 生命周期清理：玩家离开时调用 `Drop(playerId)` 清理该玩家全部状态；退出房间或重连时调用 `Clear()` 清空全量板载数据。
+- **线程安全边界**：`PresenceCursor`、`PresenceMark`、`ToolDragPresence`、`PlayerPing` 为不可变对象；`PresenceBoard` 内部集合不加锁，必须在 `RoomSession.Pump` / Unity 主线程单线程调用。
+- **示例用法**：
+
+```csharp
+var board = new PresenceBoard { Enabled = true };
+board.TryCursor(new PresenceCursor("peer_1", worldId: 0, x: 18, y: 42));
+board.TryToolDrag(new ToolDragPresence("peer_1", 0, "dig", ToolDragMode.Box, 10, 10, 20, 15, priority: 7));
+board.ClearToolDrag("peer_1");
+```
 
 ### 3. 动画增量对齐与分片 (`AnimReconciler` 与 `AnimSyncSharder`)
 
-声明能力：`onionline.anim-sync.v1`
+- **命名空间**：`OniOnline.Sdk`
+- **声明能力**：`onionline.anim-sync.v1`
 
 解决多人共享殖民地中复制人和生物动画随网络延迟发生微小相位漂移或错位的问题。
 
 - **状态快照 (`AnimSnapshot`)**：
-  - 包含 `EntityId`, `AnimHash`（动画名称哈希）, `PlayMode`（单次/循环）, `Speed`（播放速度）, `ElapsedTime`（当前已播放秒数）, `Timestamp`（采集时间戳）。
-- **智能平滑校正决策 (`AnimReconciler.Evaluate`)**：
-  - 若两端播放的动画不同（`AnimHash` 不符）或播放模式不同（`PlayMode` 不符）：返回 `AnimCorrectionAction.Replay`，强制重置为权威端目标动画与播放模式。
-  - 若动画一致，根据时延对齐计算期望播放时间后得到绝对时间漂移 `drift`：
-    - 漂移 `<= driftTolerance`（默认 0.15s）：返回 `AnimCorrectionAction.None`，无需任何干预。
-    - 小范围漂移（`driftTolerance < absDrift <= maxNudgeDrift`，默认上限 0.6s）：返回 `AnimCorrectionAction.NudgeSpeed`，平滑微调播放速度（慢了加速 1.15 倍，快了减速 0.85 倍）。肉眼无感知平滑追赶，消除关键帧突变闪烁。
-    - 严重脱节（`absDrift > maxNudgeDrift`）：返回 `AnimCorrectionAction.SnapTime`，硬跳至权威时间点。
+  - 只读结构体，包含 `EntityId`, `AnimHash`, `PlayMode`, `Speed`, `ElapsedTime`, `Timestamp`。
+- **平滑校正决策 (`AnimReconciler.Evaluate`)**：
+  - 若 `local.EntityId != authoritative.EntityId`，抛出 `ArgumentException("entity_id_mismatch")`。
+  - 防御净化：非正数、`NaN` 或无穷大的 `Speed` 回退为 `1.0f`；负数、`NaN` 或无穷大的 `ElapsedTime` 净化为 `0.0f`；非法的 `driftTolerance` 与 `maxNudgeDrift` 自动回退至默认值（`0.15f` 与 `0.6f`），确保输出的 `TargetElapsedTime` 与 `RecommendedSpeed` 始终为有限非负浮点数。
+  - 若 `AnimHash` 或 `PlayMode` 不一致：返回 `AnimCorrectionAction.Replay`，重置为权威动画、模式与净化后的权威已播放时长。
+  - 若动画与模式一致，结合有效正时延差 `(local.Timestamp - authoritative.Timestamp) * baseSpeed` 计算期望播放时间与漂移 `drift = localElapsed - expectedElapsedTime`：
+    - `|drift| <= driftTolerance`（默认 `0.15s`）：返回 `AnimCorrectionAction.None`。
+    - `driftTolerance < |drift| <= maxNudgeDrift`（默认 `0.6s`）：返回 `AnimCorrectionAction.NudgeSpeed`，本端超前时减速至 `0.85 * baseSpeed`，滞后时加速至 `1.15 * baseSpeed`。
+    - `|drift| > maxNudgeDrift`：返回 `AnimCorrectionAction.SnapTime`，硬跳至 `expectedElapsedTime`。
 - **实体分片减负 (`AnimSyncSharder`)**：
-  - `GetShard(long entityId, int totalShards)` / `IsEntityInShard(long entityId, int targetShard, int totalShards)`：基于 64 位实体 ID 的正数取模算法，将成百上千个动植物实体均匀分布到 N 帧（如 5 到 10 帧）中分批同步，彻底避免同帧广播造成的瞬时网络尖峰。
+  - `GetShard(long entityId, int totalShards)` / `IsEntityInShard(long entityId, int targetShard, int totalShards)`：先掩去最高符号位（`& 0x7FFFFFFFFFFFFFFFUL`）再对 `totalShards` 无符号取模，返回值恒在 `0 .. totalShards - 1`（当 `totalShards <= 1` 时返回 `0`）。
+- **线程安全边界**：`AnimReconciler` 与 `AnimSyncSharder` 均为纯静态无状态方法，`AnimSnapshot` 与 `AnimCorrection` 为值类型，支持任意线程并发调用。
+- **示例用法**：
+
+```csharp
+if (AnimSyncSharder.IsEntityInShard(entityId, currentFrame % 5, totalShards: 5))
+{
+    var local = new AnimSnapshot(entityId, animHash: 120, playMode: 1, speed: 1.0f, elapsedTime: 0.45f, timestamp: 10.1);
+    var auth = new AnimSnapshot(entityId, animHash: 120, playMode: 1, speed: 1.0f, elapsedTime: 0.15f, timestamp: 10.0);
+    AnimCorrection fix = AnimReconciler.Evaluate(local, auth);
+}
+```
 
 ### 4. 网格指令与区域拖选批处理 (`CellBatchCodec`)
 
-声明能力：`onionline.cell-batch.v1`
+- **命名空间**：`OniOnline.Sdk`
+- **声明能力**：`onionline.cell-batch.v1`
 
-解决在拖选操作（大范围挖掘、框选建造、地表擦水、大批量改优先级）中每帧为数十上百个网格单元单独发包造成的网络严重拥塞问题。
+解决在拖选操作（大范围挖掘、框选建造、地表擦水、大批量改优先级）中逐格发包造成的网络拥塞问题。
 
-- **矩形区域高密度压缩 (`EncodeBox` / `TryDecodeBox`)**：
-  - 参数：`worldId, startX, startY, endX, endY, toolId, priority, materialTag`。
-  - 数据负载在 64 字节以内即可完整传输横跨成百上千格的矩形批量交互（如 20x20 区域挖掘）。
-- **离散网格序列增量 Delta 压缩 (`EncodeCells` / `TryDecodeCells`)**：
-  - 参数：`worldId, int[] cells, toolId, priority, materialTag`。
-  - 采用锚点网格（Anchor Cell）与后续相对偏移量（Delta Offset）进行序列化，大幅削减连续网格序列所占网络包体积（最高支持单包 4096 格）。
+- **矩形区域编码 (`EncodeBox` / `TryDecodeBox`)**：
+  - 参数：`worldId, startX, startY, endX, endY, toolId, priority = 5, materialTag = ""`。
+  - 取值范围与异常：`startX, startY, endX, endY` 必须在 `Int16`（`-32768..32767`）范围内，越界抛出 `ArgumentOutOfRangeException`（严禁静默截断）；`priority` 必须在 `1..9` 内，越界抛出 `ArgumentOutOfRangeException`；`toolId` 为 `1..32` 个可见 ASCII 字符（`33..126`），`materialTag` 为 `0..64` 个非控制字符，非法抛出 `ArgumentException`。
+  - 负载体积：固定 14 字节数值头加变长前缀的 UTF-8 字符串，常规指令低于 64 字节，最大不超过 112 字节。
+- **离散网格序列压缩 (`EncodeCells` / `TryDecodeCells`)**：
+  - 参数：`worldId, int[] cells, toolId, priority = 5, materialTag = ""`。
+  - 取值范围与异常：`cells` 长度须为 `1..4096`（`MaximumCellsPerBatch`），超出或为空抛出 `ArgumentException`；每个单元格索引须 `>= 0`，负数抛出 `ArgumentOutOfRangeException`。
+  - 压缩算法：首格写入无符号 7-bit `VarUInt32` 锚点，后续相邻差值采用 **游程编码（RLE）+ 7-bit ZigZag `VarUInt64`** 变长压缩（重复差值自动合并为游程，单次小差值仅占 1 字节）。4096 个连续网格压缩后仅约 20 字节，64×64 网格区域仅约 270 字节。若不可压缩的极端随机输入编码后超出 `MaximumPayloadSize`（`4096` 字节），`EncodeCells` 直接抛出 `ArgumentException`，不会发出解码端拒绝的超限包。
 - **防御校验**：
-  - 自动校验包大小（最大 4096 字节）、优先级范围（1..9）、工具标识长度，遇非法或损坏包安全返回 `false`。
+  - 解码端严格限制包长 `<= 4096` 字节，读取字符串前先按字段上限（`maxChars * 4`）与流剩余可读字节数（`Length - Position`）做前置校验，杜绝畸形超长字符串前缀触发大内存分配；游程展开严格限制在 `count`（`<= 4096`）与非负 `Int32` 范围内，并校验无尾部冗余字节（`Position == Length`），任何异常或畸形数据均安全返回 `false`。
+- **线程安全边界**：`CellBatchCodec` 为纯静态无状态编解码器，对独立输入数组支持任意线程调用。
+- **示例用法**：
+
+```csharp
+byte[] boxBytes = CellBatchCodec.EncodeBox(0, startX: 10, startY: 20, endX: 50, endY: 40, toolId: "DigTool", priority: 7);
+int[] cells = new[] { 100, 101, 102, 150, 151, 200 };
+byte[] cellBytes = CellBatchCodec.EncodeCells(0, cells, toolId: "BuildTool", priority: 6, materialTag: "Sandstone");
+if (CellBatchCodec.TryDecodeCells(cellBytes, out int worldId, out int[] decoded, out string tool, out int prio, out string mat))
+{
+    // decoded 与 cells 完全一致
+}
+```
 
 ### 5. 殖民地科技树协同与单调累加 (`ResearchProgression`)
 
-声明能力：`onionline.research-sync.v1`
+- **命名空间**：`OniOnline.Sdk`
+- **声明能力**：`onionline.research-sync.v1`
 
 解决多人共享或多星球联合科研中研发目标抢占冲突、点数并发回滚及断线重连同步问题。
 
 - **研发目标与队列协同**：
-  - `TrySelectTech(techId, revision, actorId)`：基于单调递增的修订号（`CurrentRevision`）实施乐观锁裁决。旧修订号的更改请求被拒绝，消灭两端同时点击不同科技导致的来回拉扯。
-  - `TryEnqueueTech(techId)` / `TryRemoveFromQueue(techId)`：管理上限 32 项的排队候选。
+  - `TrySelectTech(string techId, long revision, string actorId = "")`：要求 `revision > 0 && revision > CurrentRevision`，`techId`（非空时 `1..64` 字符合法 token 且尚未解锁）与 `actorId`（非空时 `1..64` 字符合法 token）均通过校验后才推进 `CurrentRevision` 并更新 `ActiveTechId`。选中后自动从排队队列移除该项。
+  - `TryEnqueueTech(string techId)` / `TryRemoveFromQueue(string techId)`：管理上限 `MaximumQueuedTechs = 32` 项的不重复待研队列（已解锁或当前激活项不可入队）。
 - **研发点数单调累加 (`TryAddPoints`)**：
-  - 针对常规（basic）、高级（advanced）、核能（nuclear）、轨道（orbital）等各类型科研点数独立累加。
-  - 拦截负数、NaN 与无穷大输入，点数只能单调增加，杜绝网络延迟造成的负向回退。
-- **解锁与状态快照**：
-  - `TryUnlock(techId)`：标记科技完成，自动从激活项与队列中清理。
-  - `ExportState()` / `TryImportState(byte[] payload)`：导出与导入全量科技树快照，供中途加入房间的新玩家一次性恢复权威科研进度。
+  - `TryAddPoints(string techId, string pointType, float deltaPoints, out float currentTotal)`：校验 `techId`（`1..64` 字符合法 token）、`pointType`（`1..32` 字符合法 token，每科技最多 `MaximumPointTypesPerTech = 32` 种），要求 `deltaPoints > 0` 且非 `NaN`/无穷大；累加后若发生浮点溢出（`Infinity`/`NaN`）或未能严格大于原值则拒绝写入并返回 `false`，保证存储值严格单调递增且永不变成无穷大。
+- **解锁与版本化状态快照 (`TryUnlock`, `ExportState`, `TryImportState`)**：
+  - `TryUnlock(string techId)`：标记科技完成（上限 `MaximumUnlockedTechs = 256`），自动从激活项与队列中移除。
+  - `ExportState()`：首字节写入格式版本号 `SnapshotFormatVersion`（`1`），随后按确定性 `StringComparer.Ordinal` 顺序写入修订号、激活科技、操作者、队列、已解锁集合与点数表。
+  - `TryImportState(byte[] payload)`：校验格式版本字（须等于 `SnapshotFormatVersion`）、包大小（`<= 65536` 字节）、字符串剩余字节边界、所有字段（含 `ActiveTechId`、`LastActorId`、队列、已解锁、点数键）的 token 合法性及流结尾（`Position == Length`）。同时强制执行**单调进度守卫**：拒绝 `revision < CurrentRevision` 的快照；同修订号下拒绝篡改当前激活科技或操作者；任何快照若企图减少已有科技点数或丢失已解锁科技，一律拒绝导入并返回 `false`，不破坏原状态。需要彻底清空时必须显式调用 `Reset()`。
+- **线程安全边界**：`ResearchProgression` 内部状态集合不加锁，非线程安全，必须在 `RoomSession.Pump` 所在的 Unity 主线程单线程调用。
+- **示例用法**：
+
+```csharp
+var research = new ResearchProgression();
+research.TrySelectTech("BasicFarming", revision: 1, actorId: "host");
+research.TryAddPoints("BasicFarming", "basic", 15.0f, out float total);
+byte[] snapshot = research.ExportState();
+
+var replica = new ResearchProgression();
+bool imported = replica.TryImportState(snapshot); // true，恢复至修订号 1 与 15.0 点
+```
 
 ## 接口文档维护规范 (Documentation Maintenance Protocol)
 

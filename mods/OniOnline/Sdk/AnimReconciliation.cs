@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace OniOnline.Sdk
 {
@@ -54,6 +53,7 @@ namespace OniOnline.Sdk
     /// <summary>
     /// Evaluates animation discrepancies between local simulation and host authority.
     /// Provides smooth speed adjustment for small drifts and hard snaps for desynchronizations.
+    /// Stateless and safe for concurrent evaluation.
     /// </summary>
     public static class AnimReconciler
     {
@@ -71,12 +71,17 @@ namespace OniOnline.Sdk
                 throw new ArgumentException("entity_id_mismatch");
             }
 
-            if (float.IsNaN(driftTolerance) || driftTolerance < 0f) driftTolerance = DefaultDriftTolerance;
-            if (float.IsNaN(maxNudgeDrift) || maxNudgeDrift < driftTolerance) maxNudgeDrift = Math.Max(driftTolerance, DefaultMaxNudgeDrift);
+            if (float.IsNaN(driftTolerance) || float.IsInfinity(driftTolerance) || driftTolerance < 0f)
+                driftTolerance = DefaultDriftTolerance;
+            if (float.IsNaN(maxNudgeDrift) || float.IsInfinity(maxNudgeDrift) || maxNudgeDrift < driftTolerance)
+                maxNudgeDrift = Math.Max(driftTolerance, DefaultMaxNudgeDrift);
 
             float baseSpeed = authoritative.Speed > 0f && !float.IsNaN(authoritative.Speed) && !float.IsInfinity(authoritative.Speed)
                 ? authoritative.Speed
                 : 1.0f;
+
+            float localElapsed = SanitizeElapsedTime(local.ElapsedTime);
+            float authElapsed = SanitizeElapsedTime(authoritative.ElapsedTime);
 
             // 1. If playing different animations or play modes, force immediate replay of the authoritative anim
             if (local.AnimHash != authoritative.AnimHash || local.PlayMode != authoritative.PlayMode)
@@ -85,21 +90,29 @@ namespace OniOnline.Sdk
                     AnimCorrectionAction.Replay,
                     authoritative.AnimHash,
                     authoritative.PlayMode,
-                    Math.Max(0f, float.IsNaN(authoritative.ElapsedTime) ? 0f : authoritative.ElapsedTime),
+                    authElapsed,
                     baseSpeed);
             }
 
-            float localElapsed = Math.Max(0f, float.IsNaN(local.ElapsedTime) ? 0f : local.ElapsedTime);
-            float authElapsed = Math.Max(0f, float.IsNaN(authoritative.ElapsedTime) ? 0f : authoritative.ElapsedTime);
-
             // 2. Compute time drift accounting for latency timestamp difference if provided
             float latencyElapsed = 0f;
-            if (authoritative.Timestamp > 0 && local.Timestamp > authoritative.Timestamp &&
-                !double.IsNaN(local.Timestamp) && !double.IsNaN(authoritative.Timestamp))
+            if (authoritative.Timestamp > 0.0 && local.Timestamp > authoritative.Timestamp &&
+                !double.IsNaN(local.Timestamp) && !double.IsNaN(authoritative.Timestamp) &&
+                !double.IsInfinity(local.Timestamp) && !double.IsInfinity(authoritative.Timestamp))
             {
-                latencyElapsed = (float)(local.Timestamp - authoritative.Timestamp) * baseSpeed;
+                double rawLatency = (local.Timestamp - authoritative.Timestamp) * baseSpeed;
+                if (!double.IsNaN(rawLatency) && !double.IsInfinity(rawLatency) && rawLatency > 0.0 && rawLatency <= float.MaxValue)
+                {
+                    latencyElapsed = (float)rawLatency;
+                }
             }
+
             float expectedElapsedTime = authElapsed + latencyElapsed;
+            if (float.IsNaN(expectedElapsedTime) || float.IsInfinity(expectedElapsedTime))
+            {
+                expectedElapsedTime = authElapsed;
+            }
+
             float drift = localElapsed - expectedElapsedTime;
             float absDrift = Math.Abs(drift);
 
@@ -114,12 +127,17 @@ namespace OniOnline.Sdk
             {
                 // If local is ahead, slow down slightly; if local is behind, speed up slightly
                 float nudgeFactor = drift > 0 ? 0.85f : 1.15f;
+                float nudgedSpeed = baseSpeed * nudgeFactor;
+                if (float.IsNaN(nudgedSpeed) || float.IsInfinity(nudgedSpeed) || nudgedSpeed <= 0f)
+                {
+                    nudgedSpeed = baseSpeed;
+                }
                 return new AnimCorrection(
                     AnimCorrectionAction.NudgeSpeed,
                     authoritative.AnimHash,
                     authoritative.PlayMode,
                     localElapsed,
-                    baseSpeed * nudgeFactor);
+                    nudgedSpeed);
             }
 
             // Large drift: snap directly to authoritative elapsed time
@@ -129,6 +147,13 @@ namespace OniOnline.Sdk
                 authoritative.PlayMode,
                 expectedElapsedTime,
                 baseSpeed);
+        }
+
+        private static float SanitizeElapsedTime(float elapsed)
+        {
+            if (float.IsNaN(elapsed) || float.IsInfinity(elapsed) || elapsed < 0f)
+                return 0f;
+            return elapsed;
         }
     }
 

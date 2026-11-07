@@ -2041,13 +2041,13 @@ msgstr "Other players’ voice volume (0–100). Zero mutes playback without cha
 
 #. STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY
 msgctxt "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY"
-msgid "🎮 Gameplay Management"
-msgstr "🎮 Gameplay Management"
+msgid "Gameplay Management"
+msgstr "Gameplay Management"
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE
 msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE"
-msgid "📖 Online Gameplay Dev Guide"
-msgstr "📖 Online Gameplay Dev Guide"
+msgid "Online Gameplay Dev Guide"
+msgstr "Online Gameplay Dev Guide"
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT
 msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT"

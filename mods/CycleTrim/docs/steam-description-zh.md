@@ -14,10 +14,45 @@
 [h3]支持的 DLC:[/h3]
 [img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
-[h3]这个模组会做什么[/h3]
-重构底层算法，不再只在原版热路径上打补丁。
-把尽可能多的运算搬到 GPU。眼下的 GPU 试验从流体展示图像开始，有序的流体和传热求解还没有整段搬过去。
-先把帧时间打下来，再回头补兼容。这一阶段不承诺行为和原版对齐。
+[h3]下个版本：实验拆掉一格一物与 GPU 泊松压力投影[/h3]
+原版每个格子只留一个元素和一份质量。两种物质相遇时不能在格子里共存，旧物质必须被挤到别的格子。这一步要搜索邻格、走分支，还要决定谁先进入。现代 CPU 的宽向量指令和 GPU 最怕这种发散，最擅长的是每个格子做同一套浮点乘加。
+
+[b]1. 旧版原版算法（串行网格遍历 + 仲裁排挤）：[/b]
+[code]
+// 串行供受体质量迁移（受 ElementRecord.flow 控制）：
+Δm = clamp(k * (m_a - m_b), -0.125 * m_b, 0.125 * m_a)
+
+// 伴随行为：
+- 单次迁移量硬截断在供体质量的 12.5%
+- 触发 displace_gas / displace_liquid 进行邻格深度搜索与排挤
+- 同步迁移离散温度与病菌，改变目标格材料身份并处理 Vacuum / Sink
+- 强分支、强时序依赖，导致 CPU 缓存失效与 GPU 线程束（Warp）分化
+[/code]
+
+[b]2. 新版 GPU 算法（变密度连续流体泊松投影 + 多组分通量）：[/b]
+[code]
+// 步骤一：多组分守恒界面通量输运（每个格子同一套向量乘加，无邻格排挤搜索）
+M_c(t + Δt) = M_c(t) - Δt * div(F_c)
+
+// 步骤二：计算中间速度场有限体积散度（Divergence Kernel）
+div(u*) = (u(y, x+1) - u(y, x)) / Δx + (v(y+1, x) - v(y, x)) / Δy
+RHS = div(u*) / Δt
+
+// 步骤三：求解变密度泊松方程（Red-Black Gauss-Seidel with SOR 压力迭代）
+div(β * grad(p)) = div(u*) / Δt,  其中界面渗透率 β_face = 2 / (ρ_1 + ρ_2)
+p_i^(k+1) = p_i^(k) + ω * [ (Σ_{j} β_ij * p_j - RHS_i) / (Σ_{j} β_ij) - p_i^(k) ]
+分为 Red Pass ((x+y)%2 == 0) 与 Black Pass ((x+y)%2 == 1) 并行分步，显存屏障保证一致性。
+
+// 步骤四：速度场无散投影修正（Velocity Projection Kernel）
+u_face^(n+1) = u_face^* - Δt * β_u * (p_right - p_left) / Δx
+v_face^(n+1) = v_face^* - Δt * β_v * (p_bottom - p_top) / Δy
+
+// 边界条件：固体壁面与域外边界严格满足法向零速度 u_normal = 0 与 Neumann 条件 β = 0
+[/code]
+
+当前包还不是这套算法。OniSim 仍是一格一物。压力求解也不会直接变成一次简单乘法。Stage 2 数值参考（残差 1e-7、散度收敛、零速度不动点等 6 项测试）已在独立实验分支通过，生产内核保持隔离，疾病、建筑和存档格式不跟这一步一起改。先加速，再严格进行行为兼容性验收。
+
+完整分析：[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/docs/next-cell-representation.md]一格一物为什么在现代硬件上是负资产[/url]
 
 [h3]眼下构建里已经有的[/h3]
 忙碌复制人、静止小动物和拾取扫描会少做重复工作。这些是早期裁剪，不是最终形态。

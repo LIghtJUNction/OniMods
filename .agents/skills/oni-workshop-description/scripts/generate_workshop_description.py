@@ -96,7 +96,10 @@ def render_description_en(data: Dict[str, Any]) -> str:
         for item in data["controls"]:
             parts.append(f"* {item}\n")
 
-    # 8. Contributions / Open Source
+    # 8. onim workflow, then contributions
+    parts.append("[h3]Built with onim[/h3]")
+    parts.append("This mod comes from [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]. onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing.\n")
+    parts.append("onim dev tries it in game. onim build packs it. onim publish sends it to Steam.\n")
     if data.get("github_url"):
         parts.append("[h3]Contributions[/h3]")
         parts.append("Contributions are welcome!")
@@ -184,7 +187,10 @@ def render_description_zh(data: Dict[str, Any]) -> str:
         for item in controls:
             parts.append(f"* {item}\n")
 
-    # 8. Contributions / Open Source
+    # 8. onim 全流程，然后是开源贡献
+    parts.append("[h3]由 onim 完成[/h3]")
+    parts.append("本模组来自 [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]。onim 是这个仓库里的工具。它把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线。\n")
+    parts.append("onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。\n")
     if data.get("github_url"):
         parts.append("[h3]开源贡献[/h3]")
         parts.append("非常欢迎社区贡献！")

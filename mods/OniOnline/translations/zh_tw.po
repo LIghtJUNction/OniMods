@@ -2041,13 +2041,13 @@ msgstr "其他玩家語音的播放音量（0–100）。0 為靜音，不改變
 
 #. STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY
 msgctxt "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY"
-msgid "🎮 Gameplay Management"
-msgstr "🎮 連線玩法管理"
+msgid "Gameplay Management"
+msgstr "連線玩法管理"
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE
 msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE"
-msgid "📖 Online Gameplay Dev Guide"
-msgstr "📖 連線玩法開發指南"
+msgid "Online Gameplay Dev Guide"
+msgstr "連線玩法開發指南"
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT
 msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT"

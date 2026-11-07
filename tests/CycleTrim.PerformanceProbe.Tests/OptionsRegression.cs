@@ -14,14 +14,14 @@ namespace CycleTrim.PerformanceProbe.Tests
                 "native simulation must remain disabled by default until runtime acceptance is complete");
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
-            Check(!new OniSimOptions().OptimizePowerOverlay,
-                "workload-dependent power reuse must remain opt-in");
-            Check(!new OniSimOptions().OptimizeConveyorPathLookup,
-                "conveyor lookup candidate must remain opt-in");
-            Check(!new OniSimOptions().OptimizeAnimationSymbols,
-                "animation version coalescing must remain opt-in");
-            Check(!new OniSimOptions().OptimizeStateMachineLookups,
-                "state machine lookup reuse must remain opt-in");
+            Check(new OniSimOptions().OptimizePowerOverlay,
+                "workload-dependent power reuse enabled by default");
+            Check(new OniSimOptions().OptimizeConveyorPathLookup,
+                "conveyor lookup candidate enabled by default");
+            Check(new OniSimOptions().OptimizeAnimationSymbols,
+                "animation version coalescing enabled by default");
+            Check(new OniSimOptions().OptimizeStateMachineLookups,
+                "state machine lookup reuse enabled by default");
             Check(new OniSimOptions().ConduitAnimation == ConduitAnimationQuality.Full,
                 "conduit display sampling must preserve full quality by default");
             Load(null, expectedEnabled: false);
@@ -121,10 +121,12 @@ namespace CycleTrim.PerformanceProbe.Tests
         private static void Check(bool value, string message)
         {
             assertions++;
-            if (!value) throw new InvalidOperationException(message);
+            if (!value)
+                throw new InvalidOperationException("assertion failed: " + message);
         }
     }
 }
+
 
 // The real entrypoint and options run above. Host-only adapters stand in for
 // PLib's Unity dialog and native-library mapping, not for the option policy.

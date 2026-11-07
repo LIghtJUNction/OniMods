@@ -22,6 +22,7 @@ Thumbs.db
 
 # Game decompiled source & game files (copyrighted, do not commit)
 oni/
+decompiled/
 
 # Rust build
 target/

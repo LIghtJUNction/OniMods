@@ -156,8 +156,8 @@ internal static class Program
             { SharedTimeTests.Run(Check); Console.WriteLine("PASS " + assertions + " shared time assertions"); return 0; }
             if (args.Length == 2 && args[0] == "--check-bundled-valuetuple") return CheckBundledValueTuple(args[1]);
             if (args.Length == 2 && args[0] == "--check-no-probe") return CheckNoProbe(args[1]);
-            if (args.Length == 2 && args[0] == "--check-plib") return CheckPLib(args[1]);
-            if (args.Length == 2 && args[0] == "--check-jlib") return CheckJlib(args[1]);
+            if (args.Length == 2 && (args[0] == "--check-jlib" || args[0] == "--check-plib")) return CheckJlib(args[1]);
+            FrameworkPrimitiveTests.Run(Check);
             GameplaySdkTests.Run(Check);
             CompatibilityTests.Run(Check);
             ModSynchronizationTests.Run(Check);

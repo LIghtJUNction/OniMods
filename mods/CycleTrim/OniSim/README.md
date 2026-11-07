@@ -3,6 +3,8 @@
 OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与可观测行为实现 Rust 版本。
 它已纳入 CycleTrim 源码与构建工程；游戏接管、性能和 Mod 兼容性仍在验收，当前不能当作已经验证的替代内核。
 
+当前内核仍是一格一物，气体排挤在 `native/src/gas.rs` 的 `displace_gas`。下个版本要实验的是另一套格子：固定组分质量、界面通量、无排挤搜索，并把该核放到 GPU 上。那不是本内核已经完成的替换，说明见 [下个版本：实验替换一格一物](../docs/next-cell-representation.md)。
+
 当前源代码快照已接入 inline thermal command queue，47 项 Release Rust 测试通过。该结果只证明对应源码的单元测试；
 不代表整局 FPS、RSS 或单/四线程加速。四线程整体性能门禁仍未通过；当前快照没有对应的真实游戏验收，旧二进制的运行回执不能替代。
 详见 [PROGRESS.md](PROGRESS.md)。

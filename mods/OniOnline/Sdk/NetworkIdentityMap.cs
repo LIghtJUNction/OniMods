@@ -111,9 +111,12 @@ namespace OniOnline.Sdk
     /// <summary>
     /// Bidirectional entity mapping between 64-bit Network ID and runtime entity references.
     /// Provides O(1) registration, resolution, unregistration, and anti-ABA tombstone tracking.
+    /// Not thread-safe; callers must synchronize access or invoke on the single RoomSession.Pump / Unity main thread.
     /// </summary>
     public sealed class NetworkIdentityMap<T> where T : class
     {
+        public const double DefaultTombstoneSeconds = 10.0;
+
         private readonly Dictionary<long, T> idToEntity = new Dictionary<long, T>();
         private readonly Dictionary<T, long> entityToId = new Dictionary<T, long>();
         private readonly Dictionary<long, double> tombstones = new Dictionary<long, double>();
@@ -132,6 +135,24 @@ namespace OniOnline.Sdk
             return true;
         }
 
+        public bool TryRegister(long id, T entity, double now)
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (double.IsNaN(now) || double.IsInfinity(now) || now < 0.0) return false;
+            if (idToEntity.ContainsKey(id) || entityToId.ContainsKey(entity)) return false;
+
+            double expiry;
+            if (tombstones.TryGetValue(id, out expiry))
+            {
+                if (now < expiry) return false;
+                tombstones.Remove(id);
+            }
+
+            idToEntity.Add(id, entity);
+            entityToId.Add(entity, id);
+            return true;
+        }
+
         public bool TryGetEntity(long id, out T entity)
         {
             return idToEntity.TryGetValue(id, out entity);
@@ -143,22 +164,25 @@ namespace OniOnline.Sdk
             return entityToId.TryGetValue(entity, out id);
         }
 
-        public bool Unregister(long id, double now = 0, double tombstoneSeconds = 0)
+        public bool Unregister(long id, double now = 0.0, double tombstoneSeconds = DefaultTombstoneSeconds)
         {
+            if (double.IsNaN(now) || double.IsInfinity(now) || now < 0.0) return false;
+            if (double.IsNaN(tombstoneSeconds) || double.IsInfinity(tombstoneSeconds) || tombstoneSeconds < 0.0) return false;
+
             T entity;
             if (!idToEntity.TryGetValue(id, out entity)) return false;
 
             idToEntity.Remove(id);
             entityToId.Remove(entity);
 
-            if (tombstoneSeconds > 0)
+            if (tombstoneSeconds > 0.0)
             {
                 tombstones[id] = now + tombstoneSeconds;
             }
             return true;
         }
 
-        public bool UnregisterEntity(T entity, double now = 0, double tombstoneSeconds = 0)
+        public bool UnregisterEntity(T entity, double now = 0.0, double tombstoneSeconds = DefaultTombstoneSeconds)
         {
             if (entity == null) return false;
             long id;
@@ -173,28 +197,39 @@ namespace OniOnline.Sdk
 
         public bool IsTombstoned(long id, double now)
         {
+            if (double.IsNaN(now) || double.IsInfinity(now) || now < 0.0)
+                return tombstones.ContainsKey(id);
             double expiry;
             return tombstones.TryGetValue(id, out expiry) && now < expiry;
         }
 
         public void PurgeExpiredTombstones(double now)
         {
-            var expired = new List<long>();
+            if (double.IsNaN(now) || double.IsInfinity(now) || now < 0.0 || tombstones.Count == 0) return;
+            List<long> expired = null;
             foreach (var kvp in tombstones)
             {
-                if (now >= kvp.Value) expired.Add(kvp.Key);
+                if (now >= kvp.Value)
+                {
+                    if (expired == null) expired = new List<long>();
+                    expired.Add(kvp.Key);
+                }
             }
+            if (expired == null) return;
             for (int i = 0; i < expired.Count; i++)
             {
                 tombstones.Remove(expired[i]);
             }
         }
 
-        public void Clear()
+        public void Clear(bool preserveTombstones = false)
         {
             idToEntity.Clear();
             entityToId.Clear();
-            tombstones.Clear();
+            if (!preserveTombstones)
+            {
+                tombstones.Clear();
+            }
         }
     }
 }

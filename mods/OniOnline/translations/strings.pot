@@ -2039,12 +2039,12 @@ msgstr ""
 
 #. STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY
 msgctxt "STRINGS.ONIONLINE.OPTIONS.CATEGORY_GAMEPLAY"
-msgid "🎮 Gameplay Management"
+msgid "Gameplay Management"
 msgstr ""
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE
 msgctxt "STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE"
-msgid "📖 Online Gameplay Dev Guide"
+msgid "Online Gameplay Dev Guide"
 msgstr ""
 
 #. STRINGS.ONIONLINE.OPTIONS.DEV_GUIDE_HINT

@@ -8,6 +8,8 @@
 
 OniOnline 是《缺氧》的联机模组开发框架。安装后默认只有大厅和聊天。一人一星球或其他玩法要做成单独的模组，向框架注册后再选中。
 
+本模组来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 是这个仓库里的工具，把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
+
 当前源码候选为 **0.5.0，协议 11**，仍是开发预览。此版本号不表示已发布到 Steam。图形交互、实际 Steam 模组下载与两个真实游戏客户端的完整验收尚未完成。
 
 ## 开始使用

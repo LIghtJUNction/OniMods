@@ -123,6 +123,11 @@ The mod includes some extra quality of life features to allow easier collaborati
 
 * Shift + R will reset your chatbox to default settings.
 
+[h3]Built with onim[/h3]
+This mod comes from [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]. onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing.
+
+onim dev tries it in game. onim build packs it. onim publish sends it to Steam.
+
 [h3]Contributions[/h3]
 Contributions are welcome!
 If you have improvements, fixes, or new features, feel free to open a Pull Request.
@@ -181,6 +186,11 @@ Like what I'm doing? You can support my work:
  - CTRL + 鼠标左键点击图线：擦除涂鸦（所有玩家均可清除任意标记）
 
 * Shift + R：一键重置聊天框位置与默认设置。
+
+[h3]由 onim 完成[/h3]
+本模组来自 [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]。onim 是这个仓库里的工具。它把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线。
+
+onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
 
 [h3]开源贡献[/h3]
 非常欢迎社区贡献！

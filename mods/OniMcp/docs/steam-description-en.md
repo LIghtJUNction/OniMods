@@ -1,33 +1,62 @@
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png[/img]
+
 [b]Required mod: Jlib.[/b] Subscribe to and enable Jlib in the game mod menu, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
 
 [h1]ONI MCP Server[/h1]
 
-[b]Model Context Protocol (MCP) Server for Oxygen Not Included[/b]
+Welcome to ONI MCP Server! A local Model Context Protocol bridge for Oxygen Not Included.
+With this mod, [b]AI clients can read the colony and act only inside the tools you expose.[/b]
 
-Connect frontier LLMs (Claude, Gemini, Cursor) to Oxygen Not Included for real-time colony telemetry, engineering diagnostics, and safe automation.
+Point Claude, Cursor, Codex, or Gemini at the local server. See alerts, pipes, power, and duplicants, without parking the simulation thread.
 
-[h2]Required Prerequisite: Jlib[/h2]
-This mod requires [b]Jlib[/b] (Steam Workshop ID: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]3835083839[/url]).
-Please subscribe to Jlib and place it above ONI MCP Server in your in-game Mod Manager.
+[h2]Current Stage: v0.2.6[/h2]
+[i]The local server is in active use. Tool coverage and client prompts still move between releases.[/i]
+[i]Other mods can change the data these tools report. Place Jlib above this mod before you enable it.[/i]
 
-[h2]Core Features[/h2]
-[list]
-[*] [b]Standard MCP Compliance[/b]: Native support for the Model Context Protocol, working seamlessly with Claude Desktop, Cursor, Gemini Antigravity, and Codex.
-[*] [b]Colony Telemetry[/b]: Exposes spatial grids, thermal fields, piping, electrical circuits, and duplicant vitals via virtual resource endpoints (oni://).
-[*] [b]Intelligent Diagnostics[/b]: Leverages LLM reasoning to diagnose pipe blockages, thermal runaway, resource shortages, and automation logic bugs.
-[*] [b]Strict Safety Sandbox[/b]: Read-first design with bounded command execution and audit logging to ensure fair, safe gameplay.
-[*] [b]Non-Blocking Architecture[/b]: Asynchronous transport handling guarantees that heavy AI telemetry never stalls the game's simulation thread.
-[/list]
+[h3]Supported DLC:[/h3]
+[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
-[h2]Quick Start[/h2]
-[olist]
-[*] [b]Enable Mods[/b]: Subscribe to Jlib and ONI MCP Server, then enable both in the game's Mod Menu.
-[*] [b]Load Colony[/b]: Start or load a save. The local HTTP/MCP server starts automatically (default port: 8788).
-[*] [b]Connect Client[/b]: Configure your AI client's MCP settings to point to the server endpoint.
-[/olist]
+[h3]MODDING API[/h3]
+Players need the shared library [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Subscribe to it, enable it above ONI MCP Server, and restart the game.
+Developers reference [url=https://www.nuget.org/packages/LIghtJUNction.Jlib]LIghtJUNction.Jlib[/url] with ExcludeAssets="runtime". The NuGet package does not install the Workshop item.
+The public surface is the MCP endpoint plus oni:// resources. Start from oni://tools/manifest.
 
-[h2]AI Disclosure[/h2]
-Protocol integration, virtual filesystem abstractions, and tool schemas were developed with assistance from frontier AI models including GPT-6, Astra, and Opus 5.5. Documentation refined by Gemini.
+[h3]What the client can reach[/h3]
+A loaded colony exposes status, duplicant checks, a text map, building definitions, and inventory.
+Aggregate tools cover world reads, camera and overlays, building plans, dig and sweep orders, and server control.
+Large digs, demolitions, and save loads stay explicit. This is not an autonomous player for a whole campaign.
 
-[h2]Source Code[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniMcp]GitHub Repository[/url]
+[h3]Controls and Quality of Life[/h3]
+The server stays off the simulation thread. Colony resources appear after a save is loaded.
+
+* Browser home: http://localhost:8788/
+* MCP endpoint: http://localhost:8788/mcp/
+* The service starts from the main menu. oni:// colony tools need a loaded save.
+* Auth is off by default. Turn on AuthEnabled in OniMcpConfig.json before the port leaves localhost.
+
+[h3]Built with onim[/h3]
+This mod comes from [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]. onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing.
+
+onim dev tries it in game. onim build packs it. onim publish sends it to Steam.
+
+[h3]Contributions[/h3]
+Contributions are welcome!
+If you have improvements, fixes, or new features, feel free to open a Pull Request.
+
+Please make sure your changes are clear and well-documented where necessary.
+
+You can find the [url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniMcp]GitHub repository here[/url]
+
+[h3]Disclaimer[/h3]
+Please remember that this mod is under active development and will receive regular updates and improvements.
+Your feedback and suggestions are highly appreciated.
+Report issues on GitHub. Keep the game paused while a client is only reading.
+
+[h3]Contact[/h3]
+Questions and bug reports go to the [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub issue tracker[/url].
+
+Have fun out there. The duplicants still need oxygen. The model is only visiting.
+[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]
+
+Like what I'm doing? You can support continued OniMcp testing:
+[url=https://donate.lmm.best/?project=onimcp]Donate[/url]

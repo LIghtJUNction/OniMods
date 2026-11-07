@@ -16,7 +16,8 @@ namespace Jlib.Runtime
 #else
         public const string StaticId = "LIghtJUNction.Jlib";
 #endif
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
+        public const string PLibVersion = "4.25.0.0";
 #if !NO_REGISTRAR
         public static void RegisterConsumer(Assembly implementation, Mod owner)
         {

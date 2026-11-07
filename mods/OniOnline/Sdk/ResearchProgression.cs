@@ -8,14 +8,21 @@ namespace OniOnline.Sdk
 {
     /// <summary>
     /// Conflict-free, authoritative progression state machine for colony research.
-    /// Provides monotonic point accumulation, revision-gated tech selection, and snapshot serialization.
+    /// Provides monotonic point accumulation, revision-gated tech selection, and versioned snapshot serialization.
+    /// Not thread-safe; callers must invoke on the single RoomSession.Pump / Unity main thread.
     /// </summary>
     public sealed class ResearchProgression
     {
+        public const byte SnapshotFormatVersion = 1;
+        public const int MaximumSnapshotSize = 65536;
         public const int MaximumQueuedTechs = 32;
         public const int MaximumTechIdLength = 64;
+        public const int MaximumActorIdLength = 64;
         public const int MaximumPointTypeLength = 32;
         public const int MaximumUnlockedTechs = 256;
+        public const int MaximumPointTypesPerTech = 32;
+
+        private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
         private readonly List<string> queue = new List<string>();
         private readonly HashSet<string> unlocked = new HashSet<string>(StringComparer.Ordinal);
@@ -31,15 +38,19 @@ namespace OniOnline.Sdk
 
         public bool TrySelectTech(string techId, long revision, string actorId = "")
         {
-            if (revision <= CurrentRevision) return false;
-            if (!string.IsNullOrEmpty(techId) && (techId.Length > MaximumTechIdLength || !IsValidToken(techId)))
+            if (revision <= 0 || revision <= CurrentRevision) return false;
+            string normalizedTech = techId ?? string.Empty;
+            if (normalizedTech.Length > 0 && (normalizedTech.Length > MaximumTechIdLength || !IsValidToken(normalizedTech) || unlocked.Contains(normalizedTech)))
+                return false;
+            string normalizedActor = actorId ?? string.Empty;
+            if (normalizedActor.Length > 0 && (normalizedActor.Length > MaximumActorIdLength || !IsValidToken(normalizedActor)))
                 return false;
 
-            ActiveTechId = techId ?? string.Empty;
+            ActiveTechId = normalizedTech;
             CurrentRevision = revision;
-            LastActorId = actorId ?? string.Empty;
+            LastActorId = normalizedActor;
 
-            if (!string.IsNullOrEmpty(ActiveTechId))
+            if (ActiveTechId.Length > 0)
             {
                 queue.Remove(ActiveTechId);
             }
@@ -77,15 +88,26 @@ namespace OniOnline.Sdk
             Dictionary<string, float> techPoints;
             if (!points.TryGetValue(techId, out techPoints))
             {
+                if (points.Count >= MaximumUnlockedTechs) return false;
                 techPoints = new Dictionary<string, float>(StringComparer.Ordinal);
                 points[techId] = techPoints;
+            }
+            else if (!techPoints.ContainsKey(pointType) && techPoints.Count >= MaximumPointTypesPerTech)
+            {
+                return false;
             }
 
             float existing = 0f;
             techPoints.TryGetValue(pointType, out existing);
-            existing += deltaPoints;
-            techPoints[pointType] = existing;
-            currentTotal = existing;
+            float updated = existing + deltaPoints;
+            if (float.IsNaN(updated) || float.IsInfinity(updated) || updated <= existing)
+            {
+                currentTotal = existing;
+                return false;
+            }
+
+            techPoints[pointType] = updated;
+            currentTotal = updated;
             return true;
         }
 
@@ -125,30 +147,34 @@ namespace OniOnline.Sdk
         public byte[] ExportState()
         {
             using (var ms = new MemoryStream())
-            using (var writer = new BinaryWriter(ms, Encoding.UTF8))
+            using (var writer = new BinaryWriter(ms, StrictUtf8))
             {
+                writer.Write(SnapshotFormatVersion);
                 writer.Write(CurrentRevision);
-                writer.Write(ActiveTechId);
-                writer.Write(LastActorId);
+                CellBatchCodec.WriteBoundedString(ms, ActiveTechId);
+                CellBatchCodec.WriteBoundedString(ms, LastActorId);
 
-                // Queue
+                // Queue (preserves queue order)
                 writer.Write((ushort)queue.Count);
-                for (int i = 0; i < queue.Count; i++) writer.Write(queue[i]);
+                for (int i = 0; i < queue.Count; i++) CellBatchCodec.WriteBoundedString(ms, queue[i]);
 
-                // Unlocked
-                writer.Write((ushort)unlocked.Count);
-                foreach (string id in unlocked) writer.Write(id);
+                // Unlocked (deterministic ordinal order)
+                string[] sortedUnlocked = unlocked.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+                writer.Write((ushort)sortedUnlocked.Length);
+                for (int i = 0; i < sortedUnlocked.Length; i++) CellBatchCodec.WriteBoundedString(ms, sortedUnlocked[i]);
 
-                // Points
-                writer.Write((ushort)points.Count);
-                foreach (var kvp in points)
+                // Points (deterministic ordinal order)
+                var sortedTechs = points.OrderBy(kvp => kvp.Key, StringComparer.Ordinal).ToArray();
+                writer.Write((ushort)sortedTechs.Length);
+                for (int i = 0; i < sortedTechs.Length; i++)
                 {
-                    writer.Write(kvp.Key);
-                    writer.Write((ushort)kvp.Value.Count);
-                    foreach (var p in kvp.Value)
+                    CellBatchCodec.WriteBoundedString(ms, sortedTechs[i].Key);
+                    var sortedPointTypes = sortedTechs[i].Value.OrderBy(p => p.Key, StringComparer.Ordinal).ToArray();
+                    writer.Write((ushort)sortedPointTypes.Length);
+                    for (int j = 0; j < sortedPointTypes.Length; j++)
                     {
-                        writer.Write(p.Key);
-                        writer.Write(p.Value);
+                        CellBatchCodec.WriteBoundedString(ms, sortedPointTypes[j].Key);
+                        writer.Write(sortedPointTypes[j].Value);
                     }
                 }
                 return ms.ToArray();
@@ -157,26 +183,51 @@ namespace OniOnline.Sdk
 
         public bool TryImportState(byte[] payload)
         {
-            if (payload == null || payload.Length < 10) return false;
+            if (payload == null || payload.Length < 17 || payload.Length > MaximumSnapshotSize) return false;
 
             try
             {
                 using (var ms = new MemoryStream(payload, false))
-                using (var reader = new BinaryReader(ms, Encoding.UTF8))
+                using (var reader = new BinaryReader(ms, StrictUtf8))
                 {
-                    long revision = reader.ReadInt64();
-                    if (revision < CurrentRevision) return false;
+                    byte version = reader.ReadByte();
+                    if (version != SnapshotFormatVersion) return false;
 
-                    string active = reader.ReadString();
-                    string actor = reader.ReadString();
+                    long revision = reader.ReadInt64();
+                    if (revision < 0 || revision < CurrentRevision) return false;
+
+                    string active;
+                    if (!CellBatchCodec.TryReadBoundedString(ms, MaximumTechIdLength, allowEmpty: true, out active))
+                        return false;
+                    if (active.Length > 0 && !IsValidToken(active))
+                        return false;
+
+                    string actor;
+                    if (!CellBatchCodec.TryReadBoundedString(ms, MaximumActorIdLength, allowEmpty: true, out actor))
+                        return false;
+                    if (actor.Length > 0 && !IsValidToken(actor))
+                        return false;
+
+                    if (CurrentRevision > 0 && revision == CurrentRevision)
+                    {
+                        if (!string.Equals(active, ActiveTechId, StringComparison.Ordinal) ||
+                            !string.Equals(actor, LastActorId, StringComparison.Ordinal))
+                        {
+                            return false;
+                        }
+                    }
 
                     int queueCount = reader.ReadUInt16();
                     if (queueCount > MaximumQueuedTechs) return false;
                     var newQueue = new List<string>(queueCount);
                     for (int i = 0; i < queueCount; i++)
                     {
-                        string qId = reader.ReadString();
-                        if (IsValidToken(qId)) newQueue.Add(qId);
+                        string qId;
+                        if (!CellBatchCodec.TryReadBoundedString(ms, MaximumTechIdLength, allowEmpty: false, out qId))
+                            return false;
+                        if (!IsValidToken(qId) || qId == active || newQueue.Contains(qId))
+                            return false;
+                        newQueue.Add(qId);
                     }
 
                     int unlockedCount = reader.ReadUInt16();
@@ -184,25 +235,70 @@ namespace OniOnline.Sdk
                     var newUnlocked = new HashSet<string>(StringComparer.Ordinal);
                     for (int i = 0; i < unlockedCount; i++)
                     {
-                        string uId = reader.ReadString();
-                        if (IsValidToken(uId)) newUnlocked.Add(uId);
+                        string uId;
+                        if (!CellBatchCodec.TryReadBoundedString(ms, MaximumTechIdLength, allowEmpty: false, out uId))
+                            return false;
+                        if (!IsValidToken(uId) || uId == active || newQueue.Contains(uId) || !newUnlocked.Add(uId))
+                            return false;
                     }
 
                     int pointsCount = reader.ReadUInt16();
+                    if (pointsCount > MaximumUnlockedTechs) return false;
                     var newPoints = new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
                     for (int i = 0; i < pointsCount; i++)
                     {
-                        string tId = reader.ReadString();
+                        string tId;
+                        if (!CellBatchCodec.TryReadBoundedString(ms, MaximumTechIdLength, allowEmpty: false, out tId))
+                            return false;
+                        if (!IsValidToken(tId) || newPoints.ContainsKey(tId))
+                            return false;
                         int typeCount = reader.ReadUInt16();
+                        if (typeCount > MaximumPointTypesPerTech) return false;
                         var techDict = new Dictionary<string, float>(StringComparer.Ordinal);
                         for (int j = 0; j < typeCount; j++)
                         {
-                            string pType = reader.ReadString();
+                            string pType;
+                            if (!CellBatchCodec.TryReadBoundedString(ms, MaximumPointTypeLength, allowEmpty: false, out pType))
+                                return false;
+                            if (!IsValidToken(pType) || techDict.ContainsKey(pType))
+                                return false;
                             float pVal = reader.ReadSingle();
-                            if (pVal >= 0f && !float.IsNaN(pVal) && !float.IsInfinity(pVal))
-                                techDict[pType] = pVal;
+                            if (pVal < 0f || float.IsNaN(pVal) || float.IsInfinity(pVal))
+                                return false;
+                            techDict[pType] = pVal;
                         }
-                        if (IsValidToken(tId)) newPoints[tId] = techDict;
+                        newPoints[tId] = techDict;
+                    }
+
+                    if (ms.Position != ms.Length) return false;
+
+                    // Monotonic progression guard: unlocked techs and accumulated points cannot regress
+                    foreach (string existingUnlocked in unlocked)
+                    {
+                        if (!newUnlocked.Contains(existingUnlocked)) return false;
+                    }
+
+                    foreach (var techPair in points)
+                    {
+                        Dictionary<string, float> importedTechPoints;
+                        if (!newPoints.TryGetValue(techPair.Key, out importedTechPoints))
+                        {
+                            foreach (var pointPair in techPair.Value)
+                            {
+                                if (pointPair.Value > 0f) return false;
+                            }
+                            continue;
+                        }
+                        foreach (var pointPair in techPair.Value)
+                        {
+                            float importedVal;
+                            if (!importedTechPoints.TryGetValue(pointPair.Key, out importedVal))
+                            {
+                                if (pointPair.Value > 0f) return false;
+                                continue;
+                            }
+                            if (importedVal < pointPair.Value) return false;
+                        }
                     }
 
                     // Apply atomically
