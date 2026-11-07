@@ -1,34 +1,52 @@
-[h1]CycleTrim[/h1]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png[/img]
 
-[b]轻量级性能优化模组（缺氧 / Oxygen Not Included）[/b]
+欢迎来到 CycleTrim！一个极具颠覆性的实验性性能优化模组。
+有了这个模组，[b]底层算法会被重新拆开，能搬上 GPU 的运算就尽量搬上 GPU。[/b]
 
-针对《缺氧》后期的核心模拟热点进行针对性优化，降低重复计算，平抑掉帧与顿卡，同时完整保留原版游戏逻辑与平衡性。
+现在还在早期开发。顺序写在前面：先加速，再兼容。
 
-[h2]【必需前置】Jlib[/h2]
-本模组依赖公共库 [b]Jlib[/b]（创意工坊 ID: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]3835083839[/url]）。
-请先订阅 Jlib，并在游戏模组列表中置于 CycleTrim 之前启用。
+[h2]当前阶段: v0.4.0 早期[/h2]
+[i]这是实验版本。速度优先，存档、模组和其他系统的兼容还排在后面。[/i]
+[i]请只用可丢弃的测试存档。不要把它当成已经稳定的后期优化补丁。[/i]
 
-[h2]核心优化项[/h2]
-[list]
-[*] [b]忙碌复制人待办节流[/b]：当复制人正处于科研、长距离开采或操作设备等不可打断的长任务中时，挂起每帧对其重复扫描全局待办的冗余计算，大幅降低调度负载。
-[*] [b]圈养动物寻路剪枝[/b]：针对牧场中待机的动物降低全图导航探针查询频率，显著缓解密集养殖区的寻路热点开销。
-[*] [b]地面碎片拾取优化[/b]：基地积累大量散落物品时，优化候选空间筛选与路径代价复用，减少拾取判定引发的帧率骤降。
-[*] [b]存档元数据复用[/b]：优化周期更替保存时的反射查询流程，使用栈局部缓存替代高频弱表查询，显著缩短每日存盘卡顿时间。
-[*] [b]原生 OniSim 仿真支持[/b]：内置 Rust 编写的高性能流体与网格计算组件（支持 Windows / Linux / macOS），利用 SIMD 指令集加速底层运算。
-[/list]
+[h3]支持的 DLC:[/h3]
+[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
-[h2]设计与兼容性准则[/h2]
-[list]
-[*] [b]保留原版行为[/b]：不改动复制人优先级、日程、属性、寻路算法或游戏数值。
-[*] [b]良好生态兼容[/b]：支持本体与《眼冒金星》(Spaced Out!) DLC；主动检测 FastTrack、Plib 等模组，遇冲突自动安全降级，避免崩溃。
-[*] [b]零堆分配热路径[/b]：对高频运行路径实施零堆分配改造，降低 GC 垃圾回收造成的周期性顿卡。
-[/list]
+[h3]这个模组会做什么[/h3]
+重构底层算法，不再只在原版热路径上打补丁。
+把尽可能多的运算搬到 GPU。眼下的 GPU 试验从流体展示图像开始，有序的流体和传热求解还没有整段搬过去。
+先把帧时间打下来，再回头补兼容。这一阶段不承诺行为和原版对齐。
 
-[h2]配置项[/h2]
-可在游戏内置的“模组设置”中按需调整各优化子系统。设置变更在重启游戏后生效。
+[h3]眼下构建里已经有的[/h3]
+忙碌复制人、静止小动物和拾取扫描会少做重复工作。这些是早期裁剪，不是最终形态。
+OniSim 原生核心随包提供，默认尝试接管模拟。在意的存档请先关掉。
+仍需要 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]，并把它排在 CycleTrim 前面，然后重启。
+选项在模组菜单的 CycleTrim 里，下次启动才生效。启动前设置 CYCLETRIM_ONISIM_ENABLE=0 会留在原版 SimDLL。映射不能在游戏中途热撤销。
 
-[h2]人工智能使用说明[/h2]
-本项目的算法设计、转译补丁实现与性能测试体系由前沿模型（包括 GPT-6、Astra、Opus 5.5）辅助开发，文档内容由 Gemini 润色与整理。
+[h3]操作指南与体验优化 (QoL)[/h3]
+默认是往前冲的实验开关，不是保守的兼容档。
 
-[h2]开源主页[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub 项目主页[/url]
+* 订阅并启用。重启一次，让 Jlib 和选项页一起加载。
+* 在意的殖民地先关掉 OniSim，再用测试存档打开。
+* 管道动画、电网图层和状态机复用都可以在选项里单独收窄，改完要重启。
+
+[h3]由 onim 完成[/h3]
+本模组来自 [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]。onim 是这个仓库里的工具。它把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线。
+
+onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
+
+[h3]开源贡献[/h3]
+非常欢迎社区贡献！
+如果你有优化、Bug 修复或新功能建议，欢迎提交 Pull Request。
+
+请确保你的提交条理清晰并在必要处附带说明文档。
+
+项目地址：[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub 仓库传送门[/url]
+
+[h3]免责声明[/h3]
+请注意本模组仍在早期实验中，更新会很频繁。
+我们非常重视大家的反馈与建议！
+先加速，再兼容。崩溃、存档异常和模组冲突请报到 GitHub，并请使用测试存档。
+
+祝游戏愉快。先把周期跑起来。氧气和兼容性，都还在后面。
+[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

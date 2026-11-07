@@ -1,34 +1,52 @@
-[h1]CycleTrim[/h1]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png[/img]
 
-[b]Lightweight Performance & Frame-Time Optimizer for Oxygen Not Included[/b]
+Welcome to CycleTrim! A disruptive, experimental performance mod for Oxygen Not Included.
+With this mod, [b]the low-level algorithms get rebuilt, and as much of the math as possible moves onto the GPU.[/b]
 
-Surgically targets Oxygen Not Included's heaviest late-game simulation bottlenecks to eliminate redundant work and reduce stutter, while keeping 100% of vanilla gameplay and simulation rules intact.
+This is still early development. The order is fixed: speed first, compatibility later.
 
-[h2]Required Prerequisite: Jlib[/h2]
-This mod requires [b]Jlib[/b] (Steam Workshop ID: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]3835083839[/url]).
-Please subscribe to Jlib and place it above CycleTrim in your in-game Mod Manager.
+[h2]Current Stage: v0.4.0 Early[/h2]
+[i]This is an experiment. Speed comes first. Save safety, other mods, and the rest of the game come after.[/i]
+[i]Use a disposable test save. Do not treat this as a finished late-game optimization patch.[/i]
 
-[h2]Core Optimizations[/h2]
-[list]
-[*] [b]Busy Duplicant Chore Throttling[/b]: When duplicants are engaged in long, uninterruptible tasks (such as researching, long digs, or operating machines), CycleTrim suspends redundant every-tick scans of the global chore list.
-[*] [b]Stationary Critter Navigation Pruning[/b]: Significantly reduces full-colony NavGrid probes for idling ranch critters, alleviating pathing hotspots in high-density stables.
-[*] [b]Debris Pickup Optimization[/b]: Optimizes spatial filtering and path cost reuse when tens of thousands of items litter the floor, mitigating pickup evaluation spikes.
-[*] [b]Save Metadata Caching[/b]: Uses fast local cursors during autosaves instead of repeated reflection lookups, markedly reducing morning save freeze times.
-[*] [b]Native OniSim Engine Core[/b]: Ships with a clean-room Rust simulation engine for Windows, Linux, and macOS, utilizing modern SIMD vectorization.
-[/list]
+[h3]Supported DLC:[/h3]
+[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
-[h2]Design & Compatibility Guarantees[/h2]
-[list]
-[*] [b]100% Vanilla Behavior[/b]: Never alters dupe priorities, schedules, stats, speeds, or game balance.
-[*] [b]Ecosystem Friendly[/b]: Supports the Base Game and Spaced Out! DLC. Gracefully detects and coexists with popular mods such as FastTrack and Plib.
-[*] [b]Zero-Allocation Hotpaths[/b]: Hot execution paths are engineered to eliminate managed heap allocations, reducing GC pause spikes.
-[/list]
+[h3]What this mod will do[/h3]
+Rebuild the underlying algorithms instead of only patching vanilla hot paths.
+Move as much computation as possible onto the GPU. The current GPU experiment starts with the flow presentation image. The ordered fluid and thermal solver has not moved across as a whole.
+Cut frame time first, then come back for compatibility. Matching vanilla behavior is not a promise at this stage.
 
-[h2]Configuration[/h2]
-Individual optimization subsystems can be configured in the in-game Mod Options menu. Changes apply on next launch.
+[h3]What the current build already does[/h3]
+Busy duplicants, stationary critters, and pickup scans repeat less work. These are early cuts, not the final shape.
+The OniSim native core ships in the package and tries to take over the simulation by default. Turn it off before a colony you care about.
+CycleTrim still needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Enable Jlib above CycleTrim, then restart.
+Options live under Mods, then CycleTrim, and apply on the next launch. CYCLETRIM_ONISIM_ENABLE=0 keeps the vanilla SimDLL mapping. The mapping cannot be hot-reverted.
 
-[h2]AI Disclosure[/h2]
-Algorithms, transpiler patches, and benchmark suites were developed with assistance from frontier AI models including GPT-6, Astra, and Opus 5.5. Documentation refined by Gemini.
+[h3]Controls and Quality of Life[/h3]
+The defaults push the experiment forward. They are not a conservative compatibility preset.
 
-[h2]Source Code[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub Repository[/url]
+* Subscribe and enable. Restart once so Jlib and the options page load together.
+* Turn OniSim off before a colony you care about, then try it on a test save.
+* Conduit animation, power-overlay reuse, and state-machine reuse can each be narrowed in the options. Restart after changing them.
+
+[h3]Built with onim[/h3]
+This mod comes from [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]. onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing.
+
+onim dev tries it in game. onim build packs it. onim publish sends it to Steam.
+
+[h3]Contributions[/h3]
+Contributions are welcome!
+If you have improvements, fixes, or new features, feel free to open a Pull Request.
+
+Please make sure your changes are clear and well-documented where necessary.
+
+You can find the [url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub repository here[/url]
+
+[h3]Disclaimer[/h3]
+Please remember that this mod is an early experiment and will keep changing.
+Your feedback and suggestions are highly appreciated.
+Speed first, compatibility later. Report crashes, bad saves, and mod conflicts on GitHub, and use a test save.
+
+Have fun out there. Get the cycles moving. Oxygen and compatibility are still behind them.
+[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

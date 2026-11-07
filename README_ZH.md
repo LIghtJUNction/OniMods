@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/OniMcp/preview.png" width="47%" /></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 早期实验性性能模组" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
 - `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
 
-- `onim` 负责初始化、构建、安装、卸载和发布。
+- `onim` 负责初始化、构建、安装、卸载和发布。开发、测试、发布就这三步：`onim dev`、`onim build`、`onim publish`。项目地址：[OniMods](https://github.com/LIghtJUNction/OniMods)。
 - `OniMcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
 - 适合 Mod 开发、AI 辅助游玩和工具集成。
 
@@ -60,7 +60,7 @@
 |------|------|------|
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
-| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
+| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 早期实验性性能模组：重构底层算法并尽量搬到 GPU，先加速再兼容 |
 | `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 联机框架，内置大厅和聊天；其他玩法由单独模组提供 |
 | `Jlib` | [mods/Jlib/](mods/Jlib/) | 可独立安装的 PLib 兼容共享前置库 |
 | `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |

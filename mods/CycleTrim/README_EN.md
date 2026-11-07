@@ -1,6 +1,8 @@
 # CycleTrim
 
-A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected high-frequency simulation paths to lower overhead while keeping gameplay behavior aligned with vanilla.
+A disruptive, experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
+
+This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing: `onim dev` tries it in game, `onim build` packs it, and `onim publish` sends it to Steam.
 
 ## Index (summary page)
 

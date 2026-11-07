@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README_EN.md"><img alt="OniMcp — MCP-native colony operations" src="mods/OniMcp/preview.png" width="47%"></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — measured ONI performance optimization" src="mods/CycleTrim/preview.png" width="47%"></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — early experimental performance mod" src="mods/CycleTrim/preview.png" width="47%"></a>
 </p>
 
 ## See it working
@@ -32,12 +32,12 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | --- | --- | --- |
 | **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
 | **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) |
-| **CycleTrim** | Targets measured simulation hot paths with focused performance patches | [Module docs](mods/CycleTrim/README.md) |
+| **CycleTrim** | Early experimental performance mod: rebuild the simulation work and move it toward the GPU, speed first | [Module docs](mods/CycleTrim/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
 | **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
 
-The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules.
+The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules. Every mod here is developed, tested, and published with onim: `onim dev`, `onim build`, `onim publish`. Project: [OniMods](https://github.com/LIghtJUNction/OniMods).
 
 ## Quick start
 
