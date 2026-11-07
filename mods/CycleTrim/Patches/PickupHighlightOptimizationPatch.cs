@@ -12,7 +12,7 @@ namespace CycleTrim.Patches
     internal static class PickupHighlightOptimizationPatch
     {
         private sealed class ControllerReference { internal KAnimControllerBase Controller; }
-        private sealed class HoverState { internal readonly List<KAnimControllerBase> Highlighted = new List<KAnimControllerBase>(); }
+        private sealed class HoverState { internal readonly List<KAnimControllerBase> Highlighted = new List<KAnimControllerBase>(); internal bool UseVanilla; }
         private sealed class VisitContext
         {
             internal Tag Tag;
@@ -56,10 +56,31 @@ namespace CycleTrim.Patches
 
         private static bool Prefix(object __instance, bool is_hovering)
         {
-            if (__instance == null || ClusterManager.Instance == null
-                || ClusterManager.Instance.activeWorld == null
-                || ClusterManager.Instance.activeWorld.worldInventory == null)
+            if (__instance == null)
                 return true;
+
+            HoverState state;
+            if (!HoverStates.TryGetValue(__instance, out state))
+            {
+                state = new HoverState();
+                HoverStates.Add(__instance, state);
+            }
+
+            // If the previous enter fell back to vanilla, its matching exit
+            // must also run vanilla so it can clear every object it touched.
+            if (state.UseVanilla)
+            {
+                if (!is_hovering)
+                    state.UseVanilla = false;
+                return true;
+            }
+
+            if (ClusterManager.Instance == null || ClusterManager.Instance.activeWorld == null
+                || ClusterManager.Instance.activeWorld.worldInventory == null)
+            {
+                state.UseVanilla = true;
+                return true;
+            }
 
             bool header = __instance is ResourceCategoryHeader;
             FieldInfo tagField = header ? HeaderTag : EntryTag;
@@ -76,13 +97,6 @@ namespace CycleTrim.Patches
                 backgroundColorProperty.SetValue(background, is_hovering
                     ? (Color)backgroundHoverField.GetValue(__instance)
                     : new Color(0f, 0f, 0f, 0f), null);
-
-            HoverState state;
-            if (!HoverStates.TryGetValue(__instance, out state))
-            {
-                state = new HoverState();
-                HoverStates.Add(__instance, state);
-            }
 
             if (!is_hovering)
             {
@@ -111,14 +125,27 @@ namespace CycleTrim.Patches
             {
                 Grid.GetVisibleExtents(out int minX, out int minY, out int maxX, out int maxY);
                 if (GameScenePartitioner.Instance == null || GameScenePartitioner.Instance.pickupablesLayer == null
-                    || maxX <= minX || maxY <= minY)
+                    || maxX < minX || maxY < minY)
+                {
+                    state.UseVanilla = true;
                     return true;
+                }
                 GameScenePartitioner.Instance.VisitEntries<VisitContext>(
                     minX, minY, maxX - minX, maxY - minY,
                     GameScenePartitioner.Instance.pickupablesLayer, VisitPickupable, context);
             }
             catch (Exception error)
             {
+                // The visitor may have highlighted a prefix of the result set.
+                // Roll it back before vanilla takes over, then let vanilla own
+                // both the enter and matching exit for this UI element.
+                for (int i = 0; i < context.Highlighted.Count; i++)
+                {
+                    var controller = context.Highlighted[i];
+                    if (controller != null)
+                        controller.HighlightColour = Color.black;
+                }
+                state.UseVanilla = true;
                 Console.WriteLine("[CycleTrim] Pickup hover partition query failed; using vanilla: " + error.Message);
                 return true;
             }
