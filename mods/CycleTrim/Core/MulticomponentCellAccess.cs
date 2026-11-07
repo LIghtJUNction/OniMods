@@ -120,8 +120,7 @@ namespace CycleTrim.Core
 
             try
             {
-                if (!current.IsReady || !current.TryGetCell(cell, out snapshot)
-                    || !IsValid(snapshot))
+                if (!current.TryGetCell(cell, out snapshot) || !IsValid(snapshot))
                 {
                     snapshot = default(MulticomponentCellSnapshot);
                     return false;
