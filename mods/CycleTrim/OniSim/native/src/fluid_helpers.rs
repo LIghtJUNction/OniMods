@@ -203,14 +203,14 @@ pub(crate) fn phase(tables: &ElementTable, element: u16) -> u8 {
 pub(crate) fn liquid_density(record: &crate::tables::ElementRecord) -> f32 {
     let base = record.max_mass * 10.0 + record.molar_mass;
     let bonus = match record.id {
-        -324547888 => 300.0,    // Brine (浓盐水)
+        -324547888 => 300.0,    // Brine (浓盐水) - 最重
         -2044124200 => 350.0,   // MurkyBrine
         1911997537 => 200.0,    // SaltWater (盐水)
         878488353 => 150.0,     // SugarWater (糖水)
-        1832607973 => 50.0,     // DirtyWater (污染水) -> 比普通水(0)重，沉在普通水下方
+        1832607973 => 100.0,    // DirtyWater (污染水) -> 沉在水底
+        -1412059381 => 80.0,    // CrudeOil (原油) -> 比洁净水更重，沉入水底！
         1836671383 => 0.0,      // Water (洁净水)
-        -1412059381 => -100.0,  // CrudeOil (原油) -> 比水轻，浮在水上方
-        -486269331 => -150.0,   // Petroleum (石油) -> 比原油更轻，浮在原油上方
+        -486269331 => -100.0,   // Petroleum (精炼石油) -> 比水轻，浮在水上方
         -87974045 => -200.0,    // Ethanol (乙醇) -> 浮在石油上方
         _ => 0.0,
     };
