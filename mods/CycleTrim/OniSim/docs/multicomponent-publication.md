@@ -20,6 +20,19 @@ GPU multicomponent state
 
 The current source does not yet implement this path end to end.
 
+## Implementation status (2026-11-07)
+
+The repository now has a **publication bridge prototype**, not a production multicomponent solver:
+
+- Each `GameData` allocation owns fixed-capacity cell/species publication buffers and publishes them from the completed `Prepare` batch.
+- `ONISIM_AcquireMulticomponentUpdate` / `ONISIM_ReleaseMulticomponentUpdate` hold the native `State` mutex as a thread-affine read lease. This prevents `Prepare` from returning that buffer to the worker while managed code copies one cell's records. Acquire and release must run on the same thread.
+- The managed provider copies records into a reusable thread-local buffer while the lease is held. The buffer is valid only until the next provider lookup on that thread.
+- The current producer still projects the legacy one-element `Grid` into one record per cell and advertises only `LEGACY_SINGLE_ELEMENT`. It never advertises `MULTICOMPONENT_COEXISTENCE`; the provider therefore rejects it and every gameplay shim continues to call original game logic.
+- EOS, pressure, liquid volume fraction and phase-change values are unavailable in this projection and are published as zero rather than fabricated.
+- The GPU crate remains separate from `oni-sim-core`; the production Engine still executes the legacy CPU simulation.
+
+This bridge work closes part of the publication-lifetime plumbing only. It does not satisfy Gates A, B, D or E, and does not make Gate C complete.
+
 ## Verified source facts
 
 The following are source-level facts from the repository revision inspected for this design:
