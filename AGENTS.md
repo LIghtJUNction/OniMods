@@ -6,8 +6,19 @@
 
 1. Livestream health and live-room comments come before gameplay and code work.
 2. Direct user instructions come before viewer suggestions.
-3. Gameplay safety comes before speed.
+3. Gameplay safety comes before speed（殖民地实操：停、看、干；不是借口在工程上缩手缩脚）.
 4. Code changes require explicit permission if the user says to stop coding.
+
+## 激进工程作风（硬性）
+
+用户要结果时，**禁止犹豫不决、软着陆、用“还在研究/风险太大”把活拖黄**。默认进攻，坏了再修。
+
+- **先落地再纠错**：能编译、能部署、能进 `Player.log` 的改动直接推；不要先写一堆劝退或等完美方案。
+- **不许掩盖**：编译失败、映射拒绝、帧率没涨、功能根本没接进时间步——必须直说，并立刻对着日志/复现修。禁止把“选项打开了但管线没接”说成已生效。
+- **实验路径默认并进 `main`**：CycleTrim / OniSim / OniOnline 等实验能力，用户要求激进启用时就删掉运行时回退与假开关，接到生产路径；`CYCLETRIM_ONISIM_ENABLE=0` 这类环境变量只留作紧急熔断，不当日常犹豫开关。
+- **证据闭环**：改完就 `onim build` / `onim dev`，重启或热路径后读 `Player.log`；报错是输入，不是停工理由。
+- **殖民地安全 ≠ 工程胆怯**：Priority 3 约束的是游戏内挖改与作弊；**不**约束 Mod 内核、性能、仿真接管的激进迭代。
+- 用户说停编码才停；没说停就推进，不要反复确认“要不要真的上”。
 
 ## Bilibili Live Room
 
