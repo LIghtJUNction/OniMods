@@ -31,7 +31,7 @@ namespace CycleTrim.Patches.Multicomponent
             float dominantSafeMass = 0f;
             float totalFluidMass = 0f;
 
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Mass <= 0f || item.Element == null || item.Phase == MulticomponentPhase.Solid)
