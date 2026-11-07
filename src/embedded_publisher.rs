@@ -311,14 +311,22 @@ mod tests {
                 mock_plugins.join("libsteam_api.so"),
             )?;
         }
-        if workspace_bin
-            .join("com.rlabrecque.steamworks.net.dll")
-            .exists()
-        {
+        let steamworks_assembly = workspace_bin.join("com.rlabrecque.steamworks.net.dll");
+        if steamworks_assembly.exists() {
             fs::copy(
-                workspace_bin.join("com.rlabrecque.steamworks.net.dll"),
+                &steamworks_assembly,
                 mock_managed.join("com.rlabrecque.steamworks.net.dll"),
             )?;
+        } else {
+            // A clean CI runner has no ONI installation. The extracted publisher
+            // still gets file-layout coverage above, but compiling it requires
+            // the game-shipped Steamworks.NET assembly. Do not turn that missing
+            // external SDK into a false Rust-core regression.
+            fs::remove_dir_all(&temp)?;
+            println!(
+                "SKIP publisher build smoke test: Steamworks.NET is unavailable;                  install ONI or provide com.rlabrecque.steamworks.net.dll in the                  publisher build output to enable this integration check"
+            );
+            return Ok(());
         }
 
         cmd.arg(format!(
