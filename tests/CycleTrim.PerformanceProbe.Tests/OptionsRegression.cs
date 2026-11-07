@@ -10,6 +10,8 @@ namespace CycleTrim.PerformanceProbe.Tests
 
         internal static void Run()
         {
+            Check(new OniSimOptions().EnableMulticomponentShim,
+                "multicomponent shim option must default on while provider absence remains fail-closed");
             Check(!new OniSimOptions().EnableOniSimExperimental,
                 "native simulation must remain disabled by default until runtime acceptance is complete");
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
@@ -29,6 +31,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             var disabled = new OniSimOptions
             {
                 EnableOniSimExperimental = false,
+                EnableMulticomponentShim = false,
                 OptimizePickupCandidates = false,
                 ThrottleBusyDuplicants = false,
                 ThrottleStationaryCritters = false,
@@ -57,7 +60,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizeConveyorPathLookup = true,
                 OptimizeAnimationSymbols = true,
                 OptimizeStateMachineLookups = true,
-                ConduitAnimation = ConduitAnimationQuality.Quarter
+                ConduitAnimation = ConduitAnimationQuality.Quarter,
+                EnableMulticomponentShim = true
             };
             Load(mixed, expectedEnabled: false);
 
@@ -103,6 +107,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "state machine lookup setting before patch install");
                 Check(CycleTrimPatchOptions.ConduitAnimation == expected.ConduitAnimation,
                     "conduit display quality applied before patch install");
+                Check(CycleTrimPatchOptions.EnableMulticomponentShim == expected.EnableMulticomponentShim,
+                    "multicomponent shim gate applied before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
                     "native core setting passed to loader before patch install");
             };
