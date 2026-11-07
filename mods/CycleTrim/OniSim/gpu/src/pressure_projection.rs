@@ -17,8 +17,7 @@ pub struct PressureProjectionGpu{
  project_u:wgpu::ComputePipeline,project_v:wgpu::ComputePipeline,
  groups:[wgpu::BindGroup;7],
  density:wgpu::Buffer,velocity_x:wgpu::Buffer,velocity_y:wgpu::Buffer,solid:wgpu::Buffer,
- u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,beta_u:wgpu::Buffer,beta_v:wgpu::Buffer,
- rhs:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
+ u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
  readback:wgpu::Buffer,width:usize,height:usize,cells:usize,u_count:usize,v_count:usize,
  pub adapter:wgpu::AdapterInfo,
 }
@@ -88,7 +87,7 @@ impl PressureProjectionGpu{
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
   Ok(Self{device,queue,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
-   density,velocity_x,velocity_y,solid,u_faces,v_faces,beta_u,beta_v,rhs,pressure,
+   density,velocity_x,velocity_y,solid,u_faces,v_faces,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }
  pub fn run(&mut self,input:ProjectionInput<'_>,dt:f32,dx:f32,dy:f32,iterations:usize,omega:f32)->Result<ProjectionOutput,String>{
