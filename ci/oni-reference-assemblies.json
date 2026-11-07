@@ -59,10 +59,6 @@
           "pinned_blob_sha": "149a152de2df4cee616865df16dddad660856aa0"
         },
         {
-          "path": "Lib/UnityEngine.ImageConversionModule.dll",
-          "pinned_blob_sha": "f0096b89041f91f2a76d84102b7a7bba6198130f"
-        },
-        {
           "path": "Lib/UnityEngine.InputLegacyModule.dll",
           "pinned_blob_sha": "c0c31e011e938cc78d7e2b4c0f01fa03365c3ddd"
         },
@@ -179,12 +175,6 @@
       "sha256": "89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"
     },
     {
-      "name": "UnityEngine.ImageConversionModule.dll",
-      "path": "Lib/UnityEngine.ImageConversionModule.dll",
-      "size": 17920,
-      "sha256": "6e85d42a24c2bb9d798e834ddaa27b9a5c1853378327f6c498d69b636efd8178"
-    },
-    {
       "name": "UnityEngine.InputLegacyModule.dll",
       "path": "Lib/UnityEngine.InputLegacyModule.dll",
       "size": 27136,
@@ -223,6 +213,9 @@
     "sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
     "extract": [
       {
+        "name": "UnityEngine.ImageConversionModule.dll"
+      },
+      {
         "name": "UnityEngine.IMGUIModule.dll",
         "size": 88576,
         "sha256": "3fe2afaf000557ec559b485ba664d7de7c3f9190e1747518dc35cdd980b092b4"
@@ -238,7 +231,7 @@
         "sha256": "ce2936bb553118faacd6be2e12d664fde83318729d135b464007b55915e6db9d"
       }
     ],
-    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence."
+    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence. UnityEngine.ImageConversionModule.dll is taken from this pinned Unity 2021.3.33 compile-only module package rather than the older game-reference mirror copy, which targets a newer netstandard facade and cannot be mixed into the net48 reference compile."
   },
   "auxiliary_packages": [
     {
