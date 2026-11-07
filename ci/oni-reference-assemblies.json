@@ -39,6 +39,10 @@
           "pinned_blob_sha": "b131c7be54a4bf1ee66d3ebbb8d5c77ca8af86af"
         },
         {
+          "path": "Lib/netstandard.dll",
+          "pinned_blob_sha": "b1629cc97b944e000e6a353b9862c517c92ac8b0"
+        },
+        {
           "path": "Lib/Newtonsoft.Json.dll",
           "pinned_blob_sha": "e023edf1badcec2c131f7baaeedd924c556a65eb"
         },
@@ -80,7 +84,7 @@
         }
       ]
     },
-    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately. UnityEngine.UnityWebRequestModule.dll is additionally pinned from the same immutable reference commit and tracked upstream by Git blob SHA; it is compile-only because the public mirror targets ONI build 737790, not official build 744825. FMODUnity.dll and UnityEngine.ImageConversionModule.dll are also pinned from the same immutable reference commit and tracked upstream by Git blob SHA; both remain compile-only reference inputs for the older 737790 mirror."
+    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately. UnityEngine.UnityWebRequestModule.dll is additionally pinned from the same immutable reference commit and tracked upstream by Git blob SHA; it is compile-only because the public mirror targets ONI build 737790, not official build 744825. FMODUnity.dll and UnityEngine.ImageConversionModule.dll are also pinned from the same immutable reference commit and tracked upstream by Git blob SHA; both remain compile-only reference inputs for the older 737790 mirror. The pinned netstandard.dll is included so the net48 compatibility compile resolves the game's own netstandard facade rather than mixing a Unity 6-era module against the host targeting pack's older facade."
   },
   "method_body_source": {
     "repository": "Kupie/ONI_Decomp",
@@ -143,6 +147,12 @@
       "path": "Lib/FMODUnity.dll",
       "size": 154112,
       "sha256": "78961fd455d32828f9b34b5eea52c4376c731576843e38d64f66ac0d79c5b449"
+    },
+    {
+      "name": "netstandard.dll",
+      "path": "Lib/netstandard.dll",
+      "size": 89600,
+      "sha256": "83aa80e4cefa4f84bb39fe97f5c4d51f79be743dc690587c46f135748b672364"
     },
     {
       "name": "Newtonsoft.Json.dll",
