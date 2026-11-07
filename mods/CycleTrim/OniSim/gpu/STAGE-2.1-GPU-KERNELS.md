@@ -28,7 +28,7 @@ The operator uses shared face values and coefficients:
 
 `u_new = u* - dt * beta_f * grad(p)`
 
-The GPU solver fixes the pressure gauge at the first fluid cell supplied by the host. The CPU reference uses a zero-mean pressure gauge. These gauges differ only by an additive pressure constant in the exact system; velocity correction depends on pressure differences. GPU/CPU parity must compare corrected face velocities and residuals, or normalize the pressure offset before comparing pressure arrays.
+The GPU solver prefers a discrete Vulkan adapter and falls back to an integrated adapter. It fixes the pressure gauge at the first fluid cell supplied by the host. The CPU reference uses a zero-mean pressure gauge. These gauges differ only by an additive pressure constant in the exact system; velocity correction depends on pressure differences. GPU/CPU parity must compare corrected face velocities and residuals, or normalize the pressure offset before comparing pressure arrays.
 
 The GPU RHS is formed from shared closed-boundary faces. The CPU reference explicitly removes round-off mean from the RHS before solving; the GPU path currently relies on the shared-face telescoping sum and a pinned pressure gauge. The residual report must be checked for large domains and irregular solid geometry before accepting this numerical difference.
 
@@ -50,7 +50,7 @@ The benchmark selects a real discrete or integrated Vulkan adapter only. It repo
 
 - Naga parses and validates the pressure WGSL as part of the Rust library test.
 - The existing Python CPU reference continues to test residual, divergence reduction, solid/outer-wall impermeability and invalid inputs.
-- The GPU benchmark reports divergence reduction but does not yet fail on a calibrated residual threshold.
+- The GPU benchmark hard-fails if scaled CPU/GPU corrected-face error exceeds 1e-4 or if projected divergence is not lower than the input divergence. It reports the ratio but does not yet fail on a calibrated Poisson residual threshold.
 - The GPU pressure gauge is pinned-cell rather than zero-mean; compare pressure gradients, not raw pressure words.
 - No GPU hardware execution result is claimed until the benchmark is run on a Vulkan adapter.
 - The current API uploads density, provisional cell velocity and solid mask per call, then keeps all pressure iterations and velocity correction on the GPU. It is not yet connected to a fully GPU-resident multi-physics timestep.
