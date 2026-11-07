@@ -6,18 +6,18 @@ namespace CycleTrim.Patches
 {
     /// <summary>
     /// ONI defaults to vSyncCount=1 which locks frame rate to 50/60 Hz.
-    /// We aggressively unlock the frame rate to 300 FPS and disable VSync across all screens.
+    /// Allow rendering to reach 500 FPS and disable VSync across all screens.
     /// </summary>
     public static class FrameRateUnlockPatch
     {
+        private const int TargetFrameRate = 500;
         private static int nextForceFrame;
 
         public static void Apply(string reason)
         {
             QualitySettings.vSyncCount = 0;
-            // Setting targetFrameRate to 300 (or higher) explicitly overrides compositor vsync clamps.
-            Application.targetFrameRate = 300;
-            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=300, vSyncCount=0");
+            Application.targetFrameRate = TargetFrameRate;
+            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=" + TargetFrameRate + ", vSyncCount=0");
         }
 
         [HarmonyPatch(typeof(Game), "OnSpawn")]
@@ -47,13 +47,13 @@ namespace CycleTrim.Patches
             [HarmonyPostfix]
             public static void Postfix()
             {
-                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate >= 300)
+                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate >= TargetFrameRate)
                     return;
                 int now = Time.frameCount;
                 if (now < nextForceFrame) return;
                 nextForceFrame = now + 60;
                 QualitySettings.vSyncCount = 0;
-                Application.targetFrameRate = 300;
+                Application.targetFrameRate = TargetFrameRate;
             }
         }
 
