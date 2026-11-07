@@ -11,7 +11,7 @@ namespace CycleTrim
             "Use the experimental, unverified OniSim core for the game's SimDLL imports. Disabled by default; changes require restarting ONI. / 启用尚未完成真实游戏验收的实验性 OniSim 核心，默认关闭；修改后需要重启游戏。",
             "Simulation / 仿真")]
         [RestartRequired]
-        public bool EnableOniSim { get; set; }
+        public bool EnableOniSimExperimental { get; set; }
 
         [Option("物流候选优化 / Pickup candidates",
             "复用拾取候选的路径成本；关闭后使用原版候选选择。需要重启游戏。",
