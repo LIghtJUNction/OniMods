@@ -255,8 +255,13 @@ fn validate_state(state: &State<'_>, count: usize, channels: usize) -> Result<f3
             return Err("solid cells must contain zero mass and enthalpy".into());
         }
         for channel in 0..channels {
-            if state.mass[start + channel] == 0.0 && state.enthalpy[start + channel] != 0.0 {
+            let mass = state.mass[start + channel];
+            let enthalpy = state.enthalpy[start + channel];
+            if mass == 0.0 && enthalpy != 0.0 {
                 return Err("empty species channels must contain zero enthalpy".into());
+            }
+            if mass > 0.0 && enthalpy <= 0.0 {
+                return Err("nonempty gas species must have positive sensible enthalpy".into());
             }
         }
         let max_vertical = state.species.iter()
@@ -369,6 +374,7 @@ mod tests {
         ];
         let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &vx,
             velocity_y: &vy, solid: &solid, species: &species };
+        validate_state(&state, count, channels).unwrap();
         let mut mass_out = vec![0.0f32; count * channels];
         let mut enthalpy_out = vec![0.0f32; count * channels];
         cpu_step(&state, width, height, channels, 0.1, &mut mass_out, &mut enthalpy_out);
