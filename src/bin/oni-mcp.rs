@@ -71,6 +71,7 @@ fn curl(settings: &Settings, method: &str, payload: Option<&Value>, session: Opt
         "--header", &format!("Mcp-Protocol-Version: {PROTOCOL}"),
         "--dump-header"]).arg(&header_path).arg("--output").arg(&output_path);
     if let Some(secret) = std::env::var("ONIM_MCP_SECRET").ok().or_else(|| settings.secret.clone()) {
+        if secret.chars().any(char::is_control) { bail!("ONIM_MCP_SECRET must not contain control characters"); }
         let escaped = secret.replace('\\', "\\\\").replace('"', "\\\"");
         fs::write(&auth_path, format!("header = \"Authorization: Bearer {escaped}\"\n"))?;
         #[cfg(unix)] {
@@ -139,7 +140,7 @@ fn main() -> Result<()> {
                 std::io::stdin().read_to_string(&mut value).context("read secret from stdin")?;
                 value.trim_end_matches(['\r', '\n']).to_string()
             } else { secret };
-            if secret.trim().is_empty() { bail!("secret cannot be empty"); }
+            if secret.trim().is_empty() || secret.chars().any(char::is_control) { bail!("secret must be non-empty and contain no control characters"); }
             settings.secret=Some(secret); save(&path,&settings)?; println!("Secret saved; it will not be displayed.");
         }
         Commands::ClearSecret => { settings.secret=None; save(&path,&settings)?; println!("Stored secret removed."); }
