@@ -9,7 +9,7 @@ namespace OniOnline.UI
 {
     // Selects an already discovered asteroid in the loaded native colony.
     // It neither copies worlds nor changes the loaded save.
-    internal sealed class SystemPlanetSelectionWindow : KScreen
+    internal sealed class SystemPlanetSelectionWindow : OnlineOverlayScreen
     {
         private static SystemPlanetSelectionWindow current;
         private GameObject root;
@@ -34,6 +34,7 @@ namespace OniOnline.UI
             rect.sizeDelta = new Vector2(660, 600);
             OnlineWidgets.Surface(panel.gameObject, OnlineWidgets.PanelColor, true);
             var window = panel.gameObject.AddComponent<SystemPlanetSelectionWindow>();
+            window.BindOverlayRoot(root);
             window.root = root; window.runtime = runtime; window.selected = selected;
             window.homeSystemId = OnlineColonyState.Current?.HomeSystemId;
             current = window;

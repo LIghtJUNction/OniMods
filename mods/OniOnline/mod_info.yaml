@@ -2,4 +2,4 @@ supportedContent: ALL
 requiredDlcIds: []
 minimumSupportedBuild: 744825
 APIVersion: 2
-version: "0.5.1"
+version: "0.5.2"

@@ -10,28 +10,22 @@ namespace CycleTrim.PerformanceProbe.Tests
 
         internal static void Run()
         {
-            Check(new OniSimOptions().EnableMulticomponentShim,
-                "multicomponent shim option must default on while provider absence remains fail-closed");
-            Check(!new OniSimOptions().EnableOniSimExperimental,
-                "native simulation must remain disabled by default until runtime acceptance is complete");
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
             Check(new OniSimOptions().OptimizePowerOverlay,
                 "workload-dependent power reuse enabled by default");
             Check(new OniSimOptions().OptimizeConveyorPathLookup,
                 "conveyor lookup candidate enabled by default");
-            Check(new OniSimOptions().OptimizeAnimationSymbols,
-                "animation version coalescing enabled by default");
+            Check(!new OniSimOptions().OptimizeAnimationSymbols,
+                "animation version coalescing stays off by default on Mono");
             Check(new OniSimOptions().OptimizeStateMachineLookups,
                 "state machine lookup reuse enabled by default");
             Check(new OniSimOptions().ConduitAnimation == ConduitAnimationQuality.Full,
                 "conduit display sampling must preserve full quality by default");
-            Load(null, expectedEnabled: false);
+            Load(null, expectedEnabled: true);
 
             var disabled = new OniSimOptions
             {
-                EnableOniSimExperimental = false,
-                EnableMulticomponentShim = false,
                 OptimizePickupCandidates = false,
                 ThrottleBusyDuplicants = false,
                 ThrottleStationaryCritters = false,
@@ -44,7 +38,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizeStateMachineLookups = false,
                 EnablePerformanceDiagnostics = true
             };
-            Load(disabled, expectedEnabled: false);
+            Load(disabled, expectedEnabled: true);
             disabled.OptimizePickupCandidates = true;
             Check(!CycleTrimPatchOptions.OptimizePickupCandidates,
                 "editing a settings object must not partly enable a live patch group");
@@ -60,15 +54,14 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizeConveyorPathLookup = true,
                 OptimizeAnimationSymbols = true,
                 OptimizeStateMachineLookups = true,
-                ConduitAnimation = ConduitAnimationQuality.Quarter,
-                EnableMulticomponentShim = true
+                ConduitAnimation = ConduitAnimationQuality.Quarter
             };
-            Load(mixed, expectedEnabled: false);
+            Load(mixed, expectedEnabled: true);
 
             POptions.ThrowOnRead = true;
-            try { Load(mixed, expectedEnabled: false, useDefaults: true); }
+            try { Load(mixed, expectedEnabled: true, useDefaults: true); }
             finally { POptions.ThrowOnRead = false; }
-            Load(null, expectedEnabled: false);
+            Load(null, expectedEnabled: true);
             Console.WriteLine("PASS CycleTrim options: " + assertions
                 + " assertions; configuration applied before patching and dialog registered after");
         }
@@ -107,10 +100,10 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "state machine lookup setting before patch install");
                 Check(CycleTrimPatchOptions.ConduitAnimation == expected.ConduitAnimation,
                     "conduit display quality applied before patch install");
-                Check(CycleTrimPatchOptions.EnableMulticomponentShim == expected.EnableMulticomponentShim,
-                    "multicomponent shim gate applied before patch install");
+                Check(CycleTrimPatchOptions.EnableMulticomponentShim,
+                    "multicomponent shim always armed with OniSim");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
-                    "native core setting passed to loader before patch install");
+                    "native core always requested before patch install");
             };
             POptions.OnRegister = () => Check(harmony.Installations == 1,
                 "options dialog registered after the vanilla mod load installed patches");

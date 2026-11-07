@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace OniOnline.UI
 {
     // Personal predictions and canonical plans are deliberately different views.
-    internal sealed class WorkPlanWindow : KScreen
+    internal sealed class WorkPlanWindow : OnlineOverlayScreen
     {
         private OnlineRuntime runtime;
         private string ownerId;
@@ -58,6 +58,7 @@ namespace OniOnline.UI
             rect.offsetMin = rect.offsetMax = Vector2.zero;
             OnlineWidgets.Surface(panel, OnlineWidgets.PanelColor, true);
             var view = panel.AddComponent<WorkPlanWindow>();
+            view.BindOverlayRoot(root);
             view.root = root; view.runtime = runtime; view.ownerId = owner; view.planetId = planet;
             view.actorId = runtime.Session.LocalPlayerId;
             view.Build(); view.Activate(); return view;

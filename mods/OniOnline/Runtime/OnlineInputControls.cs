@@ -119,8 +119,11 @@ namespace OniOnline.Runtime
             {
                 voiceGate.ReleaseVoice();
                 runtime.Voice?.SetPushToTalk(false);
+                if (IsActive()) Deactivate();
                 return;
             }
+            // Never fight native confirm/pause dialogs for screen-stack ownership.
+            if (!ModalStackAllowsGameplayUi()) return;
             if (!IsActive()) Activate();
             bool allowed = runtime.VoiceEnabled && ContextAllowsShortcuts;
             runtime.Voice?.SetPushToTalk(voiceGate.UpdateVoice(allowed, VoiceBindingHeld));

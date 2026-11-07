@@ -16,8 +16,6 @@ PortableProfileTests.Run();
 MulticomponentImageTests.Run();
 NativePlatform.RequireSupported();
 Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
-if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Disabled)
-    throw new Exception("The standalone loader must be disabled unless explicitly opted in");
 var directory = Path.Combine(Path.GetTempPath(), "onisim-loader-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);
 try
@@ -31,9 +29,9 @@ try
     Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "off");
     if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Disabled)
         throw new Exception("The startup disable override was ignored");
-    Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "on");
+    Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
     if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Refused)
-        throw new Exception("Explicit standalone opt-in did not attempt the guarded loader path");
+        throw new Exception("Default-on loader did not attempt the guarded mapping path");
     Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "invalid");
     if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Refused)
         throw new Exception("An invalid override was accepted");
@@ -44,7 +42,7 @@ try
         throw new Exception("An unknown game assembly was accepted");
     }
     catch (InvalidOperationException) { }
-    Console.WriteLine("Platform selection, startup opt-out and unknown-profile refusal passed");
+    Console.WriteLine("Platform selection, default-on mapping attempt and unknown-profile refusal passed");
     if (args.Length == 0)
     {
         Console.WriteLine("Native library smoke test not run: pass the built bundle root");

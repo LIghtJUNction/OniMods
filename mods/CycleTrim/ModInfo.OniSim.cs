@@ -13,7 +13,6 @@ namespace CycleTrim
     {
         partial void ConfigureOniSim()
         {
-            bool enableOniSim = false;
             OniSimOptions options = null;
             try
             {
@@ -25,19 +24,19 @@ namespace CycleTrim
                 Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
             options = options ?? new OniSimOptions();
-            enableOniSim = options.EnableOniSimExperimental;
-            bool enableMulticomponentShim = enableOniSim;
+            // OniSim is mandatory: map the Rust SimDLL and keep the multicomponent
+            // read-lease shim armed. Official SimDLL is no longer a runtime option.
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
                 options.EnablePerformanceDiagnostics, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
                 options.OptimizeAnimationSymbols, options.OptimizeStateMachineLookups,
-                options.ConduitAnimation, enableMulticomponentShim);
-            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
+                options.ConduitAnimation, true);
+            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, true);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
 
-            if (enableMulticomponentShim && result.State == LoaderState.MappedUnverified)
+            if (result.State == LoaderState.MappedUnverified)
             {
                 try
                 {
@@ -49,14 +48,16 @@ namespace CycleTrim
                         if (!MulticomponentCellAccess.RegisterProvider(provider))
                             Console.WriteLine("[CycleTrim] Multicomponent provider was already registered.");
                         else
-                            Console.WriteLine("[CycleTrim] Multicomponent read-lease provider registered; gameplay remains fail-closed until coexistence data is published.");
+                            Console.WriteLine("[CycleTrim] Multicomponent read-lease provider registered.");
                     }
                 }
                 catch (Exception error)
                 {
-                    Console.WriteLine("[CycleTrim] Multicomponent provider unavailable; original game behavior retained: " + error.Message);
+                    Console.WriteLine("[CycleTrim] Multicomponent provider unavailable: " + error.Message);
                 }
             }
+            else if (result.State == LoaderState.Refused)
+                Console.WriteLine("[CycleTrim][OniSim] FATAL path refused — check Player.log and fix the native mapping.");
         }
 
         partial void RegisterOniSimOptions()

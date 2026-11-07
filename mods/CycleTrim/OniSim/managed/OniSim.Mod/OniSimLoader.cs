@@ -22,12 +22,10 @@ namespace OniSim.CycleTrim
         private static NativeModule targetModule;
         private static MonoImageMapper mapper;
 
+        // Standalone / CycleTrim entry: OniSim is on by default.
+        // CYCLETRIM_ONISIM_ENABLE=0|false|off remains an emergency kill switch.
         public static LoaderResult Configure(Assembly gameAssembly)
         {
-            string setting = Environment.GetEnvironmentVariable(EnableVariable);
-            if (string.IsNullOrWhiteSpace(setting))
-                return new LoaderResult(LoaderState.Disabled,
-                    "Disabled by default; set " + EnableVariable + "=1 to explicitly opt in. No native module was opened and no mapping was inserted.");
             return Configure(gameAssembly, true);
         }
 
@@ -38,7 +36,7 @@ namespace OniSim.CycleTrim
                 if (mappedPath != null) return Mapped();
                 if (!enabled)
                     return new LoaderResult(LoaderState.Disabled,
-                        "Disabled in CycleTrim's PLib Mod settings; no native module was opened and no mapping was inserted.");
+                        "Disabled by caller; no native module was opened and no mapping was inserted.");
                 string setting = Environment.GetEnvironmentVariable(EnableVariable);
                 if (!string.IsNullOrWhiteSpace(setting))
                 {
@@ -52,7 +50,7 @@ namespace OniSim.CycleTrim
                         !string.Equals(setting, "true", StringComparison.OrdinalIgnoreCase) &&
                         !string.Equals(setting, "on", StringComparison.OrdinalIgnoreCase))
                         return new LoaderResult(LoaderState.Refused,
-                            "Invalid " + EnableVariable + " value; use 0/false/off to disable or 1/true/on to enable.");
+                            "Invalid " + EnableVariable + " value; use 0/false/off to disable or leave unset / 1/true/on for OniSim.");
                 }
                 try
                 {

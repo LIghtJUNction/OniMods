@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace OniOnline.UI
 {
-    public sealed class OnlineWindow : KScreen
+    public sealed class OnlineWindow : OnlineOverlayScreen
     {
         private OnlineRuntime runtime;
         private TextMeshProUGUI status;
@@ -69,6 +69,7 @@ namespace OniOnline.UI
             shadow.effectColor = new Color(0, 0, 0, 0.35f);
             shadow.effectDistance = new Vector2(5, -5);
             var window = panel.AddComponent<OnlineWindow>();
+            window.BindOverlayRoot(root);
             window.runtime = runtime;
             window.Build();
             window.Activate();

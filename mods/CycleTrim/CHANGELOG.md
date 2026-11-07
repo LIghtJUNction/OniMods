@@ -1,3 +1,7 @@
+## 2026-11-07 — 0.4.5
+
+- Always map OniSim at startup. Remove the PLib `EnableOniSimExperimental` toggle and the official-SimDLL runtime fallback. `CYCLETRIM_ONISIM_ENABLE=0` remains an emergency kill switch only.
+
 ## 2026-11-07 — 0.4.4
 
 - Package `OniSim.Compatibility.dll` beside `implementation/CycleTrim.dll`. Without it the Jlib bootstrap failed with FileNotFoundException and the dialog misleadingly pointed at Jlib.

@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace OniOnline.UI
 {
-    internal sealed class TeamColonyWindow : KScreen
+    internal sealed class TeamColonyWindow : OnlineOverlayScreen
     {
         private const int PageSize = 8;
         private sealed class PlayerRow
@@ -104,6 +104,7 @@ namespace OniOnline.UI
             rect.offsetMin = rect.offsetMax = Vector2.zero;
             OnlineWidgets.Surface(panel, OnlineWidgets.PanelColor, true);
             var window = panel.AddComponent<TeamColonyWindow>();
+            window.BindOverlayRoot(root);
             window.runtime = runtime; window.root = root; window.session = runtime.Session; window.team = runtime.Multiplayer.Teams;
             window.team.Changed += window.MarkDirty;
             window.session.Changed += window.MarkDirty;

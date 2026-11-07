@@ -6,13 +6,6 @@ namespace CycleTrim
     [ConfigFile("CycleTrimOptions.json", true)]
     public sealed class OniSimOptions
     {
-        [Option(
-            "OniSim 仿真与 GPU 加速 / OniSim simulation & GPU acceleration",
-            "启用实验性 OniSim 核心（Rust SimDLL 与 GPU 多组分并行模拟）。关闭时使用原版官方 SimDLL；修改后需要重启游戏。",
-            "仿真 / Simulation")]
-        [RestartRequired]
-        public bool EnableOniSimExperimental { get; set; }
-
         [Option("物流候选优化 / Pickup candidates",
             "复用拾取候选的路径成本；关闭后使用原版候选选择。默认开启；需要重启游戏。",
             "优化 / Optimizations")]

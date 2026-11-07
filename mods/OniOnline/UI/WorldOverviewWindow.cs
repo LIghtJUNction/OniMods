@@ -22,7 +22,7 @@ namespace OniOnline.UI
         void CloseWorldView();
     }
 
-    internal sealed class WorldOverviewWindow : KScreen
+    internal sealed class WorldOverviewWindow : OnlineOverlayScreen
     {
         private static readonly Color32 UnknownColor = new Color32(13, 14, 18, 255);
         private static readonly Regex LinkTags = new Regex("<[^>]*>", RegexOptions.Compiled);
@@ -130,6 +130,7 @@ namespace OniOnline.UI
             shadow.effectColor = new Color(0, 0, 0, 0.35f);
             shadow.effectDistance = new Vector2(5, -5);
             var window = panel.AddComponent<WorldOverviewWindow>();
+            window.BindOverlayRoot(root);
             window.canvasRoot = root;
             window.model = model;
             window.Build();
