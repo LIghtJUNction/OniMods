@@ -41,7 +41,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             Element oxygen = CreateElement(SimHashes.Oxygen, "Oxygen", isGas: true, isLiquid: false, breathable: true, 100, 200, 255);
             var validSnapshot = new MulticomponentCellSnapshot(
                 new[] { new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 1.5f, 300f, 1.0f, 150f) },
-                1.5f, 150f, 0f, 0f);
+                1, 1.5f, 150f, 0f, 0f);
 
             var mock = new StubProvider { Ready = true, Snapshot = validSnapshot };
             Check(MulticomponentCellAccess.RegisterProvider(mock), "registers provider");
@@ -54,7 +54,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 // Mass conservation mismatch must fail closed.
                 mock.Snapshot = new MulticomponentCellSnapshot(
                     new[] { new MulticomponentSpecies(oxygen, MulticomponentPhase.Gas, 1.0f, 300f, 1.0f, 100f) },
-                    2.0f, 100f, 0f, 0f);
+                    1, 2.0f, 100f, 0f, 0f);
                 Check(!MulticomponentCellAccess.TryGetCell(0, out snapshot),
                     "mass aggregate mismatch must fail closed");
             }
@@ -137,10 +137,12 @@ namespace CycleTrim.PerformanceProbe.Tests
                 };
                 Marshal.StructureToPtr(legacyUpdate, updateMem, false);
 
+                int acquired = 0;
+                int released = 0;
                 var strictProvider = new OniSimMulticomponentProvider(
-                    () => updateMem,
-                    id => table.TryGetValue(id, out var elem) ? elem : null,
-                    allowLegacySingleElement: false);
+                    () => { acquired++; return updateMem; },
+                    () => { released++; },
+                    id => table.TryGetValue(id, out var elem) ? elem : null);
                 Check(!strictProvider.IsReady,
                     "strict provider must remain inactive when only LEGACY_SINGLE_ELEMENT is advertised");
 
@@ -153,7 +155,7 @@ namespace CycleTrim.PerformanceProbe.Tests
 
                 MulticomponentCellSnapshot snap0;
                 Check(strictProvider.TryGetCell(0, out snap0), "reads multicomponent cell 0");
-                Check(snap0.Components.Length == 2, "cell 0 has 2 coexisting species");
+                Check(snap0.ComponentCount == 2, "cell 0 has 2 coexisting species");
                 Check(snap0.Components[0].Element.id == SimHashes.Oxygen, "species 0 is Oxygen");
                 Check(snap0.Components[1].Element.id == SimHashes.CarbonDioxide, "species 1 is CarbonDioxide");
 
@@ -164,7 +166,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 for (int i = 0; i < 1000; i++)
                     strictProvider.TryGetCell(0, out snap0);
                 long after = GC.GetAllocatedBytesForCurrentThread();
-                Check(after - before == 0, "pooled TryGetCell must allocate 0 bytes on hot path");
+                Check(after - before == 0, "reusable TryGetCell must allocate 0 bytes on hot path");
+                Check(acquired == released, "every native read lease must be released");
             }
             finally
             {
