@@ -1,6 +1,7 @@
 struct Params {
  width:u32, height:u32, dt:f32, dx:f32, dy:f32, omega:f32, color:u32, gauge_cell:u32,
- channels:u32, cell_volume:f32, _padding0:u32, _padding1:u32,
+ channels:u32, cell_volume:f32, mass_scale:f32, _padding0:u32,
+ _padding1:u32, _padding2:u32, _padding3:u32,
 };
 @group(0) @binding(0) var<storage,read_write> rho:array<f32>;
 @group(0) @binding(1) var<storage,read_write> velocity_x:array<f32>;
@@ -104,7 +105,7 @@ fn compute_density_from_species_mass(@builtin(global_invocation_id) gid: vec3<u3
     for (var c = 0u; c < params.channels; c += 1u) {
         total_mass += mass[cell * params.channels + c];
     }
-    rho[cell] = total_mass / params.cell_volume;
+    rho[cell] = total_mass * params.mass_scale / params.cell_volume;
 }
 
 @compute @workgroup_size(8, 8, 1)
