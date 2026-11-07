@@ -19,7 +19,17 @@ pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
 pub(crate) const CELL_FLAG_HAS_SPECIES: u16 = 1;
 
 pub(crate) fn image_len(grid: &Grid) -> Result<usize> {
-    let species_count = grid.mass.iter().filter(|&&mass| mass > 0.0).count();
+    let mut species_count = 0usize;
+    for &mass in grid.mass.iter() {
+        if !mass.is_finite() || mass < 0.0 {
+            return Err(Error::new(Status::InvalidState, "published grid contains negative or non-finite mass"));
+        }
+        if mass > 0.0 {
+            species_count = species_count.checked_add(1).ok_or_else(|| {
+                Error::new(Status::ResourceLimit, "multicomponent species count overflow")
+            })?;
+        }
+    }
     let cells = grid.len().checked_mul(CELL_SIZE).ok_or_else(|| {
         Error::new(Status::ResourceLimit, "multicomponent cell table size overflow")
     })?;
@@ -60,8 +70,12 @@ pub(crate) fn write_image(
     for cell in 0..grid.len() {
         let at = HEADER_SIZE + cell * CELL_SIZE;
         let mass = grid.mass[cell];
+        let temperature = grid.temperature[cell];
+        if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
+            return Err(Error::new(Status::InvalidState, format!("cell {cell} contains invalid mass or temperature")));
+        }
         put_f32(output, at, mass);
-        if mass <= 0.0 {
+        if mass == 0.0 {
             continue;
         }
 
@@ -82,7 +96,7 @@ pub(crate) fn write_image(
         output[species_at + 2] = phase;
         output[species_at + 3] = 0; // no partial-pressure/EOS value in ABI v1
         put_f32(output, species_at + 4, mass);
-        put_f32(output, species_at + 8, grid.temperature[cell]);
+        put_f32(output, species_at + 8, temperature);
         next_species += 1;
     }
 
@@ -108,8 +122,8 @@ mod tests {
     use super::*;
 
     fn elements() -> ElementTable {
-        let mut bytes = 2_i32.to_le_bytes().to_vec();
-        for (index, (hash, phase)) in [(0x2d39bf75_u32, 0_u8), (0x11111111, 1_u8), (0x22222222, 2_u8)] .into_iter().enumerate() {
+        let mut bytes = 3_i32.to_le_bytes().to_vec();
+        for (index, (hash, phase)) in [(0x2d39bf75_u32, 0_u8), (0x11111111, 1_u8), (0x22222222, 2_u8)].into_iter().enumerate() {
             let mut record = [0_u8; 164];
             record[..4].copy_from_slice(&hash.to_le_bytes());
             record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
@@ -165,6 +179,20 @@ mod tests {
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
 
         grid.element[0] = 0;
+        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
+    }
+
+    #[test]
+    fn rejects_non_finite_and_negative_mass() {
+        let mut grid = grid();
+        let elements = elements();
+        let mut image = vec![0; image_len(&grid).unwrap()];
+        grid.mass[0] = f32::NAN;
+        assert_eq!(image_len(&grid).unwrap_err().status, Status::InvalidState);
+        grid.mass[0] = -1.0;
+        assert_eq!(image_len(&grid).unwrap_err().status, Status::InvalidState);
+        grid.mass[0] = 1.0;
+        grid.temperature[0] = f32::INFINITY;
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
     }
 
