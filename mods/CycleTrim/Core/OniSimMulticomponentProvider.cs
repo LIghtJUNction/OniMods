@@ -49,21 +49,24 @@ namespace CycleTrim.Core
         public const uint CurrentVersion = 1;
         public const uint FlagLegacySingleElement = 1;
         public const uint FlagMulticomponentCoexistence = 2;
-        public const int MaxPooledSpeciesPerCell = 16;
-
         [ThreadStatic]
-        private static MulticomponentSpecies[][] speciesBufferPool;
+        private static MulticomponentSpecies[] speciesBuffer;
 
-        private readonly Func<IntPtr> getUpdatePointer;
+        private readonly Func<IntPtr> acquireUpdate;
+        private readonly Action releaseUpdate;
         private readonly Func<ushort, Element> resolveElement;
 
         public OniSimMulticomponentProvider(
-            Func<IntPtr> getUpdatePointer,
+            Func<IntPtr> acquireUpdate,
+            Action releaseUpdate,
             Func<ushort, Element> resolveElement = null)
         {
-            if (getUpdatePointer == null)
-                throw new ArgumentNullException("getUpdatePointer");
-            this.getUpdatePointer = getUpdatePointer;
+            if (acquireUpdate == null)
+                throw new ArgumentNullException("acquireUpdate");
+            if (releaseUpdate == null)
+                throw new ArgumentNullException("releaseUpdate");
+            this.acquireUpdate = acquireUpdate;
+            this.releaseUpdate = releaseUpdate;
             this.resolveElement = resolveElement ?? ResolveCanonicalElement;
         }
 
@@ -71,8 +74,18 @@ namespace CycleTrim.Core
         {
             get
             {
-                NativeMulticomponentUpdate update;
-                return TryReadUpdateHeader(out update);
+                IntPtr pointer = acquireUpdate();
+                if (pointer == IntPtr.Zero)
+                    return false;
+                try
+                {
+                    NativeMulticomponentUpdate update;
+                    return TryReadUpdateHeader(pointer, out update);
+                }
+                finally
+                {
+                    releaseUpdate();
+                }
             }
         }
 
@@ -82,69 +95,80 @@ namespace CycleTrim.Core
             if (cell < 0)
                 return false;
 
-            NativeMulticomponentUpdate update;
-            if (!TryReadUpdateHeader(out update))
+            IntPtr pointer = acquireUpdate();
+            if (pointer == IntPtr.Zero)
                 return false;
 
-            if ((uint)cell >= update.CellCount)
-                return false;
-
-            IntPtr cellAddress = new IntPtr(update.Cells.ToInt64() + (long)cell * 24L);
-            uint speciesOffset = (uint)Marshal.ReadInt32(cellAddress, 0);
-            ushort count = (ushort)Marshal.ReadInt16(cellAddress, 4);
-            float totalMass = ReadSingle(cellAddress, 8);
-            float gasPressureKPa = ReadSingle(cellAddress, 12);
-            float liquidPressureKPa = ReadSingle(cellAddress, 16);
-            float liquidVolumeFraction = ReadSingle(cellAddress, 20);
-
-            if ((ulong)speciesOffset + count > update.TotalSpeciesRecords)
-                return false;
-
-            if (count > 0 && update.Species == IntPtr.Zero)
-                return false;
-
-            MulticomponentSpecies[] components = BorrowBuffer(count);
-            long speciesBase = update.Species.ToInt64() + (long)speciesOffset * 20L;
-            for (int i = 0; i < count; i++)
+            try
             {
-                IntPtr recordPtr = new IntPtr(speciesBase + (long)i * 20L);
-                ushort elementId = (ushort)Marshal.ReadInt16(recordPtr, 0);
-                byte rawPhase = Marshal.ReadByte(recordPtr, 2);
-                float mass = ReadSingle(recordPtr, 4);
-                float temperature = ReadSingle(recordPtr, 8);
-                float volumeFraction = ReadSingle(recordPtr, 12);
-                float partialPressureKPa = ReadSingle(recordPtr, 16);
-
-                MulticomponentPhase phase;
-                if (!TryMapPhase(rawPhase, out phase))
+                NativeMulticomponentUpdate update;
+                if (!TryReadUpdateHeader(pointer, out update) || (uint)cell >= update.CellCount)
                     return false;
 
-                Element element = resolveElement(elementId);
-                if (element == null)
+                IntPtr cellAddress = new IntPtr(update.Cells.ToInt64() + (long)cell * 24L);
+                uint speciesOffset = (uint)Marshal.ReadInt32(cellAddress, 0);
+                ushort count = (ushort)Marshal.ReadInt16(cellAddress, 4);
+                float totalMass = ReadSingle(cellAddress, 8);
+                float gasPressureKPa = ReadSingle(cellAddress, 12);
+                float liquidPressureKPa = ReadSingle(cellAddress, 16);
+                float liquidVolumeFraction = ReadSingle(cellAddress, 20);
+
+                if ((ulong)speciesOffset + count > update.TotalSpeciesRecords)
+                    return false;
+                if (count > 0 && update.Species == IntPtr.Zero)
                     return false;
 
-                components[i] = new MulticomponentSpecies(
-                    element,
-                    phase,
-                    mass,
-                    temperature,
-                    volumeFraction,
-                    partialPressureKPa);
+                MulticomponentSpecies[] components = BorrowBuffer(count);
+                long speciesBase = update.Species.ToInt64() + (long)speciesOffset * 20L;
+                for (int i = 0; i < count; i++)
+                {
+                    IntPtr recordPtr = new IntPtr(speciesBase + (long)i * 20L);
+                    ushort elementId = (ushort)Marshal.ReadInt16(recordPtr, 0);
+                    byte rawPhase = Marshal.ReadByte(recordPtr, 2);
+                    float mass = ReadSingle(recordPtr, 4);
+                    float temperature = ReadSingle(recordPtr, 8);
+                    float volumeFraction = ReadSingle(recordPtr, 12);
+                    float partialPressureKPa = ReadSingle(recordPtr, 16);
+
+                    MulticomponentPhase phase;
+                    if (!TryMapPhase(rawPhase, out phase))
+                        return false;
+
+                    Element element = resolveElement(elementId);
+                    if (element == null)
+                        return false;
+
+                    components[i] = new MulticomponentSpecies(
+                        element,
+                        phase,
+                        mass,
+                        temperature,
+                        volumeFraction,
+                        partialPressureKPa);
+                }
+
+                // Species records are copied while the native GameData read
+                // lease is held. The returned snapshot uses a reusable
+                // thread-local buffer and must be consumed before the next
+                // TryGetCell call on this thread.
+                snapshot = new MulticomponentCellSnapshot(
+                    components,
+                    count,
+                    totalMass,
+                    gasPressureKPa,
+                    liquidPressureKPa,
+                    liquidVolumeFraction);
+                return true;
             }
-
-            snapshot = new MulticomponentCellSnapshot(
-                components,
-                totalMass,
-                gasPressureKPa,
-                liquidPressureKPa,
-                liquidVolumeFraction);
-            return true;
+            finally
+            {
+                releaseUpdate();
+            }
         }
 
-        private bool TryReadUpdateHeader(out NativeMulticomponentUpdate update)
+        private static bool TryReadUpdateHeader(IntPtr ptr, out NativeMulticomponentUpdate update)
         {
             update = default(NativeMulticomponentUpdate);
-            IntPtr ptr = getUpdatePointer();
             if (ptr == IntPtr.Zero)
                 return false;
 
@@ -162,10 +186,7 @@ namespace CycleTrim.Core
             // A single-element projection cannot safely drive multicomponent
             // gameplay shims. Require the producer's explicit coexistence
             // capability; generation and pointer presence are not sufficient.
-            if (update.Flags != FlagMulticomponentCoexistence)
-                return false;
-
-            return true;
+            return update.Flags == FlagMulticomponentCoexistence;
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -204,18 +225,14 @@ namespace CycleTrim.Core
 
         private static MulticomponentSpecies[] BorrowBuffer(ushort count)
         {
-            if (count > MaxPooledSpeciesPerCell)
-                return new MulticomponentSpecies[count];
-
-            MulticomponentSpecies[][] pool = speciesBufferPool;
-            if (pool == null)
+            if (speciesBuffer == null || speciesBuffer.Length < count)
             {
-                pool = new MulticomponentSpecies[MaxPooledSpeciesPerCell + 1][];
-                for (int i = 0; i <= MaxPooledSpeciesPerCell; i++)
-                    pool[i] = new MulticomponentSpecies[i];
-                speciesBufferPool = pool;
+                int capacity = Math.Max(4, speciesBuffer == null ? 0 : speciesBuffer.Length * 2);
+                if (capacity < count)
+                    capacity = count;
+                speciesBuffer = new MulticomponentSpecies[capacity];
             }
-            return pool[count];
+            return speciesBuffer;
         }
 
         private static Element ResolveCanonicalElement(ushort elementIndex)
