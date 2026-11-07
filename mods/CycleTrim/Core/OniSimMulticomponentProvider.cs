@@ -56,18 +56,15 @@ namespace CycleTrim.Core
 
         private readonly Func<IntPtr> getUpdatePointer;
         private readonly Func<ushort, Element> resolveElement;
-        private readonly bool allowLegacySingleElement;
 
         public OniSimMulticomponentProvider(
             Func<IntPtr> getUpdatePointer,
-            Func<ushort, Element> resolveElement = null,
-            bool allowLegacySingleElement = false)
+            Func<ushort, Element> resolveElement = null)
         {
             if (getUpdatePointer == null)
                 throw new ArgumentNullException("getUpdatePointer");
             this.getUpdatePointer = getUpdatePointer;
             this.resolveElement = resolveElement ?? ResolveCanonicalElement;
-            this.allowLegacySingleElement = allowLegacySingleElement;
         }
 
         public bool IsReady
@@ -162,11 +159,10 @@ namespace CycleTrim.Core
             if (update.Version != CurrentVersion || update.Generation == 0 || update.Cells == IntPtr.Zero)
                 return false;
 
-            uint knownFlags = FlagLegacySingleElement | FlagMulticomponentCoexistence;
-            if ((update.Flags & ~knownFlags) != 0)
-                return false;
-
-            if (!allowLegacySingleElement && (update.Flags & FlagMulticomponentCoexistence) == 0)
+            // A single-element projection cannot safely drive multicomponent
+            // gameplay shims. Require the producer's explicit coexistence
+            // capability; generation and pointer presence are not sufficient.
+            if (update.Flags != FlagMulticomponentCoexistence)
                 return false;
 
             return true;
