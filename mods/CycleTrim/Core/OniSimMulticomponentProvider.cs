@@ -105,9 +105,15 @@ namespace CycleTrim.Core
                 if (!TryReadUpdateHeader(pointer, out update) || (uint)cell >= update.CellCount)
                     return false;
 
-                IntPtr cellAddress = new IntPtr(update.Cells.ToInt64() + (long)cell * 24L);
+                long cellAddressValue;
+                try { cellAddressValue = checked(update.Cells.ToInt64() + (long)cell * 24L); }
+                catch (OverflowException) { return false; }
+                IntPtr cellAddress = new IntPtr(cellAddressValue);
                 uint speciesOffset = (uint)Marshal.ReadInt32(cellAddress, 0);
                 ushort count = (ushort)Marshal.ReadInt16(cellAddress, 4);
+                ushort cellFlags = (ushort)Marshal.ReadInt16(cellAddress, 6);
+                if (cellFlags != (count == 0 ? 0 : 1))
+                    return false;
                 float totalMass = ReadSingle(cellAddress, 8);
                 float gasPressureKPa = ReadSingle(cellAddress, 12);
                 float liquidPressureKPa = ReadSingle(cellAddress, 16);
@@ -119,13 +125,21 @@ namespace CycleTrim.Core
                     return false;
 
                 MulticomponentSpecies[] components = BorrowBuffer(count);
-                long speciesBase = update.Species.ToInt64() + (long)speciesOffset * 20L;
+                long speciesBase;
+                try { speciesBase = checked(update.Species.ToInt64() + (long)speciesOffset * 20L); }
+                catch (OverflowException) { return false; }
                 for (int i = 0; i < count; i++)
                 {
-                    IntPtr recordPtr = new IntPtr(speciesBase + (long)i * 20L);
+                    long recordAddress;
+                    try { recordAddress = checked(speciesBase + (long)i * 20L); }
+                    catch (OverflowException) { return false; }
+                    IntPtr recordPtr = new IntPtr(recordAddress);
                     ushort elementId = (ushort)Marshal.ReadInt16(recordPtr, 0);
                     byte rawPhase = Marshal.ReadByte(recordPtr, 2);
+                    byte reserved = Marshal.ReadByte(recordPtr, 3);
                     float mass = ReadSingle(recordPtr, 4);
+                    if (reserved != 0 || mass <= 0f)
+                        return false;
                     float temperature = ReadSingle(recordPtr, 8);
                     float volumeFraction = ReadSingle(recordPtr, 12);
                     float partialPressureKPa = ReadSingle(recordPtr, 16);
@@ -181,6 +195,8 @@ namespace CycleTrim.Core
             update.Species = Marshal.ReadIntPtr(ptr, 32);
 
             if (update.Version != CurrentVersion || update.Generation == 0 || update.Cells == IntPtr.Zero)
+                return false;
+            if (update.TotalSpeciesRecords > 0 && update.Species == IntPtr.Zero)
                 return false;
 
             // A single-element projection cannot safely drive multicomponent
