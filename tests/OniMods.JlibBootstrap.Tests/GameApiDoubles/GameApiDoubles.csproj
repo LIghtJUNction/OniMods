@@ -1,3 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><AssemblyName>OniMods.JlibBootstrap.GameApiDoubles</AssemblyName></PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>OniMods.JlibBootstrap.GameApiDoubles</AssemblyName>
+  </PropertyGroup>
 </Project>
