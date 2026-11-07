@@ -105,7 +105,19 @@ calibrated against the pinned official game before a production adapter exists.
 - `reference/test_pressure_projection.py`: numerical tests for divergence
   reduction, residual, wall impermeability, invalid density and zero-velocity
   fixed point.
+- `reference/semantic_compare.py`: snapshot comparator for per-material mass,
+  sensible-energy proxy, disease budgets, changed cells, event counts and texture
+  word differences. It deliberately returns UNASSESSED without a reviewed
+  fixture-specific policy.
+- `reference/test_semantic_compare.py`: comparator self-tests.
 - `COMPATIBILITY-MATRIX.md`: legacy-to-new behavior map and promotion gates.
+
+The existing exact conformance corpus already contains dedicated pressure
+fixtures: paired Oxygen/Water mass-boundary cases, 16 deterministic mixed
+pressure worlds, IEEE flow-coefficient word cases (including signed zero,
+subnormals, infinities and NaNs), and gas/liquid/vacuum/heat/disease scenarios.
+The exact runner remains the frozen legacy baseline; the semantic comparator is
+for candidate-vs-baseline deltas after the new pressure model is connected.
 
 The CPU reference validates the mathematical operator only. It does not claim
 that the operator reproduces the official game's pressure behavior.
