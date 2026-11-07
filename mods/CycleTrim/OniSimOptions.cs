@@ -8,7 +8,7 @@ namespace CycleTrim
     {
         [Option(
             "Use OniSim simulation core / 使用 OniSim 仿真核心",
-            "Use CycleTrim's native simulation core for the game's SimDLL imports. Changes require restarting ONI. / 使用 CycleTrim 原生仿真核心替代游戏的 SimDLL；修改后需要重启游戏。",
+            "Use the experimental, unverified OniSim core for the game's SimDLL imports. Disabled by default; changes require restarting ONI. / 启用尚未完成真实游戏验收的实验性 OniSim 核心，默认关闭；修改后需要重启游戏。",
             "Simulation / 仿真")]
         [RestartRequired]
         public bool EnableOniSim { get; set; }
