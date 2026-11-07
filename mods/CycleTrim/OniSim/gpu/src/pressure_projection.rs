@@ -12,12 +12,13 @@ pub struct ProjectionOutput{
 }
 pub struct PressureProjectionGpu{
  device:Arc<wgpu::Device>,queue:Arc<wgpu::Queue>,
+ density_from_mass:wgpu::ComputePipeline,reconstruct_velocity:wgpu::ComputePipeline,
  prepare_u:wgpu::ComputePipeline,prepare_v:wgpu::ComputePipeline,
  divergence:wgpu::ComputePipeline,rbgs:wgpu::ComputePipeline,
  project_u:wgpu::ComputePipeline,project_v:wgpu::ComputePipeline,
- groups:[wgpu::BindGroup;7],
+ groups:[wgpu::BindGroup;8],
  density:wgpu::Buffer,velocity_x:wgpu::Buffer,velocity_y:wgpu::Buffer,solid:wgpu::Buffer,
- u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
+ u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,beta_u:wgpu::Buffer,beta_v:wgpu::Buffer,rhs:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
  readback:wgpu::Buffer,width:usize,height:usize,cells:usize,u_count:usize,v_count:usize,
  pub adapter:wgpu::AdapterInfo,
 }
@@ -44,6 +45,8 @@ impl PressureProjectionGpu{
   let make_pipeline=|label:&'static str,entry_point:&'static str|{
    device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor{label:Some(label),layout:None,module:&shader,entry_point:Some(entry_point),compilation_options:Default::default(),cache:None})
   };
+  let density_from_mass=make_pipeline("density from species mass","compute_density_from_species_mass");
+  let reconstruct_velocity=make_pipeline("reconstruct cell velocity","reconstruct_cell_velocity");
   let prepare_u=make_pipeline("prepare u faces","prepare_u_faces");
   let prepare_v=make_pipeline("prepare v faces","prepare_v_faces");
   let divergence=make_pipeline("compute divergence","compute_divergence");
@@ -64,8 +67,8 @@ impl PressureProjectionGpu{
   let beta_v=make_buffer("v inverse face density",v_count*4,storage);
   let rhs=make_buffer("pressure poisson rhs",cells*4,storage);
   let pressure=make_buffer("pressure solution",cells*4,storage|wgpu::BufferUsages::COPY_SRC);
-  let params_red=make_buffer("red parameters",32,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
-  let params_black=make_buffer("black parameters",32,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_red=make_buffer("red parameters",48,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
+  let params_black=make_buffer("black parameters",48,wgpu::BufferUsages::UNIFORM|wgpu::BufferUsages::COPY_DST);
   let readback=make_buffer("projection readback",(cells+u_count+v_count)*4,wgpu::BufferUsages::MAP_READ|wgpu::BufferUsages::COPY_DST);
   let buffers:[&wgpu::Buffer;10]=[&density,&velocity_x,&velocity_y,&solid,&u_faces,&v_faces,&beta_u,&beta_v,&rhs,&pressure];
   let bind=|pipeline:&wgpu::ComputePipeline,bindings:&[u32],params:&wgpu::Buffer|{
@@ -83,10 +86,11 @@ impl PressureProjectionGpu{
    bind(&rbgs,&[3,6,7,8,9,10],&params_black),
    bind(&project_u,&[4,6,9,10],&params_red),
    bind(&project_v,&[5,7,9,10],&params_red),
+   bind(&reconstruct_velocity,&[1,2,3,4,5,10],&params_red),
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
-  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
-   density,velocity_x,velocity_y,solid,u_faces,v_faces,pressure,
+  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),density_from_mass,reconstruct_velocity,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
+   density,velocity_x,velocity_y,solid,u_faces,v_faces,beta_u,beta_v,rhs,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }
  pub fn run(&mut self,input:ProjectionInput<'_>,dt:f32,dx:f32,dy:f32,iterations:usize,omega:f32)->Result<ProjectionOutput,String>{
