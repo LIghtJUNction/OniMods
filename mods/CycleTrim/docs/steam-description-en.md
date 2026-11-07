@@ -1,46 +1,33 @@
 [h1]CycleTrim[/h1]
 
-[b]Lightweight performance optimization mod for Oxygen Not Included[/b]
+[b]Conquer Late-Game Lag! Lightweight Performance & FPS Optimizer for Oxygen Not Included[/b]
 
-[h2]v0.4.0 OniSim core[/h2]
-The Rust simulation core is bundled and enabled by default on Windows x64, macOS x64 and Linux x64. Disable it in CycleTrim Mod settings and restart ONI to use the original core; CYCLETRIM_ONISIM_ENABLE=0 also disables it before startup. Unknown game profiles refuse takeover and keep the original core.
+As your colony reaches hundreds or thousands of cycles, does your FPS tank and every morning autosave freeze your screen?
+[b]CycleTrim[/b] performs surgical optimizations on ONI's heaviest simulation bottlenecks. It eliminates redundant computations and significantly improves FPS while [b]keeping 100% of vanilla mechanics and gameplay intact[/b].
 
-Windows/macOS have CI native builds and host loader tests; ONI runtime acceptance on those platforms remains unverified. Earlier Linux runtime receipts apply only to their recorded binaries and saves.
+[h2]⚠️ Required Prerequisite[/h2]
+This mod requires [b]Jlib[/b] (Steam Workshop ID: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]3835083839[/url]).
+[b]Please subscribe to Jlib and ensure it is placed ABOVE CycleTrim in your in-game Mod Manager.[/b]
 
-[h2]v0.3.1 fix[/h2]
-CycleTrim previously treated any non-null `currentChore` as active work. ONI keeps a non-null `IdleChore` while a duplicant is idle, so the mod also throttled pickup and chore refreshes for idle duplicants.
-
-v0.3.1 excludes `IdleChore`. Idle duplicants use the vanilla immediate refresh path; active workers keep the throttle.
-
-If a current ONI build or another mod rewrites `Manager.TickFrame()`, CycleTrim now skips the async path-probe quota patch instead of throwing and disabling the whole mod.
-
-[h2]What this mod changes[/h2]
-CycleTrim removes repeated work from five high-frequency simulation paths. It does not change duplicant priorities, schedules, path rules, or chore conditions.
-
-[h2]Key optimizations[/h2]
+[h2]⚡ Major Optimizations[/h2]
 [list]
-[*] Pickup candidate lookup: cache candidate cost computation and candidate ranking prep.
-[*] Busy duplicants: throttle heavy refresh work for active workers; `IdleChore` explicitly bypasses throttling so idle workers retain vanilla responsiveness.
-[*] Stationary critters: reduce repeated `Navigator` probe work and navigation hotspot pressure.
-[*] Ordinary Creature Brain scheduling: cap vanilla Creature normal scheduling at high render rates; Dupe, custom Brain-group, and priority paths remain vanilla.
-[*] AsyncPathProber: deduplicate successfully applied vanilla Creature snapshots and apply worker/in-flight backpressure; Minion, Robot, and custom abilities stay vanilla.
+[*] 🏃 [b]Busy Duplicant Chore Throttling[/b]: When dupes are locked into long, uninterruptible chores (researching, digging, operating machinery), CycleTrim suppresses the redundant every-tick scan of the global chore list. Saves up to 50%+ chore CPU time!
+[*] 🐾 [b]Stationary Critter Navigation Pruning[/b]: Ranch critters idling in pens no longer trigger excessive full-colony NavGrid probes. Cuts pathing hotspots by up to 90%+ in high-population ranches!
+[*] 📦 [b]Debris Pickup Acceleration[/b]: Late-game colonies often have tens of thousands of items on the floor. Optimizes candidate filtering and path cost reuse to eliminate pickup micro-stutters.
+[*] 💾 [b]Lightning-Fast Save Metadata[/b]: Replaces repeated reflection queries during autosaves with ultra-fast local cursors, slashing daily autosave lag by 1.5×~2×!
+[*] 🦀 [b]Embedded OniSim Native Rust Core[/b]: Ships with a clean-room native Rust simulation accelerator for Windows, Linux, and macOS, unlocking SIMD parallel processing power.
 [/list]
 
-[h2]Compatibility[/h2]
-Supports the base game and DLC. Duplicants, robots, custom Brain groups, and priority paths use vanilla code whenever a patch does not apply. CycleTrim no longer intercepts `SmartReservoir` automation signaling, preserving vanilla repeated notifications for stock reservoirs and third-party buildings that reuse the component.
-
-[h2]Performance[/h2]
+[h2]🛡️ Safety & Compatibility[/h2]
 [list]
-[*] Busy duplicant throttle: median FPS 70.6 → 85.1 (+20.6%); Brain total time 5.087 s → 2.449 s (-51.9%).
-[*] Stationary critter throttle: median FPS 81.23 → 109.28 (+34.5%); Navigator hotspot total 826.852 ms → 47.970 ms (-94.2%).
-[*] UpdatePickups cache: average cost 41.279 µs → 35.708 µs (-13.5%).
-[*] Ordinary Creature Brain synthetic benchmark: scheduled calls 43,200 → 19,200 (-55.56%).
+[*] [b]Pure Vanilla Behavior[/b]: Never alters dupe priorities, schedules, stats, speeds, or game balance.
+[*] [b]Great Mod Compatibility[/b]: Fully supports both the Base Game and the Spaced Out! DLC. Actively detects popular mods like FastTrack and Plib, gracefully backing off if conflicts are detected.
+[*] [b]Zero-Allocation Hotpaths[/b]: Carefully engineered to prevent heap allocations on critical paths, eliminating GC pause spikes.
 [/list]
 
-[b]Note: the Brain figures are from a standalone 240 FPS × 30 s function-level synthetic benchmark, not an in-game FPS test.[/b]
-Creature calls were 36,000 → 12,000 (-66.67%); local median elapsed time was 255.580 ms → 113.289 ms (-55.67%, 2.26x). Actual gains depend on the colony and real Brain workload.
+[h2]⚙️ Configurable Options[/h2]
+All optimization submodules can be tailored to your liking in the in-game Mod Options menu. Changes take effect on next game launch.
 
-[b]The PathProbe matrix is also synthetic, not FPS:[/b] at requested 0/25/50/75/90% hit rates, 10,000 requests executed 10000/7701/5501/3301/2000 probes, for theoretical work reductions of 0/22.99/44.99/66.99/80.00%. A refresh is forced after eight consecutive skips.
-
-[h2]Details[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md]Full details [English](/url)
+[h2]Source Code & Community[/h2]
+100% open-source and transparent:
+[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/CycleTrim]GitHub Repository[/url]

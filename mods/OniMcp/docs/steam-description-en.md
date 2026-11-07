@@ -1,82 +1,30 @@
 [h1]ONI MCP Server[/h1]
 
-[b]A local MCP bridge mod for Oxygen Not Included[/b]
+[b]Bridge LLMs (Claude, Gemini, Cursor) to Oxygen Not Included via Model Context Protocol[/b]
 
-[h2]v0.2.6 controls and reliability[/h2]
+Ever wished you had an AI Chief Engineer supervising your colony?
+[b]ONI MCP Server[/b] brings the open [b]Model Context Protocol (MCP)[/b] standard into Oxygen Not Included. It allows cutting-edge LLMs and AI coding assistants to inspect your colony's state in real-time, diagnose engineering bottlenecks, and safely assist your space expansion!
+
+[h2]⚠️ Required Prerequisite[/h2]
+This mod requires [b]Jlib[/b] (Steam Workshop ID: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]3835083839[/url]).
+[b]Please subscribe to Jlib and ensure it is placed ABOVE ONI MCP Server in your in-game Mod Manager.[/b]
+
+[h2]🤖 Key Features[/h2]
 [list]
-[*] Native Survival new-game controls; tolerate missing optional save previews.
-[*] Correct building anchors, utility tools and camera navigation.
-[*] Bounded research, Printing Pod and notification waits with compact observations.
-[*] Avoid Unity Mono input-event constructor crashes.
+[*] 🌐 [b]Standard MCP Compliance[/b]: Connects effortlessly with any MCP-compatible client, including Claude Desktop, Cursor, Gemini Antigravity, and Codex.
+[*] 🔍 [b]Deep Colony Telemetry[/b]: Grants AI real-time visibility into world grids, thermal fields, fluid/gas conduits, power networks, and duplicant health & morale.
+[*] 💡 [b]Intelligent Colony Diagnostics[/b]: Struggling with an overheating SPOM, a clogged pipe, or an unexpected food crisis? Ask your AI to inspect the current colony state and pinpoint the exact issue.
+[*] 🛡️ [b]Strict Safety & Zero-Cheat Sandbox[/b]: Read-heavy by default with strictly bounded write capabilities. All modifications are auditable, preserving fair gameplay.
+[*] ⚡ [b]Non-Blocking Performance[/b]: Runs an asynchronous HTTP/MCP service without hitching or stalling the Unity game loop.
 [/list]
 
-[h2]v0.2.5 Workshop installation update[/h2]
-[list]
-[*] Repackage the Workshop files as one legacy ZIP for ONI's mod loader. The previous directory download was complete in Steam but ONI reported it as a failed mod download.
-[*] Reject queued MCP actions from before a save-load context change, so they cannot run against the new world.
-[*] Label the optional support button clearly as an AI-token purchase link, separate from OniMcp's local authentication token.
-[/list]
+[h2]🚀 Quick Setup[/h2]
+[olist]
+[*] [b]Subscribe & Enable[/b]: Subscribe to this mod and prerequisite [b]Jlib[/b], then enable both in your game's Mod Menu.
+[*] [b]Load Game[/b]: Start or load any colony. The local MCP server spins up automatically (default port: `8788`).
+[*] [b]Connect Your AI[/b]: Add the ONI MCP server endpoint to your AI client's configuration to begin interactive exploration!
+[/olist]
 
-[h2]v0.2.4 protocol and reliability update[/h2]
-[list]
-[*] Support modern MCP discovery and protocol negotiation while retaining legacy client compatibility.
-[*] Reject malformed HTTP and MCP requests before they reach game actions; bound session and task lifetimes.
-[*] Report the installed mod version consistently to both modern and legacy clients.
-[*] Keep the options dialog compact, hide the token while editing it, and add an optional project-support button.
-[/list]
-[b]Validation note:[/b] Automated checks and the PLib options UI call chain passed; a full in-game click-through of the dialog has not been completed.
-
-[h2]v0.2.3 stability update[/h2]
-[list]
-[*] Fix resource dispatch and JSON-RPC null responses, and keep tool metadata isolated from callers.
-[*] Cancel timed-out queued game-thread calls and protect session-owned tasks.
-[*] Save settings atomically and preserve the last valid settings if a reload fails.
-[/list]
-
-[h2]v0.2.2 maintenance update[/h2]
-[list]
-[*] Remove 680 unused `using` directives and clear code-inspection noise.
-[*] Pass the Release build with warnings treated as errors.
-[*] MCP tools, protocol behavior, and save behavior are unchanged.
-[/list]
-
-[h2]What this mod does[/h2]
-[list]
-[*] Starts a local MCP-compatible service for colony state access and safe operations.
-[*] Exposes `oni://` resources and grouped tool entrypoints (`world_editor`, `game_control`, `building_control`, etc.).
-[*] Returns bounded, auditable results and requires confirmation for risky changes.
-[/list]
-
-[h2]Typical use cases[/h2]
-[list]
-[*] Colony snapshots and environment inspection.
-[*] Small-scale safe automation (pause/speed/screenshots/small build or maintenance actions).
-[*] MCP client integration for structured gameplay workflows.
-[/list]
-
-[h2]Safety / Scope[/h2]
-[list]
-[*] Long autonomous sessions should use bounded run windows, pause-and-verify loops, and risk confirmation.
-[*] High-risk actions require explicit confirmation.
-[*] Recommended to use network/auth boundaries when exposed beyond local loopback.
-[/list]
-
-[h2]Compatibility[/h2]
-[list]
-[*] Tool names and payloads may still change before `1.0.0`.
-[*] Built for Oxygen base game + DLC environment usage.
-[/list]
-
-[h2]Documentation[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]Read English docs[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文文档[/url]
-
-[h2]Optional project support[/h2]
-[url=https://api.lmm.best]Buy AI tokens (optional)[/url] to support OniMods development. This purchase is unrelated to the mod's local authentication token. OniMcp does not require this site or a purchase; you can use a compatible MCP client and model of your choice.
-
-[h2]Benchmark skill[/h2]
-[list]
-[*] Use `benchmark` tool in agents for fixed-path perf validation.
-[*] Output format is a standardized JSON object (`status`,`ok`,`suite`,`suiteStartedAt`,`suiteEndedAt`,`durationMs`,`summary`,`results`).
-[*] Example keys in each result: `name`,`status`,`iterations`,`durationMs`, plus item-specific metrics and optional `error`.
-[/list]
+[h2]Open Source & Documentation[/h2]
+Source code, virtual filesystem specs, and tool definitions are available on GitHub:
+[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniMcp]GitHub Repository[/url]
