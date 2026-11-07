@@ -42,16 +42,18 @@ namespace CycleTrim.Core
     public struct MulticomponentCellSnapshot
     {
         public readonly MulticomponentSpecies[] Components;
+        public readonly int ComponentCount;
         public readonly float TotalMass;
         public readonly float GasPressureKPa;
         public readonly float LiquidPressureKPa;
         public readonly float LiquidVolumeFraction;
 
         public MulticomponentCellSnapshot(MulticomponentSpecies[] components,
-            float totalMass, float gasPressureKPa, float liquidPressureKPa,
+            int componentCount, float totalMass, float gasPressureKPa, float liquidPressureKPa,
             float liquidVolumeFraction)
         {
             Components = components;
+            ComponentCount = componentCount;
             TotalMass = totalMass;
             GasPressureKPa = gasPressureKPa;
             LiquidPressureKPa = liquidPressureKPa;
@@ -136,7 +138,8 @@ namespace CycleTrim.Core
 
         private static bool IsValid(MulticomponentCellSnapshot snapshot)
         {
-            if (snapshot.Components == null || !FiniteNonNegative(snapshot.TotalMass)
+            if (snapshot.Components == null || snapshot.ComponentCount < 0
+                || snapshot.ComponentCount > snapshot.Components.Length || !FiniteNonNegative(snapshot.TotalMass)
                 || !FiniteNonNegative(snapshot.GasPressureKPa)
                 || !FiniteNonNegative(snapshot.LiquidPressureKPa)
                 || !FiniteNonNegative(snapshot.LiquidVolumeFraction)
@@ -144,7 +147,7 @@ namespace CycleTrim.Core
                 return false;
 
             float mass = 0f;
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Element == null || !FiniteNonNegative(item.Mass)
