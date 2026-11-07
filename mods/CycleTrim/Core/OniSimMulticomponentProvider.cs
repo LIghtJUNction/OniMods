@@ -53,12 +53,12 @@ namespace CycleTrim.Core
         private static MulticomponentSpecies[] speciesBuffer;
 
         private readonly Func<IntPtr> acquireUpdate;
-        private readonly Action releaseUpdate;
+        private readonly System.Action releaseUpdate;
         private readonly Func<ushort, Element> resolveElement;
 
         public OniSimMulticomponentProvider(
             Func<IntPtr> acquireUpdate,
-            Action releaseUpdate,
+            System.Action releaseUpdate,
             Func<ushort, Element> resolveElement = null)
         {
             if (acquireUpdate == null)
