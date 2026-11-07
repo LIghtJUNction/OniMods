@@ -1,9 +1,10 @@
 struct Params {
  width:u32, height:u32, dt:f32, dx:f32, dy:f32, omega:f32, color:u32, gauge_cell:u32,
+ channels:u32, cell_volume:f32, _padding0:u32, _padding1:u32,
 };
-@group(0) @binding(0) var<storage,read> rho:array<f32>;
-@group(0) @binding(1) var<storage,read> velocity_x:array<f32>;
-@group(0) @binding(2) var<storage,read> velocity_y:array<f32>;
+@group(0) @binding(0) var<storage,read_write> rho:array<f32>;
+@group(0) @binding(1) var<storage,read_write> velocity_x:array<f32>;
+@group(0) @binding(2) var<storage,read_write> velocity_y:array<f32>;
 @group(0) @binding(3) var<storage,read> solid:array<u32>;
 @group(0) @binding(4) var<storage,read_write> u_faces:array<f32>;
 @group(0) @binding(5) var<storage,read_write> v_faces:array<f32>;
@@ -12,6 +13,7 @@ struct Params {
 @group(0) @binding(8) var<storage,read_write> rhs:array<f32>;
 @group(0) @binding(9) var<storage,read_write> pressure:array<f32>;
 @group(0) @binding(10) var<uniform> params:Params;
+@group(0) @binding(11) var<storage,read> mass:array<f32>;
 
 @compute @workgroup_size(8,8,1)
 fn prepare_u_faces(@builtin(global_invocation_id) gid:vec3<u32>) {
@@ -21,6 +23,7 @@ fn prepare_u_faces(@builtin(global_invocation_id) gid:vec3<u32>) {
  if x==0u || x==w { u_faces[f]=0.0; beta_u[f]=0.0; return; }
  let a=y*w+x-1u; let b=a+1u;
  if solid[a]!=0u || solid[b]!=0u { u_faces[f]=0.0; beta_u[f]=0.0; return; }
+ if rho[a]<=0.0 || rho[b]<=0.0 { u_faces[f]=0.0; beta_u[f]=0.0; return; }
  u_faces[f]=0.5*(velocity_x[a]+velocity_x[b]);
  beta_u[f]=2.0/(rho[a]+rho[b]);
 }
@@ -33,6 +36,7 @@ fn prepare_v_faces(@builtin(global_invocation_id) gid:vec3<u32>) {
  if y==0u || y==params.height { v_faces[f]=0.0; beta_v[f]=0.0; return; }
  let a=(y-1u)*w+x; let b=a+w;
  if solid[a]!=0u || solid[b]!=0u { v_faces[f]=0.0; beta_v[f]=0.0; return; }
+ if rho[a]<=0.0 || rho[b]<=0.0 { v_faces[f]=0.0; beta_v[f]=0.0; return; }
  v_faces[f]=0.5*(velocity_y[a]+velocity_y[b]);
  beta_v[f]=2.0/(rho[a]+rho[b]);
 }
