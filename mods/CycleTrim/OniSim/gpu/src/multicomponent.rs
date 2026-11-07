@@ -24,7 +24,6 @@ impl MulticomponentGpu {
         let values=count.checked_mul(channels).ok_or("tensor overflow")?;
         if width==0 || height==0 || channels==0 || values>u32::MAX as usize { return Err("invalid grid dimensions".into()); }
         let device=&context.device;
-        let queue=&context.queue;
         let info=context.adapter.clone();
         let max_bytes=(values.max(count).max(channels)*4) as u64;
         if max_bytes>device.limits().max_storage_buffer_binding_size as u64 { return Err("tensor exceeds Vulkan storage-buffer limit".into()); }
