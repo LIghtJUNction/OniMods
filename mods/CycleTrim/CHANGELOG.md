@@ -1,3 +1,10 @@
+## Unreleased — pickup highlight hot paths
+
+- Scope resource-category and resource-entry hover highlighting to the visible `pickupablesLayer` partition instead of enumerating the entire world inventory. Track only controllers highlighted by each UI element so exit clears the exact prior set, including items that moved off-screen.
+- Reuse pickupable-to-animation-controller references through weak-key caches, refreshing destroyed Unity components. Reuse `KBatchedAnimController` lookups in the shared overlay highlight loop; unsupported IL shapes retain the original lookup.
+- The vanilla `HighlightColour` setter already avoids dirtying unchanged values via `SetHighlightColour`; no duplicate equality guard was added.
+- Runtime game validation and before/after colony benchmarks remain pending.
+
 ## 2026-11-07 — 0.4.8
 
 - Promote the GPU multicomponent operator's CPU upwind flux into the native tick: dense 8-channel gas tensor, pack/unpack through legacy Grid + mixture, run after `gas_phase`.
