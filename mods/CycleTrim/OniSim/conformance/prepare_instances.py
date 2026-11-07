@@ -73,7 +73,7 @@ def stage_simulation_options(destination, core):
     # PLib reads this mod-local file. Do not change shared user settings or
     # infer success from the option: the actual process mapping still needs audit.
     with path.open("x") as output:
-        json.dump(dict(EnableOniSim=core == "rust"), output, indent=2)
+        json.dump(dict(EnableOniSimExperimental=core == "rust"), output, indent=2)
         output.write("\n")
     return digest(path)
 

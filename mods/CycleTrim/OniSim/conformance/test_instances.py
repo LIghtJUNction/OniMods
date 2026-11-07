@@ -26,7 +26,7 @@ class SimulationOptionsTests(unittest.TestCase):
                 root = Path(folder)
                 actual = prepare_instances.stage_simulation_options(root, core)
                 path = root / "CycleTrimOptions.json"
-                self.assertEqual(json.loads(path.read_text()), {"EnableOniSim": enabled})
+                self.assertEqual(json.loads(path.read_text()), {"EnableOniSimExperimental": enabled})
                 self.assertEqual(actual, verify_instances.digest(path))
                 self.assertEqual(list(root.iterdir()), [path])
 

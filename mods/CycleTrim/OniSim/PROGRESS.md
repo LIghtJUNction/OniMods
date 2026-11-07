@@ -1,6 +1,65 @@
-# OniSim status (2026-10-21)
+# OniSim engineering log
 
-## Current source: inline thermal command queue
+## Current status (2026-11-07)
+
+### Message routing audit
+
+A static audit against `OFFICIAL-MESSAGES.md` found all **62 official message IDs**
+referenced by the current native source. Fifty-nine route into lifecycle, world,
+cell-material, cell-command, thermal-component, mass-component, interaction or
+radiation handlers. `SetVisibleCells`, `ToggleProfiler` and
+`RadiationSickness` are explicit no-ops because they are absent from both
+dispatch registries in the pinned official 744825 library. This is identifier
+and dispatch accounting only; it is not proof that every message's complete
+gameplay semantics are equivalent.
+
+### Confirmed remaining gaps
+
+- `Elements_CreateInteractions` is parsed and its rule records are retained in
+  state, but `do_gas_interaction` and `do_gas_interaction_pair` have no caller
+  in the Rust fixed-step pipeline. Static inspection of the pinned official
+  control flow also found no incoming call to the legacy three-argument helper.
+  Whether these helpers belong in the active simulation path is unresolved;
+  do not add a guessed phase call without a positive official call-site or a
+  differential behavior fixture.
+- The current source has no passing overall four-worker scaling gate. Worker
+  creation and differential correctness do not prove a performance win.
+- The current source snapshot has no corresponding full-game graphical,
+  long-duration or whole-colony acceptance. Historical receipts apply only to
+  their exact source and binary identities.
+- The 29 ordered `GameDataUpdate` event queues are declared and published by
+  `events.rs`; each individual callback still requires end-to-end behavior
+  coverage, not merely a non-null span.
+- SIMSAVE v15 parsing/serialization and world-offset/topology handling exist;
+  full multi-world DLC and long-running game compatibility remain separate
+  acceptance gates.
+
+### Physical pipeline status
+
+The fixed-step path currently runs temperature exchange and state transitions,
+gas/liquid pressure traversal, disease diffusion, radiation-region updates,
+component updates and cell post-processing. Post-processing calls partial-melt,
+sublimation/off-gas and unstable-cell paths. The helper remains unconnected in Rust; its required role in the pinned
+official simulation is unresolved and must not be guessed or marked complete.
+
+### Safety and CI
+
+- PR [#568](https://github.com/LIghtJUNction/OniMods/pull/568) changes the CycleTrim
+  option to a new `EnableOniSimExperimental` key, default off. The old persisted
+  `EnableOniSim` key is intentionally not reused, preventing an old default-true
+  value from silently enabling takeover after upgrade.
+- The standalone loader is also default-off; it requires an explicit
+  `CYCLETRIM_ONISIM_ENABLE=1/true/on` opt-in.
+- The OniMods main branch had an unreachable `tools/OniHarness` gitlink
+  (`107fee3c…`). The PR branch now points at reachable OniHarness main
+  `c149819e…` so CI can check out the test dependency. CI must still complete;
+  checkout success alone is not test acceptance.
+
+The existing source checkpoint below records 47 passing Release Rust tests.
+It explicitly does not claim whole-game FPS/RSS, overall worker speedup or a
+current-source game launch. Older results below remain historical evidence.
+
+## Source checkpoint: inline thermal command queue
 
 The production thermal command queue now stores each validated fixed-size ABI
 payload inline in a 48-byte queue entry. Its 14 supported message types need at
