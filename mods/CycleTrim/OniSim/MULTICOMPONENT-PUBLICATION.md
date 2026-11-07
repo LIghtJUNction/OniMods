@@ -26,8 +26,8 @@ The following are source-level facts from the repository revision inspected for 
 
 1. `OniSim/native` is a separate `oni-sim-core` crate. Its dependencies currently contain Rayon, not wgpu.
 2. `OniSim/gpu` is a separate `onisim-gpu` crate with its own Cargo workspace. It is not currently linked into the native production core.
-3. `gpu/src/multicomponent.rs` models per-cell species mass, cell velocity X/Y, a cell-level solid mask and per-channel vertical drift. Its readback API maps a GPU readback buffer and copies values into a caller-owned CPU slice.
-4. That GPU operator does not currently publish canonical element IDs, per-species phase, per-species temperature/enthalpy, gas partial pressure, liquid pressure or liquid volume fraction. A cell-level solid mask cannot represent gas and liquid phases coexisting in one cell.
+3. `gpu/src/multicomponent.rs` now models per-cell species mass and sensible enthalpy, cell velocity X/Y, an obstacle mask, and per-channel gas metadata (canonical element ID, gas phase, specific heat capacity and vertical drift). Mass and enthalpy use the same conservative upwind face flux; temperature is derived as `H/(m*cp)`. Its readback maps a GPU buffer and copies results into caller-owned CPU slices.
+4. This remains an isolated gas-only operator. It rejects liquid/solid channels; the cell obstacle mask cannot represent coexisting phases. It has no equation-of-state pressure, liquid pressure/volume fraction, phase change, latent heat, or production native integration.
 5. Production `native/src/world_cells.rs` still stores one `element`, one `temperature` and one `mass` per cell. `PhysicsWorld` uses this single-element CellSOA.
 6. `GameData` already has two alternating publication allocations. Each contains a Grid, events, visibility, presentation buffers and retired command slots. The worker does not reuse a ready allocation until the `Prepare` handoff returns it.
 7. The existing 496-byte `OniSimGameDataUpdate` descriptor is an established ABI. Its pointers are borrowed and external reads must be serialized with mutation. The existing descriptor must not be silently resized or reinterpreted.
@@ -135,3 +135,17 @@ It deliberately publishes no partial pressure or liquid volume fraction. The
 managed reader does not register this snapshot as an active multicomponent
 provider. Coexisting-species support remains blocked on integrating a genuine
 multi-phase tensor state into the production solver and its GameData publication.
+
+
+## GPU operator update (2026-11-07)
+
+The experimental Vulkan gas-mixture operator now transports sensible enthalpy
+alongside species mass and carries canonical per-channel gas metadata. Its CPU
+reference tests per-species mass and enthalpy conservation, nonnegative state,
+and impermeable obstacle cells. The Vulkan benchmark separately reports
+upload/dispatch/readback and resident 32-step timings.
+
+This improves the experimental gas transport model but does not change the
+publication gate: the GPU crate remains separate from `oni-sim-core`, and the
+operator is not connected to the production simulation worker or GameData.
+Liquid/solid coexistence and pressure/EOS remain unimplemented.
