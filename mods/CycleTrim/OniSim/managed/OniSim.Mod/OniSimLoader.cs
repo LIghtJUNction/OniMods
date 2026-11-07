@@ -24,6 +24,10 @@ namespace OniSim.CycleTrim
 
         public static LoaderResult Configure(Assembly gameAssembly)
         {
+            string setting = Environment.GetEnvironmentVariable(EnableVariable);
+            if (string.IsNullOrWhiteSpace(setting))
+                return new LoaderResult(LoaderState.Disabled,
+                    "Disabled by default; set " + EnableVariable + "=1 to explicitly opt in. No native module was opened and no mapping was inserted.");
             return Configure(gameAssembly, true);
         }
 
