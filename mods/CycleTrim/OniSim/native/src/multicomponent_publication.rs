@@ -19,10 +19,21 @@ pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
 pub(crate) const CELL_FLAG_HAS_SPECIES: u16 = 1;
 
 pub(crate) fn image_len(grid: &Grid) -> Result<usize> {
+    let cell_count = grid.len();
+    if cell_count > u32::MAX as usize {
+        return Err(Error::new(
+            Status::ResourceLimit,
+            "multicomponent cell count exceeds the OMC1 field width",
+        ));
+    }
+
     let mut species_count = 0usize;
     for &mass in grid.mass.iter() {
         if !mass.is_finite() || mass < 0.0 {
-            return Err(Error::new(Status::InvalidState, "published grid contains negative or non-finite mass"));
+            return Err(Error::new(
+                Status::InvalidState,
+                "published grid contains negative or non-finite mass",
+            ));
         }
         if mass > 0.0 {
             species_count = species_count.checked_add(1).ok_or_else(|| {
@@ -30,15 +41,61 @@ pub(crate) fn image_len(grid: &Grid) -> Result<usize> {
             })?;
         }
     }
-    let cells = grid.len().checked_mul(CELL_SIZE).ok_or_else(|| {
+    if species_count > u32::MAX as usize {
+        return Err(Error::new(
+            Status::ResourceLimit,
+            "multicomponent species count exceeds the OMC1 field width",
+        ));
+    }
+
+    let cells = cell_count.checked_mul(CELL_SIZE).ok_or_else(|| {
         Error::new(Status::ResourceLimit, "multicomponent cell table size overflow")
     })?;
     let species = species_count.checked_mul(SPECIES_SIZE).ok_or_else(|| {
         Error::new(Status::ResourceLimit, "multicomponent species table size overflow")
     })?;
-    HEADER_SIZE.checked_add(cells).and_then(|n| n.checked_add(species)).ok_or_else(|| {
-        Error::new(Status::ResourceLimit, "multicomponent image size overflow")
-    })
+    HEADER_SIZE
+        .checked_add(cells)
+        .and_then(|n| n.checked_add(species))
+        .ok_or_else(|| Error::new(Status::ResourceLimit, "multicomponent image size overflow"))
+}
+
+/// Validate every source cell before touching the caller-owned output buffer.
+///
+/// This makes failed snapshots atomic from the caller's perspective: an invalid
+/// late cell cannot leave an apparently usable but partially overwritten image.
+fn validate_cells(grid: &Grid, elements: &ElementTable) -> Result<usize> {
+    let mut species_count = 0usize;
+    for cell in 0..grid.len() {
+        let mass = grid.mass[cell];
+        let temperature = grid.temperature[cell];
+        if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
+            return Err(Error::new(
+                Status::InvalidState,
+                format!("cell {cell} contains invalid mass or temperature"),
+            ));
+        }
+        if mass == 0.0 {
+            continue;
+        }
+
+        let element_index = grid.element[cell] as usize;
+        let element = elements.elements.get(element_index).ok_or_else(|| {
+            Error::new(
+                Status::InvalidState,
+                format!("cell {cell} references missing element index {element_index}"),
+            )
+        })?;
+        let phase = (element.record.state & 3) as u8;
+        if !(1..=3).contains(&phase) {
+            return Err(Error::new(
+                Status::InvalidState,
+                format!("cell {cell} has positive mass but no supported material phase"),
+            ));
+        }
+        species_count += 1;
+    }
+    Ok(species_count)
 }
 
 pub(crate) fn write_image(
@@ -49,10 +106,14 @@ pub(crate) fn write_image(
 ) -> Result<()> {
     let required = image_len(grid)?;
     if output.len() != required {
-        return Err(Error::new(Status::InvalidArgument, "multicomponent image buffer has incorrect length"));
+        return Err(Error::new(
+            Status::InvalidArgument,
+            "multicomponent image buffer has incorrect length",
+        ));
     }
 
-    let species_count = grid.mass.iter().filter(|&&mass| mass > 0.0).count();
+    // Complete all fallible source validation before writing any output bytes.
+    let species_count = validate_cells(grid, elements)?;
     let cell_table_end = HEADER_SIZE + grid.len() * CELL_SIZE;
 
     output.fill(0);
@@ -70,22 +131,9 @@ pub(crate) fn write_image(
     for cell in 0..grid.len() {
         let at = HEADER_SIZE + cell * CELL_SIZE;
         let mass = grid.mass[cell];
-        let temperature = grid.temperature[cell];
-        if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
-            return Err(Error::new(Status::InvalidState, format!("cell {cell} contains invalid mass or temperature")));
-        }
         put_f32(output, at, mass);
         if mass == 0.0 {
             continue;
-        }
-
-        let element_index = grid.element[cell] as usize;
-        let element = elements.elements.get(element_index).ok_or_else(|| {
-            Error::new(Status::InvalidState, format!("cell {cell} references missing element index {element_index}"))
-        })?;
-        let phase = (element.record.state & 3) as u8;
-        if phase == 0 {
-            return Err(Error::new(Status::InvalidState, format!("cell {cell} has positive mass but no material phase")));
         }
 
         let species_at = cell_table_end + next_species * SPECIES_SIZE;
@@ -93,10 +141,10 @@ pub(crate) fn write_image(
         put_u16(output, at + 8, 1);
         put_u16(output, at + 10, CELL_FLAG_HAS_SPECIES);
         put_u16(output, species_at, grid.element[cell]);
-        output[species_at + 2] = phase;
+        output[species_at + 2] = (elements.elements[grid.element[cell] as usize].record.state & 3) as u8;
         output[species_at + 3] = 0; // no partial-pressure/EOS value in ABI v1
         put_f32(output, species_at + 4, mass);
-        put_f32(output, species_at + 8, temperature);
+        put_f32(output, species_at + 8, grid.temperature[cell]);
         next_species += 1;
     }
 
@@ -174,12 +222,26 @@ mod tests {
     fn rejects_missing_element_and_phase_zero_with_positive_mass() {
         let mut grid = grid();
         let elements = elements();
-        grid.element[0] = 99;
         let mut image = vec![0; image_len(&grid).unwrap()];
+        grid.element[1] = 99;
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
 
-        grid.element[0] = 0;
+        grid.element[1] = 0;
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
+    }
+
+    #[test]
+    fn rejects_invalid_late_cell_without_modifying_output() {
+        let mut grid = grid();
+        let elements = elements();
+        let mut image = vec![0xa5; image_len(&grid).unwrap()];
+        grid.element[1] = 99;
+
+        assert_eq!(
+            write_image(&grid, &elements, 7, &mut image).unwrap_err().status as i32,
+            Status::InvalidState as i32
+        );
+        assert!(image.iter().all(|&byte| byte == 0xa5));
     }
 
     #[test]
