@@ -215,7 +215,7 @@ namespace OniSim.Compatibility
             {
                 int required = api.CopyMulticomponentImage(IntPtr.Zero, 0);
                 CheckOperation(0, 0);
-                if (required < MulticomponentImage.HeaderSize || required > 32 + 24 * BinaryLayout.MaxCells)
+                if (required < MulticomponentImage.HeaderSize || required > 512 * 1024 * 1024)
                     throw new InvalidDataException("Native multicomponent image length is invalid.");
                 var image = new byte[required];
                 GCHandle pin = GCHandle.Alloc(image, GCHandleType.Pinned);
