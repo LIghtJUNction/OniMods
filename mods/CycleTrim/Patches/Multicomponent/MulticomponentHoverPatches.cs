@@ -14,12 +14,12 @@ namespace CycleTrim.Patches.Multicomponent
     {
         public static string FormatCompositionSuffix(MulticomponentCellSnapshot snapshot)
         {
-            if (snapshot.Components == null || snapshot.Components.Length <= 1 || snapshot.TotalMass <= 0f)
+            if (snapshot.Components == null || snapshot.ComponentCount <= 1 || snapshot.TotalMass <= 0f)
                 return string.Empty;
 
             var builder = new StringBuilder(" [");
             bool first = true;
-            for (int i = 0; i < snapshot.Components.Length; i++)
+            for (int i = 0; i < snapshot.ComponentCount; i++)
             {
                 MulticomponentSpecies item = snapshot.Components[i];
                 if (item.Mass <= 0f || item.Element == null)
