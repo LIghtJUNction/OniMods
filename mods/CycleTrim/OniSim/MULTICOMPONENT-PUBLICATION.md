@@ -119,3 +119,19 @@ Only after the provider passes host and pinned-reference tests should individual
 - ONI runtime validation: **Not performed**
 
 Keep PR #571 in Draft until the data model, production solver integration, publication lifetime, provider and runtime gates have independent evidence.
+
+
+## ABI v1 implementation status (2026-11-07)
+
+A copy-based OMC1 v1 snapshot has now been implemented on the follow-up branch.
+It serializes the currently published native Grid under the native state mutex
+into caller-owned memory, and the managed facade validates its header, offsets,
+phase codes, mass aggregates and species ranges.
+
+**Important limitation:** OMC1 v1 is explicitly flagged `LEGACY_SINGLE_ELEMENT`.
+The current production `Grid`/CellSOA is still single-element, so this is a
+real and testable ABI transport baseline, not a multicomponent physics producer.
+It deliberately publishes no partial pressure or liquid volume fraction. The
+managed reader does not register this snapshot as an active multicomponent
+provider. Coexisting-species support remains blocked on integrating a genuine
+multi-phase tensor state into the production solver and its GameData publication.
