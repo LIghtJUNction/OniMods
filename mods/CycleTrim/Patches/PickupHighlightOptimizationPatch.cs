@@ -160,19 +160,6 @@ namespace CycleTrim.Patches
             return false;
         }
 
-        private static Util.IterationInstruction VisitPickupable(object value, VisitContext context)
-        {
-            var pickupable = value as Pickupable;
-            if (pickupable == null || pickupable.KPrefabID == null || !pickupable.KPrefabID.HasTag(context.Tag))
-                return Util.IterationInstruction.Continue;
-            var controller = GetController(pickupable);
-            if (controller == null || !context.Seen.Add(controller))
-                return Util.IterationInstruction.Continue;
-            controller.HighlightColour = context.Colour;
-            context.Highlighted.Add(controller);
-            return Util.IterationInstruction.Continue;
-        }
-
         private static KAnimControllerBase GetController(Pickupable pickupable)
         {
             ControllerReference cached;
