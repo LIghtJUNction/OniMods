@@ -34,7 +34,8 @@ exit without a new ZIP fails the command and restores the previous package.
 Installation extracts and checks the DLL and `mod_info.yaml` before replacing
 the installed copy. Extraction or Dev enablement failures preserve the previous
 installation; an interrupted transaction is retained at the reported recovery
-path. Legacy lowercase `dev` copies are removed after a successful Dev install.
+path. Identity-confirmed duplicates across Local, Dev and Workshop are moved to
+`mods/.onim-recovery`; `mods.json` is backed up before deduplication.
 
 ## Commands
 

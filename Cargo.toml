@@ -1,15 +1,19 @@
 [package]
 name = "onim"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2024"
 license-file = "LICENSE"
 description = "Command-line toolkit for creating, building, installing, and managing Oxygen Not Included mods."
 repository = "https://github.com/LIghtJUNction/OniMods"
+homepage = "https://github.com/LIghtJUNction/OniMods"
 readme = "README-onim.md"
+keywords = ["oxygen-not-included", "modding", "cli"]
+categories = ["command-line-utilities"]
 include = [
     "/Cargo.toml",
     "/Cargo.lock",
     "/README-onim.md",
+    "/CHANGELOG-onim.md",
     "/LICENSE",
     "/LICENSE.MIT",
     "/LICENSING.md",
