@@ -2,7 +2,7 @@
 
 OniOnline 是联机框架。内置玩法只有 `onionline.chat`：它可以加入大厅并聊天，不登记星球。其他玩法使用同一个 `IGameplayRules` 接口，由独立模组注册。
 
-SDK 的发布载体是独立的 **OniOnline.Framework.dll**，目标为 .NET Standard 2.0，不引用 Unity、游戏程序集或 PLib，命名空间为 `OniOnline.Sdk`。框架已正式发布到官方 NuGet（`LIghtJUNction.OniOnline.Framework`）。开发者通过 NuGet 引用已构建的包，不复制或重新编译框架源码，**严禁在自己的模组产物中重复打包 OniOnline.Framework.dll**。这个 API 仍处于开发预览，没有承诺后续二进制兼容性。
+SDK 的发布载体是独立的 **OniOnline.Framework.dll**，目标为 .NET Standard 2.0，不引用 Unity、游戏程序集或 PLib，命名空间为 `OniOnline.Sdk`。官方 NuGet 包是 `LIghtJUNction.OniOnline.Framework`，当前可安装版本是 **0.4.0**。仓库源码已经是 0.5.0，NuGet 上还没有 0.5.0。开发者通过 NuGet 引用已构建的包，不复制或重新编译框架源码，**严禁在自己的模组产物中重复打包 OniOnline.Framework.dll**。这个 API 仍处于开发预览，没有承诺后续二进制兼容性。
 
 ## 第三方 Mod 接入规范（NuGet 依赖与前置 Mod 声明）
 
@@ -10,13 +10,13 @@ SDK 的发布载体是独立的 **OniOnline.Framework.dll**，目标为 .NET Sta
 在您的玩法 Mod 项目中，通过 NuGet 引入独立框架：
 
 ```bash
-dotnet add package LIghtJUNction.OniOnline.Framework --version 0.5.0
+dotnet add package LIghtJUNction.OniOnline.Framework --version 0.4.0
 ```
 
 或在 `.csproj` 中声明：
 ```xml
 <ItemGroup>
-  <PackageReference Include="LIghtJUNction.OniOnline.Framework" Version="0.5.0" PrivateAssets="all" ExcludeAssets="runtime" />
+  <PackageReference Include="LIghtJUNction.OniOnline.Framework" Version="0.4.0" PrivateAssets="all" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
 > [!IMPORTANT]
