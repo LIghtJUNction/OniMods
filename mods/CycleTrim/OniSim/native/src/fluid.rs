@@ -1,7 +1,7 @@
 use crate::events::EventQueues;
 use crate::fluid_helpers::{
-    add_disease, add_mass, clear_cell, clear_disease, cvtt, game_index, notify, phase, smax, smin,
-    swap_material,
+    add_disease, add_mass, are_liquids_miscible, clear_cell, clear_disease, cvtt, game_index,
+    liquid_density, notify, phase, smax, smin, swap_material,
 };
 use crate::gas::displace_gas;
 use crate::tables::{DiseaseTable, ElementTable};
@@ -260,6 +260,13 @@ pub(crate) fn update_liquid(
                     remaining -= amount;
                 }
             }
+        } else if phase(tables, down_element) == 2 {
+            // 下方是另一种液体：比较实际密度，较重液体下沉置换较轻液体！
+            let down_record = &tables.elements[down_element as usize].record;
+            if liquid_density(record) > liquid_density(down_record) {
+                swap_material(world, events, cell, down);
+                return;
+            }
         } else if tables.elements[down_element as usize].record.state & 2 == 0 {
             if down_element == world.sink_element {
                 clear_cell(&mut world.write, world.vacuum_element, cell);
@@ -284,7 +291,9 @@ pub(crate) fn update_liquid(
     }
     for (side, direction) in [(cell - 1, 0), (cell + 1, 1)] {
         let side_element = world.read.element[side];
-        if (side_element != element && tables.elements[side_element as usize].record.state & 2 != 0)
+        let side_record = &tables.elements[side_element as usize].record;
+        let is_miscible = are_liquids_miscible(record, side_record);
+        if (side_element != element && !is_miscible && side_record.state & 2 != 0)
             || phase(tables, world.write.element[side]) == 3
             || world.read.properties[side] & 2 != 0
         {
@@ -348,7 +357,18 @@ pub(crate) fn update_liquid(
         }
     }
     for (diagonal, side) in [(down + 1, cell + 1), (down - 1, cell - 1)] {
-        if phase(tables, world.write.element[diagonal]) == 1
+        let diag_elem = world.write.element[diagonal];
+        let diag_phase = phase(tables, diag_elem);
+        let can_slide_diagonal = if diag_phase == 1 {
+            true
+        } else if diag_phase == 2 {
+            // 对角线是另一种更轻的液体：较重液体可沿斜面滑落置换
+            liquid_density(record) > liquid_density(&tables.elements[diag_elem as usize].record)
+        } else {
+            false
+        };
+
+        if can_slide_diagonal
             && (phase(tables, world.write.element[side]) == 3
                 || world.write.properties[side] & 1 != 0)
             && phase(tables, world.write.element[down]) != 3

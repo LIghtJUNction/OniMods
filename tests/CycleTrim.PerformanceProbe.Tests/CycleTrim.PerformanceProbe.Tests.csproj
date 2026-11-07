@@ -7,6 +7,7 @@
     <LangVersion>latest</LangVersion>
     <NuGetAudit>false</NuGetAudit>
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+    <DefineConstants>$(DefineConstants);PERFORMANCE_PROBE_HOST_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj" />
@@ -20,6 +21,7 @@
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Multicomponent/*.cs" Link="Jlib/%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Core/MulticomponentCellAccess.cs" Link="MulticomponentCellAccess.cs" />
     <Compile Include="../../mods/CycleTrim/Core/OniSimMulticomponentProvider.cs" Link="OniSimMulticomponentProvider.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPhysiologyPatches.cs" Link="MulticomponentPhysiologyPatches.cs" />

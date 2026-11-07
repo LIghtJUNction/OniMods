@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="../../mods/CycleTrim/OniSim/managed/OniSim.Mod/*.cs" Exclude="../../mods/CycleTrim/OniSim/managed/OniSim.Mod/ModInfo.cs" />
     <Compile Include="../../mods/CycleTrim/OniSim/managed/OniSim.Compatibility/MulticomponentImage.cs" />
+    <ProjectReference Include="../../mods/Jlib/Jlib/Jlib.csproj" />
     <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0" PrivateAssets="all" />
   </ItemGroup>
 </Project>

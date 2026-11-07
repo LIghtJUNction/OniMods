@@ -20,7 +20,6 @@ namespace OniSim.CycleTrim
         private static readonly object Gate = new object();
         private static string mappedPath;
         private static NativeModule targetModule;
-        private static MonoImageMapper mapper;
 
         // Standalone / CycleTrim entry: OniSim is on by default.
         // CYCLETRIM_ONISIM_ENABLE=0|false|off remains an emergency kill switch.
@@ -69,16 +68,18 @@ namespace OniSim.CycleTrim
                     if (Type.GetType("Mono.Runtime") == null)
                         throw new PlatformNotSupportedException("OniSim takeover requires Unity Mono.");
                     OfficialProfile.ValidateAssembly(gameAssembly);
-                    RequireNoGameInstance(gameAssembly);
                     string monoPath = NativePlatform.MonoPath(gameAssembly.Location);
                     OfficialProfile.ValidateMono(monoPath);
-                    mapper = new MonoImageMapper(NativeModule.OpenAlreadyLoaded(monoPath));
-                    IntPtr image = mapper.FindImage(Path.GetFullPath(gameAssembly.Location));
-                    if (image == IntPtr.Zero) throw new InvalidOperationException("The exact loaded Assembly-CSharp MonoImage was not found.");
-                    // All checks and symbol binding precede the single image-scoped mutation.
+                    // Validate the native Sim target prior to invoking Jlib's native component replacement.
                     targetModule = NativeModule.OpenTarget(path);
                     OfficialProfile.ValidateTarget(targetModule);
-                    mapper.Insert(image, path);
+
+                    var replacement = Jlib.Runtime.JlibApi.ReplaceSimDll(gameAssembly, path);
+                    if (!replacement.Succeeded)
+                    {
+                        return new LoaderResult(LoaderState.Refused,
+                            "OniSim mapping refused: " + replacement.Message);
+                    }
                     mappedPath = path;
                     return Mapped();
                 }
@@ -100,14 +101,6 @@ namespace OniSim.CycleTrim
         {
             return new LoaderResult(LoaderState.MappedUnverified,
                 "Assembly-scoped SimDLL mapping remains active and unverified; gameReady=false. Environment changes cannot remove or replace it. Restart is required.");
-        }
-
-        private static void RequireNoGameInstance(Assembly gameAssembly)
-        {
-            Type game = gameAssembly.GetType("Game", true);
-            PropertyInfo instance = game.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
-            if (instance == null || instance.GetValue(null, null) != null)
-                throw new InvalidOperationException("Mapping is only permitted during startup before a Game instance exists.");
         }
     }
 }

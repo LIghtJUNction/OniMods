@@ -1,5 +1,5 @@
 use crate::events::{EventQueues, WorldDamageInfo};
-use crate::fluid_helpers::{game_index, phase, smin, swap_material};
+use crate::fluid_helpers::{game_index, liquid_density, phase, smin, swap_material};
 use crate::tables::{ElementRecord, ElementTable};
 use crate::world::PhysicsWorld;
 
@@ -16,13 +16,19 @@ pub(crate) fn density_displacement(
     if source.state != below_record.state {
         return false;
     }
+    // 液体与气体的重力分层置换
+    let should_sink = if source.state & 3 == 2 {
+        liquid_density(source) > liquid_density(below_record)
+    } else {
+        source.molar_mass > below_record.molar_mass
+    };
+    if should_sink {
+        swap_material(world, events, cell, below);
+        return true;
+    }
     let sample = world.next_random() as f32 * f32::from_bits(0x38000100);
     if !(probability < sample) {
         return false;
-    }
-    if below_record.molar_mass < source.molar_mass {
-        swap_material(world, events, cell, below);
-        return true;
     }
     if world.write.element[cell] != world.write.element[below] {
         return false;
@@ -184,4 +190,31 @@ pub(crate) fn pressure_break(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_test_record(id: i32, max_mass: f32, molar_mass: f32, state: u8) -> ElementRecord {
+        let mut record: ElementRecord = unsafe { std::mem::zeroed() };
+        record.id = id;
+        record.max_mass = max_mass;
+        record.molar_mass = molar_mass;
+        record.state = state;
+        record
+    }
+
+    #[test]
+    fn dirty_water_is_denser_than_clean_water_and_sinks() {
+        let clean = make_test_record(1836671383, 1000.0, 18.01528, 2); // Water
+        let dirty = make_test_record(1832607973, 1000.0, 18.01528, 2); // DirtyWater
+        let brine = make_test_record(-324547888, 1000.0, 18.01528, 2); // Brine
+        let oil = make_test_record(-1412059381, 870.0, 100.0, 2); // CrudeOil
+
+        // 验证沉降顺序：浓盐水 > 污染水 > 洁净水 > 原油
+        assert!(liquid_density(&brine) > liquid_density(&dirty));
+        assert!(liquid_density(&dirty) > liquid_density(&clean));
+        assert!(liquid_density(&clean) > liquid_density(&oil));
+    }
 }

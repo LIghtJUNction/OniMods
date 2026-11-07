@@ -194,20 +194,13 @@ fn gas(
     let source = &elements.elements[source_element as usize].record;
     let direction = world.gas_scan_direction as isize;
     world.gas_scan_direction = -world.gas_scan_direction;
-    let first = cell.checked_add_signed(direction).unwrap();
-    let second = cell.checked_add_signed(-direction).unwrap();
+    let _first = cell.checked_add_signed(direction).unwrap();
+    let _second = cell.checked_add_signed(-direction).unwrap();
     let below = cell - world.stride;
-    let above = cell + world.stride;
+    let _above = cell + world.stride;
     let mass = world.write.mass[cell];
-    let discard = if f32::from_bits(0x3089705f) <= mass {
-        mass < 0.001
-            && [first, second, below, above].into_iter().any(|neighbor| {
-                !(world.write.mass[neighbor] < 1.0)
-                    && phase(elements, world.write.element[neighbor]) == 1
-            })
-    } else {
-        true
-    };
+    // 质量守恒保证：绝不因为气体薄（<0.001）就蒸发成真空。只有近零残余才清理
+    let discard = mass <= 1e-6;
     if discard {
         world.flow[cell] = [0.0; 4];
         crate::fluid_displacement::evaporate(world, events, cell);

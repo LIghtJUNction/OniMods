@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 
 namespace CycleTrim.PerformanceProbe.Tests
 {
@@ -68,6 +69,30 @@ namespace HarmonyLib
             Installations++;
             OwnerReadyAtInstall = CycleTrim.Patches.PerformanceProbePatch.Owner == Id;
         }
+
+        public HarmonyClassProcessor CreateClassProcessor(Type type)
+        {
+            return new HarmonyClassProcessor(this, type);
+        }
+
+        public MethodInfo Patch(MethodBase original, HarmonyMethod prefix = null, HarmonyMethod postfix = null, HarmonyMethod transpiler = null, HarmonyMethod finalizer = null)
+        {
+            return original as MethodInfo;
+        }
+    }
+
+    public sealed class HarmonyClassProcessor
+    {
+        public HarmonyClassProcessor(Harmony instance, Type type) { }
+        public System.Collections.Generic.List<MethodInfo> Patch() => new System.Collections.Generic.List<MethodInfo>();
+    }
+
+    public sealed class HarmonyMethod
+    {
+        public HarmonyMethod() { }
+        public HarmonyMethod(MethodInfo method) { this.method = method; }
+        public HarmonyMethod(Type type, string name) { }
+        public MethodInfo method;
     }
 }
 
@@ -82,6 +107,11 @@ namespace CycleTrim.Patches
     internal static class FetchLayoutExperiment
     {
         internal static void StartIfRequested() { }
+    }
+
+    internal static class FrameRateUnlockPatch
+    {
+        internal static void Apply(string reason) { }
     }
 
     internal static class FetchPickupCandidatePatch

@@ -198,3 +198,36 @@ pub(crate) fn swap_material(
 pub(crate) fn phase(tables: &ElementTable, element: u16) -> u8 {
     tables.elements[element as usize].record.state & 3
 }
+
+#[inline]
+pub(crate) fn liquid_density(record: &crate::tables::ElementRecord) -> f32 {
+    let base = record.max_mass * 10.0 + record.molar_mass;
+    let bonus = match record.id {
+        -324547888 => 300.0,    // Brine (浓盐水)
+        -2044124200 => 350.0,   // MurkyBrine
+        1911997537 => 200.0,    // SaltWater (盐水)
+        878488353 => 150.0,     // SugarWater (糖水)
+        1832607973 => 50.0,     // DirtyWater (污染水) -> 比普通水(0)重，沉在普通水下方
+        1836671383 => 0.0,      // Water (洁净水)
+        -1412059381 => -100.0,  // CrudeOil (原油) -> 比水轻，浮在水上方
+        -486269331 => -150.0,   // Petroleum (石油) -> 比原油更轻，浮在原油上方
+        -87974045 => -200.0,    // Ethanol (乙醇) -> 浮在石油上方
+        _ => 0.0,
+    };
+    base + bonus
+}
+
+/// 现实世界流体互溶性判断：
+/// 水溶液家族（洁净水、污染水、盐水、浓盐水）之间完全互溶，扩散形成均匀混合相。
+/// 烃/油相（原油、石油、乙醇）之间互溶。
+/// 油与水不互溶，界面张力维持清晰分层。
+#[inline]
+pub(crate) fn are_liquids_miscible(a: &crate::tables::ElementRecord, b: &crate::tables::ElementRecord) -> bool {
+    if a.id == b.id {
+        return true;
+    }
+    let is_water_family = |id: i32| matches!(id, 1836671383 | 1832607973 | 1911997537 | -324547888 | 878488353 | -2044124200);
+    let is_oil_family = |id: i32| matches!(id, -1412059381 | -486269331 | -87974045);
+
+    (is_water_family(a.id) && is_water_family(b.id)) || (is_oil_family(a.id) && is_oil_family(b.id))
+}

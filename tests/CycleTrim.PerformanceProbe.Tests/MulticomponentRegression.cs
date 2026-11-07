@@ -4,7 +4,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using CycleTrim.Core;
 using CycleTrim.Patches.Multicomponent;
+using Jlib.Multicomponent;
 using UnityEngine;
+using MulticomponentCellAccess = CycleTrim.Core.MulticomponentCellAccess;
+using MulticomponentBreathingPatch = CycleTrim.Patches.Multicomponent.MulticomponentBreathingPatch;
 
 namespace CycleTrim.PerformanceProbe.Tests
 {

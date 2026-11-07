@@ -203,10 +203,13 @@ impl<'a> PreparedStep<'a> {
             if gas_phase(world, elements, diseases, events, region) {
                 world.sync_read_from_write();
             }
-            // Aggressive 一格多物: GPU-operator CPU flux over dense gas channels.
+            // 禁用 multicomponent_flux：避免因通道发散或阈值截断导致气体大片湮灭成真空。
+            // 严格采用单相质量守恒网格流转，保证气液界面清晰锐利。
+            /*
             if crate::multicomponent_flux::step_region(world, elements, events, region) {
                 world.sync_read_from_write();
             }
+            */
             // Gas events are already in the main queue. Temperature task events
             // join after them, at ConsolidateEvents, rather than at task execution.
             consolidate_events(events, &mut temperature_events);

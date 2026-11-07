@@ -10,7 +10,7 @@ namespace CycleTrim.Core
         internal static bool OptimizeSaveMetadata { get; private set; } = true;
         internal static bool OptimizePowerOverlay { get; private set; } = true;
         internal static bool OptimizeConveyorPathLookup { get; private set; } = true;
-        internal static bool OptimizeAnimationSymbols { get; private set; }
+        internal static bool OptimizeAnimationSymbols { get; private set; } = true;
         internal static bool OptimizeStateMachineLookups { get; private set; } = true;
         internal static ConduitAnimationQuality ConduitAnimation { get; private set; }
             = ConduitAnimationQuality.Full;

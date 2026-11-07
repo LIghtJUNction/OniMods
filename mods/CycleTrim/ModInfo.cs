@@ -10,6 +10,7 @@ namespace CycleTrim
         // Host tests link this entrypoint without loading PLib or OniSim.
         partial void ConfigureOniSim();
         partial void RegisterOniSimOptions();
+        partial void InstallMulticomponentShims(Harmony harmony);
 
         public override void OnLoad(Harmony harmony)
         {
@@ -18,6 +19,7 @@ namespace CycleTrim
             ConfigureOniSim();
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
             base.OnLoad(harmony);
+            InstallMulticomponentShims(harmony);
             RegisterOniSimOptions();
             FetchLayoutExperiment.StartIfRequested();
         }

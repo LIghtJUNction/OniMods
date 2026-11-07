@@ -1,6 +1,8 @@
 //! Gas transfers recovered from the official Linux simulation binary.
 use crate::events::EventQueues;
-use crate::fluid_helpers::{add_disease, clear_disease, cvtt, do_displacement, notify, smax, smin};
+use crate::fluid_helpers::{
+    add_disease, clear_disease, cvtt, do_displacement, notify, phase, smax, smin,
+};
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
 
@@ -117,9 +119,31 @@ pub(crate) fn displace_gas(
             continue;
         }
         let target = world.write.element[dst];
-        if (target == element || target == world.vacuum_element)
-            && world.write.properties[dst] & 1 == 0
-        {
+        let target_phase = phase(tables, target);
+        let allows_gas = if target == element || target == world.vacuum_element {
+            true
+        } else if target_phase == 2 {
+            // 当液体未占满 1m³ 格子时，空隙允许气体进入分压
+            let target_max = tables.elements[target as usize].record.max_mass.max(1.0);
+            let liq_vol = world.write.mass[dst] / target_max;
+            liq_vol < 0.95 && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element)
+        } else {
+            false
+        };
+
+        if allows_gas && world.write.properties[dst] & 1 == 0 {
+            if target_phase == 2 {
+                // 液体未占满格：气体作为共存相进入空隙容积
+                let gas_mass = world.write.mass[src];
+                let _gas_temp = world.write.temperature[src];
+                world.mixture_element[dst] = element;
+                world.mixture_mass[dst] += gas_mass;
+                world.write.mass[src] = 0.0;
+                world.write.element[src] = world.vacuum_element;
+                notify(world, events, src);
+                notify(world, events, dst);
+                return true;
+            }
             do_displacement(world, tables, diseases, events, src, dst);
             return true;
         }
@@ -146,19 +170,12 @@ pub(crate) fn displace_gas(
             return true;
         }
     }
-    // Aggressive: if classic displacement cannot find a same-element or vacuum
-    // sink, coexist into a neighboring different gas instead of deleting work.
-    for n in 0..4 {
-        let Some(dst) = cardinal[(seed + n) & 3] else {
-            continue;
-        };
-        if coexist_gas_into(world, tables, diseases, events, src, dst) {
-            return true;
-        }
-    }
+    // If classic displacement cannot find a same-element or vacuum sink,
+    // do not displace; keep the gas in place so mass is strictly conserved.
     false
 }
 
+#[allow(dead_code)]
 /// Merge `src` gas into `dst` as a second species when `dst` already holds a
 /// different gas. Dominant mass stays on the legacy Grid element/mass fields.
 fn coexist_gas_into(

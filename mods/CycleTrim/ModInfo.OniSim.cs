@@ -78,5 +78,19 @@ namespace CycleTrim
                 Debug.LogWarning("[CycleTrim] PLib options dialog registration failed: " + error);
             }
         }
+
+#if !PERFORMANCE_PROBE_HOST_TESTS
+        partial void InstallMulticomponentShims(HarmonyLib.Harmony harmony)
+        {
+            try
+            {
+                Jlib.Multicomponent.MulticomponentPatches.ApplyAll(harmony);
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning("[CycleTrim] Failed to install multicomponent patches: " + error);
+            }
+        }
+#endif
     }
 }

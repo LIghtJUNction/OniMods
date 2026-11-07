@@ -63,7 +63,7 @@ namespace OniMods.JlibBootstrap
                         dialog = KScreenManager.AddChild(Global.Instance.globalCanvas,
                             ScreenPrefabs.Instance.ConfirmDialogScreen.gameObject).GetComponent<ConfirmDialogScreen>();
                         dialog.PopupConfirmDialog(string.Join("\n", messages) +
-                            "\n\nIf this mentions Jlib, install and enable one compatible Jlib. Otherwise check Player.log for [Jlib bootstrap] / FileNotFoundException, repair the mod install, then restart.",
+                            "\n\nIf this mentions Jlib, install and enable one compatible Jlib. Otherwise check Player.log for [Jlib bootstrap], repair the mod install, then restart.",
                             () => { }, null, title_text: "Mod startup");
                         dialog.Activate();
                         shown = true;

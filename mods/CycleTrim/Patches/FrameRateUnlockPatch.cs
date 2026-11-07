@@ -5,53 +5,68 @@ using UnityEngine;
 namespace CycleTrim.Patches
 {
     /// <summary>
-    /// ONI never exposes a VSync toggle; Unity defaults to vSyncCount=1 and the
-    /// windowed compositor often looks like a hard 60 FPS cap. Force the unlocked
-    /// path used by PerformanceCaptureMonitor.
+    /// ONI defaults to vSyncCount=1 which locks frame rate to 50/60 Hz.
+    /// We aggressively unlock the frame rate to 300 FPS and disable VSync across all screens.
     /// </summary>
-    internal static class FrameRateUnlockPatch
+    public static class FrameRateUnlockPatch
     {
         private static int nextForceFrame;
 
-        internal static void Apply(string reason)
+        public static void Apply(string reason)
         {
             QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = -1;
-            Debug.Log("[CycleTrim] VSync forced off (" + reason + "); targetFrameRate=-1, vSyncCount=0");
+            // Setting targetFrameRate to 300 (or higher) explicitly overrides compositor vsync clamps.
+            Application.targetFrameRate = 300;
+            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=300, vSyncCount=0");
         }
 
         [HarmonyPatch(typeof(Game), "OnSpawn")]
-        [HarmonyPostfix]
-        private static void AfterGameSpawn()
+        public static class AfterGameSpawn
         {
-            Apply("Game.OnSpawn");
-            nextForceFrame = 0;
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                Apply("Game.OnSpawn");
+                nextForceFrame = 0;
+            }
+        }
+
+        [HarmonyPatch(typeof(MainMenu), "OnSpawn")]
+        public static class AfterMainMenuSpawn
+        {
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                Apply("MainMenu.OnSpawn");
+            }
         }
 
         [HarmonyPatch(typeof(Game), "LateUpdate")]
-        [HarmonyPostfix]
-        private static void KeepUnlocked()
+        public static class KeepUnlocked
         {
-            if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate < 0)
-                return;
-            int now = Time.frameCount;
-            if (now < nextForceFrame) return;
-            nextForceFrame = now + 120;
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = -1;
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate >= 300)
+                    return;
+                int now = Time.frameCount;
+                if (now < nextForceFrame) return;
+                nextForceFrame = now + 60;
+                QualitySettings.vSyncCount = 0;
+                Application.targetFrameRate = 300;
+            }
         }
 
-        // GraphicsOptionsScreen is internal in Assembly-CSharp.
         [HarmonyPatch]
-        private static class AfterGraphicsApply
+        public static class AfterGraphicsApply
         {
-            private static MethodBase TargetMethod()
+            public static MethodBase TargetMethod()
             {
                 return AccessTools.Method(AccessTools.TypeByName("GraphicsOptionsScreen"), "ApplySettings");
             }
 
             [HarmonyPostfix]
-            private static void Postfix()
+            public static void Postfix()
             {
                 Apply("GraphicsOptionsScreen.ApplySettings");
             }
