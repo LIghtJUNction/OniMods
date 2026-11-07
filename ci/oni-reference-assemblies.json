@@ -35,6 +35,10 @@
           "pinned_blob_sha": "edcc29584194c60aab9e65ce9ac89029373222c7"
         },
         {
+          "path": "Lib/FMODUnity.dll",
+          "pinned_blob_sha": "b131c7be54a4bf1ee66d3ebbb8d5c77ca8af86af"
+        },
+        {
           "path": "Lib/Newtonsoft.Json.dll",
           "pinned_blob_sha": "e023edf1badcec2c131f7baaeedd924c556a65eb"
         },
@@ -49,6 +53,10 @@
         {
           "path": "Lib/UnityEngine.dll",
           "pinned_blob_sha": "149a152de2df4cee616865df16dddad660856aa0"
+        },
+        {
+          "path": "Lib/UnityEngine.ImageConversionModule.dll",
+          "pinned_blob_sha": "f0096b89041f91f2a76d84102b7a7bba6198130f"
         },
         {
           "path": "Lib/UnityEngine.InputLegacyModule.dll",
@@ -72,7 +80,7 @@
         }
       ]
     },
-    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately. UnityEngine.UnityWebRequestModule.dll is additionally pinned from the same immutable reference commit and tracked upstream by Git blob SHA; it is compile-only because the public mirror targets ONI build 737790, not official build 744825."
+    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately. UnityEngine.UnityWebRequestModule.dll is additionally pinned from the same immutable reference commit and tracked upstream by Git blob SHA; it is compile-only because the public mirror targets ONI build 737790, not official build 744825. FMODUnity.dll and UnityEngine.ImageConversionModule.dll are also pinned from the same immutable reference commit and tracked upstream by Git blob SHA; both remain compile-only reference inputs for the older 737790 mirror."
   },
   "method_body_source": {
     "repository": "Kupie/ONI_Decomp",
@@ -131,6 +139,12 @@
       "sha256": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"
     },
     {
+      "name": "FMODUnity.dll",
+      "path": "Lib/FMODUnity.dll",
+      "size": 154112,
+      "sha256": "78961fd455d32828f9b34b5eea52c4376c731576843e38d64f66ac0d79c5b449"
+    },
+    {
       "name": "Newtonsoft.Json.dll",
       "path": "Lib/Newtonsoft.Json.dll",
       "size": 176640,
@@ -153,6 +167,12 @@
       "path": "Lib/UnityEngine.dll",
       "size": 184832,
       "sha256": "89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"
+    },
+    {
+      "name": "UnityEngine.ImageConversionModule.dll",
+      "path": "Lib/UnityEngine.ImageConversionModule.dll",
+      "size": 17920,
+      "sha256": "6e85d42a24c2bb9d798e834ddaa27b9a5c1853378327f6c498d69b636efd8178"
     },
     {
       "name": "UnityEngine.InputLegacyModule.dll",
