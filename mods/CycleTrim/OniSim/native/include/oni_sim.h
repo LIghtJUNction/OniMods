@@ -162,7 +162,12 @@ typedef struct OniSimMulticomponentUpdate {
 } OniSimMulticomponentUpdate;
 #pragma pack(pop)
 
-const OniSimMulticomponentUpdate *ONISIM_GetMulticomponentUpdate(void);
+/* Thread-affine read lease: Acquire pins the current GameData publication
+ * and returns its descriptor. Copy the descriptor and requested records before
+ * Release. Prepare/Shutdown block while a lease is held. Acquire/Release MUST
+ * execute on the same thread; nested acquisition is rejected. */
+const OniSimMulticomponentUpdate *ONISIM_AcquireMulticomponentUpdate(void);
+void ONISIM_ReleaseMulticomponentUpdate(void);
 
 void ConduitTemperatureManager_Initialize(void);
 void ConduitTemperatureManager_Shutdown(void);
