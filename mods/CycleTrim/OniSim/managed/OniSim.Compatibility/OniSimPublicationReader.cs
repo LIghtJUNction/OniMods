@@ -11,8 +11,10 @@ namespace OniSim.Compatibility
     public sealed class OniSimPublicationReader
     {
         private readonly NativeApi api;
-        private bool leaseHeld;
-        private int leaseThreadId;
+        [ThreadStatic]
+        private static bool leaseHeld;
+        [ThreadStatic]
+        private static int leaseThreadId;
 
         private OniSimPublicationReader(NativeApi api)
         {
