@@ -36,6 +36,10 @@ rtk proxy cargo run --locked --release --bin multicomponent-bench
 
 基准只选择真实离散或集成 Vulkan Adapter；没有硬件 Adapter 时以错误退出，不采用软件回退。
 
+## 自动化验证
+
+已在 OniSim diamond workflow 中加入独立 `gpu-operator` job：使用 Rust 1.99.1 执行 Naga WGSL 解析/验证、CPU 参考守恒与固体墙测试，并编译 Vulkan benchmark 的全部目标。该 job 不需要 GPU；真实 Adapter 的端到端测试仍由目标硬件运行。
+
 ## 当前验证状态
 
 本次执行容器检查结果：
