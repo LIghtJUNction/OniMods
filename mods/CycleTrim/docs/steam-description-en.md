@@ -19,15 +19,15 @@ Cut frame time first, then come back for compatibility. Matching vanilla behavio
 
 [h3]What the current build already does[/h3]
 Busy duplicants, stationary critters, and pickup scans repeat less work. These are early cuts, not the final shape.
-The OniSim native core ships in the package and tries to take over the simulation by default. Turn it off before a colony you care about.
+The OniSim native core ships in the package but does not take over the simulation by default. Keep the vanilla SimDLL for normal colonies; explicitly enable the experimental option only on a disposable test save.
 CycleTrim still needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Enable Jlib above CycleTrim, then restart.
-Options live under Mods, then CycleTrim, and apply on the next launch. CYCLETRIM_ONISIM_ENABLE=0 keeps the vanilla SimDLL mapping. The mapping cannot be hot-reverted.
+Options live under Mods, then CycleTrim, and apply on the next launch. OniSim is off by default; the new experimental opt-in must be enabled explicitly. CYCLETRIM_ONISIM_ENABLE=0 keeps the vanilla SimDLL mapping. The mapping cannot be hot-reverted.
 
 [h3]Controls and Quality of Life[/h3]
-The defaults push the experiment forward. They are not a conservative compatibility preset.
+The default keeps the official simulation core active. OniSim remains an experimental, opt-in test path.
 
 * Subscribe and enable. Restart once so Jlib and the options page load together.
-* Turn OniSim off before a colony you care about, then try it on a test save.
+* Keep OniSim off for normal colonies; enable it only for a disposable test save.
 * Conduit animation, power-overlay reuse, and state-machine reuse can each be narrowed in the options. Restart after changing them.
 
 [h3]Built with onim[/h3]
