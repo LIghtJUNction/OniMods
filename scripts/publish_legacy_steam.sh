@@ -55,11 +55,14 @@ fi
 MODE=""
 PLAN=""
 PLAN_HASH=""
+EXTRA_ARGS=()
 while (($#)); do
   case "$1" in
     --prepare-first-item|--create-first-item|--verify-first-item|--publish-first-item|--update-existing)
       [[ -z "$MODE" ]] || { echo "Choose one publish stage" >&2; exit 2; }
       MODE="$1" ;;
+    --update-preview)
+      EXTRA_ARGS+=("--update-preview") ;;
     --plan|--expected-plan-sha256)
       [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || { echo "Missing value for $1" >&2; exit 2; }
       if [[ "$1" == --plan ]]; then PLAN="$2"; else PLAN_HASH="$2"; fi
@@ -121,5 +124,5 @@ if [[ -z "$WORKSHOP_ID" ]]; then
   esac
 else
   [[ "$MODE" == --update-existing ]] || { echo "Configured Workshop ID found; choose --update-existing" >&2; exit 2; }
-  run_publisher --vdf "$VDF"
+  run_publisher --vdf "$VDF" "${EXTRA_ARGS[@]}"
 fi
