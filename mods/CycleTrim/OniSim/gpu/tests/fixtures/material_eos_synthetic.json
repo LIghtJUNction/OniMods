@@ -1,0 +1,35 @@
+{
+  "source": "synthetic-ci-fixture-not-an-official-game-table",
+  "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "units": {
+    "mass_kg_per_game_unit": 1.0,
+    "molar_mass_kg_per_mol_per_game_unit": 0.001,
+    "temperature_kelvin_per_game_unit": 1.0,
+    "temperature_offset_kelvin": 0.0,
+    "pressure_pa_per_game_unit": 1.0
+  },
+  "max_relative_deviation": 1e-10,
+  "gases": [
+    {
+      "name": "SyntheticOxygen",
+      "molar_mass": 32.0,
+      "default_mass": 0.032,
+      "default_temperature": 300.0,
+      "default_pressure": 2494.338785445972
+    },
+    {
+      "name": "SyntheticCarbonDioxide",
+      "molar_mass": 44.0,
+      "default_mass": 0.044,
+      "default_temperature": 300.0,
+      "default_pressure": 2494.338785445972
+    },
+    {
+      "name": "SyntheticNitrogen",
+      "molar_mass": 28.0,
+      "default_mass": 0.028,
+      "default_temperature": 300.0,
+      "default_pressure": 2494.338785445972
+    }
+  ]
+}

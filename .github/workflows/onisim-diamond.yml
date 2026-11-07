@@ -71,6 +71,8 @@ jobs:
         run: cargo +1.99.1 test --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --lib
       - name: Compile Vulkan benchmark executables
         run: cargo +1.99.1 check --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --all-targets
+      - name: Smoke-test the EOS calibration CLI with synthetic records
+        run: cargo +1.99.1 run --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --bin material-eos-calibrate -- mods/CycleTrim/OniSim/gpu/tests/fixtures/material_eos_synthetic.json
 
   pressure-projection-reference:
     runs-on: ubuntu-latest
