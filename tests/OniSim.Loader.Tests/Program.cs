@@ -14,6 +14,9 @@ if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile")
 
 PortableProfileTests.Run();
 NativePlatform.RequireSupported();
+Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
+if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Disabled)
+    throw new Exception("The standalone loader must be disabled unless explicitly opted in");
 var directory = Path.Combine(Path.GetTempPath(), "onisim-loader-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);
 try
@@ -27,6 +30,9 @@ try
     Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "off");
     if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Disabled)
         throw new Exception("The startup disable override was ignored");
+    Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "on");
+    if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Refused)
+        throw new Exception("Explicit standalone opt-in did not attempt the guarded loader path");
     Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "invalid");
     if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Refused)
         throw new Exception("An invalid override was accepted");

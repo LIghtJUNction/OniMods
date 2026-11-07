@@ -3,9 +3,9 @@
 OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与可观测行为实现 Rust 版本。
 它已纳入 CycleTrim 源码与构建工程；游戏接管、性能和 Mod 兼容性仍在验收，当前不能当作已经验证的替代内核。
 
-当前开发源码已独立重建为 `2772e526…`，43 项 Rust 测试通过；单/四工作线程各
-287 个原生用例、9739 次发布对比通过。压力扫描借用优化通过两组增量原生性能门槛。新版已通过指定存档的无头存读档往返，
-完整线程采样、图形和整局性能验收仍待完成；旧文件的成功记录不能代替它。详见 [PROGRESS.md](PROGRESS.md)。
+当前源代码快照已接入 inline thermal command queue，47 项 Release Rust 测试通过。该结果只证明对应源码的单元测试；
+不代表整局 FPS、RSS 或单/四线程加速。四线程整体性能门禁仍未通过；当前快照没有对应的真实游戏验收，旧二进制的运行回执不能替代。
+详见 [PROGRESS.md](PROGRESS.md)。
 
 质量搜索的 FIFO 去重及早期热／气体实验的整合范围，见
 [Transport 整合记录](transport-lab/INTEGRATION-20261106.md)。历史实验与当前生产回归分别验证，
@@ -21,13 +21,16 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 
 - 直接使用官方消息布局，没有额外消息封包协议或 C# 全图镜像。
 - 源码已包含气液、热传导、相变、疾病、辐射、质量组件和热量组件。
+- 2026-11-07 静态路由审计在源码中找到全部 62 个官方消息 ID：59 个进入生命周期、世界、地块或组件处理器；`SetVisibleCells`、`ToggleProfiler`、`RadiationSickness` 这 3 个按固定版本官方派发注册表缺席证据作为 no-op。ID 被识别不等于行为已通过差分验证。
+- `Elements_CreateInteractions` 已解析并保存规则，但 `do_gas_interaction` / `do_gas_interaction_pair` 目前没有固定步进调用点。对固定版本官方控制流的静态检查也没有找到旧三参数 helper 的入边；是否需要把它接入主循环尚未证实，不能仅凭函数存在就猜测调用时机。
 - 原生存档、世界初始化、挖掘和质量命令、CPU 贴图输出已接线，行为对照继续扩展。
 - 帧命令在封帧时移交所有权，按官方各阶段顺序处理。
 - 调度已接入 Step 批次、双 GameData、ready 屏障与异步工作线程，完整调度等价性仍待验收。
   细节见 [FRAME-SYNC.md](FRAME-SYNC.md)。
 - C# 独立调用层提供长度边界、错误检查、会话生命周期和借用指针视图。
-  CycleTrim 的 PLib Mod 设置默认启用 OniSim，可在游戏 Mod 设置页关闭，重启后生效；
-  `CYCLETRIM_ONISIM_ENABLE=0` 也可在启动前强制关闭。隔离存档已验证接管、短步运行与存档往返；完整兼容性尚未验收。
+  CycleTrim 的 PLib 设置使用新的 `EnableOniSimExperimental` 字段显式 opt-in，默认关闭；
+  旧版 `EnableOniSim` 配置键不再读取，避免历史默认开启值在升级后继续接管。修改后需要重启。
+  `CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭。真实游戏完整兼容性尚未验收。
 - 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。验收与复现见 [PARALLEL-VALIDATION.md](PARALLEL-VALIDATION.md)。
 - 疾病发射器的菱形遍历经过 Lean 4.19 证明和 65,040 个差分场景验证；该组件基准在记录的场景中快 13.894 倍，不代表整局性能提升。详见 [lean-lab/README.md](lean-lab/README.md)。
 
@@ -65,9 +68,9 @@ rtk dotnet build mods/CycleTrim/OniSim/managed/OniSim.Host/OniSim.Host.csproj -c
 ```
 
 编译通过只证明源码和 ABI 边界可构建，不证明游戏行为、存档、DLC 或其他 Mod 兼容。
-CycleTrim 在支持的 Linux x64 环境默认尝试使用 OniSim；可在 PLib Mod 设置页关闭并重启，或设置
-`CYCLETRIM_ONISIM_ENABLE=0` 在启动前强制关闭。在完成多场景、长时与原版对照验收前，
-不要把它当作已验证的原版替代品。
+CycleTrim 在支持的 Linux x64 环境默认保留官方 SimDLL，不接管游戏物理管线。只有在 PLib 设置页
+显式开启 `EnableOniSimExperimental` 并重启后才会尝试映射；`CYCLETRIM_ONISIM_ENABLE=0`
+可在启动前强制关闭。在完成多场景、长时与原版对照验收前，不要把它当作已验证的原版替代品。
 
 `development-build.json` 与 `first-run.json` 记录旧源码快照；退役的 OSB1 协议保存在 [history/](history/)。这些都是历史材料，不能代表当前源码。
 

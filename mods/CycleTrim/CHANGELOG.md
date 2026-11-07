@@ -1,3 +1,14 @@
+## 2026-11-07 — Unreleased
+
+- Disable OniSim runtime mapping by default in CycleTrim and the standalone
+  loader. The official SimDLL remains active unless the experimental option is
+  explicitly enabled.
+- Rename the PLib opt-in key to `EnableOniSimExperimental`; do not reuse the
+  old persisted `EnableOniSim` key, preventing upgrades from silently
+  retaining the previous default-true takeover.
+- Keep the native library packaged for opt-in testing; this changes runtime
+  activation policy, not the shipped native artifact.
+
 # Changelog / 更新日志
 
 Generated from `git log -- mods/CycleTrim`.
