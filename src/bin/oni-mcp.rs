@@ -119,8 +119,9 @@ fn main() -> Result<()> {
     let mut settings=load(&path)?;
     match cli.command {
         Commands::SetUrl { url } => {
-            let parsed=url::Url::parse(&url).context("invalid URL")?;
-            if !matches!(parsed.scheme(),"http"|"https") || parsed.host_str().is_none() { bail!("endpoint must be an absolute HTTP(S) URL"); }
+            let valid = (url.starts_with("http://") || url.starts_with("https://"))
+                && url.split_once("://").map(|(_, rest)| !rest.is_empty() && !rest.starts_with('/')).unwrap_or(false);
+            if !valid { bail!("endpoint must be an absolute HTTP(S) URL"); }
             settings.url=url; save(&path,&settings)?; println!("OniMcp endpoint saved.");
         }
         Commands::SetSecret { secret } => {
