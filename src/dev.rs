@@ -1,7 +1,6 @@
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
 
 use crate::archive;
 use crate::build;
@@ -13,7 +12,8 @@ use crate::mod_config_backup;
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     game_process::ensure_stopped()?;
     let source_dir = selected.config.project_abs(&cfg.repo_root);
-    let static_id = read_static_id(&source_dir).context("源码缺少可确认的 Mod staticID")?;
+    let static_id =
+        identity::static_id_from_project(&source_dir).context("源码缺少可确认的 Mod staticID")?;
     let keep = KeepSource {
         kind: SourceKind::Dev,
         id: selected.name.clone(),
@@ -156,26 +156,6 @@ fn count_enabled_mods(mods: &[Value]) -> usize {
                 || item.get("status").and_then(Value::as_i64) == Some(1)
         })
         .count()
-}
-
-fn read_static_id(dev_dir: &Path) -> Option<String> {
-    let content = fs::read_to_string(dev_dir.join("mod.yaml")).ok()?;
-    content.lines().find_map(|line| {
-        let (key, value) = line.split_once(':')?;
-        if key.trim() != "staticID" {
-            return None;
-        }
-        let cleaned = value
-            .trim()
-            .trim_matches('"')
-            .trim_matches('\'')
-            .to_string();
-        if cleaned.is_empty() {
-            None
-        } else {
-            Some(cleaned)
-        }
-    })
 }
 
 fn ensure_expansion_enabled(item: &mut Value) {

@@ -12,7 +12,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     game_process::ensure_stopped()?;
 
     let source_dir = selected.config.project_abs(&cfg.repo_root);
-    let static_id = read_static_id(&source_dir.join("mod.yaml"))
+    let static_id = identity::static_id_from_project(&source_dir)
         .with_context(|| format!("读取目标 Mod staticID 失败：{}", source_dir.display()))?;
     let keep = KeepSource {
         kind: SourceKind::Local,

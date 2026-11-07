@@ -483,3 +483,24 @@ fn a_legacy_directory_alias_cannot_delete_the_new_dev_installation() {
         "new-package"
     );
 }
+
+#[test]
+fn scoped_uninstall_keeps_one_matching_other_source() {
+    for (scope, retained) in [("local", "Dev"), ("dev", "Local")] {
+        let project = Project::new();
+        for installed_scope in ["Local", "Dev"] {
+            let installed = project.installed(installed_scope);
+            fs::write(installed.join("mod.yaml"), "staticID: test.Alpha\n").unwrap();
+        }
+        let output = project.run(&["uninstall", "--scope", scope], "0");
+        assert!(output.status.success(), "{output:?}");
+        assert!(
+            project.mods().join(retained).join("Alpha").is_dir(),
+            "scope={scope}, retained={retained}, stdout={}, stderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let removed = if scope == "local" { "Local" } else { "Dev" };
+        assert!(!project.mods().join(removed).join("Alpha").exists());
+    }
+}

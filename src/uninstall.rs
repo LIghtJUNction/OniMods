@@ -34,8 +34,13 @@ pub fn run(cfg: &Config, selected: &SelectedMod, scope: UninstallScope) -> Resul
 fn find_static_id(cfg: &Config, selected: &SelectedMod) -> Result<String> {
     let manifest = selected.config.project_abs(&cfg.repo_root).join("mod.yaml");
     if manifest.is_file() {
-        return identity::read_static_id(&manifest)
+        return identity::static_id_from_project(&selected.config.project_abs(&cfg.repo_root))
             .with_context(|| format!("读取 Mod 身份失败：{}", manifest.display()));
+    }
+    if let Ok(static_id) =
+        identity::static_id_from_project(&selected.config.project_abs(&cfg.repo_root))
+    {
+        return Ok(static_id);
     }
     let roots = cfg.game_mods_dir()?;
     for scope in ["Local", "Dev", "dev"] {

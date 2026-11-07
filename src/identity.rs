@@ -50,16 +50,8 @@ pub fn best_non_workshop_source(cfg: &Config, static_id: &str) -> Result<Option<
         ("dev", SourceKind::Dev),
     ] {
         let root = mods_root.join(dirname);
-        match fs::symlink_metadata(&root) {
-            Ok(metadata) if metadata.file_type().is_symlink() => continue,
-            Ok(metadata) if !metadata.is_dir() => {
-                bail!("Mod 来源路径不是普通目录：{}", root.display())
-            }
-            Ok(_) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(error) => {
-                return Err(error).with_context(|| format!("检查安装来源失败：{}", root.display()));
-            }
+        if validate_scope_root(&mods_root, dirname)? {
+            continue;
         }
         match fs::read_dir(&root) {
             Ok(entries) => {
@@ -96,12 +88,12 @@ pub fn best_source_excluding(
     static_id: &str,
     excluded: SourceKind,
 ) -> Result<Option<KeepSource>> {
-    if excluded != SourceKind::Local
+    if excluded != SourceKind::Dev
         && let Some(source) = find_directory_source(cfg, static_id, "Dev", SourceKind::Dev)?
     {
         return Ok(Some(source));
     }
-    if excluded != SourceKind::Dev
+    if excluded != SourceKind::Local
         && let Some(source) = find_directory_source(cfg, static_id, "Local", SourceKind::Local)?
     {
         return Ok(Some(source));
@@ -146,15 +138,10 @@ fn find_directory_source(
     dirname: &str,
     kind: SourceKind,
 ) -> Result<Option<KeepSource>> {
-    let root = cfg.game_mods_dir()?.join(dirname);
-    match fs::symlink_metadata(&root) {
-        Ok(metadata) if metadata.file_type().is_symlink() => return Ok(None),
-        Ok(metadata) if !metadata.is_dir() => bail!("Mod 来源路径不是普通目录：{}", root.display()),
-        Ok(_) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(error).with_context(|| format!("扫描安装目录失败：{}", root.display()));
-        }
+    let mods_root = cfg.game_mods_dir()?;
+    let root = mods_root.join(dirname);
+    if validate_scope_root(&mods_root, dirname)? {
+        return Ok(None);
     }
     let entries = match fs::read_dir(&root) {
         Ok(entries) => entries,
@@ -308,17 +295,8 @@ impl CleanupPlan {
 
         for dirname in ["Dev", "dev", "Local"] {
             let root = mods_root.join(dirname);
-            match fs::symlink_metadata(&root) {
-                Ok(metadata) if metadata.file_type().is_symlink() => continue,
-                Ok(metadata) if !metadata.is_dir() => {
-                    bail!("Mod 来源路径不是普通目录：{}", root.display())
-                }
-                Ok(_) => {}
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-                Err(error) => {
-                    return Err(error)
-                        .with_context(|| format!("扫描 Mod 目录失败：{}", root.display()));
-                }
+            if validate_scope_root(&mods_root, dirname)? {
+                continue;
             }
             let entries = match fs::read_dir(&root) {
                 Ok(entries) => entries,
@@ -376,34 +354,33 @@ impl CleanupPlan {
             && target.kind != SourceKind::Workshop
         {
             let siblings: &[&str] = match target.kind {
-                    SourceKind::Local => &["Dev", "dev"],
-                    SourceKind::Dev => &["Local", "dev"],
-                    SourceKind::Workshop => &[],
-                };
-                let scope = match target.kind {
-                    SourceKind::Local => "Local",
-                    SourceKind::Dev => "Dev",
-                    SourceKind::Workshop => unreachable!(),
-                };
-                let canonical_target = canonical_dir(&mods_root.join(scope).join(&target.id));
-                for sibling in siblings {
-                    let path = mods_root.join(sibling).join(&target.id);
-                    if fs::symlink_metadata(&path).is_err()
-                        || canonical_dir(&path) == canonical_target
-                    {
+                SourceKind::Local => &["Dev", "dev"],
+                SourceKind::Dev => &["Local", "dev"],
+                SourceKind::Workshop => &[],
+            };
+            let scope = match target.kind {
+                SourceKind::Local => "Local",
+                SourceKind::Dev => "Dev",
+                SourceKind::Workshop => unreachable!(),
+            };
+            let canonical_target = canonical_dir(&mods_root.join(scope).join(&target.id));
+            for sibling in siblings {
+                let path = mods_root.join(sibling).join(&target.id);
+                if fs::symlink_metadata(&path).is_err() || canonical_dir(&path) == canonical_target
+                {
+                    continue;
+                }
+                if path.is_dir() && !path.join("mod.yaml").is_file() {
+                    if *sibling == "dev" {
                         continue;
                     }
-                    if path.is_dir() && !path.join("mod.yaml").is_file() {
-                        if *sibling == "dev" {
-                            continue;
-                        }
-                        bail!(
-                            "无法验证同名旧 Mod 的 staticID，保留目录并停止安装：{}",
-                            path.display()
-                        );
-                    }
+                    bail!(
+                        "无法验证同名旧 Mod 的 staticID，保留目录并停止安装：{}",
+                        path.display()
+                    );
                 }
             }
+        }
 
         Ok(Self {
             directories: directories.into_iter().collect(),
@@ -573,6 +550,35 @@ fn canonical_dir(path: &Path) -> PathBuf {
     fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
+/// Returns true only for the historical lowercase `dev` alias pointing at `Dev`.
+fn validate_scope_root(mods_root: &Path, dirname: &str) -> Result<bool> {
+    let root = mods_root.join(dirname);
+    match fs::symlink_metadata(&root) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            let link = fs::read_link(&root)
+                .with_context(|| format!("读取 Mod 目录符号链接失败：{}", root.display()))?;
+            let linked = if link.is_absolute() {
+                link
+            } else {
+                root.parent().context("Mod 根目录没有父目录")?.join(link)
+            };
+            let expected = mods_root.join("Dev");
+            if dirname == "dev"
+                && (linked == expected || canonical_dir(&linked) == canonical_dir(&expected))
+            {
+                return Ok(true);
+            }
+            bail!("Mod 来源目录不允许使用符号链接：{}", root.display());
+        }
+        Ok(metadata) if !metadata.is_dir() => {
+            bail!("Mod 来源路径不是普通目录：{}", root.display())
+        }
+        Ok(_) => Ok(false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        Err(error) => Err(error).with_context(|| format!("检查安装来源失败：{}", root.display())),
+    }
+}
+
 pub fn read_static_id(path: &Path) -> Result<String> {
     let content = fs::read_to_string(path)?;
     for line in content.lines() {
@@ -588,6 +594,51 @@ pub fn read_static_id(path: &Path) -> Result<String> {
     bail!("mod.yaml 缺少 staticID：{}", path.display())
 }
 
+pub fn static_id_from_project(project_dir: &Path) -> Result<String> {
+    let manifest = project_dir.join("mod.yaml");
+    if manifest.is_file() {
+        return read_static_id(&manifest);
+    }
+    let mut found = BTreeSet::new();
+    for entry in fs::read_dir(project_dir)
+        .with_context(|| format!("读取 Mod 项目目录失败：{}", project_dir.display()))?
+    {
+        let entry = entry?;
+        if entry.file_type()?.is_file()
+            && entry.path().extension().and_then(|value| value.to_str()) == Some("csproj")
+        {
+            let source = fs::read_to_string(entry.path())?;
+            if let Some(value) = xml_property(&source, "ModStaticID") {
+                if value.contains("$(") {
+                    bail!(
+                        "项目 ModStaticID 依赖未解析的 MSBuild 属性：{}",
+                        entry.path().display()
+                    );
+                }
+                if !value.trim().is_empty() {
+                    found.insert(value.trim().to_owned());
+                }
+            }
+        }
+    }
+    match found.len() {
+        1 => Ok(found.into_iter().next().expect("one staticID")),
+        0 => bail!("项目中没有可确认的 staticID：{}", project_dir.display()),
+        _ => bail!(
+            "项目中的 .csproj 声明了多个不同的 ModStaticID：{}",
+            project_dir.display()
+        ),
+    }
+}
+
+fn xml_property(source: &str, name: &str) -> Option<String> {
+    let start_tag = format!("<{name}>");
+    let end_tag = format!("</{name}>");
+    let start = source.find(&start_tag)? + start_tag.len();
+    let end = source[start..].find(&end_tag)? + start;
+    Some(source[start..end].trim().to_owned())
+}
+
 fn restore(moved: &[(PathBuf, PathBuf)]) -> Result<()> {
     for (source, backup) in moved.iter().rev() {
         if backup.exists() {
@@ -596,4 +647,34 @@ fn restore(moved: &[(PathBuf, PathBuf)]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::static_id_from_project;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn reads_generated_manifest_identity_from_project_file() {
+        let path = std::env::temp_dir().join(format!(
+            "onim-static-id-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&path).expect("create temp project");
+        fs::write(
+            path.join("Example.csproj"),
+            "<Project><PropertyGroup><ModStaticID>Example.Owner</ModStaticID></PropertyGroup></Project>",
+        )
+        .expect("write csproj");
+        assert_eq!(
+            static_id_from_project(&path).expect("project identity"),
+            "Example.Owner"
+        );
+        fs::remove_dir_all(path).expect("remove temp project");
+    }
 }
