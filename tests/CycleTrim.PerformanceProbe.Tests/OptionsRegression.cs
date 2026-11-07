@@ -10,6 +10,8 @@ namespace CycleTrim.PerformanceProbe.Tests
 
         internal static void Run()
         {
+            Check(!new OniSimOptions().EnableOniSim,
+                "native simulation must remain disabled by default until runtime acceptance is complete");
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
             Check(!new OniSimOptions().OptimizePowerOverlay,
@@ -22,7 +24,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 "state machine lookup reuse must remain opt-in");
             Check(new OniSimOptions().ConduitAnimation == ConduitAnimationQuality.Full,
                 "conduit display sampling must preserve full quality by default");
-            Load(null, expectedEnabled: true);
+            Load(null, expectedEnabled: false);
 
             var disabled = new OniSimOptions
             {
@@ -57,10 +59,10 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizeStateMachineLookups = true,
                 ConduitAnimation = ConduitAnimationQuality.Quarter
             };
-            Load(mixed, expectedEnabled: true);
+            Load(mixed, expectedEnabled: false);
 
             POptions.ThrowOnRead = true;
-            try { Load(mixed, expectedEnabled: true, useDefaults: true); }
+            try { Load(mixed, expectedEnabled: false, useDefaults: true); }
             finally { POptions.ThrowOnRead = false; }
             Load(null, expectedEnabled: true);
             Console.WriteLine("PASS CycleTrim options: " + assertions
