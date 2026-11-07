@@ -12,8 +12,25 @@ OLD_PROCESS_WAIT_SECONDS="${ONI_OLD_PROCESS_EXIT_WAIT_SECONDS:-30}"
 PROBE_OUTPUT="$LOG_DIR/oni-mcp-probe.txt"
 PROBE_ERROR="$LOG_DIR/oni-mcp-probe.err"
 
+export DISPLAY="${DISPLAY:-:0}"
+if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/$(id -u)" ]; then
+  export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -e "$XDG_RUNTIME_DIR/wayland-1" ]; then
+  export WAYLAND_DISPLAY="wayland-1"
+fi
+
+is_steam_running() {
+  pgrep -x steam >/dev/null 2>&1 || pgrep -f "steam.sh" >/dev/null 2>&1 || pgrep -f "steamrt64/steam" >/dev/null 2>&1
+}
+
 oni_pids() {
-  pidof OxygenNotIncluded 2>/dev/null || true
+  local pids
+  pids="$(pidof OxygenNotIncluded 2>/dev/null || true)"
+  if [ -z "$pids" ]; then
+    pids="$(pgrep -x OxygenNotIncluded 2>/dev/null || true)"
+  fi
+  printf '%s' "$pids"
 }
 
 pid_in_list() {
@@ -67,17 +84,17 @@ if ! command -v steam >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! pgrep -x steam >/dev/null 2>&1; then
+if ! is_steam_running; then
   echo "steam_client=absent starting"
   nohup setsid steam -silent >"$LOG_DIR/oni-steam-client.log" 2>&1 </dev/null &
   echo "steam_client_pid=$!"
   for _ in $(seq 1 "$STEAM_CLIENT_WAIT_SECONDS"); do
-    pgrep -x steam >/dev/null 2>&1 && break
+    is_steam_running && break
     sleep 1
   done
 fi
 
-if ! pgrep -x steam >/dev/null 2>&1; then
+if ! is_steam_running; then
   echo "steam_client=timeout"
   tail -120 "$LOG_DIR/oni-steam-client.log" 2>/dev/null || true
   exit 1

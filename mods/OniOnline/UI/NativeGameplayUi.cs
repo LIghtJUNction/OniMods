@@ -20,11 +20,11 @@ namespace OniOnline.UI
                 if (checkedFrame == Time.frameCount && checkedGame == game) return ready;
                 checkedFrame = Time.frameCount;
                 checkedGame = game;
-                var characters = Object.FindFirstObjectByType<MinionSelectScreen>();
-                var destination = Object.FindFirstObjectByType<ColonyDestinationSelectScreen>();
-                ready = (characters == null || !characters.IsScreenActive()) &&
-                    (destination == null || !destination.IsScreenActive()) &&
-                    global::OniOnline.Runtime.OnlineInputControls.ModalStackAllowsGameplayUi();
+                // Once game.baseAlreadyCreated is true, startup screens (MinionSelectScreen /
+                // ColonyDestinationSelectScreen) are already destroyed and never exist in scene.
+                // Do NOT call FindFirstObjectByType here as it traverses hundreds of thousands
+                // of Unity scene objects every single frame, causing severe frame drops.
+                ready = global::OniOnline.Runtime.OnlineInputControls.ModalStackAllowsGameplayUi();
                 return ready;
             }
         }

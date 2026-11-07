@@ -41,6 +41,8 @@ namespace CycleTrim.Patches
             internal volatile int Tick;
             internal int QueueQuotaTick = -1;
             internal int QueueQuota = 1;
+            internal int LastSkipTick = -1;
+            internal int CurrentTickSkips;
         }
 
         private sealed class NavigatorState
@@ -284,6 +286,13 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
+                var managerState = States.GetValue(__instance, StateFactory);
+                if (managerState.LastSkipTick != managerState.Tick)
+                {
+                    managerState.LastSkipTick = managerState.Tick;
+                    managerState.CurrentTickSkips = 0;
+                }
+
                 var abilities = (CreaturePathFinderAbilities)nav.GetCurrentAbilities();
                 var prefabInstanceId = PrefabInstanceId(abilities);
                 var stamp = CreateStamp(nav, abilities, prefabInstanceId);
@@ -300,6 +309,14 @@ namespace CycleTrim.Patches
                     }
                     admitted = state.Admission.TryAdmit(stamp, supported: true);
                 }
+
+                // If consecutive skips exceed budget this tick, force admission to avoid
+                // scanning unbounded numbers of throttled creatures in a single tick.
+                if (!admitted && managerState.CurrentTickSkips >= MaxConsecutiveSkips)
+                {
+                    admitted = true;
+                }
+
                 if (admitted)
                 {
                     __result = new AsyncPathProber.WorkOrder
@@ -322,6 +339,12 @@ namespace CycleTrim.Patches
                 }
                 else
                 {
+                    managerState.CurrentTickSkips++;
+                    var navigators = Navigators(__instance);
+                    if (navigators != null && navigators.ContainsKey(nav))
+                    {
+                        navigators[nav] = 0;
+                    }
                     __result = new AsyncPathProber.WorkOrder
                     {
                         navigator = nav,

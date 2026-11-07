@@ -40,7 +40,8 @@ namespace CycleTrim.Patches
             int cell,
             bool forceUpdate,
             bool reportOccupation,
-            bool executePathProbeTaskAsync)
+            bool executePathProbeTaskAsync,
+            bool canTraverseSubmerged)
         {
             var context = (int)navigator.CurrentNavType & 0xFF;
             context |= ((int)navigator.flags & 0xFF) << 8;
@@ -56,9 +57,7 @@ namespace CycleTrim.Patches
             {
                 context |= 1 << 18;
             }
-            var canTraverseSubmerged = PathFinder.IsSubmerged(cell)
-                || Db.Get().Attributes.MaxUnderwaterTravelCost.Lookup(navigator) == null;
-            if (canTraverseSubmerged)
+            if (canTraverseSubmerged || PathFinder.IsSubmerged(cell))
             {
                 context |= 1 << 19;
             }
@@ -140,7 +139,8 @@ namespace CycleTrim.Patches
                     cell,
                     forceUpdate,
                     ___reportOccupation,
-                    ___executePathProbeTaskAsync));
+                    ___executePathProbeTaskAsync,
+                    ((CreaturePathFinderAbilities)___abilities).canTraverseSubmered));
         }
     }
 }

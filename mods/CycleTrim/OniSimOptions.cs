@@ -69,10 +69,10 @@ namespace CycleTrim
         public bool OptimizeConveyorPathLookup { get; set; } = true;
 
         [Option("动画重复更新优化 / Animation symbol updates",
-            "动画覆盖数据逐位相同时保留版本号，减少重复的纹理数据复制。默认开启；需要重启游戏。",
+            "动画覆盖数据逐位相同时保留版本号，减少重复的纹理数据复制。默认关闭；需要重启游戏。",
             "优化 / Optimizations")]
         [RestartRequired]
-        public bool OptimizeAnimationSymbols { get; set; } = true;
+        public bool OptimizeAnimationSymbols { get; set; }
 
         [Option("状态机查询复用 / State machine lookups",
             "复用列表未变化时的状态机查询结果，减少重复扫描。默认开启；需要重启游戏。",

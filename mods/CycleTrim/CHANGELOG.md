@@ -1,5 +1,8 @@
-## 2026-11-07 — Unreleased
+## 2026-11-07 — 0.4.3
 
+- Fix severe frame drop (1-2 FPS) in late-game saves caused by AsyncPathProber.Manager loop starvation: reset penalty score on throttled navigators (navigators[nav] = 0) to prevent permanent ordering priority monopolization, and bound per-tick skips.
+- Optimize stationary critter navigation probe check by directly querying cached CreaturePathFinderAbilities.canTraverseSubmered, eliminating repeated database and attribute lookups.
+- Disable experimental animation symbol optimization by default to avoid Mono JIT unaligned read overhead on Linux x64.
 - Disable OniSim runtime mapping by default in CycleTrim and the standalone
   loader. The official SimDLL remains active unless the experimental option is
   explicitly enabled.
