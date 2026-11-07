@@ -89,11 +89,10 @@ impl MulticomponentGpu {
         self.readback.map_async(wgpu::MapMode::Read,..,move|r|{let _=send.send(r);});
         self.device.poll(wgpu::PollType::Wait{submission_index:Some(submission),timeout:Some(Duration::from_secs(30))}).map_err(|e|e.to_string())?;
         receive.recv_timeout(Duration::from_secs(2)).map_err(|e|e.to_string())?.map_err(|e|e.to_string())?;
-        {let view=self.readback.get_mapped_range(..);output.copy_from_slice(bytemuck::cast_slice(&view));}
+        {let view=self.readback.get_mapped_range(..).map_err(|e|e.to_string())?;output.copy_from_slice(bytemuck::cast_slice(&view));}
         self.readback.unmap();Ok(())
     }
 }
-fn make_entry(binding:u32,buffer:&wgpu::Buffer)->wgpu::BindGroupEntry<'_>{bind(binding,buffer)}
 fn bind(binding:u32,buffer:&wgpu::Buffer)->wgpu::BindGroupEntry<'_>{wgpu::BindGroupEntry{binding,resource:buffer.as_entire_binding()}}
 
 pub fn cpu_step(state:&State<'_>,width:usize,height:usize,channels:usize,dt:f32,output:&mut[f32]){
