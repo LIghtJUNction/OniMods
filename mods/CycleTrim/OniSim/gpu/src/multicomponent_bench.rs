@@ -196,7 +196,7 @@ fn main() -> Result<(), String> {
         }
         for _ in 0..31 {
             let start = Instant::now();
-            cpu_step(&state, width, height, channels, dt, &mut cpu_mass, &mut cpu_enthalpy);
+            cpu_step(&state, width, height, channels, dt, &mut cpu_mass, &mut cpu_enthalpy)?;
             cpu_times.push(start.elapsed().as_secs_f64() * 1e6);
 
             let start = Instant::now();
