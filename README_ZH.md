@@ -4,12 +4,12 @@
 
 <p align="center">
   <a href="mods/OniMcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/OniMcp/preview.png" width="47%" /></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 早期实验性性能模组" src="mods/CycleTrim/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 下个版本实验拆掉一格一物" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
 <p align="center">
   <a href="mods/OniOnline/README.md"><img alt="OniOnline — 联机框架" src="mods/OniOnline/preview.png" width="47%" /></a>
-  <a href="mods/Jlib/README.md"><img alt="Jlib — 共享前置库" src="mods/Jlib/Jlib/preview.png" width="47%" /></a>
+  <a href="mods/Jlib/README.md"><img alt="Jlib — 共享前置库" src="https://raw.githubusercontent.com/LIghtJUNction/Jlib/e72c45633a05a54187a3ee1933243a46795932ab/Jlib/preview.png" width="47%" /></a>
 </p>
 
 <div align="center">
@@ -33,7 +33,7 @@
 
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
 - `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地。
-- `CycleTrim`：早期实验性性能模组。重构底层算法，把尽可能多的运算搬到 GPU。先加速，再兼容。
+- `CycleTrim`：早期实验性性能模组。下个版本实验拆掉一格一物，把组分通量核搬到 GPU。先加速，再兼容。
 - `OniOnline`：联机框架。安装后默认是大厅和聊天，其他玩法由单独模组注册。
 - `Jlib`：OniMcp 和 CycleTrim 共用的 PLib 兼容前置库。游戏里要单独启用，并排在依赖它的模组前面。
 - `OniModTemplate`：用 `onim init` 开新模组时的目录模板。
@@ -60,7 +60,7 @@
 |------|------|------|
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
-| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 早期实验性性能模组：重构底层算法并尽量搬到 GPU，先加速再兼容 |
+| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 早期实验。下个版本试着用 GPU 通量核替换一格一物，先加速再兼容 |
 | `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 联机框架，内置大厅和聊天；其他玩法由单独模组提供 |
 | `Jlib` | [mods/Jlib/](mods/Jlib/) | 可独立安装的 PLib 兼容共享前置库 |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | `onim init` 使用的新模组目录模板 |

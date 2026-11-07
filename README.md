@@ -13,12 +13,12 @@
 
 <p align="center">
   <a href="mods/OniMcp/README_EN.md"><img alt="OniMcp — MCP-native colony operations" src="mods/OniMcp/preview.png" width="47%"></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — early experimental performance mod" src="mods/CycleTrim/preview.png" width="47%"></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — next version experiments past one element per cell" src="mods/CycleTrim/preview.png" width="47%"></a>
 </p>
 
 <p align="center">
   <a href="mods/OniOnline/README.md"><img alt="OniOnline — multiplayer framework" src="mods/OniOnline/preview.png" width="47%"></a>
-  <a href="mods/Jlib/README.md"><img alt="Jlib — shared PLib-compatible library" src="mods/Jlib/Jlib/preview.png" width="47%"></a>
+  <a href="mods/Jlib/README.md"><img alt="Jlib — shared PLib-compatible library" src="https://raw.githubusercontent.com/LIghtJUNction/Jlib/e72c45633a05a54187a3ee1933243a46795932ab/Jlib/preview.png" width="47%"></a>
 </p>
 
 ## See it working
@@ -37,7 +37,7 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | --- | --- | --- |
 | **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
 | **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) |
-| **CycleTrim** | Early experimental performance mod: rebuild the simulation work and move it toward the GPU, speed first | [Module docs](mods/CycleTrim/README.md) |
+| **CycleTrim** | Early experiment. Next version tries replacing one-element-per-cell flow with a GPU flux kernel. Speed first | [Module docs](mods/CycleTrim/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
 | **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
