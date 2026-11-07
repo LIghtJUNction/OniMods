@@ -41,6 +41,8 @@
 | `onionline.shared-clock.v1` | 玩法选配 | 多人共享游戏暂停与 1..3 档倍速同步 | `SharedClockPolicy` |
 | `onionline.entity-identity.v1` | 玩法选配 | 跨进程确定性 64 位实体 ID 映射与防 ABA 墓碑 | `DeterministicNetId`, `NetworkIdentityMap<T>` |
 | `onionline.anim-sync.v1` | 玩法选配 | 动画状态对齐、智能平滑调速与分片防尖峰 | `AnimReconciler`, `AnimSyncSharder` |
+| `onionline.cell-batch.v1` | 玩法选配 | 矩形框与离散网格指令高密 Delta 批处理 | `CellBatchCodec` |
+| `onionline.research-sync.v1` | 玩法选配 | 科技树协同、单调点数累加与快照导出导入 | `ResearchProgression` |
 | `onionline.native-planet.v1` | 原生适配器 | 原生 WorldContainer 星球清单与尺寸读取 | `NativeWorldSource` |
 | `onionline.native-observation.v1` | 原生适配器 | 原生视口瓦片采样与授权观察 | `NativeWorldInterestSource` |
 | `onionline.native-star-map.v1` | 原生适配器 (DLC) | 眼冒金星 DLC 原生星图读取 | `LocalNativeStarMap` |

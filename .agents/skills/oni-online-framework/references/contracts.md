@@ -22,7 +22,7 @@
 - `NativeAdapterGuard` 只允许已登记游戏构建和能力进入原生调用。未知构建返回 `native_adapter_unavailable`，不读取、不写入、不破坏现有存档。
 - `NativeChatEntry` 的入口属于殖民地 HUD；它只在 `NativeGameplayUi.Ready` 且联机会话存在时出现。重连期间保留入口，窗口显示重连状态并禁用发送。
 - 大厅和聊天是框架能力。默认玩法是 `onionline.chat`。浏览页可以创建聊天房间。星球开局和星图只属于声明 `onionline.worlds.v1` 的玩法模组。
-- `onionline.shared-simulation.v1`、`onionline.strict-admission.v1`、`onionline.presence.v1`、`onionline.shared-clock.v1`、`onionline.entity-identity.v1` 和 `onionline.anim-sync.v1` 不在默认会话里。共用模拟的快照确认、内容哈希、严格差异清单、光标与框选工具标记、共享暂停、跨进程确定实体 ID 映射与动画分片对齐均由对应玩法声明后再启用。共享暂停还要同时有共用模拟。聊天不因构建号、DLC 或模组清单不同而失败。
+- `onionline.shared-simulation.v1`、`onionline.strict-admission.v1`、`onionline.presence.v1`、`onionline.shared-clock.v1`、`onionline.entity-identity.v1`、`onionline.anim-sync.v1`、`onionline.cell-batch.v1` 和 `onionline.research-sync.v1` 不在默认会话里。共用模拟的快照确认、内容哈希、严格差异清单、光标与框选工具标记、共享暂停、跨进程确定实体 ID 映射、动画分片对齐、网格指令高密批处理与科技树协同均由对应玩法声明后再启用。共享暂停还要同时有共用模拟。聊天不因构建号、DLC 或模组清单不同而失败。
 
 ## 设计变更时的检查
 

@@ -22,6 +22,8 @@ namespace OniOnline.Network
         public const string StrictAdmissionV1 = "onionline.strict-admission.v1";
         public const string EntityIdentityV1 = "onionline.entity-identity.v1";
         public const string AnimSyncV1 = "onionline.anim-sync.v1";
+        public const string CellBatchV1 = "onionline.cell-batch.v1";
+        public const string ResearchSyncV1 = "onionline.research-sync.v1";
         public const string NativePlanet744825V1 = NativePlanetV1;
         public const string NativeObservation744825V1 = NativeObservationV1;
         public const string NativeStarMap744825V1 = NativeStarMapV1;
@@ -70,6 +72,12 @@ namespace OniOnline.Network
 
         public static bool UsesAnimSync(System.Collections.Generic.IEnumerable<string> capabilities)
         { return Negotiated(capabilities, AnimSyncV1); }
+
+        public static bool UsesCellBatch(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return Negotiated(capabilities, CellBatchV1); }
+
+        public static bool UsesResearchSync(System.Collections.Generic.IEnumerable<string> capabilities)
+        { return Negotiated(capabilities, ResearchSyncV1); }
 
         public static bool SupportsNativeAdapter(string gameVersion, bool spacedOut, string capability)
         {

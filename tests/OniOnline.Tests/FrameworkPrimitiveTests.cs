@@ -252,6 +252,71 @@ internal static class FrameworkPrimitiveTests
         int shardB = AnimSyncSharder.GetShard(101, 5);
         check(shardA >= 0 && shardA < 5 && shardB >= 0 && shardB < 5, "animation sharder bounds shards between 0 and N-1");
         check(AnimSyncSharder.IsEntityInShard(100, shardA, 5), "animation sharder accurately classifies target shard");
+
+        // --- CellBatchCodec Tests ---
+        byte[] boxPayload = CellBatchCodec.EncodeBox(0, 10, 20, 30, 40, "DigTool", 7, "Sandstone");
+        int bWorld, bStartX, bStartY, bEndX, bEndY, bPriority;
+        string bTool, bMat;
+        check(boxPayload != null && boxPayload.Length > 0 &&
+            CellBatchCodec.TryDecodeBox(boxPayload, out bWorld, out bStartX, out bStartY, out bEndX, out bEndY, out bTool, out bPriority, out bMat) &&
+            bWorld == 0 && bStartX == 10 && bStartY == 20 && bEndX == 30 && bEndY == 40 && bTool == "DigTool" && bPriority == 7 && bMat == "Sandstone",
+            "cell batch codec serializes and deserializes rectangular box regions accurately");
+
+        int[] sampleCells = new[] { 100, 101, 102, 150, 151, 200 };
+        byte[] cellsPayload = CellBatchCodec.EncodeCells(1, sampleCells, "BuildTool", 9, "Cu");
+        int cWorld, cPriority;
+        int[] cCells;
+        string cTool, cMat;
+        check(CellBatchCodec.TryDecodeCells(cellsPayload, out cWorld, out cCells, out cTool, out cPriority, out cMat) &&
+            cWorld == 1 && cPriority == 9 && cTool == "BuildTool" && cMat == "Cu" && cCells.SequenceEqual(sampleCells),
+            "cell batch codec delta-encodes and reconstructs discrete cell lists accurately");
+
+        check(!CellBatchCodec.TryDecodeBox(new byte[5], out bWorld, out bStartX, out bStartY, out bEndX, out bEndY, out bTool, out bPriority, out bMat) &&
+            !CellBatchCodec.TryDecodeCells(new byte[5], out cWorld, out cCells, out cTool, out cPriority, out cMat),
+            "cell batch codec rejects truncated or invalid payloads safely");
+
+        // --- ResearchProgression Tests ---
+        var research = new ResearchProgression();
+        check(research.TrySelectTech("BasicFarming", 1, "host_player") && research.ActiveTechId == "BasicFarming" && research.CurrentRevision == 1,
+            "research progression selects initial tech with revision");
+        check(!research.TrySelectTech("AdvancedResearch", 1, "peer_2"),
+            "research selection rejects equal or older revisions");
+        check(research.TrySelectTech("AdvancedResearch", 2, "peer_2") && research.ActiveTechId == "AdvancedResearch" && research.CurrentRevision == 2,
+            "higher revision overrides active research selection");
+
+        check(research.TryEnqueueTech("PowerRegulation") && research.Queue.Length == 1 && research.Queue[0] == "PowerRegulation",
+            "enqueue adds tech to progression queue");
+        check(!research.TryEnqueueTech("PowerRegulation") && !research.TryEnqueueTech("AdvancedResearch"),
+            "duplicate or currently active tech cannot be queued");
+
+        float totalPoints;
+        check(research.TryAddPoints("AdvancedResearch", "basic", 15.5f, out totalPoints) && totalPoints == 15.5f,
+            "monotonic research point addition records points correctly");
+        check(research.TryAddPoints("AdvancedResearch", "basic", 5.0f, out totalPoints) && totalPoints == 20.5f,
+            "additional research points accumulate monotonically");
+        check(!research.TryAddPoints("AdvancedResearch", "basic", -1.0f, out totalPoints) &&
+            !research.TryAddPoints("AdvancedResearch", "basic", float.NaN, out totalPoints),
+            "invalid or negative research points are strictly rejected");
+
+        byte[] exportedState = research.ExportState();
+        check(exportedState != null && exportedState.Length > 0, "research progression exports compact binary snapshot");
+
+        var replicaResearch = new ResearchProgression();
+        check(replicaResearch.TryImportState(exportedState) &&
+            replicaResearch.ActiveTechId == "AdvancedResearch" &&
+            replicaResearch.CurrentRevision == 2 &&
+            replicaResearch.Queue.SequenceEqual(new[] { "PowerRegulation" }) &&
+            replicaResearch.GetPoints("AdvancedResearch", "basic") == 20.5f,
+            "replica research successfully imports and restores authoritative progression snapshot");
+
+        check(research.TryUnlock("AdvancedResearch") && research.IsUnlocked("AdvancedResearch") &&
+            research.ActiveTechId == string.Empty && !research.TryEnqueueTech("AdvancedResearch"),
+            "unlocking a tech marks it completed and clears from active/queue");
+
+        // --- SessionCompatibility Helpers ---
+        var capsWithNew = new[] { SessionCapabilities.CellBatchV1, SessionCapabilities.ResearchSyncV1 };
+        check(SessionCapabilities.UsesCellBatch(capsWithNew) && SessionCapabilities.UsesResearchSync(capsWithNew),
+            "session compatibility detects negotiated cell batch and research sync capabilities");
     }
 
     private static StrictEndpoint Endpoint(string gameplay, string build, string[] dlc, StrictMod[] mods)

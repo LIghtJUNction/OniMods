@@ -111,6 +111,8 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 | `onionline.shared-clock.v1` | `SharedClockPolicy` | 必须同时协商共用模拟。任何参与者可以暂停，速度取更新的修订号，只接受 1 到 3。 |
 | `onionline.entity-identity.v1` | `DeterministicNetId`、`NetworkIdentityMap<T>` | 跨进程确定的 64 位实体网络映射。静态建筑与格子由 64 位 FNV-1a 强哈希确定生成（避免 .NET string.GetHashCode 跨进程随机化）；动态实体由主机/席位段和流水号划分，杜绝线性探测冲突。提供防 ABA 复用的死亡墓碑缓冲与双向 O(1) 实体查找。 |
 | `onionline.anim-sync.v1` | `AnimReconciler`、`AnimSyncSharder` | 动画对齐与增量调速。检测动画名称/哈希不符时强制重播（Replay），检测小范围时间漂移时通过推荐微调速度（NudgeSpeed）平滑收敛，避免关键帧硬跳动；大漂移强制校正（SnapTime）。分片器将大量动画实体的同步轮询平摊到多个帧中，消除瞬时流量洪峰。 |
+| `onionline.cell-batch.v1` | `CellBatchCodec` | 区域拖选与多网格工具指令高密压缩编解码。矩形框模式仅需定长数据表达万级单元；离散单元采用锚点+增量 Delta 压缩，消除逐格发包造成的严重网络洪峰与队列拥塞。 |
+| `onionline.research-sync.v1` | `ResearchProgression` | 殖民地科技树状态权威流转与单调累加。提供带修订号（Revision）的目标研发防竞争抢占、科技队列排队、多类型研发点数（常规/高级/核能/轨道）单调累加与科技树快照导出导入。 |
 
 ## 接口详细参考 (API Reference)
 
@@ -164,6 +166,37 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
     - 严重脱节（`absDrift > maxNudgeDrift`）：返回 `AnimCorrectionAction.SnapTime`，硬跳至权威时间点。
 - **实体分片减负 (`AnimSyncSharder`)**：
   - `GetShard(long entityId, int totalShards)` / `IsEntityInShard(long entityId, int targetShard, int totalShards)`：基于 64 位实体 ID 的正数取模算法，将成百上千个动植物实体均匀分布到 N 帧（如 5 到 10 帧）中分批同步，彻底避免同帧广播造成的瞬时网络尖峰。
+
+### 4. 网格指令与区域拖选批处理 (`CellBatchCodec`)
+
+声明能力：`onionline.cell-batch.v1`
+
+解决在拖选操作（大范围挖掘、框选建造、地表擦水、大批量改优先级）中每帧为数十上百个网格单元单独发包造成的网络严重拥塞问题。
+
+- **矩形区域高密度压缩 (`EncodeBox` / `TryDecodeBox`)**：
+  - 参数：`worldId, startX, startY, endX, endY, toolId, priority, materialTag`。
+  - 数据负载在 64 字节以内即可完整传输横跨成百上千格的矩形批量交互（如 20x20 区域挖掘）。
+- **离散网格序列增量 Delta 压缩 (`EncodeCells` / `TryDecodeCells`)**：
+  - 参数：`worldId, int[] cells, toolId, priority, materialTag`。
+  - 采用锚点网格（Anchor Cell）与后续相对偏移量（Delta Offset）进行序列化，大幅削减连续网格序列所占网络包体积（最高支持单包 4096 格）。
+- **防御校验**：
+  - 自动校验包大小（最大 4096 字节）、优先级范围（1..9）、工具标识长度，遇非法或损坏包安全返回 `false`。
+
+### 5. 殖民地科技树协同与单调累加 (`ResearchProgression`)
+
+声明能力：`onionline.research-sync.v1`
+
+解决多人共享或多星球联合科研中研发目标抢占冲突、点数并发回滚及断线重连同步问题。
+
+- **研发目标与队列协同**：
+  - `TrySelectTech(techId, revision, actorId)`：基于单调递增的修订号（`CurrentRevision`）实施乐观锁裁决。旧修订号的更改请求被拒绝，消灭两端同时点击不同科技导致的来回拉扯。
+  - `TryEnqueueTech(techId)` / `TryRemoveFromQueue(techId)`：管理上限 32 项的排队候选。
+- **研发点数单调累加 (`TryAddPoints`)**：
+  - 针对常规（basic）、高级（advanced）、核能（nuclear）、轨道（orbital）等各类型科研点数独立累加。
+  - 拦截负数、NaN 与无穷大输入，点数只能单调增加，杜绝网络延迟造成的负向回退。
+- **解锁与状态快照**：
+  - `TryUnlock(techId)`：标记科技完成，自动从激活项与队列中清理。
+  - `ExportState()` / `TryImportState(byte[] payload)`：导出与导入全量科技树快照，供中途加入房间的新玩家一次性恢复权威科研进度。
 
 ## 接口文档维护规范 (Documentation Maintenance Protocol)
 
