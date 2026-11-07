@@ -20,10 +20,11 @@ namespace OniMcp.Tools
                 return false;
             }
 
+            value = value.Replace('\\', '/').Trim('/');
             if (string.IsNullOrWhiteSpace(value) || value == "." || value == ".."
-                || value.Contains("/") || value.Contains("\\") || value.Contains(":") || value.Contains(".."))
+                || value.Contains(":") || value.Contains(".."))
             {
-                error = "Blueprint target must be a single safe file name inside /active/blueprints/.";
+                error = "Blueprint target must be a safe path inside /active/blueprints/.";
                 return false;
             }
             if (value.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
@@ -45,9 +46,14 @@ namespace OniMcp.Tools
             }
             if (mustExist && !File.Exists(candidate))
             {
-                string match = Directory.Exists(root)
-                    ? Array.Find(Directory.GetFiles(root, "*.blueprint"), item => string.Equals(Path.GetFileName(item), value, StringComparison.OrdinalIgnoreCase))
-                    : null;
+                string match = null;
+                if (Directory.Exists(root))
+                {
+                    string targetName = Path.GetFileName(candidate);
+                    string[] allFiles = Directory.GetFiles(root, "*.blueprint", SearchOption.AllDirectories);
+                    match = Array.Find(allFiles, item => string.Equals(Path.GetFileName(item), targetName, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(item.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Replace('\\', '/'), value, StringComparison.OrdinalIgnoreCase));
+                }
                 if (match == null || !IsBlueprintDiskPath(match))
                 {
                     error = "Blueprint not found.";

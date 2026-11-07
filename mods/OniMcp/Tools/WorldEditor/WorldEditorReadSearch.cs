@@ -59,6 +59,13 @@ namespace OniMcp.Tools
                     return CallToolResult.Text(ReadSymbolMarkdown(path, Text(args, "query", "target", "search")));
                 if (IsBlueprintVirtualFile(relative))
                     return ReadBlueprintVirtualFile(relative);
+                if (relative == "notes" || relative == "notes/" || relative.StartsWith("notes/", StringComparison.Ordinal))
+                {
+                    string sub = (relative == "notes" || relative == "notes/") ? "" : relative.Substring("notes/".Length);
+                    var noteArgs = CopyPayload(args);
+                    noteArgs["path"] = sub;
+                    return SaveNotesManager.ReadNote(noteArgs);
+                }
                 if (IsInfrastructureMapMarkdown(relative))
                     return CallToolResult.Text(ReadInfrastructureMapMarkdown(args, path, relative));
                 if (IsManagementMarkdown(relative))

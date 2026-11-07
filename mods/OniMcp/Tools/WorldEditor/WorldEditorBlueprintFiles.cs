@@ -127,23 +127,60 @@ namespace OniMcp.Tools
             {
                 case "list":
                 case "ls":
+                    if (FirstZoomText(args, "format", "profile").Equals("json", StringComparison.OrdinalIgnoreCase) || args["category"] != null || args["folder"] != null)
+                        return BlueprintList(args);
                     return CallToolResult.Text(ReadBlueprintIndexMarkdown());
+                case "categories":
+                case "folders":
+                    return BlueprintList(args);
                 case "read":
                 case "open":
                     return ReadBlueprintByName(args);
+                case "preview":
+                    return BlueprintPreview(args);
                 case "create":
                 case "new":
+                    if (args["x1"] != null || args["minX"] != null || args["width"] != null)
+                        return BlueprintCapture(args);
                     return CreateBlueprint(args);
+                case "capture":
+                    return BlueprintCapture(args);
+                case "import":
+                    return BlueprintImport(args);
+                case "export":
+                    return BlueprintExport(args);
+                case "share":
+                    return BlueprintShare(args);
+                case "rename":
+                case "mv":
+                    return BlueprintRename(args);
+                case "categorize":
+                case "category":
+                case "move":
+                    return BlueprintCategorize(args);
+                case "replace_materials":
+                case "replace_material":
+                    return BlueprintReplaceMaterials(args);
                 case "delete":
                 case "remove":
                 case "rm":
                     return DeleteBlueprint(args);
                 case "use":
                 case "place":
-                    return UseBlueprint(args);
+                    return BlueprintPlace(args);
+                case "cancel":
+                    return BlueprintCancel(args);
                 default:
-                    return CallToolResult.Error("blueprint action must be list, read, create, delete, or use");
+                    return CallToolResult.Error("blueprint action must be list, read, preview, create, capture, import, export, share, rename, categorize, replace_materials, delete, place, or cancel");
             }
+        }
+
+        public static string ReadBlueprintContent(string name)
+        {
+            string path = FindBlueprintPath(name);
+            if (path == null)
+                return null;
+            return ReadBlueprintText(path);
         }
 
         private static CallToolResult ReadBlueprintByName(JObject args)

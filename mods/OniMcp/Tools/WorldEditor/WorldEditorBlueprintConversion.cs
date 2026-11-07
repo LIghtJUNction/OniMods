@@ -269,7 +269,7 @@ namespace OniMcp.Tools
                 yield break;
             if (!ValidateBlueprintPathComponents(dir, out _))
                 yield break;
-            foreach (string path in Directory.GetFiles(dir, "*.blueprint").OrderBy(Path.GetFileName))
+            foreach (string path in Directory.GetFiles(dir, "*.blueprint", SearchOption.AllDirectories).OrderBy(Path.GetFileName))
                 if (IsBlueprintDiskPath(path) && ValidateBlueprintPathComponents(path, out _))
                     yield return Path.GetFullPath(path);
         }
