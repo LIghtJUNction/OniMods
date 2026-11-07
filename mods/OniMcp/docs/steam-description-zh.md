@@ -14,7 +14,6 @@
 [i]其他模组可能改变这些工具读到的数据。请把 Jlib 排在本模组前面再启用。[/i]
 
 [h3]支持的 DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MOD 拓展接口 (API)[/h3]
 玩家需要共享库 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]。先订阅并启用它，再启用 ONI MCP Server，然后重启游戏。

@@ -14,7 +14,6 @@ Point Claude, Cursor, Codex, or Gemini at the local server. See alerts, pipes, p
 [i]Other mods can change the data these tools report. Place Jlib above this mod before you enable it.[/i]
 
 [h3]Supported DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MODDING API[/h3]
 Players need the shared library [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Subscribe to it, enable it above ONI MCP Server, and restart the game.

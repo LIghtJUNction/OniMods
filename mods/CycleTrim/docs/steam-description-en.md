@@ -12,7 +12,6 @@ This is still early development. The order is fixed: speed first, compatibility 
 [i]Use a disposable test save. Do not treat this as a finished late-game optimization patch.[/i]
 
 [h3]Supported DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]Next version: experiment past one element per cell & GPU Poisson pressure projection[/h3]
 The stock simulation stores one element and one mass in each cell. When two substances meet, they cannot share the cell, so the old substance has to be pushed somewhere else. That push searches neighbor cells, branches, and then decides who gets in first. Wide CPU vectors and GPUs are built for the same multiply-add on every cell. They stall on that kind of divergence.

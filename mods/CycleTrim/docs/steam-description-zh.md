@@ -12,7 +12,6 @@
 [i]请只用可丢弃的测试存档。不要把它当成已经稳定的后期优化补丁。[/i]
 
 [h3]支持的 DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]下个版本：实验拆掉一格一物与 GPU 泊松压力投影[/h3]
 原版每个格子只留一个元素和一份质量。两种物质相遇时不能在格子里共存，旧物质必须被挤到别的格子。这一步要搜索邻格、走分支，还要决定谁先进入。现代 CPU 的宽向量指令和 GPU 最怕这种发散，最擅长的是每个格子做同一套浮点乘加。

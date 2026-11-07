@@ -14,7 +14,6 @@ See who is in the room, talk while the colony loads, and let a gameplay mod regi
 [i]CycleTrim and Spaced Out! are not fixed prerequisites. Mods you do not declare are treated as required, so guests may still need the same list.[/i]
 
 [h3]Supported DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MODDING API[/h3]
 OniOnline.Framework is a .NET Standard 2.0 SDK. It does not reference Unity, the game, or PLib.

@@ -1,11 +1,11 @@
 ---
 name: oni-workshop-description
-description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或改写具有纯正社区风味的图文介绍页面（BBCode/Markdown），包含头部横幅、阶段警告、Supported DLC 徽章图链、API/架构、快捷键与 QoL、Roadmap、贡献指南、免责声明及幽默结尾动画。
+description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或改写具有纯正社区风味的图文介绍页面（BBCode/Markdown），包含头部横幅、阶段警告、Supported DLC 文字说明、API/架构、快捷键与 QoL、Roadmap、贡献指南、免责声明及幽默结尾动画。
 ---
 
 # 缺氧 Mod 创意工坊社区风味页面设计技能 (ONI Workshop Description Flavor)
 
-本技能指导 Agent 生成具有极高辨识度、专业感和社区号召力的 Steam 创意工坊模组描述页面。该风格源自《缺氧》知名模组 **Oxygen Not Included Together (ONIT)** 与 **Sgt_Imalas** 社区标准体系。
+本技能指导 Agent 生成具有极高辨识度、专业感和社区号召力的 Steam 创意工坊模组描述页面。该风格源自《缺氧》知名模组 **Oxygen Not Included Together (ONIT)**。
 
 ---
 
@@ -27,9 +27,9 @@ description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或�
 |    - 斜体 Bug 心理预期: [i]expect bugs and maybe crashes[/i]  |
 |    - 斜体 兼容性提醒: [i]use other mods at own discretion[/i]  |
 +-------------------------------------------------------------+
-| 4. DLC 兼容性图形徽章 (Supported DLC Graphic Badge) ⭐核心视觉 |
+| 4. DLC 兼容性说明 (Supported DLC) |
 |    - [h3]Supported DLC:[/h3]                                |
-|    - [img]GitHub Raw 图床直链 (含本体/眼冒金星/寒霜/仿生等)[/img]|
+|    - 按实际支持范围填写文字，不使用 Sgt_Imalas 的兼容性图标|
 +-------------------------------------------------------------+
 | 5. 开发者与模组接口 (MODDING API / SDK)                       |
 |    - NuGet SDK、模块化通信、示例 Mod 链接                     |
@@ -78,22 +78,11 @@ description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或�
 | **OniMcp** | `LIghtJUNction/OniMods` | `https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png` |
 | **OniOnline** | `LIghtJUNction/OniMods` | `https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniOnline/preview.png` |
 
-### 2. Supported DLC 兼容性徽章（由 Sgt_Imalas 维护开源）
+### 2. Supported DLC 兼容性说明
 
-| 兼容范围 / 适用场景 | 说明 | GitHub Raw 链接（直接放进 `[img]...[/img]`） |
-| :--- | :--- | :--- |
-| **全量兼容 (All DLCs)** | 本体 + 眼冒金星 + 寒霜 + 仿生 + 史前 + 水洋 全绿勾 | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png` |
-| **仅原版 (Vanilla Only)** | 仅本体绿勾，无 DLC | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoDLC.png` |
-| **仅眼冒金星 (Spaced Out! Only)** | 仅眼冒金星绿勾，不支持本体 | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoBase.png` |
-| **必须寒霜 (DLC2 Required)** | 需要 The Frosty Planet Pack | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC2_Required.png` |
-| **必须仿生 (DLC3 Required)** | 需要 The Bionic Booster Pack | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC3_Required.png` |
-| **必须史前 (DLC4 Required)** | 需要 The Prehistoric Planet Pack | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC4_Required.png` |
-| **必须水洋 (DLC5 Required)** | 需要 The Aquatic Planet Pack | `https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC5_Required.png` |
+使用文字说明模组实际支持的游戏本体和 DLC；发布前核实支持范围。不要使用 Sgt_Imalas 的兼容性图标或其变体。
 
-> [!TIP]
-> 上表图片均在 GitHub 公开维护，Steam 工坊详情页能够稳定加载，请按模组的实际支持情况直接取用对应 URL。
-
-### 2. 常用动图与表情包 (Closing Reaction GIFs)
+### 3. 常用动图与表情包 (Closing Reaction GIFs)
 - 奔跑/惊慌复制人经典循环 GIF：
   `https://i.ibb.co/LXdJf9K9/I3P8A6f.gif`
 
@@ -117,7 +106,7 @@ See where dupes are, see what they are doing, collaborate together with friends 
 [i]Use other mods at your own discretion as they may cause issues and instability[/i]
 
 [h3]Supported DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
+[Fill in verified base game and DLC compatibility.]
 
 [h3]MODDING API[/h3]
 This mod includes a modding API so any of you modders out there can also add custom functionality to your own mods!
@@ -181,7 +170,7 @@ Like what I'm doing? You can support my work:
 [i]请谨慎搭配其他第三方模组使用，部分模组可能引发冲突或稳定性问题[/i]
 
 [h3]支持的 DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
+[填写已核实的游戏本体与 DLC 兼容范围。]
 
 [h3]MOD 拓展接口 (API)[/h3]
 本模组自带模组开发接口（Modding API），任何模组开发者都可以为自己的 Mod 轻松接入支持！

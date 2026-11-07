@@ -14,7 +14,6 @@
 [i]CycleTrim 和眼冒金星不是固定前置。未声明用途的模组会当成必需项，客人可能仍要装上同一份列表。[/i]
 
 [h3]支持的 DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MOD 拓展接口 (API)[/h3]
 OniOnline.Framework 是 .NET Standard 2.0 SDK，不引用 Unity、游戏或 PLib。

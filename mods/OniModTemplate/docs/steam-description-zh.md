@@ -8,7 +8,6 @@
 [i]发布前请复制成新的模组。不要把模板的 static ID 当成成品创意工坊条目发出去。[/i]
 
 [h3]支持的 DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MOD 拓展接口 (API)[/h3]
 模板面向游戏模组 API 2，并声明支持全部内容。

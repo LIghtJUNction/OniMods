@@ -3,10 +3,10 @@
 generate_workshop_description.py
 
 Generate authentic, high-impact Steam Workshop descriptions for Oxygen Not Included mods
-following the iconic "ONI Together / Sgt_Imalas" community flavor.
+following the ONI Together community flavor.
 
 Features:
-- Ready-to-use GitHub raw image URLs for Supported DLC compatibility badges
+- Plain-text descriptions of supported DLC
 - 1:1 English and Simplified Chinese BBCode output
 - Built-in validation for Steam's 8,000 character limit and BBCode tag matching
 - Directly integrates with the OniMods publish workflow (`onim workshop page`)
@@ -18,28 +18,21 @@ import re
 import sys
 from typing import Dict, Any, Optional
 
-# Authentic raw GitHub asset catalog
-DLC_BADGES = {
-    # All versions supported: Base Game + Spaced Out! + Frosty + Bionic + Prehistoric + Aqua
-    "all": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png",
-    # Vanilla Base Game only (No Spaced Out!)
-    "no-dlc": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoDLC.png",
-    "vanilla": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoDLC.png",
-    # Spaced Out! only (No Vanilla)
-    "spaced-out-only": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoBase.png",
-    "no-base": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_NoBase.png",
-    # Requires DLC2 (The Frosty Planet Pack)
-    "frosty-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC2_Required.png",
-    "dlc2-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC2_Required.png",
-    # Requires DLC3 (The Bionic Booster Pack)
-    "bionic-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC3_Required.png",
-    "dlc3-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC3_Required.png",
-    # Requires DLC4 (The Prehistoric Planet Pack)
-    "prehistoric-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC4_Required.png",
-    "dlc4-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC4_Required.png",
-    # Requires DLC5 (The Aquatic Planet Pack)
-    "aquatic-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC5_Required.png",
-    "dlc5-required": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All_DLC5_Required.png",
+# Describe only the selected compatibility; verify it against the mod before publishing.
+DLC_TEXT = {
+    "all": ("Base game and all DLCs.", "支持游戏本体及所有 DLC。"),
+    "no-dlc": ("Base game only.", "仅支持游戏本体。"),
+    "vanilla": ("Base game only.", "仅支持游戏本体。"),
+    "spaced-out-only": ("Spaced Out! only; base game without it is not supported.", "仅支持眼冒金星；不支持单独运行游戏本体。"),
+    "no-base": ("Spaced Out! only; base game without it is not supported.", "仅支持眼冒金星；不支持单独运行游戏本体。"),
+    "frosty-required": ("The Frosty Planet Pack is required.", "需要寒霜星球包。"),
+    "dlc2-required": ("The Frosty Planet Pack is required.", "需要寒霜星球包。"),
+    "bionic-required": ("The Bionic Booster Pack is required.", "需要仿生扩展包。"),
+    "dlc3-required": ("The Bionic Booster Pack is required.", "需要仿生扩展包。"),
+    "prehistoric-required": ("The Prehistoric Planet Pack is required.", "需要史前星球包。"),
+    "dlc4-required": ("The Prehistoric Planet Pack is required.", "需要史前星球包。"),
+    "aquatic-required": ("The Aquatic Planet Pack is required.", "需要水洋星球包。"),
+    "dlc5-required": ("The Aquatic Planet Pack is required.", "需要水洋星球包。"),
 }
 
 DEFAULT_GIF = "https://i.ibb.co/LXdJf9K9/I3P8A6f.gif"
@@ -79,11 +72,9 @@ def render_description_en(data: Dict[str, Any]) -> str:
     parts.append(f"[i]{stage_warning}[/i]")
     parts.append(f"[i]{mod_compat_warning}[/i]\n")
 
-    # 4. Supported DLC badge
-    dlc_key = data.get("dlc_badge", "all")
-    badge_url = DLC_BADGES.get(dlc_key, dlc_key)
+    # 4. Supported DLC
     parts.append("[h3]Supported DLC:[/h3]")
-    parts.append(f"[img]{badge_url}[/img]\n")
+    parts.append(DLC_TEXT[data.get("dlc_badge", "all")][0] + "\n")
 
     # 5. Modding API / Extensibility (Optional)
     if data.get("api_info"):
@@ -169,11 +160,9 @@ def render_description_zh(data: Dict[str, Any]) -> str:
     parts.append(f"[i]{stage_warning}[/i]")
     parts.append(f"[i]{mod_compat_warning}[/i]\n")
 
-    # 4. Supported DLC badge
-    dlc_key = data.get("dlc_badge", "all")
-    badge_url = DLC_BADGES.get(dlc_key, dlc_key)
+    # 4. Supported DLC
     parts.append("[h3]支持的 DLC:[/h3]")
-    parts.append(f"[img]{badge_url}[/img]\n")
+    parts.append(DLC_TEXT[data.get("dlc_badge", "all")][1] + "\n")
 
     # 5. Modding API / Extensibility (Optional)
     if data.get("api_info_zh") or data.get("api_info"):
@@ -249,7 +238,7 @@ def validate_description(text: str, lang: str = "en") -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Steam Workshop BBCode descriptions in ONIT / Sgt_Imalas style")
+    parser = argparse.ArgumentParser(description="Generate Steam Workshop BBCode descriptions in ONIT community style")
     parser.add_argument("--name", default="OniOnline", help="Mod name")
     parser.add_argument("--name-zh", default="OniOnline 联机框架", help="Chinese Mod name")
     parser.add_argument("--tagline", default="The definitive multiplayer experience!", help="Tagline")
@@ -257,7 +246,7 @@ def main():
     parser.add_argument("--core-pitch", default="all players share controls over a single colony.", help="Core pitch")
     parser.add_argument("--core-pitch-zh", default="支持多人加入共享房间，多端同步与局域网/Steam联机。", help="Chinese core pitch")
     parser.add_argument("--stage", default="v0.5.0 Alpha", help="Current Stage")
-    parser.add_argument("--dlc", default="all", choices=list(DLC_BADGES.keys()), help="Supported DLC badge key")
+    parser.add_argument("--dlc", default="all", choices=list(DLC_TEXT.keys()), help="Supported DLC compatibility key (verify before publishing)")
     parser.add_argument("--banner", default="", help="Header banner image URL")
     parser.add_argument("--github", default="https://github.com/LIghtJUNction/OniMods", help="GitHub repository URL")
     parser.add_argument("--discord", default="", help="Discord URL")

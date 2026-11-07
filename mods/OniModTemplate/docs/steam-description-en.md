@@ -8,7 +8,6 @@ Patches go in Patches/. Shared logic goes in Core/. Overlays go in UI/. Options 
 [i]Copy it into a new mod before you publish. Do not ship the template static ID as a finished Workshop item.[/i]
 
 [h3]Supported DLC:[/h3]
-[img]https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/refs/heads/master/Compat_All.png[/img]
 
 [h3]MODDING API[/h3]
 The template targets the game's mod API 2 and declares support for all content.
