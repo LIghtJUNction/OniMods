@@ -145,6 +145,100 @@ internal static class FrameworkPrimitiveTests
                 "the report bundle stores the scrubbed log");
         }
         finally { if (File.Exists(zip)) File.Delete(zip); }
+
+        // --- DeterministicNetId Tests ---
+        long buildingId1 = DeterministicNetId.ForBuilding(0, 1024, "OxygenDiffuser", 1);
+        long buildingId2 = DeterministicNetId.ForBuilding(0, 1024, "OxygenDiffuser", 1);
+        long buildingIdDiffCell = DeterministicNetId.ForBuilding(0, 1025, "OxygenDiffuser", 1);
+        long buildingIdDiffWorld = DeterministicNetId.ForBuilding(1, 1024, "OxygenDiffuser", 1);
+        long buildingIdDiffPrefab = DeterministicNetId.ForBuilding(0, 1024, "ManualGenerator", 1);
+        long buildingIdDiffLayer = DeterministicNetId.ForBuilding(0, 1024, "OxygenDiffuser", 2);
+
+        check(buildingId1 == buildingId2 && buildingId1 > 0 && DeterministicNetId.IsStatic(buildingId1) && !DeterministicNetId.IsDynamic(buildingId1),
+            "deterministic building net id produces identical static positive ids for identical inputs");
+        check(buildingId1 != buildingIdDiffCell && buildingId1 != buildingIdDiffWorld && buildingId1 != buildingIdDiffPrefab && buildingId1 != buildingIdDiffLayer,
+            "deterministic building net id differentiates world, cell, prefab, and layer");
+
+        long cellId1 = DeterministicNetId.ForCell(0, 500, "dig");
+        long cellId2 = DeterministicNetId.ForCell(0, 500, "mop");
+        check(cellId1 != cellId2 && DeterministicNetId.IsStatic(cellId1), "cell net id differentiates task subcategories");
+
+        long dynamicId = DeterministicNetId.ForDynamic(3, 42, 101);
+        check(DeterministicNetId.IsDynamic(dynamicId) && !DeterministicNetId.IsStatic(dynamicId),
+            "dynamic net id sets the high bit flag");
+        check(DeterministicNetId.GetPeerId(dynamicId) == 3 &&
+            DeterministicNetId.GetSequence(dynamicId) == 42 &&
+            DeterministicNetId.GetTypeTag(dynamicId) == 101,
+            "dynamic net id preserves peer id, sequence number, and type tag bit fields");
+
+        // --- NetworkIdentityMap Tests ---
+        var map = new NetworkIdentityMap<object>();
+        var entityA = new object();
+        var entityB = new object();
+        check(map.TryRegister(1001, entityA) && !map.TryRegister(1001, entityB) && !map.TryRegister(1002, entityA),
+            "identity map registers unique pairs and rejects duplicate keys or entities");
+
+        object resolved;
+        long resolvedId;
+        check(map.TryGetEntity(1001, out resolved) && ReferenceEquals(resolved, entityA) &&
+            map.TryGetId(entityA, out resolvedId) && resolvedId == 1001,
+            "identity map resolves bidirectionally");
+
+        check(map.Unregister(1001, now: 10.0, tombstoneSeconds: 5.0) && map.Count == 0 && map.TombstoneCount == 1,
+            "unregistered entity leaves a temporary tombstone");
+        check(!map.TryRegister(1001, entityB), "active tombstone prevents immediate id reuse");
+
+        map.PurgeExpiredTombstones(now: 12.0);
+        check(map.TombstoneCount == 1 && !map.TryRegister(1001, entityB), "unexpired tombstone stays active");
+
+        map.PurgeExpiredTombstones(now: 16.0);
+        check(map.TombstoneCount == 0 && map.TryRegister(1001, entityB), "expired tombstone purges and allows id reuse");
+
+        // --- PresenceBoard Tool Drag & Ping Tests ---
+        var drag = new ToolDragPresence("player_1", 0, "dig", ToolDragMode.Box, 10, 10, 15, 15, 7, "Sandstone", 0xFF0000FF);
+        check(presence.TryToolDrag(drag) && presence.ToolDragFor("player_1") != null &&
+            presence.ToolDragFor("player_1").ToolId == "dig" && presence.ToolDragFor("player_1").Priority == 7,
+            "presence board retains active tool drag state for player");
+
+        presence.ClearToolDrag("player_1");
+        check(presence.ToolDragFor("player_1") == null, "clear tool drag removes the player drag preview");
+
+        var ping = new PlayerPing("player_1", 0, 12, 12, "alert", 100.5);
+        check(presence.TryPing(ping) && presence.Pings.Length == 1 && presence.Pings[0].Category == "alert",
+            "presence board retains and rotates pings");
+
+        presence.Drop("player_1");
+        check(presence.Pings.Length == 0 && presence.ToolDragFor("player_1") == null,
+            "player leave removes active tool drags and pings");
+
+        // --- AnimReconciler & AnimSyncSharder Tests ---
+        var localSnapshot = new AnimSnapshot(501, 1234, 1, 1.0f, 0.50f, 10.0);
+        var authMatching = new AnimSnapshot(501, 1234, 1, 1.0f, 0.52f, 10.0);
+        var correctionMatch = AnimReconciler.Evaluate(localSnapshot, authMatching);
+        check(correctionMatch.Action == AnimCorrectionAction.None,
+            "animation within drift tolerance requires no correction");
+
+        var authDiffAnim = new AnimSnapshot(501, 5678, 2, 1.0f, 0.10f, 10.0);
+        var correctionDiff = AnimReconciler.Evaluate(localSnapshot, authDiffAnim);
+        check(correctionDiff.Action == AnimCorrectionAction.Replay && correctionDiff.TargetAnimHash == 5678,
+            "differing animation forces replay with authoritative anim hash");
+
+        // Small drift (0.35s drift > 0.15s tolerance, <= 0.6s max nudge) -> NudgeSpeed
+        var authSmallDrift = new AnimSnapshot(501, 1234, 1, 1.0f, 0.15f, 10.0);
+        var correctionNudge = AnimReconciler.Evaluate(localSnapshot, authSmallDrift);
+        check(correctionNudge.Action == AnimCorrectionAction.NudgeSpeed && correctionNudge.RecommendedSpeed < 1.0f,
+            "small positive drift nudges local animation playback speed down to converge");
+
+        // Large drift (> 0.6s) -> SnapTime
+        var authLargeDrift = new AnimSnapshot(501, 1234, 1, 1.0f, 2.50f, 10.0);
+        var correctionSnap = AnimReconciler.Evaluate(localSnapshot, authLargeDrift);
+        check(correctionSnap.Action == AnimCorrectionAction.SnapTime && Math.Abs(correctionSnap.TargetElapsedTime - 2.50f) < 0.001f,
+            "large drift forces immediate snap to authoritative time");
+
+        int shardA = AnimSyncSharder.GetShard(100, 5);
+        int shardB = AnimSyncSharder.GetShard(101, 5);
+        check(shardA >= 0 && shardA < 5 && shardB >= 0 && shardB < 5, "animation sharder bounds shards between 0 and N-1");
+        check(AnimSyncSharder.IsEntityInShard(100, shardA, 5), "animation sharder accurately classifies target shard");
     }
 
     private static StrictEndpoint Endpoint(string gameplay, string build, string[] dlc, StrictMod[] mods)

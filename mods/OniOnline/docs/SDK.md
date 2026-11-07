@@ -107,8 +107,10 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 | --- | --- | --- |
 | `onionline.shared-simulation.v1` | `SnapshotAdmission`、`ContentDigestBoard` | 权威端先暂停出快照，快照带编号、校验和、指纹。客户端加载后必须回报同一份指纹。客户端等待 90 秒，权威端总期限 180 秒，5 秒没有新字节记一次停滞。之后客户端按块上报哈希；少数不一致返回要补的块，多数不一致要求重发快照，未知快照隔离且不抹掉已发布哈希。 |
 | `onionline.strict-admission.v1` | `StrictAdmission` | 比较玩法版本、游戏构建号、已启用 DLC 和其他模组的 ID 与版本。最多列出 10 条差异。未协商这个合同时，构建号不同仍然可以进大厅。 |
-| `onionline.presence.v1` | `PresenceBoard` | 每个玩家只保留最新光标，地图标记要求序号递增。未协商时输入被丢弃。 |
+| `onionline.presence.v1` | `PresenceBoard` | 实时同步光标位置（`PresenceCursor`）、地图标记（`PresenceMark`）、拖选工具预览（`ToolDragPresence`：挖掘、建造、擦水等框选与优先级）、以及地图高亮交互信号（`PlayerPing`）。未协商时输入被丢弃。 |
 | `onionline.shared-clock.v1` | `SharedClockPolicy` | 必须同时协商共用模拟。任何参与者可以暂停，速度取更新的修订号，只接受 1 到 3。 |
+| `onionline.entity-identity.v1` | `DeterministicNetId`、`NetworkIdentityMap<T>` | 跨进程确定的 64 位实体网络映射。静态建筑与格子由 64 位 FNV-1a 强哈希确定生成（避免 .NET string.GetHashCode 跨进程随机化）；动态实体由主机/席位段和流水号划分，杜绝线性探测冲突。提供防 ABA 复用的死亡墓碑缓冲与双向 O(1) 实体查找。 |
+| `onionline.anim-sync.v1` | `AnimReconciler`、`AnimSyncSharder` | 动画对齐与增量调速。检测动画名称/哈希不符时强制重播（Replay），检测小范围时间漂移时通过推荐微调速度（NudgeSpeed）平滑收敛，避免关键帧硬跳动；大漂移强制校正（SnapTime）。分片器将大量动画实体的同步轮询平摊到多个帧中，消除瞬时流量洪峰。 |
 
 `CommandInFlight` 按命令键去重：权威端答复、超时或准入代次变化之前，同一条命令不会再次发出。这些类型不冻结游戏模拟，也不替玩法拦截 `SimMessages`。模拟冻结仍由声明共用模拟的玩法自己实现；补丁贴不上时拒绝的是该玩法。
 
