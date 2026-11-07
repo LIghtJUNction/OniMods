@@ -10,7 +10,7 @@ pub struct MulticomponentGpu {
     groups: [wgpu::BindGroup; 2], mass_a: wgpu::Buffer, mass_b: wgpu::Buffer,
     velocity_x: wgpu::Buffer, velocity_y: wgpu::Buffer, solid: wgpu::Buffer,
     drift_y: wgpu::Buffer, params: wgpu::Buffer, readback: wgpu::Buffer,
-    width: usize, height: usize, channels: usize, count: usize, uploaded: bool,
+    width: usize, height: usize, channels: usize, count: usize, uploaded: bool, max_cfl_rate: f32,
     pub adapter: wgpu::AdapterInfo,
 }
 impl MulticomponentGpu {
@@ -48,11 +48,24 @@ impl MulticomponentGpu {
         };
         let groups=[create_group(&mass_a,&mass_b),create_group(&mass_b,&mass_a)];
         if let Some(e)=scope.pop().await{return Err(e.to_string());}
-        Ok(Self{device,queue,pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,adapter:info})
+        Ok(Self{device,queue,pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,max_cfl_rate:0.0,adapter:info})
     }
     pub fn upload(&mut self,state:&State<'_>)->Result<(),String>{
         self.uploaded=false;
         if state.mass.len()!=self.count*self.channels||state.velocity_x.len()!=self.count||state.velocity_y.len()!=self.count||state.solid.len()!=self.count||state.drift_y.len()!=self.channels{return Err("input tensor dimensions mismatch".into());}
+        if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
+            || state.velocity_x.iter().chain(state.velocity_y).chain(state.drift_y).any(|v| !v.is_finite()) {
+            return Err("state contains negative mass or non-finite values".into());
+        }
+        let mut max_rate=0.0f32;
+        for cell in 0..self.count {
+            if state.solid[cell] != 0 && state.mass[cell*self.channels..(cell+1)*self.channels].iter().any(|v| *v != 0.0) {
+                return Err("solid cells must contain zero mass".into());
+            }
+            let max_vertical=state.drift_y.iter().map(|d|(state.velocity_y[cell]+*d).abs()).fold(0.0f32,f32::max);
+            max_rate=max_rate.max(state.velocity_x[cell].abs()+max_vertical);
+        }
+        self.max_cfl_rate=max_rate;
         self.queue.write_buffer(&self.mass_a,0,bytemuck::cast_slice(state.mass));
         self.queue.write_buffer(&self.velocity_x,0,bytemuck::cast_slice(state.velocity_x));
         self.queue.write_buffer(&self.velocity_y,0,bytemuck::cast_slice(state.velocity_y));
@@ -61,7 +74,7 @@ impl MulticomponentGpu {
         self.uploaded=true;Ok(())
     }
     pub fn run_steps_and_readback(&mut self,steps:usize,dt:f32,output:&mut[f32])->Result<(),String>{
-        if !self.uploaded||steps==0||output.len()!=self.count*self.channels||!dt.is_finite()||dt<=0.0{return Err("resident run requires valid uploaded state, positive steps/dt and matching output".into());}
+        if !self.uploaded||steps==0||output.len()!=self.count*self.channels||!dt.is_finite()||dt<=0.0||dt*self.max_cfl_rate>1.0{return Err("resident run requires valid uploaded state, positive steps/dt and matching output".into());}
         self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,dt.to_bits()]));
         let mut encoder=self.device.create_command_encoder(&Default::default());
         for step in 0..steps{
