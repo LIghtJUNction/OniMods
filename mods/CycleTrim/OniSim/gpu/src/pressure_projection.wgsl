@@ -85,3 +85,39 @@ fn project_v_faces(@builtin(global_invocation_id) gid:vec3<u32>) {
  let a=(y-1u)*w+x; let b=a+w;
  v_faces[f]-=params.dt*beta_v[f]*(pressure[b]-pressure[a])/params.dy;
 }
+
+@compute @workgroup_size(8, 8, 1)
+fn compute_density_from_species_mass(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let x = gid.x;
+    let y = gid.y;
+    if x >= params.width || y >= params.height { return; }
+    let cell = y * params.width + x;
+    if solid[cell] != 0u {
+        rho[cell] = 0.0;
+        return;
+    }
+    var total_mass = 0.0;
+    for (var c = 0u; c < params.channels; c += 1u) {
+        total_mass += mass[cell * params.channels + c];
+    }
+    rho[cell] = total_mass / params.cell_volume;
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn reconstruct_cell_velocity(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let x = gid.x;
+    let y = gid.y;
+    if x >= params.width || y >= params.height { return; }
+    let cell = y * params.width + x;
+    if solid[cell] != 0u {
+        velocity_x[cell] = 0.0;
+        velocity_y[cell] = 0.0;
+        return;
+    }
+    let u_left = y * (params.width + 1u) + x;
+    let u_right = u_left + 1u;
+    let v_top = y * params.width + x;
+    let v_bottom = v_top + params.width;
+    velocity_x[cell] = 0.5 * (u_faces[u_left] + u_faces[u_right]);
+    velocity_y[cell] = 0.5 * (v_faces[v_top] + v_faces[v_bottom]);
+}
