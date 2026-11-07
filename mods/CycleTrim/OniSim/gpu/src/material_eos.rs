@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 //! Explicitly calibrated ideal-gas mapping for OniSim material metadata.
 //!
 //! Game table values are not assumed to be SI. Callers must supply all unit
