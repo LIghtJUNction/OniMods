@@ -256,6 +256,8 @@ cd mods/CycleTrim/OniSim/gpu
 cargo run --locked --release --bin material-eos-calibrate -- /path/to/official-gas-defaults.json
 ```
 
-The tool rejects missing provenance, invalid unit scales, invalid defaults,
-and gas records whose inferred volumes exceed the chosen consistency envelope.
+The tool rejects missing provenance, malformed declared digests, invalid unit
+scales, invalid defaults, and gas records whose inferred volumes exceed the
+chosen consistency envelope. The digest is recorded and format-checked; the
+CLI does not independently hash or verify the source binary/export.
 No example values should be mistaken for official game data.
