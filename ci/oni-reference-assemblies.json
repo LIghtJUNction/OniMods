@@ -213,7 +213,9 @@
     "sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
     "extract": [
       {
-        "name": "UnityEngine.ImageConversionModule.dll"
+        "name": "UnityEngine.ImageConversionModule.dll",
+        "size": 13312,
+        "sha256": "ad185932c8bb8ed22319c064080e669ca6c13b66f0baab2dfb11d3adf2db7481"
       },
       {
         "name": "UnityEngine.IMGUIModule.dll",
