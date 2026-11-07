@@ -132,7 +132,7 @@ fn main() -> Result<(), String> {
         let mut gpu_mass = vec![0.0; values];
         let mut gpu_enthalpy = vec![0.0; values];
 
-        cpu_step(&state, width, height, channels, dt, &mut cpu_mass, &mut cpu_enthalpy);
+        cpu_step(&state, width, height, channels, dt, &mut cpu_mass, &mut cpu_enthalpy)?;
         let mut gpu = pollster::block_on(MulticomponentGpu::new(width, height, channels))?;
         adapter = gpu.adapter.name.clone();
         vendor = gpu.adapter.vendor;
