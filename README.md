@@ -16,6 +16,11 @@
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — early experimental performance mod" src="mods/CycleTrim/preview.png" width="47%"></a>
 </p>
 
+<p align="center">
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — multiplayer framework" src="mods/OniOnline/preview.png" width="47%"></a>
+  <a href="mods/Jlib/README.md"><img alt="Jlib — shared PLib-compatible library" src="mods/Jlib/Jlib/preview.png" width="47%"></a>
+</p>
+
 ## See it working
 
 [![GPT operating an Oxygen Not Included colony through OniMcp](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
@@ -36,6 +41,7 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
 | **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
+| **oni-skills** *(optional)* | Colony engineering notes for SPOM, cooling, ranching and power | [Guides](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) |
 
 The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules. Every mod here is developed, tested, and published with onim: `onim dev`, `onim build`, `onim publish`. Project: [OniMods](https://github.com/LIghtJUNction/OniMods).
 
@@ -97,9 +103,9 @@ Critical operations remain bounded and should be preceded by read-only inspectio
 ├── src/                         onim Rust CLI
 ├── mods/
 │   ├── OniMcp/                  MCP server mod
-│   ├── CycleTrim/               measured performance patches
-│   ├── OniOnline/               multiplayer experiments
-│   ├── Jlib/                    shared prerequisite library (submodule)
+│   ├── CycleTrim/               early GPU-first performance experiment
+│   ├── OniOnline/               multiplayer framework, lobby and chat
+│   ├── Jlib/                    shared PLib-compatible library (submodule)
 │   └── OniModTemplate/          reusable mod scaffold
 ├── docs/                        architecture, testing and publishing notes
 ├── scripts/                     verification helpers
@@ -124,6 +130,8 @@ Keep changes focused, update the affected changelog, and open an issue first whe
 
 - [OniMcp changelog](mods/OniMcp/CHANGELOG.md)
 - [CycleTrim changelog](mods/CycleTrim/CHANGELOG.md)
+- [OniOnline](mods/OniOnline/README.md)
+- [Jlib](mods/Jlib/README.md)
 - [Template changelog](mods/OniModTemplate/CHANGELOG.md)
 - [Steam publishing workflow](docs/steam-publishing.md)
 - [Architecture and principles](docs/architecture-and-principles.md)

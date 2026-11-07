@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="mods/OniOnline/README.md"><img alt="OniOnline — 缺氧星球联机 Mod" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
-  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — 联机框架" src="mods/OniOnline/preview.png" width="47%" /></a>
+  <a href="mods/Jlib/README.md"><img alt="Jlib — 共享前置库" src="mods/Jlib/Jlib/preview.png" width="47%" /></a>
 </p>
 
 <div align="center">
@@ -29,14 +29,14 @@
   · <a href="#onim">onim</a>
 </p>
 
-缺氧（Oxygen Not Included）Mod 工程仓库，包含：
+缺氧（Oxygen Not Included）Mod 工程仓库。开发、测试、发布就这三步：`onim dev`、`onim build`、`onim publish`。项目地址：[OniMods](https://github.com/LIghtJUNction/OniMods)。
 
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
-- `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
-
-- `onim` 负责初始化、构建、安装、卸载和发布。开发、测试、发布就这三步：`onim dev`、`onim build`、`onim publish`。项目地址：[OniMods](https://github.com/LIghtJUNction/OniMods)。
-- `OniMcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
-- 适合 Mod 开发、AI 辅助游玩和工具集成。
+- `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地。
+- `CycleTrim`：早期实验性性能模组。重构底层算法，把尽可能多的运算搬到 GPU。先加速，再兼容。
+- `OniOnline`：联机框架。安装后默认是大厅和聊天，其他玩法由单独模组注册。
+- `Jlib`：OniMcp 和 CycleTrim 共用的 PLib 兼容前置库。游戏里要单独启用，并排在依赖它的模组前面。
+- `OniModTemplate`：用 `onim init` 开新模组时的目录模板。
 
 > **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
@@ -63,6 +63,7 @@
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 早期实验性性能模组：重构底层算法并尽量搬到 GPU，先加速再兼容 |
 | `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 联机框架，内置大厅和聊天；其他玩法由单独模组提供 |
 | `Jlib` | [mods/Jlib/](mods/Jlib/) | 可独立安装的 PLib 兼容共享前置库 |
+| `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | `onim init` 使用的新模组目录模板 |
 | `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |
 | 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
@@ -195,14 +196,16 @@ cp Directory.Build.props.example Directory.Build.props
 ├── src/                   # onim 源码
 ├── mods/                  # Mod 项目目录
 │   ├── OniModTemplate/    # Mod 模板（ModInfo + Patches/）
-│   ├── OniMcp/           # ONI MCP Server
+│   ├── OniMcp/            # ONI MCP Server
 │   │   ├── ModInfo.cs     # 仅入口
 │   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
 │   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
-│   └── CycleTrim/         # 性能优化 Mod
-│       ├── ModInfo.cs     # 仅入口
-│       ├── Core/          # 非补丁核心逻辑
-│       └── Patches/       # Harmony 补丁
+│   ├── CycleTrim/         # 早期实验性性能模组，方向是把运算搬到 GPU
+│   │   ├── ModInfo.cs     # 仅入口
+│   │   ├── Core/          # 非补丁核心逻辑
+│   │   └── Patches/       # Harmony 补丁
+│   ├── OniOnline/         # 联机框架，默认大厅和聊天
+│   └── Jlib/              # 共享前置库（子模块）
 ├── docs/                  # 参考文档
 └── scripts/               # 辅助与校验脚本
 ```
