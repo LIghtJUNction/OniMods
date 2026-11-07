@@ -151,3 +151,7 @@ The current execution workspace has no Rust toolchain and no Vulkan hardware
 adapter, so it cannot produce a hardware measurement. The benchmark must be run
 on the target GPU before any latency or speedup result is recorded. A missing
 adapter is an explicit failure, never a skipped/passing test.
+
+The OniSim diamond workflow now has a dedicated `gpu-operator` job. It validates
+WGSL with Naga, runs CPU conservation/wall tests, and compiles all benchmark
+targets without requiring a GPU. Real Vulkan timing remains a hardware-only run.
