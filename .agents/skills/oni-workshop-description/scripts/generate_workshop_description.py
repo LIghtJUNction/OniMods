@@ -35,7 +35,7 @@ DLC_TEXT = {
     "dlc5-required": ("The Aquatic Planet Pack is required.", "需要水洋星球包。"),
 }
 
-DEFAULT_GIF = "https://i.ibb.co/LXdJf9K9/I3P8A6f.gif"
+DEFAULT_GIF = ""
 
 KNOWN_BANNERS = {
     "jlib": "https://raw.githubusercontent.com/LIghtJUNction/Jlib/main/Jlib/preview.png",

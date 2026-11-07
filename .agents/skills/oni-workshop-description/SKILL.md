@@ -1,6 +1,6 @@
 ---
 name: oni-workshop-description
-description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或改写具有纯正社区风味的图文介绍页面（BBCode/Markdown），包含头部横幅、阶段警告、Supported DLC 文字说明、API/架构、快捷键与 QoL、Roadmap、贡献指南、免责声明及幽默结尾动画。
+description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或改写具有纯正社区风味的图文介绍页面（BBCode/Markdown），包含头部横幅、阶段警告、Supported DLC 文字说明、API/架构、快捷键与 QoL、Roadmap、贡献指南、免责声明及幽默结尾。
 ---
 
 # 缺氧 Mod 创意工坊社区风味页面设计技能 (ONI Workshop Description Flavor)
@@ -49,7 +49,6 @@ description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或�
 | 10. 玩家社区与幽默结语 (Community & Closing Joke)             |
 |    - Discord 社区链接                                       |
 |    - 标志性冷幽默金句 (如 "When together oxygen is not included")|
-|    - 复制人魔性反应 GIF 动图 ([img]...[/img])                |
 +-------------------------------------------------------------+
 | 11. 赞助通道 (Tip Jar / Sponsor)                             |
 |    - Ko-Fi / 爱发电 / GitHub Sponsors 链接                   |
@@ -81,10 +80,6 @@ description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或�
 ### 2. Supported DLC 兼容性说明
 
 使用文字说明模组实际支持的游戏本体和 DLC；发布前核实支持范围。不要使用 Sgt_Imalas 的兼容性图标或其变体。
-
-### 3. 常用动图与表情包 (Closing Reaction GIFs)
-- 奔跑/惊慌复制人经典循环 GIF：
-  `https://i.ibb.co/LXdJf9K9/I3P8A6f.gif`
 
 ---
 
@@ -150,7 +145,6 @@ The mod supports the base game and DLC, report any issues you run into!
 [url=https://discord.gg/]Join our discord community[/url] to connect with other players, suggest features for the mod, and stay up-to-date.
 
 That's about it, have fun out there and remember. When together oxygen is not included.
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]
 
 Like what I'm doing? You can support my work:
 [url=https://ko-fi.com/]Ko-Fi[/url]
@@ -214,7 +208,6 @@ onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
 [url=https://discord.gg/]加入我们的 Discord 玩家社区[/url]，与其他小伙伴联机开黑、提交新想法，并获取第一手更新动态！
 
 祝大家游戏愉快，时刻牢记：聚在一起，缺氧也快乐。
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]
 
 如果喜欢我的工作，欢迎赞助支持：
 [url=https://ko-fi.com/]Ko-Fi[/url]

@@ -13,8 +13,6 @@
 [i]这是开发预览。请预期有缺陷、未完成的界面，以及仍然需要备份的会话。[/i]
 [i]CycleTrim 和眼冒金星不是固定前置。未声明用途的模组会当成必需项，客人可能仍要装上同一份列表。[/i]
 
-[h3]支持的 DLC:[/h3]
-
 [h3]MOD 拓展接口 (API)[/h3]
 OniOnline.Framework 是 .NET Standard 2.0 SDK，不引用 Unity、游戏或 PLib。
 在 OnLoad 里调用 GameplayFramework.Register，连接前再 Select 要使用的玩法。
@@ -61,4 +59,3 @@ onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
 提问和缺陷请送到 [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url]。
 
 祝游戏愉快，并请记住：聚在一起，氧气照样没算在内。
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

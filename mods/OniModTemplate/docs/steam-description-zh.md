@@ -7,8 +7,6 @@
 [i]这是开发脚手架，不是殖民地模组。在存档里启用模板不会增加玩法。[/i]
 [i]发布前请复制成新的模组。不要把模板的 static ID 当成成品创意工坊条目发出去。[/i]
 
-[h3]支持的 DLC:[/h3]
-
 [h3]MOD 拓展接口 (API)[/h3]
 模板面向游戏模组 API 2，并声明支持全部内容。
 在仓库根目录构建和安装：
@@ -52,4 +50,3 @@ onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
 提问请送到 [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url]。
 
 祝制作愉快。这一页是空白的复制人登记表，细菌得你自己带。
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

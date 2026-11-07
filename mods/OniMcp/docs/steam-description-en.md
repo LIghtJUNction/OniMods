@@ -13,8 +13,6 @@ Point Claude, Cursor, Codex, or Gemini at the local server. See alerts, pipes, p
 [i]The local server is in active use. Tool coverage and client prompts still move between releases.[/i]
 [i]Other mods can change the data these tools report. Place Jlib above this mod before you enable it.[/i]
 
-[h3]Supported DLC:[/h3]
-
 [h3]MODDING API[/h3]
 Players need the shared library [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Subscribe to it, enable it above ONI MCP Server, and restart the game.
 Developers reference [url=https://www.nuget.org/packages/LIghtJUNction.Jlib]LIghtJUNction.Jlib[/url] with ExcludeAssets="runtime". The NuGet package does not install the Workshop item.
@@ -55,7 +53,6 @@ Report issues on GitHub. Keep the game paused while a client is only reading.
 Questions and bug reports go to the [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub issue tracker[/url].
 
 Have fun out there. The duplicants still need oxygen. The model is only visiting.
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]
 
 Like what I'm doing? You can support continued OniMcp testing:
 [url=https://donate.lmm.best/?project=onimcp]Donate[/url]

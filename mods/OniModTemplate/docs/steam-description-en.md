@@ -7,8 +7,6 @@ Patches go in Patches/. Shared logic goes in Core/. Overlays go in UI/. Options 
 [i]This is a developer scaffold, not a colony mod. Enabling the template in a save does not add gameplay.[/i]
 [i]Copy it into a new mod before you publish. Do not ship the template static ID as a finished Workshop item.[/i]
 
-[h3]Supported DLC:[/h3]
-
 [h3]MODDING API[/h3]
 The template targets the game's mod API 2 and declares support for all content.
 Build and install from the repository root:
@@ -52,4 +50,3 @@ It has no published Workshop ID. A first public item would need the staged Legac
 Questions go to the [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub issue tracker[/url].
 
 Have fun out there. This page is a blank duplicant form. You bring the germs.
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

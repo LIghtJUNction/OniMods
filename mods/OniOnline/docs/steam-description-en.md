@@ -13,8 +13,6 @@ See who is in the room, talk while the colony loads, and let a gameplay mod regi
 [i]This is a development preview. Expect bugs, incomplete graphics, and sessions that still need a backup save.[/i]
 [i]CycleTrim and Spaced Out! are not fixed prerequisites. Mods you do not declare are treated as required, so guests may still need the same list.[/i]
 
-[h3]Supported DLC:[/h3]
-
 [h3]MODDING API[/h3]
 OniOnline.Framework is a .NET Standard 2.0 SDK. It does not reference Unity, the game, or PLib.
 Call GameplayFramework.Register from OnLoad, then Select the gameplay before connecting.
@@ -61,4 +59,3 @@ Use a test save. Protocol 11 and build 744825 are the current adapter target. An
 Questions and bug reports go to the [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub issue tracker[/url].
 
 Have fun out there, and remember: when together, oxygen is still not included.
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]

@@ -13,8 +13,6 @@
 [i]本地服务已在实际使用。工具覆盖和客户端提示仍会随版本调整。[/i]
 [i]其他模组可能改变这些工具读到的数据。请把 Jlib 排在本模组前面再启用。[/i]
 
-[h3]支持的 DLC:[/h3]
-
 [h3]MOD 拓展接口 (API)[/h3]
 玩家需要共享库 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]。先订阅并启用它，再启用 ONI MCP Server，然后重启游戏。
 开发者通过 [url=https://www.nuget.org/packages/LIghtJUNction.Jlib]LIghtJUNction.Jlib[/url] 引用，并设置 ExcludeAssets="runtime"。NuGet 包不能代替创意工坊里的前置模组。
@@ -55,7 +53,6 @@ onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
 提问和缺陷请送到 [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url]。
 
 祝游戏愉快。复制人仍然需要氧气，模型只是来参观的。
-[img]https://i.ibb.co/LXdJf9K9/I3P8A6f.gif[/img]
 
 如果这份工作对你有用，欢迎支持 OniMcp 的后续测试：
 [url=https://donate.lmm.best/?project=onimcp]捐赠[/url]
