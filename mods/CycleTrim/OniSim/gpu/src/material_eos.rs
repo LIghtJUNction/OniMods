@@ -1,8 +1,9 @@
-use serde::{Deserialize, Serialize};
 //! Explicitly calibrated ideal-gas mapping for OniSim material metadata.
 //!
 //! Game table values are not assumed to be SI. Callers must supply all unit
 //! scales and validate the inferred effective cell volume against real tables.
+use serde::{Deserialize, Serialize};
+
 const GAS_CONSTANT: f64 = 8.314_462_618_153_24;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
