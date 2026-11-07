@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><AssemblyName>FixtureConsumer</AssemblyName></PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework><AssemblyName>FixtureConsumer</AssemblyName></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../GameApiDoubles/GameApiDoubles.csproj" />
     <ProjectReference Include="../Jlib.Good/Jlib.Good.csproj" />
