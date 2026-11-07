@@ -10,7 +10,7 @@ pub struct MulticomponentGpu {
     groups: [wgpu::BindGroup; 2], mass_a: wgpu::Buffer, mass_b: wgpu::Buffer,
     velocity_x: wgpu::Buffer, velocity_y: wgpu::Buffer, solid: wgpu::Buffer,
     drift_y: wgpu::Buffer, params: wgpu::Buffer, readback: wgpu::Buffer,
-    width: usize, height: usize, channels: usize, count: usize, uploaded: bool, max_cfl_rate: f32,
+    width: usize, height: usize, channels: usize, count: usize, uploaded: bool, current_is_a: bool, max_cfl_rate: f32,
     pub adapter: wgpu::AdapterInfo,
 }
 impl MulticomponentGpu {
@@ -49,10 +49,31 @@ impl MulticomponentGpu {
         };
         let groups=[create_group(&mass_a,&mass_b),create_group(&mass_b,&mass_a)];
         if let Some(e)=scope.pop().await{return Err(e.to_string());}
-        Ok(Self{device:context.device.clone(),queue:context.queue.clone(),pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,max_cfl_rate:0.0,adapter:info})
+        Ok(Self{device:context.device.clone(),queue:context.queue.clone(),pipeline,groups,mass_a,mass_b,velocity_x,velocity_y,solid,drift_y,params,readback,width,height,channels,count,uploaded:false,current_is_a:true,max_cfl_rate:0.0,adapter:info})
     }
+
+    /// Current device-local NHWC mass tensor after the most recent dispatch.
+    pub fn current_mass_buffer(&self) -> &wgpu::Buffer {
+        if self.current_is_a { &self.mass_a } else { &self.mass_b }
+    }
+
+    /// Shared cell-centred velocity buffers, suitable for another operator on the same GpuContext.
+    pub fn velocity_buffers(&self) -> (&wgpu::Buffer, &wgpu::Buffer) {
+        (&self.velocity_x, &self.velocity_y)
+    }
+
+    /// Shared solid-cell mask for other operators on the same GpuContext.
+    pub fn solid_buffer(&self) -> &wgpu::Buffer {
+        &self.solid
+    }
+
+    pub fn dimensions(&self) -> (usize, usize, usize) {
+        (self.width, self.height, self.channels)
+    }
+
     pub fn upload(&mut self,state:&State<'_>)->Result<(),String>{
         self.uploaded=false;
+        self.current_is_a=true;
         if state.mass.len()!=self.count*self.channels||state.velocity_x.len()!=self.count||state.velocity_y.len()!=self.count||state.solid.len()!=self.count||state.drift_y.len()!=self.channels{return Err("input tensor dimensions mismatch".into());}
         if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
             || state.velocity_x.iter().chain(state.velocity_y).chain(state.drift_y).any(|v| !v.is_finite()) {
@@ -78,12 +99,14 @@ impl MulticomponentGpu {
         if !self.uploaded||steps==0||output.len()!=self.count*self.channels||!dt.is_finite()||dt<=0.0||dt*self.max_cfl_rate>1.0{return Err("resident run requires valid uploaded state, positive steps/dt and matching output".into());}
         self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,dt.to_bits()]));
         let mut encoder=self.device.create_command_encoder(&Default::default());
-        for step in 0..steps{
+        for _ in 0..steps{
+            let group=if self.current_is_a{&self.groups[0]}else{&self.groups[1]};
             let mut pass=encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);pass.set_bind_group(0,&self.groups[step&1],&[]);
+            pass.set_pipeline(&self.pipeline);pass.set_bind_group(0,group,&[]);
             pass.dispatch_workgroups((self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8),1);
+            self.current_is_a=!self.current_is_a;
         }
-        let final_buffer=if steps&1==1{&self.mass_b}else{&self.mass_a};
+        let final_buffer=if self.current_is_a{&self.mass_a}else{&self.mass_b};
         encoder.copy_buffer_to_buffer(final_buffer,0,&self.readback,0,(output.len()*4) as u64);
         let submission=self.queue.submit([encoder.finish()]);
         let(send,receive)=mpsc::sync_channel(1);
