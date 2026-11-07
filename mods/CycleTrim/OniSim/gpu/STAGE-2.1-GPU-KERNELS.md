@@ -97,3 +97,25 @@ faces. This is safe fail-closed behavior, not a gas-to-vacuum flow model.
 The caller must supply a valid fluid gauge cell, a calibrated cell volume and
 mass scale, and a conservative CFL bound. The legacy game still does not use
 this experimental pipeline.
+
+
+## Stage 2.6 — one-submission resident coupling benchmark
+
+A new `resident-pipeline-bench` executable creates one shared `GpuContext`,
+uploads the initial multi-component state once per sample, dispatches one
+conservative transport step, runs the pressure projection directly against the
+transport mass/velocity/solid buffers, then performs one final mass readback.
+The pressure projection computes density from species mass on the GPU using
+explicit cell-volume and mass-unit scales.
+
+Run:
+```sh
+cd mods/CycleTrim/OniSim/gpu
+rtk proxy cargo run --locked --release --bin resident-pipeline-bench
+```
+
+The benchmark covers 96×96×4 and 256×384×4, five warmups and 31 samples. It
+reports median/P95 end-to-end time and CPU/GPU transport mass parity. The
+pressure iteration count defaults to 32 and can be set with
+`ONISIM_PRESSURE_ITERATIONS`. The benchmark is a one-transport-step followed
+by pressure projection; it is not yet a long-run coupled stability test.
