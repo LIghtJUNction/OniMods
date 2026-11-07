@@ -55,13 +55,24 @@ def verify(path: Path, *, expected_size: int | None, expected_sha256: str,
     return actual_sha256
 
 
-def extract_named_dll(package_path: Path, output_dir: Path, name: str) -> Path:
+def extract_named_dll(
+    package_path: Path,
+    output_dir: Path,
+    name: str,
+    preferred_entry: str | None = None,
+) -> Path:
     with zipfile.ZipFile(package_path) as archive:
-        candidates = [entry for entry in archive.namelist() if entry.endswith("/" + name)]
-        if not candidates:
-            raise ValueError(f"{name}: not found in {package_path.name}")
-        candidates.sort(key=lambda entry: ("netstandard2.0" not in entry.lower(), len(entry), entry))
-        selected = candidates[0]
+        entries = archive.namelist()
+        if preferred_entry:
+            if preferred_entry not in entries:
+                raise ValueError(f"{preferred_entry}: not found in {package_path.name}")
+            selected = preferred_entry
+        else:
+            candidates = [entry for entry in entries if entry.endswith("/" + name)]
+            if not candidates:
+                raise ValueError(f"{name}: not found in {package_path.name}")
+            candidates.sort(key=lambda entry: ("netstandard2.0" not in entry.lower(), len(entry), entry))
+            selected = candidates[0]
         destination = output_dir / name
         with archive.open(selected) as source, destination.open("wb") as out:
             shutil.copyfileobj(source, out)
@@ -122,6 +133,35 @@ def main() -> int:
                     expected_sha256=item.get("sha256", ""),
                     allow_missing_sha256=args.allow_missing_sha256,
                     label=item["name"] + " (auxiliary)",
+                )
+        finally:
+            package_path.unlink(missing_ok=True)
+
+    for auxiliary in manifest.get("auxiliary_packages", []):
+        package_path = output_dir / (auxiliary["package"] + ".nupkg")
+        download(auxiliary["url"], package_path)
+        try:
+            label = auxiliary["package"] + "@" + auxiliary["version"]
+            verify(
+                package_path,
+                expected_size=auxiliary.get("size"),
+                expected_sha256=auxiliary.get("sha256", ""),
+                allow_missing_sha256=args.allow_missing_sha256,
+                label=label,
+            )
+            for item in auxiliary["extract"]:
+                destination = extract_named_dll(
+                    package_path,
+                    output_dir,
+                    item["name"],
+                    item.get("entry"),
+                )
+                verify(
+                    destination,
+                    expected_size=item.get("size"),
+                    expected_sha256=item.get("sha256", ""),
+                    allow_missing_sha256=args.allow_missing_sha256,
+                    label=item["name"] + " (auxiliary " + label + ")",
                 )
         finally:
             package_path.unlink(missing_ok=True)
