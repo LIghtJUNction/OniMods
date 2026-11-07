@@ -101,8 +101,6 @@ fn main() -> Result<(), String> {
         let mut expected = vec![0.0f32; fixture.mass.len()];
         cpu_step(&fixture.state(), width, height, channels, dt, &mut expected);
         let mut actual = vec![0.0f32; fixture.mass.len()];
-        let (velocity_x, velocity_y) = transport.velocity_buffers();
-        let solid = transport.solid_buffer();
         let gauge_cell = fixture.solid.iter().position(|&value| value == 0)
             .ok_or("fixture has no fluid cells")?;
 
@@ -113,6 +111,8 @@ fn main() -> Result<(), String> {
             transport.upload(&fixture.state())?;
             let started = Instant::now();
             transport.dispatch_resident(1, dt)?;
+            let (velocity_x, velocity_y) = transport.velocity_buffers();
+            let solid = transport.solid_buffer();
             pressure.run_with_shared_state(
                 transport.current_mass_buffer(),
                 velocity_x,
