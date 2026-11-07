@@ -111,6 +111,8 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, static_id: &str) -> Resu
             mods.push(new_dev_mod_entry(selected, static_id));
         }
 
+        ensure_prerequisite_order(mods);
+
         (before_enabled, count_enabled_mods(mods))
     };
     data["mod_load_in_progress"] = Value::Bool(false);
@@ -147,6 +149,38 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, static_id: &str) -> Resu
         eprintln!("⚠️ 配置已启用，但备份清理未完成：{}", error);
     }
     Ok(())
+}
+
+fn ensure_prerequisite_order(mods: &mut Vec<Value>) {
+    let jlib_idx = mods.iter().position(|item| {
+        item.get("staticID").and_then(Value::as_str) == Some("LIghtJUNction.Jlib")
+            || item
+                .get("label")
+                .and_then(|l| l.get("id"))
+                .and_then(Value::as_str)
+                == Some("Jlib")
+    });
+
+    if let Some(jlib_pos) = jlib_idx {
+        let first_consumer_idx = mods.iter().position(|item| {
+            let sid = item.get("staticID").and_then(Value::as_str);
+            let id = item
+                .get("label")
+                .and_then(|l| l.get("id"))
+                .and_then(Value::as_str);
+            sid == Some("LIghtJUNction.CycleTrim")
+                || sid == Some("LIghtJUNction.OniMcp")
+                || id == Some("CycleTrim")
+                || id == Some("OniMcp")
+        });
+
+        if let Some(consumer_pos) = first_consumer_idx {
+            if jlib_pos > consumer_pos {
+                let jlib = mods.remove(jlib_pos);
+                mods.insert(consumer_pos, jlib);
+            }
+        }
+    }
 }
 
 fn count_enabled_mods(mods: &[Value]) -> usize {

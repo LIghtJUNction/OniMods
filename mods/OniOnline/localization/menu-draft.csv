@@ -411,7 +411,7 @@ options.dev_guide_hint,在浏览器中打开 OniOnline 联机玩法与 SDK 开�
 options.builtin_gameplay,内置玩法是聊天,內建玩法是聊天,Built-in gameplay is chat
 options.builtin_gameplay_hint,框架自带的玩法只有大厅聊天。其他玩法需要单独安装对应模组。,框架自帶的玩法只有大廳聊天。其他玩法需要單獨安裝對應模組。,The framework ships with lobby chat. Other gameplay requires its own mod.
 options.active_gameplay,首选联机玩法 ID,首選連線玩法 ID,Preferred Gameplay ID
-options.active_gameplay_hint,创建或加入大厅时使用的玩法标识。默认为 onionline.chat。安装其他玩法模组后，填入该模组注册的玩法 ID。,建立或加入大廳時使用的玩法標識。預設為 onionline.chat。安裝其他玩法模組後，填入該模組註冊的玩法 ID。,Gameplay id used when hosting or joining. Default: onionline.chat. After installing another gameplay mod, enter the id it registers.
+options.active_gameplay_hint,创建或加入大厅时使用的玩法标识。默认为 onionline.chat。安装其他玩法模组后，填入该模组注册的玩法 ID。,建立或加入大廳時使用的玩法標識。預設為 onionline.chat。安裝其他玩法模組後，填入該模組註冊的玩法 ID。,"Gameplay id used when hosting or joining. Default: onionline.chat. After installing another gameplay mod, enter the id it registers."
 options.disabled_gameplays,禁用的玩法 ID 列表,禁用的玩法 ID 清單,Disabled Gameplay IDs
 options.disabled_gameplays_hint,需要禁用的玩法 ID（多个以分号或逗号分隔）。被禁用的玩法将无法在房间中使用。,需要禁用的玩法 ID（多個以分號或逗號分隔）。被禁用的玩法將無法在房間中使用。,Gameplay IDs to disable (separated by semicolons or commas). Disabled gameplays cannot be selected or used in rooms.
 error.voice_steam_unavailable,语音需要 Steam 已连接，并且麦克风可用,語音需要 Steam 已連線，而且麥克風可用,Voice requires Steam to be connected and an available microphone
