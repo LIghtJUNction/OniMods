@@ -5,7 +5,6 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace CycleTrim.Patches
 {
@@ -32,6 +31,13 @@ namespace CycleTrim.Patches
         private static readonly FieldInfo EntryBackground = AccessTools.Field(typeof(ResourceEntry), "Background");
         private static readonly FieldInfo HeaderBackgroundHover = AccessTools.Field(typeof(ResourceCategoryHeader), "BackgroundHoverColor");
         private static readonly FieldInfo EntryBackgroundHover = AccessTools.Field(typeof(ResourceEntry), "BackgroundHoverColor");
+        private static readonly PropertyInfo HeaderBackgroundColor = GetBackgroundColorProperty(HeaderBackground);
+        private static readonly PropertyInfo EntryBackgroundColor = GetBackgroundColorProperty(EntryBackground);
+
+        private static PropertyInfo GetBackgroundColorProperty(FieldInfo field)
+        {
+            return field == null ? null : AccessTools.Property(field.FieldType, "color");
+        }
 
         private static bool Prepare()
         {
@@ -60,12 +66,16 @@ namespace CycleTrim.Patches
             FieldInfo colourField = header ? HeaderColour : EntryColour;
             FieldInfo backgroundField = header ? HeaderBackground : EntryBackground;
             FieldInfo backgroundHoverField = header ? HeaderBackgroundHover : EntryBackgroundHover;
-            if (tagField == null || colourField == null || backgroundField == null || backgroundHoverField == null)
+            PropertyInfo backgroundColorProperty = header ? HeaderBackgroundColor : EntryBackgroundColor;
+            if (tagField == null || colourField == null || backgroundField == null
+                || backgroundHoverField == null || backgroundColorProperty == null)
                 return true;
 
-            var background = backgroundField.GetValue(__instance) as Image;
+            var background = backgroundField.GetValue(__instance);
             if (background != null)
-                background.color = is_hovering ? (Color)backgroundHoverField.GetValue(__instance) : new Color(0f, 0f, 0f, 0f);
+                backgroundColorProperty.SetValue(background, is_hovering
+                    ? (Color)backgroundHoverField.GetValue(__instance)
+                    : new Color(0f, 0f, 0f, 0f), null);
 
             HoverState state;
             if (!HoverStates.TryGetValue(__instance, out state))
