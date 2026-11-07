@@ -44,6 +44,13 @@ DLC_BADGES = {
 
 DEFAULT_GIF = "https://i.ibb.co/LXdJf9K9/I3P8A6f.gif"
 
+KNOWN_BANNERS = {
+    "jlib": "https://raw.githubusercontent.com/LIghtJUNction/Jlib/main/Jlib/preview.png",
+    "cycletrim": "https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png",
+    "onimcp": "https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png",
+    "onionline": "https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniOnline/preview.png",
+}
+
 def render_description_en(data: Dict[str, Any]) -> str:
     """Build English BBCode description."""
     parts = []
@@ -267,7 +274,7 @@ def main():
         "core_pitch_zh": args.core_pitch_zh,
         "stage": args.stage,
         "dlc_badge": args.dlc,
-        "banner_url": args.banner,
+        "banner_url": KNOWN_BANNERS.get(args.banner.lower(), args.banner) if args.banner else "",
         "github_url": args.github,
         "discord_url": args.discord,
         "controls": [

@@ -62,7 +62,23 @@ description: 为缺氧 (Oxygen Not Included) Steam 创意工坊模组生成或�
 
 社区作者已经将高清矢量/位图资产托管在 GitHub 上，Steam 工坊直接支持解析这些 raw 图链：
 
-### 1. Supported DLC 兼容性徽章（由 Sgt_Imalas 维护开源）
+### 1. 顶部视觉大图 / 横幅 (Header Banner) ⭐极其重要防裂图规范
+
+> [!CAUTION]
+> **绝对禁止使用 404 或未验证的图片 URL！**
+> Steam 工坊详情页若遇到 404 链接，会在页面正上方最显眼处展示一个破碎图片图标（白纸撕角与绿山裂缝），极度破坏页面美感。
+> - **严禁使用临时/历史分支**（如已合并删除的 `release/*` 分支）。
+> - **必须统一使用 `main` 分支验证可用的 Raw 图链**。
+> - **若该 Mod 无远程可用图床，必须直接删除最顶部的 `[img]...[/img]`**，宁可不要 Banner 也绝不能放死链！
+
+| 模组名称 | 官方/仓库位置 | GitHub Raw 稳定直链（200 OK，已验证） |
+| :--- | :--- | :--- |
+| **Jlib** | `LIghtJUNction/Jlib` | `https://raw.githubusercontent.com/LIghtJUNction/Jlib/main/Jlib/preview.png` |
+| **CycleTrim** | `LIghtJUNction/OniMods` | `https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/CycleTrim/preview.png` |
+| **OniMcp** | `LIghtJUNction/OniMods` | `https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png` |
+| **OniOnline** | `LIghtJUNction/OniMods` | `https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniOnline/preview.png` |
+
+### 2. Supported DLC 兼容性徽章（由 Sgt_Imalas 维护开源）
 
 | 兼容范围 / 适用场景 | 说明 | GitHub Raw 链接（直接放进 `[img]...[/img]`） |
 | :--- | :--- | :--- |
