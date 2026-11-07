@@ -66,13 +66,17 @@ fn main()->Result<(),String>{
   let mut gpu=pollster::block_on(PressureProjectionGpu::new(w,h))?;
   adapter_name=gpu.adapter.name.clone();vendor=gpu.adapter.vendor;device_type=format!("{:?}",gpu.adapter.device_type);backend=format!("{:?}",gpu.adapter.backend);
   let mut output=gpu.run(fixture.input(),0.2,1.0,1.0,iterations,1.0)?;
-  let after=divergence(w,h,&output.u_faces,&output.v_faces,&fixture.solid);
   let mut samples=Vec::new();
   for _ in 0..5{output=gpu.run(fixture.input(),0.2,1.0,1.0,iterations,1.0)?;}
   for _ in 0..31{let t=Instant::now();output=black_box(gpu.run(fixture.input(),0.2,1.0,1.0,iterations,1.0)?);samples.push(t.elapsed().as_secs_f64()*1e6);}
   let p95_index=(samples.len()*95).div_ceil(100)-1;
   let mut sorted=samples.clone();sorted.sort_by(f64::total_cmp);let p95=sorted[p95_index];let med=median(&mut samples);
   let after=divergence(w,h,&output.u_faces,&output.v_faces,&fixture.solid);
+  let mut max_abs=0.0f64;let mut max_rel=0.0f64;
+  for (a,b) in cpu.u.iter().zip(&output.u_faces).chain(cpu.v.iter().zip(&output.v_faces)){
+   let error=(*a as f64-*b as f64).abs();
+   max_abs=max_abs.max(error);max_rel=max_rel.max(error/(*a as f64).abs().max(1e-3));
+  }
   rows.push(Row{width:w,height:h,iterations,median_us:med,p95_us:p95,divergence_before_l2:before,divergence_after_l2:after,divergence_ratio:after/before.max(1e-30),max_abs_face_error:max_abs,max_relative_face_error:max_rel,cpu_gpu_parity_pass:max_rel<=1e-4});
  }
  println!("{}",serde_json::to_string_pretty(&Report{stage:"Stage 2 Vulkan Poisson pressure projection",adapter:adapter_name,vendor,device_type,backend,warmup:5,samples:31,rows}).map_err(|e|e.to_string())?);
