@@ -10,7 +10,7 @@ namespace CycleTrim.PerformanceProbe.Tests
 
         internal static void Run()
         {
-            Check(!new OniSimOptions().EnableOniSim,
+            Check(!new OniSimOptions().EnableOniSimExperimental,
                 "native simulation must remain disabled by default until runtime acceptance is complete");
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
@@ -28,7 +28,7 @@ namespace CycleTrim.PerformanceProbe.Tests
 
             var disabled = new OniSimOptions
             {
-                EnableOniSim = false,
+                EnableOniSimExperimental = false,
                 OptimizePickupCandidates = false,
                 ThrottleBusyDuplicants = false,
                 ThrottleStationaryCritters = false,
