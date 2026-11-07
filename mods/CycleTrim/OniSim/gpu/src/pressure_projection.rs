@@ -151,7 +151,7 @@ impl PressureProjectionGpu{
 mod tests{
  #[test]
  fn pressure_projection_wgsl_validates(){
-  let module=naga::front::wgsl::parse_str(SHADER).expect("pressure WGSL parser");
+  let module=naga::front::wgsl::parse_str(super::SHADER).expect("pressure WGSL parser");
   naga::valid::Validator::new(naga::valid::ValidationFlags::all(),naga::valid::Capabilities::all()).validate(&module).expect("pressure WGSL validation");
  }
 }
