@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "scope": "Corrected notification dedup candidate, isolated Steam headless attempts; incomplete real-game acceptance",
+  "native_sha256": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "game_runtime_validated": false,
+  "headless_then_graphics_acceptance": false,
+  "whole_game_performance_measured": false,
+  "full_compatibility": false,
+  "native_processes_started": [
+    2409245,
+    2426427,
+    2499325
+  ],
+  "graphics_instances_started": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "startup_timeout_seconds": 60,
+      "started": true,
+      "readiness_passed": false,
+      "reason": "Instance telemetry stale during startup",
+      "normal_quit_completed": true
+    },
+    {
+      "attempt": 2,
+      "startup_timeout_seconds": 180,
+      "started": true,
+      "readiness_passed": true,
+      "actual_library_audit_passed": true,
+      "loaded_save": false,
+      "reason": "Readonly 0400 profile save rejected by native WorldGen.CanLoad read/write open; subsequent worldgen fallback reports SolarSystem.Load error.",
+      "normal_quit_completed": true
+    },
+    {
+      "attempt": 3,
+      "started": false,
+      "reason": "Single-instance measured memory capacity preflight failed after permission correction."
+    },
+    {
+      "attempt": 4,
+      "started": false,
+      "reason": "Single-instance preflight failed again before launch: available+owned PSS 4276233216 bytes, required 4294967296."
+    },
+    {
+      "attempt": 5,
+      "started": true,
+      "startup_timeout_seconds": 180,
+      "readiness_passed": true,
+      "actual_library_audit_passed": true,
+      "loaded_save": true,
+      "clock_at_load": 50.61665725708008,
+      "bounded_step_passed": false,
+      "bounded_step_error": "No positive native-clock progress; native pause holds require inspection, and substantial paging was observed.",
+      "paused_after_failure": true,
+      "normal_quit_completed": true
+    }
+  ],
+  "observed_engine": {
+    "batch_mode": true,
+    "graphics_device": "Null",
+    "camera_render_callbacks": 0,
+    "root_verified": true,
+    "game_loaded": false
+  },
+  "permission_repair": {
+    "completed_on_own_inactive_copies": true,
+    "source_gameplay_save_modified": false,
+    "bytes_unchanged_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+    "mode_before": "0400",
+    "mode_after": "0600",
+    "host_tests_passed": 26,
+    "receipt_sha256": "e5cd1e9d520ccedfde0f9fcda90239479a00c0a8230145ea21b084685c2963ca"
+  },
+  "latest_capacity": {
+    "ready": false,
+    "count": 1,
+    "mem_available_bytes": 3911753728,
+    "required_bytes": 4294967296,
+    "captured_at": "2026-10-20T20:22:46.045938+00:00",
+    "receipt_sha256": "56bb49720eaf855f953d24025266dc1747771b98dade34298fe89eddd00ccca5"
+  },
+  "engine_library_audit_sha256": "ef542b3b7305f2a9f4aed2f3c38861c263932292379e76db1e517d8f7e871839",
+  "tool_sha256": {
+    "prepare_instances.py": "7b028cb0f4402e483244f0a7a57c8827da5286050dc7c25eba020189339179e5",
+    "verify_instances.py": "ee68ebe5781cf83f2d0fda0bff8eb2bd8e0a3b5dc4e346ba4d475d5a31e82416",
+    "step_instance.py": "0bc2563b90b914debae06b255ddcf019f28f8d6f47361d717e76e4a2d94e6f52",
+    "benchmark_frames.py": "45f6be82f598d3626ad5eda8bcef3258d83769a3fa57370791cd1d37da762db7",
+    "test_runner.py": "5211ff17707b09633185f43d81b90133ab817f1de130ebfc3bae2f197d9a17ba",
+    "test_instances.py": "c03ad6f9f9207636f1c7d9b40c083a21e67d8119daf69a1c11a196495f3d6299"
+  },
+  "cleanup": {
+    "all_own_games_exited": true,
+    "own_steam_group_launcher_stopped": true,
+    "foreign_sessions_modified": false
+  },
+  "remaining": [
+    "Load corrected working copy and verify positive bounded native clock progress",
+    "Save/load round trip via supported native test interface",
+    "Graphical acceptance after headless acceptance",
+    "Four real simultaneous CycleTrim instances and low-memory resource evidence",
+    "Whole-game performance against same-save reference"
+  ],
+  "latest_actual_game_clock_progress_verified": false,
+  "attempt5_receipts_sha256": {
+    "attempt5-library-audit.json": "6c944c99f49c5b3c1d3dbbd003ee7fe4691f73ae514005052c57f20429cd1376",
+    "attempt5-headless-step.json": "fcb5ef9ab9b2b5c86ec62d2c83f3285f19cc6a9dac00a764514e380c71a1f49b",
+    "attempt5-resources-after-step.json": "c408ed7216fdf9755b558f35694700e55d1b58c64eed24651f87898a0c03e447",
+    "stop-guest1-attempt5.log": "e0ab0a13a2c26fb6089cd2d2fa26ea6c5015d77fb757621644c83bbd319f0822"
+  },
+  "next_runtime_route": "Separate optional OniMcp acceptance profile using its supported save/load and inspected native-pause release within a game-owned deadline. The minimal controller save API remains unimplemented."
+}

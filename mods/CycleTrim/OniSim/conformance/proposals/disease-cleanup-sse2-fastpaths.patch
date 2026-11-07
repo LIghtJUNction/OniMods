@@ -1,0 +1,308 @@
+--- a/src/disease.rs
++++ b/src/disease.rs
+@@ -282,16 +282,15 @@
+                                     radiation_enabled,
+                                 );
+                             }
+-                            // Each cell reads only itself: cleanup can follow its growth
+-                            // immediately without changing the original two-pass result.
+-                            if counts[local] < 1 {
+-                                ids[local] = u8::MAX;
+-                                counts[local] = 0;
+-                                infestation[local] = 0;
+-                                growth[local] = 0.0;
+-                            }
+-                            infestation[local] = (infestation[local] as u16 + 1).min(254) as u8;
+                         }
++                        // Growth reads only its own cell and immutable tables. A row
++                        // can finish growth before its independent cleanup groups.
++                        cleanup_fields(
++                            &mut ids[row + min_x..row + max_x],
++                            &mut counts[row + min_x..row + max_x],
++                            &mut infestation[row + min_x..row + max_x],
++                            &mut growth[row + min_x..row + max_x],
++                        );
+                     }
+                 });
+         });
+@@ -318,17 +317,117 @@
+         }
+     }
+     for y in min_y..max_y {
+-        for x in min_x..max_x {
+-            let cell = y * stride + x;
+-            if cells.disease_count[cell] < 1 {
+-                clear_disease(cells, cell);
+-            }
+-            // Even a cleared cell advances from zero to one in this pass.
+-            cells.disease_infestation[cell] =
+-                (cells.disease_infestation[cell] as u16 + 1).min(254) as u8;
+-        }
++        let start = y * stride + min_x;
++        let end = y * stride + max_x;
++        cleanup_fields(
++            &mut cells.disease_idx[start..end],
++            &mut cells.disease_count[start..end],
++            &mut cells.disease_infestation[start..end],
++            &mut cells.disease_growth[start..end],
++        );
+     }
+     Ok(())
++}
++
++// Counts <= 0 clear all disease fields, then every cell advances infestation.
++// Positive counts preserve the exact growth word, including signaling NaNs.
++#[inline]
++fn cleanup_scalar(ids: &mut [u8], counts: &mut [i32], infestation: &mut [u8], growth: &mut [f32]) {
++    for (((id, count), infestation), growth) in
++        ids.iter_mut().zip(counts).zip(infestation).zip(growth)
++    {
++        if *count < 1 {
++            *id = u8::MAX;
++            *count = 0;
++            *infestation = 0;
++            *growth = 0.0;
++        }
++        *infestation = (*infestation as u16 + 1).min(254) as u8;
++    }
++}
++
++#[cfg(target_arch = "x86_64")]
++#[inline]
++fn cleanup_four(
++    ids: &mut [u8; 4],
++    counts: &mut [i32; 4],
++    infestation: &mut [u8; 4],
++    growth: &mut [f32; 4],
++) {
++    use std::arch::x86_64::*;
++    // SSE2 is guaranteed on x86_64. Array types bound every 16-byte and
++    // 4-byte unaligned access. Integer/bitwise operations preserve all FP words.
++    unsafe {
++        let zero = _mm_setzero_si128();
++        let old_counts = _mm_loadu_si128(counts.as_ptr().cast());
++        let keep = _mm_cmpgt_epi32(old_counts, zero);
++        let lanes = _mm_movemask_epi8(keep);
++        if lanes == 0 {
++            // Every lane takes the original count <= 0 branch; no old payload
++            // can contribute to the result, including NaN growth words.
++            _mm_storeu_si128(counts.as_mut_ptr().cast(), zero);
++            _mm_storeu_si128(growth.as_mut_ptr().cast(), zero);
++            ids.fill(u8::MAX);
++            infestation.fill(1);
++            return;
++        }
++        let old_ticks = std::ptr::read_unaligned(infestation.as_ptr().cast::<u32>());
++        let one = _mm_set1_epi8(1);
++        let tick = _mm_min_epu8(
++            _mm_adds_epu8(_mm_cvtsi32_si128(old_ticks as i32), one),
++            _mm_set1_epi8(-2),
++        );
++        if lanes == 0xffff {
++            // Every positive-count lane keeps its ID/count/growth verbatim.
++            // Avoid writing those unchanged arrays after the growth pass.
++            std::ptr::write_unaligned(
++                infestation.as_mut_ptr().cast::<u32>(),
++                _mm_cvtsi128_si32(tick) as u32,
++            );
++            return;
++        }
++        let keep_bytes = _mm_packs_epi16(_mm_packs_epi32(keep, zero), zero);
++        let old_growth = _mm_loadu_si128(growth.as_ptr().cast());
++        _mm_storeu_si128(counts.as_mut_ptr().cast(), _mm_and_si128(old_counts, keep));
++        _mm_storeu_si128(growth.as_mut_ptr().cast(), _mm_and_si128(old_growth, keep));
++        let old_ids = std::ptr::read_unaligned(ids.as_ptr().cast::<u32>());
++        let mask = _mm_cvtsi128_si32(keep_bytes) as u32;
++        std::ptr::write_unaligned(ids.as_mut_ptr().cast::<u32>(), old_ids | !mask);
++        let tick = _mm_or_si128(
++            _mm_and_si128(tick, keep_bytes),
++            _mm_andnot_si128(keep_bytes, one),
++        );
++        std::ptr::write_unaligned(
++            infestation.as_mut_ptr().cast::<u32>(),
++            _mm_cvtsi128_si32(tick) as u32,
++        );
++    }
++}
++
++#[inline]
++fn cleanup_fields(ids: &mut [u8], counts: &mut [i32], infestation: &mut [u8], growth: &mut [f32]) {
++    assert!(
++        ids.len() == counts.len() && ids.len() == infestation.len() && ids.len() == growth.len(),
++        "disease cleanup slices must share a length"
++    );
++    #[cfg(target_arch = "x86_64")]
++    {
++        let (id_blocks, id_tail) = ids.as_chunks_mut::<4>();
++        let (count_blocks, count_tail) = counts.as_chunks_mut::<4>();
++        let (infestation_blocks, infestation_tail) = infestation.as_chunks_mut::<4>();
++        let (growth_blocks, growth_tail) = growth.as_chunks_mut::<4>();
++        for (((ids, counts), infestation), growth) in id_blocks
++            .iter_mut()
++            .zip(count_blocks)
++            .zip(infestation_blocks)
++            .zip(growth_blocks)
++        {
++            cleanup_four(ids, counts, infestation, growth);
++        }
++        cleanup_scalar(id_tail, count_tail, infestation_tail, growth_tail);
++    }
++    #[cfg(not(target_arch = "x86_64"))]
++    cleanup_scalar(ids, counts, infestation, growth);
+ }
+ 
+ pub(crate) fn post_process(
+--- a/src/disease_tests.rs
++++ b/src/disease_tests.rs
+@@ -135,3 +135,151 @@
+         equal(&cells, &original);
+     }
+ }
++
++#[test]
++fn cleanup_fields_match_all_lane_masks_and_infestation_bytes() {
++    let words = [
++        0, 0x80000000, 1, 0x80000001, 0x7f800000, 0xff800000, 0x7fc12345, 0x7fa12345, 0xffa12345,
++        0x3f800000, 0xbf800000, 0x7f7fffff,
++    ];
++    for mask in 0..16 {
++        for tick in 0..=255_u8 {
++            for shift in 0..words.len() {
++                let mut ids = [0_u8, 1, 254, 255];
++                let mut counts: [i32; 4] = std::array::from_fn(|i| {
++                    if mask & (1 << i) != 0 {
++                        [1, 17, i32::MAX, 64][i]
++                    } else {
++                        [0, -1, i32::MIN, -100][i]
++                    }
++                });
++                let mut infestation: [u8; 4] =
++                    std::array::from_fn(|i| tick.wrapping_add((i * 73) as u8));
++                let mut growth: [f32; 4] =
++                    std::array::from_fn(|i| f32::from_bits(words[(shift + i) % words.len()]));
++                let mut expected_ids = ids;
++                let mut expected_counts = counts;
++                let mut expected_infestation = infestation;
++                let mut expected_words = growth.map(f32::to_bits);
++                for i in 0..4 {
++                    if expected_counts[i] < 1 {
++                        expected_ids[i] = 255;
++                        expected_counts[i] = 0;
++                        expected_infestation[i] = 0;
++                        expected_words[i] = 0;
++                    }
++                    expected_infestation[i] = (expected_infestation[i] as u16 + 1).min(254) as u8;
++                }
++                cleanup_fields(&mut ids, &mut counts, &mut infestation, &mut growth);
++                assert_eq!(ids, expected_ids);
++                assert_eq!(counts, expected_counts);
++                assert_eq!(infestation, expected_infestation);
++                assert_eq!(growth.map(f32::to_bits), expected_words);
++            }
++        }
++    }
++}
++
++#[test]
++fn cleanup_fields_keep_unaligned_tails_and_outside_cells_exact() {
++    for offset in 0..8 {
++        for length in 0..38 {
++            let mut actual = fixture(64);
++            let mut expected = actual.clone();
++            for cell in offset..offset + length {
++                if expected.disease_count[cell] < 1 {
++                    expected.disease_idx[cell] = 255;
++                    expected.disease_count[cell] = 0;
++                    expected.disease_infestation[cell] = 0;
++                    expected.disease_growth[cell] = 0.0;
++                }
++                expected.disease_infestation[cell] =
++                    (expected.disease_infestation[cell] as u16 + 1).min(254) as u8;
++            }
++            let selected = offset..offset + length;
++            cleanup_fields(
++                &mut actual.disease_idx[selected.clone()],
++                &mut actual.disease_count[selected.clone()],
++                &mut actual.disease_infestation[selected.clone()],
++                &mut actual.disease_growth[selected],
++            );
++            equal(&actual, &expected);
++        }
++    }
++}
++
++#[test]
++fn cleanup_fields_reject_unequal_lengths_before_writes() {
++    for short in 0..4 {
++        let mut ids = [1_u8; 4];
++        let mut counts = [-1_i32; 4];
++        let mut infestation = [255_u8; 4];
++        let mut growth = [f32::from_bits(0x7fa12345); 4];
++        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++            cleanup_fields(
++                &mut ids[..if short == 0 { 3 } else { 4 }],
++                &mut counts[..if short == 1 { 3 } else { 4 }],
++                &mut infestation[..if short == 2 { 3 } else { 4 }],
++                &mut growth[..if short == 3 { 3 } else { 4 }],
++            );
++        }));
++        assert!(result.is_err());
++        assert_eq!(ids, [1; 4]);
++        assert_eq!(counts, [-1; 4]);
++        assert_eq!(infestation, [255; 4]);
++        assert_eq!(growth.map(f32::to_bits), [0x7fa12345; 4]);
++    }
++}
++
++#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
++#[test]
++fn cleanup_fields_preserve_mxcsr_and_errno_in_512_environments() {
++    fn read_mxcsr() -> u32 {
++        let mut value = 0_u32;
++        unsafe {
++            std::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut value,
++            options(nostack, preserves_flags));
++        }
++        value
++    }
++    fn write_mxcsr(value: u32) {
++        unsafe {
++            std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &value,
++            options(nostack, preserves_flags));
++        }
++    }
++    unsafe extern "C" {
++        fn __errno_location() -> *mut std::ffi::c_int;
++    }
++    let original = FloatEnv::capture();
++    let _restore = original.install();
++    let base = read_mxcsr() & !0xffff;
++    for mask in [0x1f80, 0x1f00, 0x1e80, 0x1d80, 0x1b80, 0x1780, 0x0f80, 0] {
++        for rounding in [0, 0x2000, 0x4000, 0x6000] {
++            for denormals in [0, 0x40, 0x8000, 0x8040] {
++                for sticky in [0, 1, 0x20, 0x3f] {
++                    let requested = base | mask | rounding | denormals | sticky;
++                    for pattern in 0..3 {
++                        let mut ids = [0, 1, 254, 255, 1];
++                        let mut counts = match pattern {
++                            0 => [-1, 0, 1, i32::MAX, 0],
++                            1 => [0, -1, i32::MIN, 0, -1],
++                            _ => [1, 17, i32::MAX, 2, 1],
++                        };
++                        let mut infestation = [0, 255, 253, 254, 255];
++                        let mut growth =
++                            [0x7fa12345, 1, 0x80000000, 0xffa12345, 0x7f800000].map(f32::from_bits);
++                        let errno = unsafe { __errno_location() };
++                        unsafe {
++                            *errno = 33;
++                        }
++                        write_mxcsr(requested);
++                        cleanup_fields(&mut ids, &mut counts, &mut infestation, &mut growth);
++                        assert_eq!(read_mxcsr(), requested);
++                        assert_eq!(unsafe { *errno }, 33);
++                    }
++                }
++            }
++        }
++    }
++}

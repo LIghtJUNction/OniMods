@@ -1,0 +1,318 @@
+{
+  "samples": [
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67000,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 91796,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 91736,
+      "samples": 55,
+      "peak_delta_kib": 24736,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 0,
+      "label": "baseline"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67352,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81632,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81572,
+      "samples": 42,
+      "peak_delta_kib": 14220,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 0,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 66972,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81172,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81112,
+      "samples": 39,
+      "peak_delta_kib": 14140,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 1,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67340,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 92136,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 92076,
+      "samples": 51,
+      "peak_delta_kib": 24736,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 1,
+      "label": "baseline"
+    },
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67448,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 92244,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 92184,
+      "samples": 57,
+      "peak_delta_kib": 24736,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 2,
+      "label": "baseline"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67440,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81640,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81580,
+      "samples": 44,
+      "peak_delta_kib": 14140,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 2,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67476,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81764,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81704,
+      "samples": 36,
+      "peak_delta_kib": 14228,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 3,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67000,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 91796,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 91736,
+      "samples": 51,
+      "peak_delta_kib": 24736,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 3,
+      "label": "baseline"
+    },
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67412,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 92204,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 92144,
+      "samples": 53,
+      "peak_delta_kib": 24732,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 4,
+      "label": "baseline"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67516,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81804,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81744,
+      "samples": 44,
+      "peak_delta_kib": 14228,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 4,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67468,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 81664,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 81604,
+      "samples": 42,
+      "peak_delta_kib": 14136,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 5,
+      "label": "candidate"
+    },
+    {
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "input_sha256": "b2e1caea1dd85102898b1a82944c661ca6fdbedb2d2415409d9dde7e1c9e4d4f",
+      "saved_sha256": "cddc19f490808377dbd6b031d518fc158f9f13958e23baf588cfb224d422b2c7",
+      "width": 736,
+      "height": 304,
+      "padded_cells": 225828,
+      "batch_count": 2,
+      "before_kib": {
+        "VmRSS": 67476,
+        "VmSwap": 0
+      },
+      "after_kib": {
+        "VmRSS": 92268,
+        "VmSwap": 0
+      },
+      "peak_rss_kib": 92208,
+      "samples": 51,
+      "peak_delta_kib": 24732,
+      "major_faults": 0,
+      "scope": "Isolated native two-record Load; whole-process RSS sampled every 1ms; glibc malloc_trim only in probe before measurement; no game or FPS claim",
+      "sample": 5,
+      "label": "baseline"
+    }
+  ],
+  "summary_peak_delta_kib": {
+    "baseline": 24736.0,
+    "candidate": 14180.0
+  },
+  "libraries": {
+    "baseline": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+    "candidate": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33"
+  },
+  "scope": "Two-record native Load; 6 alternating fresh-process pairs; whole-process RSS sampled at 1ms, malloc_trim only before probe, no game",
+  "schema": 1,
+  "date": "2026-10-21",
+  "baseline_cell_bytes": 56,
+  "candidate_cell_bytes": 32,
+  "layout_verified_with": "rustc 1.99.1",
+  "cell_storage_reduction_percent": 42.857142857142854,
+  "probe_source_sha256": "ab4d0e0b983a9392109038221717c27e2e4ea01334b07919636d401c348fda78",
+  "probe_source_path": "conformance/artifacts/global-perf/load_memory_child.py",
+  "baseline_compiler": "rustc 1.97.0",
+  "candidate_compiler": "rustc 1.99.1",
+  "limitations": [
+    "Whole-process RSS sampled at 1ms, not a complete native heap attribution",
+    "glibc malloc_trim is used only before the probe; no game process was modified",
+    "Authored Oxygen-only native Load batch; no Unity, buildings or duplicants",
+    "This is temporary Load-plan storage, not a 43 percent reduction of total game RAM",
+    "No FPS or normal-frame speed claim"
+  ]
+}

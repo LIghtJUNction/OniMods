@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "seed_hex": "4f4e495f4c45414e",
+  "total_cases": 65040,
+  "compared_cells": 31991764,
+  "update_steps": 13957,
+  "elapsed_ns": 1956565928,
+  "groups": [{"name":"small_exhaustive_search","cases":52488,"compared_cells":72552,"update_steps":0,"elapsed_ns":9258744},
+    {"name":"random_search","cases":2000,"compared_cells":1799434,"update_steps":0,"elapsed_ns":88537133},
+    {"name":"u16_coordinate_and_dimension_boundaries","cases":4704,"compared_cells":112698,"update_steps":0,"elapsed_ns":38104366},
+    {"name":"small_exhaustive_updates","cases":4500,"compared_cells":256000,"update_steps":9000,"elapsed_ns":12633250},
+    {"name":"random_updates_special_float_bits","cases":1200,"compared_cells":1439312,"update_steps":4800,"elapsed_ns":62618787},
+    {"name":"overlap_region_timer_and_large_dimension_updates","cases":148,"compared_cells":28311768,"update_steps":157,"elapsed_ns":1745220822}],
+  "scope": "Actual Rust disease emitter component; minimal world adapter; not an ONI runtime test"
+}

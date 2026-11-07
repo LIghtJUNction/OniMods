@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "source_integrated": false,
+  "runtime_accepted": false,
+  "candidate_native_sha256": "368df12470780b24d9c373accd8eca20b005bfb16a5e09adc47120e127ed66b6",
+  "release_unit_tests": 45,
+  "runs": [
+    {
+      "workers": 1,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "7d40f049b55aa1e9eb2fd2e6ad004b962ac408cdb53c19a1f977a0da4ace9c40"
+    },
+    {
+      "workers": 4,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "0641eb6f1f3d2b98c5fd2b1fe99b95249ec1ac9ff619e382bc54a563646ab41a"
+    }
+  ],
+  "complete": true,
+  "adopted": false,
+  "scope": "Four-cell SSE2 cleanup inside existing row ownership; native frame fixtures, not whole-game performance",
+  "sizes": {
+    "96": {
+      "samples": 96,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": 6.47138323736256,
+          "wall_change_percent": 7.460430481352653,
+          "peak_rss_change_percent": -0.005971575301566556
+        },
+        "thermal": {
+          "cpu_change_percent": 4.098160053896183,
+          "wall_change_percent": 5.730244805210183,
+          "peak_rss_change_percent": 0.0716546247089056
+        },
+        "sealed": {
+          "cpu_change_percent": -5.894645104078188,
+          "wall_change_percent": -5.8460783010681805,
+          "peak_rss_change_percent": 0.047886986711365154
+        },
+        "germ_flow": {
+          "cpu_change_percent": 2.139343670348137,
+          "wall_change_percent": 1.9532752766663997,
+          "peak_rss_change_percent": 0.06565596275516228
+        },
+        "mixed_germs": {
+          "cpu_change_percent": 0.38458414449533684,
+          "wall_change_percent": 0.42265130160548114,
+          "peak_rss_change_percent": 0.011965300628169473
+        },
+        "vacuum": {
+          "cpu_change_percent": 1.9380309080935465,
+          "wall_change_percent": 3.8834489953764706,
+          "peak_rss_change_percent": -0.005985515053574808
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "44112406879db73cd12f60f935bcebf0c460c38e9278b8a085d32b787896797e"
+    },
+    "192": {
+      "samples": 60,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -6.283241409631013,
+          "wall_change_percent": -5.256267719261731,
+          "peak_rss_change_percent": -0.037458795325140404
+        },
+        "thermal": {
+          "cpu_change_percent": 0.8336785268206137,
+          "wall_change_percent": 2.8104716413334785,
+          "peak_rss_change_percent": 0.05277044854881119
+        },
+        "sealed": {
+          "cpu_change_percent": 6.722122611735104,
+          "wall_change_percent": 6.77157470646379,
+          "peak_rss_change_percent": 0.015101177891874151
+        },
+        "germ_flow": {
+          "cpu_change_percent": -4.00619347018949,
+          "wall_change_percent": -4.346267937837012,
+          "peak_rss_change_percent": 0.007379529186035683
+        },
+        "mixed_germs": {
+          "cpu_change_percent": 0.9807677236330026,
+          "wall_change_percent": 0.3279863860409904,
+          "peak_rss_change_percent": -0.014769957905624853
+        },
+        "vacuum": {
+          "cpu_change_percent": 0.13356200899894421,
+          "wall_change_percent": 1.2749478217688681,
+          "peak_rss_change_percent": -0.13135527739144282
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "af4bf81a3c9adb5779cae0a225da568bebff9c2a1b75e7b941b8b9803b8d20e0"
+    }
+  },
+  "decision": "Reject: unchanged original gates fail. Uniform clear/retain groups still perform unnecessary loads/stores; evaluate exact semantic fast paths separately.",
+  "base_commit": "512a95c82729ef9a45b9267f59bd68dfda6fe7e9",
+  "proposal_patch_sha256": "aef94cb2d86c9f189fb25a6b85cdbbc1222bb1a0e0d69dee9c1e3fc9dec6dac2",
+  "ignored_diagnostic_test_excluded_from_proposal": true
+}

@@ -1,0 +1,3 @@
+'PreparedStep.duplicate_eq_single' does not depend on any axioms
+'PreparedStep.frame_result_equal' depends on axioms: [propext]
+'PreparedStep.later_checks_preserved' does not depend on any axioms

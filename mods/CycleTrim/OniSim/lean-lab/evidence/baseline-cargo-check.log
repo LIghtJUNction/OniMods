@@ -1,0 +1,38 @@
+    Checking oni-sim-core v0.1.0 (/workspace/scratch/d2db565d18f3/onisim-source/experimental/OniSim/native)
+src/mass_components.rs:9:12: error[E0432]: unresolved import `crate::worker_shape`: could not find `worker_shape` in the crate root
+src/radiation.rs:10:12: error[E0432]: unresolved import `crate::worker_shape`: could not find `worker_shape` in the crate root
+src/state.rs:4:12: error[E0432]: unresolved import `crate::cell_material`: could not find `cell_material` in the crate root
+src/state.rs:6:12: error[E0432]: unresolved import `crate::frames_commands`: could not find `frames_commands` in the crate root
+src/state.rs:7:12: error[E0432]: unresolved import `crate::frames_data`: could not find `frames_data` in the crate root
+src/state.rs:8:12: error[E0432]: unresolved import `crate::frames_engine`: could not find `frames_engine` in the crate root
+src/state.rs:15:12: error[E0432]: unresolved import `crate::worker`: could not find `worker` in the crate root
+src/state.rs:16:12: error[E0432]: unresolved import `crate::worker_shape`: could not find `worker_shape` in the crate root
+src/state.rs:18:12: error[E0432]: unresolved import `crate::world_messages`: could not find `world_messages` in the crate root
+src/frames_plan.rs:2:31: error[E0432]: unresolved import `crate::frames::Replacement`: no `Replacement` in `frames`
+src/frames.rs:14:39: error[E0433]: cannot find `frames_commands` in the crate root: could not find `frames_commands` in the crate root
+src/frames.rs:19:30: error[E0433]: cannot find `frames_commands` in the crate root: could not find `frames_commands` in the crate root
+src/frames.rs:20:33: error[E0433]: cannot find `cell_material` in the crate root: could not find `cell_material` in the crate root
+src/frames.rs:21:30: error[E0433]: cannot find `world_messages` in the crate root: could not find `world_messages` in the crate root
+src/frames_plan.rs:56:56: error[E0631]: type mismatch in function arguments: expected due to this
+src/frames_plan.rs:59:47: error[E0609]: no field `completed_frames` on type `Scheduler`: unknown field
+src/frames_plan.rs:60:47: error[E0609]: no field `cell_modifications` on type `Scheduler`: unknown field
+src/frames_plan.rs:295:29: error[E0599]: no method named `subdivision` found for struct `Scheduler` in the current scope: method not found in `Scheduler`
+src/frames_plan.rs:300:21: error[E0308]: mismatched types: expected `Option<&DiseaseTable>`, found `Option<&Arc<DiseaseTable>>`
+src/messages.rs:73:38: error[E0061]: this method takes 3 arguments but 4 arguments were supplied
+src/messages.rs:97:29: error[E0609]: no field `cell_modifications` on type `Scheduler`: unknown field
+src/messages.rs:113:49: error[E0308]: mismatched types: expected `Option<&DiseaseTable>`, found `Option<&Arc<DiseaseTable>>`
+src/messages.rs:141:21: error[E0599]: no method named `reserve` found for struct `Scheduler` in the current scope: method not found in `Scheduler`
+src/messages.rs:142:43: error[E0609]: no field `cell_modifications` on type `Scheduler`: unknown field
+src/messages.rs:143:14: error[E0609]: no field `pending_events` on type `&mut State`: unknown field
+src/messages.rs:150:10: error[E0609]: no field `pending_events` on type `&mut State`: unknown field
+src/messages.rs:171:23: error[E0609]: no field `pending_events` on type `&mut State`: unknown field
+src/messages.rs:172:23: error[E0609]: no field `published_events` on type `&mut State`: unknown field
+src/messages.rs:192:33: error[E0609]: no field `cell_modifications` on type `Scheduler`: unknown field
+src/messages.rs:194:62: error[E0308]: mismatched types: expected `Arc<ElementTable>`, found `ElementTable`
+src/messages.rs:195:62: error[E0308]: mismatched types: expected `Arc<DiseaseTable>`, found `DiseaseTable`
+src/messages.rs:196:43: error[E0599]: no method named `process_frame` found for mutable reference `&mut State` in the current scope: method not found in `&mut State`
+src/messages.rs:198:32: error[E0599]: no method named `prepare_publication` found for mutable reference `&mut State` in the current scope: method not found in `&mut State`
+src/state.rs:124:22: error[E0599]: no method named `queue_energy_batch` found for struct `ThermalComponents` in the current scope: method not found in `ThermalComponents`
+src/lib.rs:210:33: error[E0609]: no field `cell_modifications` on type `Scheduler`: unknown field
+src/lib.rs:237:54: error[E0308]: mismatched types: expected `Option<&DiseaseTable>`, found `Option<&Arc<DiseaseTable>>`
+error: could not compile `oni-sim-core` (lib) due to 36 previous errors

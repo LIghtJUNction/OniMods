@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "complete": true,
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "official_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "scope": "96x96 authored native fixtures; CPU16 worker1, eight alternating pairs per scene; not whole-game FPS",
+  "samples": 96,
+  "all_final_publications_match_official": true,
+  "timed_major_faults": 0,
+  "scenes": {
+    "fluid": {
+      "cpu_change_percent": -3.452291149194986,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5683447209999999,
+          "minimum": 0.513403404,
+          "maximum": 0.636932808
+        },
+        "candidate": {
+          "median": 0.5487238065,
+          "minimum": 0.5067168980000001,
+          "maximum": 0.634653319
+        },
+        "median_speedup": 1.0357573596544876
+      },
+      "peak_rss_kib": {
+        "baseline": 38812.0,
+        "candidate": 33304.0
+      },
+      "peak_rss_change_percent": -14.191487168916828
+    },
+    "thermal": {
+      "cpu_change_percent": -20.682978097770167,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.2313244605,
+          "minimum": 0.194013599,
+          "maximum": 0.271264564
+        },
+        "candidate": {
+          "median": 0.183479673,
+          "minimum": 0.171212238,
+          "maximum": 0.21668963200000002
+        },
+        "median_speedup": 1.2607634225509001
+      },
+      "peak_rss_kib": {
+        "baseline": 36700.0,
+        "candidate": 33308.0
+      },
+      "peak_rss_change_percent": -9.242506811989104
+    },
+    "sealed": {
+      "cpu_change_percent": -9.285832734240884,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5600353084999999,
+          "minimum": 0.544482698,
+          "maximum": 0.595114154
+        },
+        "candidate": {
+          "median": 0.5080313665,
+          "minimum": 0.49087955499999997,
+          "maximum": 0.539688183
+        },
+        "median_speedup": 1.102363644115663
+      },
+      "peak_rss_kib": {
+        "baseline": 39360.0,
+        "candidate": 33244.0
+      },
+      "peak_rss_change_percent": -15.538617886178862
+    },
+    "germ_flow": {
+      "cpu_change_percent": -1.3561242732678447,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.7344396229999999,
+          "minimum": 0.676566013,
+          "maximum": 0.8296952220000001
+        },
+        "candidate": {
+          "median": 0.724479709,
+          "minimum": 0.6810186659999999,
+          "maximum": 0.741028188
+        },
+        "median_speedup": 1.0137476783355983
+      },
+      "peak_rss_kib": {
+        "baseline": 38792.0,
+        "candidate": 33334.0
+      },
+      "peak_rss_change_percent": -14.069911321922046
+    },
+    "mixed_germs": {
+      "cpu_change_percent": -1.787611859386029,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.7872779219999999,
+          "minimum": 0.7370679769999999,
+          "maximum": 0.815545152
+        },
+        "candidate": {
+          "median": 0.7732044485,
+          "minimum": 0.711955911,
+          "maximum": 0.8454186639999999
+        },
+        "median_speedup": 1.018201490598382
+      },
+      "peak_rss_kib": {
+        "baseline": 39344.0,
+        "candidate": 33274.0
+      },
+      "peak_rss_change_percent": -15.428019520130132
+    },
+    "vacuum": {
+      "cpu_change_percent": -35.46293049882458,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.7544835205,
+          "minimum": 0.6841508870000002,
+          "maximum": 0.7696840650000001
+        },
+        "candidate": {
+          "median": 0.48692155400000003,
+          "minimum": 0.445837375,
+          "maximum": 0.572036208
+        },
+        "median_speedup": 1.5494970684744014
+      },
+      "peak_rss_kib": {
+        "baseline": 83692.0,
+        "candidate": 33236.0
+      },
+      "peak_rss_change_percent": -60.287721646035465
+    }
+  },
+  "gates": {
+    "maximum_scene_cpu_regression_3_percent": true,
+    "at_least_one_scene_cpu_reduction_10_percent": true,
+    "maximum_peak_rss_increase_3_percent": true
+  },
+  "passes_predeclared_official_gates": true,
+  "source_integrated": true,
+  "production_promoted": false,
+  "runtime_acceptance": false,
+  "whole_game_speedup_established": false,
+  "raw_report_sha256": "178cdbf658c5c41aa4209c3ab6344e42f14a5d8073f1f0ac191f30709e7f08fd",
+  "interpretation": "Fresh corrected binary passes all native gates; all samples retained, including host-load/frequency dispersion. Actual-game and four-instance acceptance remain separate.",
+  "canonical_rebuild_matches_tested_binary": true,
+  "canonical_harness_matches_expanded_test_run": true,
+  "game_free_harness_tests": 47
+}
