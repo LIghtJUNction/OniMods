@@ -31,7 +31,7 @@ namespace OniSim.Compatibility
         internal readonly VersionDelegate GetAbiVersion;
         internal readonly StatusDelegate GetLastStatus;
         internal readonly GenerationDelegate GetGeneration;
-        internal readonly CopyImageDelegate CopyGridImage;
+        internal readonly CopyImageDelegate CopyGridImage, CopyMulticomponentImage;
         internal readonly string Path;
 
         private NativeApi(string path)
@@ -55,7 +55,7 @@ namespace OniSim.Compatibility
             GetGeneration = Load<GenerationDelegate>("ONISIM_GetGeneration");
             GetCapabilities = Load<PointerDelegate>("ONISIM_GetCapabilities");
             GetGrid = Load<PointerDelegate>("ONISIM_GetGrid");
-            CopyGridImage = Load<CopyImageDelegate>("ONISIM_CopyGridImage");
+            CopyGridImage = Load<CopyImageDelegate>("ONISIM_CopyGridImage");\n            CopyMulticomponentImage = Load<CopyImageDelegate>("ONISIM_CopyMulticomponentImage");
             uint version = GetAbiVersion();
             if (version != 1) throw new NotSupportedException("Native ABI version " + version + " is not supported.");
         }
