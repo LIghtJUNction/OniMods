@@ -73,7 +73,7 @@ while (($#)); do
 done
 [[ -n "$MODE" ]] || { usage >&2; exit 2; }
 
-(cd "$ROOT" && cargo run --quiet --release -- --config "$CONFIG" --mod "$MOD_KEY" publish --non-interactive --auto-note --dry-run)
+(cd "$ROOT" && cargo run --bin onim --quiet --release -- --config "$CONFIG" --mod "$MOD_KEY" publish --non-interactive --auto-note --dry-run)
 test -f "$VDF"
 dotnet build "$ROOT/tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj" -c Release >/dev/null
 test -f "$PUBLISHER"

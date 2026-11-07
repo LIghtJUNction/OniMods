@@ -145,7 +145,7 @@ run_tests() {
   [[ "$SKIP_TESTS" == true ]] && return
   if [[ "$MOD_KEY" == "CycleTrim" ]]; then
     (cd "$ROOT" && python scripts/verify_cycletrim_target_contract.py)
-    (cd "$ROOT" && cargo run --quiet --release -- \
+    (cd "$ROOT" && cargo run --bin onim --quiet --release -- \
       --config "$ROOT/onim.toml" --mod CycleTrim build --release)
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
     (cd "$ROOT" && dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true)
@@ -183,7 +183,7 @@ run_publisher() {
 }
 
 build_metadata() {
-  (cd "$ROOT" && cargo run --quiet --release -- \
+  (cd "$ROOT" && cargo run --bin onim --quiet --release -- \
     --config "$ROOT/onim.toml" --mod "$MOD_KEY" publish \
     --non-interactive --auto-note --dry-run)
   test -f "$VDF_PATH"
@@ -266,7 +266,7 @@ if [[ -n "$FIRST_MODE" ]]; then
       fi
       (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests -c Release)
     fi
-    (cd "$ROOT" && cargo run --quiet --release -- --config "$ROOT/onim.toml" --mod "$MOD_KEY" publish --non-interactive --auto-note --dry-run)
+    (cd "$ROOT" && cargo run --bin onim --quiet --release -- --config "$ROOT/onim.toml" --mod "$MOD_KEY" publish --non-interactive --auto-note --dry-run)
     dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
     run_publisher --prepare-first-item --vdf "$VDF_PATH" --output "$FIRST_PLAN"
   else

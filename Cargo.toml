@@ -1,6 +1,7 @@
 [package]
 name = "onim"
 version = "0.1.11"
+default-run = "onim"
 edition = "2024"
 license-file = "LICENSE"
 description = "Command-line toolkit for Oxygen Not Included mods and OniMcp."
