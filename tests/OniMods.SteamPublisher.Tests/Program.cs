@@ -589,7 +589,7 @@ static void RunFirstPublicationCase(string modName = "OniOnline")
     {
         ["ONIM_PUBLISH_NAME"] = modName,
         ["ONIM_PUBLISH_STATIC_ID"] = "LIghtJUNction." + modName,
-        ["ONIM_PUBLISH_TAGS"] = "tweaks,Spaced Out!",
+        ["ONIM_PUBLISH_TAGS"] = modName == "Jlib" ? "tweaks" : "tweaks,Spaced Out!",
         ["ONIM_PUBLISH_WORKSHOP_ID"] = "0",
         ["ONIM_PUBLISH_CREATOR_APP_ID"] = "636750",
         ["ONIM_PUBLISH_CONSUMER_APP_ID"] = "457140",
@@ -694,12 +694,14 @@ static void RunFirstPublicationCase(string modName = "OniOnline")
         var otherTarget = modName == "Jlib" ? "OniOnline" : "Jlib";
         var ownJournal = FirstPublicationJournal.JournalPath(root);
         Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", otherTarget);
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_STATIC_ID", "LIghtJUNction." + otherTarget);
         FirstPublicationPlan.RequireTarget();
         if (FirstPublicationJournal.JournalPath(root) == ownJournal)
             throw new InvalidOperationException("First-publication targets share a creation journal");
         ExpectFirstPublicationException<InvalidOperationException>(
             () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "a plan reviewed for the other allowed target");
         Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", modName);
+        Environment.SetEnvironmentVariable("ONIM_PUBLISH_STATIC_ID", target["ONIM_PUBLISH_STATIC_ID"]);
 
         foreach (var (name, invalidValue) in new[]
         {

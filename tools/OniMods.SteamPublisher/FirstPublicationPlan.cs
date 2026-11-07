@@ -9,6 +9,8 @@ internal sealed record FirstPublicationPlan(
     string Title, string EnglishDescription, string ChineseDescription,
     string[] Tags, string PlanSha256)
 {
+    internal static string Name => WorkshopTarget.DisplayName;
+
     internal static void RequireTarget()
     {
         if (WorkshopTarget.WorkshopId != 0 || WorkshopTarget.CreatorAppId != 636750
