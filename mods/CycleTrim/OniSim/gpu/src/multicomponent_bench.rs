@@ -204,8 +204,8 @@ fn main() -> Result<(), String> {
             gpu.run_steps_and_readback(1, dt, &mut gpu_mass, &mut gpu_enthalpy)?;
             end_to_end_times.push(start.elapsed().as_secs_f64() * 1e6);
 
-            let start = Instant::now();
             gpu.upload(&state)?;
+            let start = Instant::now();
             gpu.run_steps_and_readback(32, dt, &mut gpu_mass, &mut gpu_enthalpy)?;
             resident_times.push(start.elapsed().as_secs_f64() * 1e6);
         }
