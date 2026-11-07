@@ -176,7 +176,7 @@ mod tests {
         let elements = elements();
         grid.element[0] = 99;
         let mut image = vec![0; image_len(&grid).unwrap()];
-        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
+        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidState as i32);
 
         grid.element[0] = 0;
         assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidState);
@@ -201,6 +201,6 @@ mod tests {
         let grid = grid();
         let elements = elements();
         let mut image = vec![0; image_len(&grid).unwrap() - 1];
-        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status, Status::InvalidArgument);
+        assert_eq!(write_image(&grid, &elements, 1, &mut image).unwrap_err().status as i32, Status::InvalidArgument as i32);
     }
 }
