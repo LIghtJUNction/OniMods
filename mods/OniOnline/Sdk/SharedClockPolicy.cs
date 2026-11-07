@@ -34,5 +34,13 @@ namespace OniOnline.Sdk
             ActorId = playerId;
             return true;
         }
+
+        public void Reset()
+        {
+            Paused = false;
+            Speed = 1;
+            Revision = 0;
+            ActorId = null;
+        }
     }
 }

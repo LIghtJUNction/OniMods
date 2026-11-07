@@ -191,5 +191,14 @@ namespace OniOnline.Sdk
             marks.RemoveAll(mark => mark.PlayerId == playerId);
             pings.RemoveAll(ping => ping.PlayerId == playerId);
         }
+
+        public void Clear()
+        {
+            cursors.Clear();
+            toolDrags.Clear();
+            markSequence.Clear();
+            marks.Clear();
+            pings.Clear();
+        }
     }
 }

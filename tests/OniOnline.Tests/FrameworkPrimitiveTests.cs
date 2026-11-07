@@ -89,8 +89,9 @@ internal static class FrameworkPrimitiveTests
             "an unknown snapshot is quarantined and the published hashes stay");
 
         var commands = new CommandInFlight();
-        check(commands.TryAdmit("dig:1", 1, 0) && !commands.TryAdmit("dig:1", 1, 1),
-            "the same command is not sent again before the authority answers");
+        check(commands.TryAdmit("dig:1", 1, 0) && !commands.TryAdmit("dig:1", 1, 1) &&
+            !commands.TryAdmit("dig:2", 1, double.NaN) && !commands.TryAdmit("dig:3", 1, -1.0),
+            "the same command is not sent again before the authority answers and invalid timestamps are rejected");
         check(!commands.Acknowledge("dig:1", 2) && commands.Acknowledge("dig:1", 1) && commands.TryAdmit("dig:1", 1, 2),
             "only the matching generation acknowledgement releases the command");
         check(commands.Expire(2 + CommandInFlight.DefaultTimeoutSeconds, CommandInFlight.DefaultTimeoutSeconds) == 1 &&
@@ -119,6 +120,9 @@ internal static class FrameworkPrimitiveTests
             "any participant can pause, and an older revision is ignored");
         check(clock.TrySpeed("a", 3, 3) && clock.Speed == 3 && !clock.TrySpeed("a", 0, 4) && clock.Speed == 3,
             "the newest speed revision wins and speeds stay inside 1..3");
+        clock.Reset();
+        check(!clock.Paused && clock.Speed == 1 && clock.Revision == 0 && clock.ActorId == null,
+            "reset clears clock policy state");
 
         string root = TestSlotLayout.Root("/tmp/onionline-tests", 2);
         check(root.EndsWith("onionline-slot2") && TestSlotLayout.Saves(root).EndsWith(Path.Combine("onionline-slot2", "save_files")) &&
@@ -186,13 +190,15 @@ internal static class FrameworkPrimitiveTests
 
         check(map.Unregister(1001, now: 10.0, tombstoneSeconds: 5.0) && map.Count == 0 && map.TombstoneCount == 1,
             "unregistered entity leaves a temporary tombstone");
+        check(map.IsTombstoned(1001) && map.IsTombstoned(1001, 12.0) && !map.IsTombstoned(1001, 16.0),
+            "is tombstoned identifies active and expired tombstones");
         check(!map.TryRegister(1001, entityB), "active tombstone prevents immediate id reuse");
 
         map.PurgeExpiredTombstones(now: 12.0);
         check(map.TombstoneCount == 1 && !map.TryRegister(1001, entityB), "unexpired tombstone stays active");
 
         map.PurgeExpiredTombstones(now: 16.0);
-        check(map.TombstoneCount == 0 && map.TryRegister(1001, entityB), "expired tombstone purges and allows id reuse");
+        check(map.TombstoneCount == 0 && !map.IsTombstoned(1001) && map.TryRegister(1001, entityB), "expired tombstone purges and allows id reuse");
 
         // --- PresenceBoard Tool Drag & Ping Tests ---
         var drag = new ToolDragPresence("player_1", 0, "dig", ToolDragMode.Box, 10, 10, 15, 15, 7, "Sandstone", 0xFF0000FF);
@@ -209,9 +215,9 @@ internal static class FrameworkPrimitiveTests
         check(presence.TryPing(ping) && presence.Pings.Length == 1 && presence.Pings[0].Category == "alert",
             "presence board retains and rotates pings");
 
-        presence.Drop("player_1");
-        check(presence.Pings.Length == 0 && presence.ToolDragFor("player_1") == null && presence.ToolDrags.Length == 0,
-            "player leave removes active tool drags and pings");
+        presence.Clear();
+        check(presence.Pings.Length == 0 && presence.ToolDrags.Length == 0 && presence.Marks.Length == 0 && presence.Cursors.Length == 0,
+            "presence board clear removes all active cursors, drags, marks, and pings");
 
         // --- AnimReconciler & AnimSyncSharder Tests ---
         var localSnapshot = new AnimSnapshot(501, 1234, 1, 1.0f, 0.50f, 10.0);
@@ -224,6 +230,11 @@ internal static class FrameworkPrimitiveTests
         var correctionDiff = AnimReconciler.Evaluate(localSnapshot, authDiffAnim);
         check(correctionDiff.Action == AnimCorrectionAction.Replay && correctionDiff.TargetAnimHash == 5678,
             "differing animation forces replay with authoritative anim hash");
+
+        var authDiffMode = new AnimSnapshot(501, 1234, 2, 1.0f, 0.50f, 10.0);
+        var correctionDiffMode = AnimReconciler.Evaluate(localSnapshot, authDiffMode);
+        check(correctionDiffMode.Action == AnimCorrectionAction.Replay && correctionDiffMode.TargetPlayMode == 2,
+            "differing play mode forces replay with authoritative mode");
 
         // Small drift (0.35s drift > 0.15s tolerance, <= 0.6s max nudge) -> NudgeSpeed
         var authSmallDrift = new AnimSnapshot(501, 1234, 1, 1.0f, 0.15f, 10.0);

@@ -78,25 +78,29 @@ namespace OniOnline.Sdk
                 ? authoritative.Speed
                 : 1.0f;
 
-            // 1. If playing different animations, force immediate replay of the authoritative anim
-            if (local.AnimHash != authoritative.AnimHash)
+            // 1. If playing different animations or play modes, force immediate replay of the authoritative anim
+            if (local.AnimHash != authoritative.AnimHash || local.PlayMode != authoritative.PlayMode)
             {
                 return new AnimCorrection(
                     AnimCorrectionAction.Replay,
                     authoritative.AnimHash,
                     authoritative.PlayMode,
-                    authoritative.ElapsedTime,
+                    Math.Max(0f, float.IsNaN(authoritative.ElapsedTime) ? 0f : authoritative.ElapsedTime),
                     baseSpeed);
             }
 
+            float localElapsed = Math.Max(0f, float.IsNaN(local.ElapsedTime) ? 0f : local.ElapsedTime);
+            float authElapsed = Math.Max(0f, float.IsNaN(authoritative.ElapsedTime) ? 0f : authoritative.ElapsedTime);
+
             // 2. Compute time drift accounting for latency timestamp difference if provided
             float latencyElapsed = 0f;
-            if (authoritative.Timestamp > 0 && local.Timestamp > authoritative.Timestamp)
+            if (authoritative.Timestamp > 0 && local.Timestamp > authoritative.Timestamp &&
+                !double.IsNaN(local.Timestamp) && !double.IsNaN(authoritative.Timestamp))
             {
                 latencyElapsed = (float)(local.Timestamp - authoritative.Timestamp) * baseSpeed;
             }
-            float expectedElapsedTime = authoritative.ElapsedTime + latencyElapsed;
-            float drift = local.ElapsedTime - expectedElapsedTime;
+            float expectedElapsedTime = authElapsed + latencyElapsed;
+            float drift = localElapsed - expectedElapsedTime;
             float absDrift = Math.Abs(drift);
 
             // Within tolerance: no correction needed
@@ -114,7 +118,7 @@ namespace OniOnline.Sdk
                     AnimCorrectionAction.NudgeSpeed,
                     authoritative.AnimHash,
                     authoritative.PlayMode,
-                    local.ElapsedTime,
+                    localElapsed,
                     baseSpeed * nudgeFactor);
             }
 

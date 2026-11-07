@@ -127,8 +127,8 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
   - `DeterministicNetId.ForDynamic(byte peerId, uint sequence, ushort typeTag)`：最高位（bit 63）置 1，高 7 位存储生成席位 ID（0..127），中 16 位存储类型标记（TypeTag），低 32 位存储单调递增流水号。确保动态生成的实体（如掉落物、杂物、临时投射物）在各客户端间天然命名空间隔离，零碰撞。
   - 辅助解析：`IsDynamic(long id)`、`IsStatic(long id)`、`GetPeerId(long dynamicId)`、`GetTypeTag(long dynamicId)`、`GetSequence(long dynamicId)`。
 - **实体映射表与生命周期管理 (`NetworkIdentityMap<T>`)**：
-  - 双向 O(1) 查找：`TryRegister(long netId, T instance)`、`TryGet(long netId, out T instance)`、`TryGetNetId(T instance, out long netId)`。
-  - 防 ABA 墓碑机制：当实体销毁注销时调用 `Unregister(long netId)`，ID 不会立即回收，而是进入带时间戳的墓碑缓冲区（默认保留 10 秒）。在此期间任何迟到的网络包试图访问该 ID 都会被识别为 `IsTombstoned(netId)` 并安全丢弃，避免实体销毁重建后旧网络包作用到新实体的 ABA 隐患。调用 `PurgeExpiredTombstones()` 可清理过期墓碑。
+  - 双向 O(1) 查找：`TryRegister(long netId, T instance)`、`TryGetEntity(long netId, out T instance)`、`TryGetId(T instance, out long netId)`。
+  - 防 ABA 墓碑机制：当实体销毁注销时调用 `Unregister(long netId)`，ID 不会立即回收，而是进入带时间戳的墓碑缓冲区（默认保留 10 秒）。在此期间任何迟到的网络包试图访问该 ID 都会被识别为 `IsTombstoned(netId)` 或 `IsTombstoned(netId, now)` 并安全丢弃，避免实体销毁重建后旧网络包作用到新实体的 ABA 隐患。调用 `PurgeExpiredTombstones(now)` 可清理过期墓碑，`Clear()` 重置全部映射与墓碑。
 
 ### 2. 玩家光标与交互态共享 (`PresenceBoard`)
 
@@ -146,7 +146,7 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 - **战术标记与高亮信号 (`PresenceMark` & `PlayerPing`)**：
   - `PresenceMark`：带递增序号的地块标记，供多端同步静态指示。
   - `PlayerPing`：带 `Category`（如 "alert"、"look_here"）与 `Timestamp` 的瞬时高亮脉冲，队列自动轮转，上限 32 个。
-  - 玩家断开离开时通过 `Drop(playerId)` 一并清理对应光标、拖选与标记状态。
+  - 玩家断开离开时通过 `Drop(playerId)` 清理单人状态；退出房间或重连时调用 `Clear()` 一键清空全量板载状态。
 
 ### 3. 动画增量对齐与分片 (`AnimReconciler` 与 `AnimSyncSharder`)
 
@@ -157,7 +157,7 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 - **状态快照 (`AnimSnapshot`)**：
   - 包含 `EntityId`, `AnimHash`（动画名称哈希）, `PlayMode`（单次/循环）, `Speed`（播放速度）, `ElapsedTime`（当前已播放秒数）, `Timestamp`（采集时间戳）。
 - **智能平滑校正决策 (`AnimReconciler.Evaluate`)**：
-  - 若两端播放的动画不同（`AnimHash` 不符）：返回 `AnimCorrectionAction.Replay`，强制重置为权威端目标动画。
+  - 若两端播放的动画不同（`AnimHash` 不符）或播放模式不同（`PlayMode` 不符）：返回 `AnimCorrectionAction.Replay`，强制重置为权威端目标动画与播放模式。
   - 若动画一致，根据时延对齐计算期望播放时间后得到绝对时间漂移 `drift`：
     - 漂移 `<= driftTolerance`（默认 0.15s）：返回 `AnimCorrectionAction.None`，无需任何干预。
     - 小范围漂移（`driftTolerance < absDrift <= maxNudgeDrift`，默认上限 0.6s）：返回 `AnimCorrectionAction.NudgeSpeed`，平滑微调播放速度（慢了加速 1.15 倍，快了减速 0.85 倍）。肉眼无感知平滑追赶，消除关键帧突变闪烁。

@@ -17,7 +17,7 @@ namespace OniOnline.Sdk
 
         public bool TryAdmit(string key, long generation, double now)
         {
-            if (!Valid(key) || generation <= 0) return false;
+            if (!Valid(key) || generation <= 0 || double.IsNaN(now) || double.IsInfinity(now) || now < 0) return false;
             Expire(now, DefaultTimeoutSeconds);
             if (pending.ContainsKey(key) || pending.Count >= MaximumInFlight) return false;
             pending.Add(key, new Pending { Generation = generation, At = now });

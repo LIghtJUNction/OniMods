@@ -166,6 +166,17 @@ namespace OniOnline.Sdk
             return Unregister(id, now, tombstoneSeconds);
         }
 
+        public bool IsTombstoned(long id)
+        {
+            return tombstones.ContainsKey(id);
+        }
+
+        public bool IsTombstoned(long id, double now)
+        {
+            double expiry;
+            return tombstones.TryGetValue(id, out expiry) && now < expiry;
+        }
+
         public void PurgeExpiredTombstones(double now)
         {
             var expired = new List<long>();
@@ -181,19 +192,9 @@ namespace OniOnline.Sdk
 
         public void Clear()
         {
-            idToEntity.ClearEntityReferences();
             idToEntity.Clear();
             entityToId.Clear();
             tombstones.Clear();
-        }
-    }
-
-    internal static class IdentityMapExtensions
-    {
-        internal static void ClearEntityReferences<T>(this Dictionary<long, T> dict) where T : class
-        {
-            // Clear dictionary explicitly
-            dict.Clear();
         }
     }
 }
