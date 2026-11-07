@@ -125,6 +125,12 @@ fn main() -> Result<()> {
             settings.url=url; save(&path,&settings)?; println!("OniMcp endpoint saved.");
         }
         Commands::SetSecret { secret } => {
+            let secret = if secret == "-" {
+                use std::io::Read;
+                let mut value = String::new();
+                std::io::stdin().read_to_string(&mut value).context("read secret from stdin")?;
+                value.trim_end_matches(['\r', '\n']).to_string()
+            } else { secret };
             if secret.trim().is_empty() { bail!("secret cannot be empty"); }
             settings.secret=Some(secret); save(&path,&settings)?; println!("Secret saved; it will not be displayed.");
         }
