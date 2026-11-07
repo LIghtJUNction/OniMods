@@ -70,6 +70,16 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.401'
+      - name: Fetch pinned ONI compile references for Jlib host tests
+        run: |
+          python3 scripts/fetch_oni_reference_assemblies.py \
+            --manifest ci/oni-reference-assemblies.json \
+            --output "$GITHUB_WORKSPACE/.oni-managed"
+      - name: Pack shared Jlib package for host regressions
+        run: |
+          dotnet pack mods/Jlib/Jlib/Jlib.csproj -c Release \
+            -p:TargetFrameworks=netstandard2.1 \
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.99.1 --profile minimal
       - name: Test onim CLI regressions
