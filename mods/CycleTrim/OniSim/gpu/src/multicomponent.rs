@@ -12,6 +12,7 @@ pub struct SpeciesInfo {
     pub vertical_drift: f32,
 }
 
+#[derive(Clone, Copy)]
 pub struct State<'a> {
     pub mass: &'a [f32],
     pub enthalpy: &'a [f32],
@@ -65,8 +66,12 @@ impl MulticomponentGpu {
             .ok_or("no hardware Vulkan adapter available")?;
         let info = adapter.get_info();
         let max_bytes = (values.max(count).max(channels) * 4) as u64;
+        let readback_bytes = values.checked_mul(8).ok_or("readback size overflow")? as u64;
         if max_bytes > adapter.limits().max_storage_buffer_binding_size as u64 {
             return Err("tensor exceeds Vulkan storage-buffer limit".into());
+        }
+        if readback_bytes > adapter.limits().max_buffer_size {
+            return Err("mass/enthalpy readback exceeds Vulkan buffer limit".into());
         }
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -359,8 +364,8 @@ mod tests {
         let species = [
             SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: -0.002 },
             SpeciesInfo { element_id: 2, phase: 1, specific_heat_capacity: 1.25, vertical_drift: -0.001 },
-            SpeciesInfo { element_id: 3, phase: 2, specific_heat_capacity: 1.5, vertical_drift: 0.001 },
-            SpeciesInfo { element_id: 4, phase: 3, specific_heat_capacity: 1.75, vertical_drift: 0.002 },
+            SpeciesInfo { element_id: 3, phase: 1, specific_heat_capacity: 1.5, vertical_drift: 0.001 },
+            SpeciesInfo { element_id: 4, phase: 1, specific_heat_capacity: 1.75, vertical_drift: 0.002 },
         ];
         let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &vx,
             velocity_y: &vy, solid: &solid, species: &species };
