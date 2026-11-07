@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::ffi::{CString, c_char};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(i32)]
 pub(crate) enum Status {
     InvalidArgument = 1,
@@ -13,6 +13,7 @@ pub(crate) enum Status {
     BufferTooSmall = 6,
 }
 
+#[derive(Debug)]
 pub(crate) struct Error {
     pub(crate) status: Status,
     pub(crate) message: String,

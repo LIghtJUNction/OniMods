@@ -204,6 +204,34 @@ namespace OniSim.Compatibility
             });
         }
 
+        /// <summary>
+        /// Copies a versioned multicomponent publication image. ABI v1 is explicitly
+        /// marked as a legacy single-element projection until the production solver
+        /// publishes coexisting species.
+        /// </summary>
+        public MulticomponentImage SnapshotMulticomponent()
+        {
+            return Locked(() =>
+            {
+                if (api.CopyMulticomponentImage == null)
+                    throw new NotSupportedException("Native library does not expose the optional multicomponent publication API.");
+                int required = api.CopyMulticomponentImage(IntPtr.Zero, 0);
+                CheckOperation(0, 0);
+                if (required < MulticomponentImage.HeaderSize || required > 512 * 1024 * 1024)
+                    throw new InvalidDataException("Native multicomponent image length is invalid.");
+                var image = new byte[required];
+                GCHandle pin = GCHandle.Alloc(image, GCHandleType.Pinned);
+                try
+                {
+                    int copied = api.CopyMulticomponentImage(pin.AddrOfPinnedObject(), image.Length);
+                    CheckOperation(0, 0);
+                    if (copied != required) throw new InvalidDataException("Native multicomponent image length changed while copying.");
+                }
+                finally { pin.Free(); }
+                return MulticomponentImage.Parse(image);
+            });
+        }
+
         public GridView GetGridView() { return Locked(NewView); }
 
         internal byte[] GetDescriptor(ulong generation)

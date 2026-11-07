@@ -71,6 +71,12 @@ const uint8_t *ONISIM_GetGrid(void);
  * An undersized destination is not written. Callers own their output buffers. */
 int32_t ONISIM_CopyGridImage(uint8_t *destination, int32_t capacity);
 
+/* Versioned OMC1 multicomponent snapshot. ABI v1 explicitly advertises
+ * LEGACY_SINGLE_ELEMENT: current production cells still contain at most one
+ * species. This copy API is coherent under the native state lock and returns
+ * caller-owned bytes; it does not claim GPU/production multicomponent support. */
+int32_t ONISIM_CopyMulticomponentImage(uint8_t *destination, int32_t capacity);
+
 /* Pack=4, Linux x64 GameDataUpdate. Array pointers are native-owned, borrowed
  * only while the session is alive and its grid generation remains current.
  * Event and texture pointers belong to one publication and must be consumed

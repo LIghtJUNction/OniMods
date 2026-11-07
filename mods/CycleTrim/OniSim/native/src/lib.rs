@@ -39,6 +39,7 @@ mod messages_cells;
 #[cfg(test)]
 mod messages_tests;
 mod messages_world;
+mod multicomponent_publication;
 mod numeric;
 mod offgas;
 mod parallel;
@@ -93,7 +94,7 @@ const CAPABILITIES: &[u8] = concat!(
     "\"ignoredMessages\":[-563057023,-409964931,-727746602],",
     "\"callbacks\":false,\"callbackRecords\":true,\"saveLoad\":true,\"events\":true,",
     "\"flow\":true,\"textures\":false,\"radiationSimulation\":true,\"radiationStorage\":\"native\",",
-    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",",
+    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",\"multicomponentPublication\":\"legacy-single-element-v1\",",
     "\"storageMutationTiming\":\"frame-command-stage\",\"officialCommandScheduling\":false,",
     "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable\",\"runtimeValidated\":false,",
     "\"batchPrevalidation\":true,\"readyObservation\":true,\"externalPointerSynchronization\":\"caller-required\"}\0"
@@ -309,6 +310,48 @@ pub unsafe extern "C" fn ONISIM_CopyGridImage(destination: *mut u8, capacity: i3
         let image = unsafe { std::slice::from_raw_parts_mut(destination, required) };
         grid.write_image(image);
         Ok(required as i32)
+    })
+}
+
+#[unsafe(no_mangle)]
+/// # Safety
+/// A nonnull destination with positive capacity must designate that many
+/// writable bytes exclusively for this call. Null requests only the size.
+/// The function copies a coherent published image while holding the native
+/// state lock; the caller owns the output buffer after this call returns.
+pub unsafe extern "C" fn ONISIM_CopyMulticomponentImage(destination: *mut u8, capacity: i32) -> i32 {
+    boundary(-1, || {
+        if capacity < 0 {
+            return Err(bytes::invalid("multicomponent snapshot capacity must be nonnegative"));
+        }
+        let state = state::lock()?;
+        let grid = state.initialized_grid()?;
+        let elements = state.elements.as_deref().ok_or_else(|| {
+            Error::new(Status::InvalidState, "multicomponent snapshot requires registered elements")
+        })?;
+        let required = multicomponent_publication::image_len(grid)?;
+        let required_i32 = i32::try_from(required).map_err(|_| {
+            Error::new(Status::ResourceLimit, "multicomponent snapshot exceeds signed ABI length")
+        })?;
+        if destination.is_null() || capacity == 0 {
+            return Ok(required_i32);
+        }
+        if (capacity as usize) < required {
+            return Err(Error::new(
+                Status::BufferTooSmall,
+                format!("multicomponent snapshot requires {required} bytes"),
+            ));
+        }
+        if (destination as usize).checked_add(required).is_none()
+            || state.overlaps_native_storage(destination as usize, required)
+        {
+            return Err(bytes::invalid(
+                "multicomponent snapshot destination overflows or overlaps native storage",
+            ));
+        }
+        let image = unsafe { std::slice::from_raw_parts_mut(destination, required) };
+        multicomponent_publication::write_image(grid, elements, state.generation, image)?;
+        Ok(required_i32)
     })
 }
 

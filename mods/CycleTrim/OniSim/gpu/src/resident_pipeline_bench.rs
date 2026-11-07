@@ -1,6 +1,6 @@
 use onisim_gpu::{
     gpu_context::GpuContext,
-    multicomponent::{cpu_step, MulticomponentGpu, State},
+    multicomponent::{cpu_step, MulticomponentGpu, SpeciesInfo, State},
     pressure_projection::PressureProjectionGpu,
 };
 use serde::Serialize;
@@ -8,10 +8,11 @@ use std::{hint::black_box, sync::Arc, time::Instant};
 
 struct Fixture {
     mass: Vec<f32>,
+    enthalpy: Vec<f32>,
     velocity_x: Vec<f32>,
     velocity_y: Vec<f32>,
     solid: Vec<u32>,
-    drift_y: Vec<f32>,
+    species: Vec<SpeciesInfo>,
 }
 impl Fixture {
     fn new(width: usize, height: usize, channels: usize) -> Self {
@@ -32,26 +33,38 @@ impl Fixture {
                 }
             }
         }
+        let species: Vec<SpeciesInfo> = (0..channels)
+            .map(|c| SpeciesInfo {
+                element_id: (c + 1) as u16,
+                phase: 1,
+                specific_heat_capacity: 1.0 + c as f32 * 0.25,
+                vertical_drift: 0.0,
+            })
+            .collect();
         let mut mass = vec![0.0; cells * channels];
+        let mut enthalpy = vec![0.0; cells * channels];
         for cell in 0..cells {
             if solid[cell] == 0 {
                 for channel in 0..channels {
-                    mass[cell * channels + channel] =
-                        0.5 + ((cell * 17 + channel * 13) % 97) as f32 / 97.0;
+                    let m = 0.5 + ((cell * 17 + channel * 13) % 97) as f32 / 97.0;
+                    mass[cell * channels + channel] = m;
+                    enthalpy[cell * channels + channel] =
+                        m * species[channel].specific_heat_capacity * 300.0;
                 }
             }
         }
         let velocity_x = (0..cells).map(|i| ((i * 17 % 101) as f32 - 50.0) * 0.00002).collect();
         let velocity_y = (0..cells).map(|i| ((i * 23 % 89) as f32 - 44.0) * 0.00002).collect();
-        Self { mass, velocity_x, velocity_y, solid, drift_y: vec![0.0; channels] }
+        Self { mass, enthalpy, velocity_x, velocity_y, solid, species }
     }
     fn state(&self) -> State<'_> {
         State {
             mass: &self.mass,
+            enthalpy: &self.enthalpy,
             velocity_x: &self.velocity_x,
             velocity_y: &self.velocity_y,
             solid: &self.solid,
-            drift_y: &self.drift_y,
+            species: &self.species,
         }
     }
 }
@@ -99,7 +112,8 @@ fn main() -> Result<(), String> {
             context.clone(), width, height,
         ))?;
         let mut expected = vec![0.0f32; fixture.mass.len()];
-        cpu_step(&fixture.state(), width, height, channels, dt, &mut expected);
+        let mut expected_enthalpy = vec![0.0f32; fixture.enthalpy.len()];
+        cpu_step(&fixture.state(), width, height, channels, dt, &mut expected, &mut expected_enthalpy);
         let mut actual = vec![0.0f32; fixture.mass.len()];
         let gauge_cell = fixture.solid.iter().position(|&value| value == 0)
             .ok_or("fixture has no fluid cells")?;

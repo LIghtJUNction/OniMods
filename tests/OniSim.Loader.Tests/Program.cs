@@ -13,6 +13,7 @@ if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile")
 }
 
 PortableProfileTests.Run();
+MulticomponentImageTests.Run();
 NativePlatform.RequireSupported();
 Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
 if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Disabled)

@@ -134,6 +134,45 @@ Load receives a raw native save image. BeginSave returns a native-owned image
 that remains borrowed until EndSave. Its format and version handling are described
 in [SAVE-FORMAT.md](SAVE-FORMAT.md). Saving is not a command-queue flush.
 
+
+## Versioned multicomponent snapshot extension
+
+`ONISIM_CopyMulticomponentImage(destination, capacity)` is an optional, copy-based
+extension. A null destination or zero capacity returns the required byte count;
+a nonnull undersized destination is not written. Successful calls copy under the
+native state mutex into caller-owned memory, so the returned bytes have no native
+pointer lifetime and do not require a read lease.
+
+The OMC1 v1 image is little-endian:
+
+| Offset | Field | Type |
+| ---: | --- | --- |
+| 0 | Magic `OMC1` | u32 |
+| 4 | Version (=1) | u16 |
+| 6 | Header bytes (=32) | u16 |
+| 8 | Lifecycle generation | u64 |
+| 16 | Cell count | u32 |
+| 20 | Species record count | u32 |
+| 24 | Cell record bytes (=12) | u16 |
+| 26 | Species record bytes (=12) | u16 |
+| 28 | Capability flags | u32 |
+
+The header is followed by `cell_count` 12-byte cell records
+(`total_mass:f32, species_offset:u32, species_count:u16, flags:u16`), then
+`species_count` 12-byte species records
+(`element_index:u16, phase:u8, flags:u8, mass:f32, temperature:f32`).
+Phase values preserve the official Element.State values: 1 gas, 2 liquid, 3 solid.
+
+**Capability flag 1 is LEGACY_SINGLE_ELEMENT.** The current production CellSOA
+still has one element/mass/temperature per cell, so ABI v1 faithfully publishes
+at most one species per cell. It is a transport/ABI bridge and a testable
+single-element baseline, not multicomponent simulation and not a source of
+partial pressure, volume fraction, or an equation-of-state result. The optional
+symbol is loaded defensively by the managed facade; older native libraries
+without it remain usable, and the snapshot call fails closed.
+
+The 496-byte legacy GameData descriptor and the existing save image are unchanged.
+
 ## Published data
 
 Linux x64 GameDataUpdate uses Pack=4 and is 496 bytes:
