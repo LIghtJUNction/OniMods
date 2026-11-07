@@ -71,6 +71,22 @@ Payloads must designate readable memory for their lengths. Pointer-bearing
 messages also require their nested arrays to remain valid until the call returns.
 Length/address bounds and overlap checks cannot prove a foreign allocation exists.
 
+## Multicomponent publication read lease
+
+
+
+`ONISIM_AcquireMulticomponentUpdate` returns a pointer to the versioned 40-byte update descriptor and pins the current `GameData` publication by retaining the native session mutex. The caller must copy the descriptor and all required cell/species records before calling `ONISIM_ReleaseMulticomponentUpdate`.
+
+
+
+The lease is thread-affine: acquire and release must execute on the same OS thread. Nested acquisition on one thread is rejected. A held lease blocks `Prepare`, message mutation and shutdown from advancing/reusing the publication buffer. Always release in a `finally` block. Do not retain any returned pointer after release.
+
+
+
+The legacy 496-byte `OniSimGameDataUpdate` descriptor is unchanged. The new update descriptor is a separate extension. Its `LEGACY_SINGLE_ELEMENT` capability is not a coexisting-species state; consumers must require `MULTICOMPONENT_COEXISTENCE` before overriding game logic.
+
+
+
 ## Ownership and synchronization
 
 There is one active native simulation per process. The official SIM_Initialize
