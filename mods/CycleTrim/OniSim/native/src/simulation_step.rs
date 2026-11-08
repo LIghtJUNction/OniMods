@@ -231,16 +231,17 @@ impl<'a> PreparedStep<'a> {
             }
             world.sync_read_from_write();
             let temperature_ms = lap();
+            // Pressure traversal only mutates gas or vacuum cells. Liquid GPU
+            // inputs are limited to liquid-primary cells, so its upload and
+            // diffusion can run while the CPU performs the gas pressure pass.
+            let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
+                crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
+            } else { None };
             if gas_phase(world, elements, diseases, events, region) {
                 world.sync_read_from_write();
             }
             let gas_phase_ms = lap();
             let gpu_diffusion = gpu_thermal_active && world.gas_channel_count > 0;
-            // Liquid cells are impermeable to the gas pass. Submit their sparse
-            // diffusion now and collect it after gas transport has completed.
-            let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
-                crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
-            } else { None };
             let mut diffusion_solid = Vec::new();
             let gpu_transport_ran = crate::multicomponent_flux::step_region_with_mask(
                 world, elements, events, region, systems.gpu.as_deref_mut(), gpu_diffusion, Some(&mut diffusion_solid),

@@ -358,6 +358,57 @@ mod material_range_tests {
     }
 
     #[test]
+    fn liquid_dispatch_before_gas_pressure_matches_serial_order() {
+        use crate::{events::EventQueues, multicomponent_flux as flux, tables::{DiseaseTable, ElementTable}, world::{PhysicsWorld, Region}};
+        let mut bytes = 6_i32.to_le_bytes().to_vec();
+        for index in 0..6usize {
+            let id = match index { 0 => 0xa9360b34u32, 1 => 0x2d39bf75, 2 => 0x6d95058c, _ => 0x11110000 + index as u32 };
+            let mut record = [0u8; 164];
+            record[..4].copy_from_slice(&id.to_le_bytes());
+            record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
+            record[10] = if index < 2 { 0 } else if index == 2 { 3 } else if index == 5 { 1 } else { 2 };
+            record[12..16].copy_from_slice(&1.0f32.to_le_bytes());
+            record[36..40].copy_from_slice(&0.5f32.to_le_bytes());
+            bytes.extend_from_slice(&record);
+        }
+        bytes.extend_from_slice(&[0u8; 24]);
+        let elements=ElementTable::parse(&bytes).unwrap();
+        let diseases=DiseaseTable { diseases: Vec::new(), element_count: elements.len() };
+        let make_world=|| {
+            let mut world=PhysicsWorld::new(8,8,0,&elements).unwrap();
+            world.write.element.fill(world.vacuum_element);
+            world.write.temperature.fill(300.0);
+            for (x,y,id,mass) in [(3,3,3,1.0),(4,3,4,1.0),(3,4,5,3.0),(4,4,5,0.5)] {
+                let i=y*world.stride+x; world.write.element[i]=id; world.write.mass[i]=mass;
+            }
+            // A liquid secondary in a gas-primary cell must remain CPU-owned.
+            let i=4*world.stride+3; world.mixture_element[i]=3; world.mixture_mass[i]=0.2;
+            world.sync_read_from_write(); world
+        };
+        let region=Region {min_x:2,min_y:2,max_x:7,max_y:7,..Default::default()};
+        let mut serial=make_world(); let mut overlap=make_world();
+        let mut gpu=super::GpuSimulation::new(serial.stride,serial.padded_height).unwrap();
+        let mut a=EventQueues::default(); let mut b=EventQueues::default();
+        let before_gas=serial.write.mass.clone();
+        assert!(crate::simulation_step_fluid::gas_phase(&mut serial,&elements,&diseases,&mut a,region));
+        assert_ne!(before_gas,serial.write.mass, "fixture must exercise an actual gas transfer");
+        let serial_pending=flux::begin_sparse_liquid_region(&serial,&elements,region,&mut gpu).unwrap().unwrap();
+        let mut serial_mask=Vec::new();
+        assert!(flux::finish_sparse_liquid_region(serial_pending,&mut serial,&mut a,&mut serial_mask).unwrap());
+        let pending=flux::begin_sparse_liquid_region(&overlap,&elements,region,&mut gpu).unwrap().unwrap();
+        assert!(crate::simulation_step_fluid::gas_phase(&mut overlap,&elements,&diseases,&mut b,region));
+        let mut overlap_mask=Vec::new();
+        assert!(flux::finish_sparse_liquid_region(pending,&mut overlap,&mut b,&mut overlap_mask).unwrap());
+        assert_eq!(serial_mask,overlap_mask);
+        assert_eq!(serial.write.element,overlap.write.element);
+        assert_eq!(serial.write.mass,overlap.write.mass);
+        assert_eq!(serial.write.temperature,overlap.write.temperature);
+        assert_eq!(serial.mixture_element,overlap.mixture_element);
+        assert_eq!(serial.mixture_mass,overlap.mixture_mass);
+        assert_eq!(serial.flow,overlap.flow);
+    }
+
+    #[test]
     fn liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy() {
         use crate::{events::EventQueues, multicomponent_flux, tables::ElementTable, world::{PhysicsWorld, Region}};
         use super::GpuSimulation;
