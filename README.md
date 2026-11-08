@@ -1,3 +1,7 @@
+> This project is developed by AI through a fully automated, end-to-end closed-loop workflow.
+>
+> **Typing code by hand is human abuse! Protect humans!**
+
 <div align="center">
   <h1>OniMods</h1>
   <p><strong>Build, ship, optimize, and automate Oxygen Not Included mods from one workspace.</strong></p>
