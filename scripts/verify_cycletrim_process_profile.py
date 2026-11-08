@@ -16,7 +16,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from profile_cycletrim_process import collect, interval, loaded_libraries, process_snapshot, stat_fields
+from profile_cycletrim_process import collect, interval, loaded_libraries, process_snapshot, stat_fields, summarize
 import profile_cycletrim_native as native_profiler
 
 
@@ -62,10 +62,60 @@ class ProcessProfileTests(unittest.TestCase):
             idle = interval(b, process_snapshot(sleeping.pid), os.sysconf("SC_CLK_TCK"))
             self.assertGreater(cpu["processCpuSeconds"], 0)
             self.assertGreater(cpu["processCpuSeconds"], idle["processCpuSeconds"])
+            sleeping_thread = next(t for t in idle["threads"] if t["tid"] == sleeping.pid)
+            self.assertEqual(sleeping_thread["endState"], "S")
+            self.assertIn("endWaitChannel", sleeping_thread)
+            self.assertGreaterEqual(sleeping_thread["voluntaryContextSwitches"], 0)
         finally:
             for child in (busy, sleeping):
                 child.terminate()
                 child.wait(timeout=5)
+
+    def test_wait_observations_and_context_deltas_are_not_durations(self):
+        first = process_snapshot(os.getpid())
+        tid = str(os.getpid())
+        first["threads"] = {tid: first["threads"][tid]}
+        first["threads"][tid].update(voluntaryContextSwitches=10, involuntaryContextSwitches=3)
+        second = copy.deepcopy(first)
+        second["monotonicSeconds"] += 1
+        second["threads"][tid].update(state="S", waitChannel="futex_wait_queue",
+                                      voluntaryContextSwitches=17, involuntaryContextSwitches=5)
+        third = copy.deepcopy(second)
+        third["monotonicSeconds"] += 1
+        third["threads"][tid].update(state="R", waitChannel="0", voluntaryContextSwitches=20)
+        hz = os.sysconf("SC_CLK_TCK")
+        rows = [interval(first, second, hz), interval(second, third, hz)]
+        self.assertEqual(rows[0]["threads"][0]["voluntaryContextSwitches"], 7)
+        report = summarize([first, second, third], rows)["observedThreads"][0]
+        self.assertEqual(report["voluntaryContextSwitches"], 10)
+        self.assertEqual(report["involuntaryContextSwitches"], 2)
+        self.assertEqual(report["contextSwitchIntervals"], 2)
+        self.assertEqual(report["sampledStates"], {"S": 1, "R": 1})
+        self.assertEqual(report["sampledWaitChannels"], {"futex_wait_queue": 1, "0": 1})
+        self.assertEqual(report["waitChannelUnavailableSamples"], 0)
+        self.assertNotIn("blockedSeconds", report)
+
+    def test_unavailable_optional_thread_files_preserve_cpu_capture(self):
+        original_read = Path.read_text
+
+        def restricted_read(path, *args, **kwargs):
+            if path.parent.parent.name == "task" and path.name in ("status", "wchan"):
+                raise PermissionError("optional thread observation unavailable")
+            return original_read(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", restricted_read):
+            first = process_snapshot(os.getpid())
+            second = process_snapshot(os.getpid())
+        self.assertEqual(first["threadsLostDuringRead"], 0)
+        thread = first["threads"][str(os.getpid())]
+        self.assertIsNone(thread["waitChannel"])
+        self.assertNotIn("voluntaryContextSwitches", thread)
+        rows = [interval(first, second, os.sysconf("SC_CLK_TCK"))]
+        summary = summarize([first, second], rows)
+        observed = next(t for t in summary["observedThreads"] if t["tid"] == os.getpid())
+        self.assertEqual(observed["waitChannelUnavailableSamples"], 1)
+        self.assertEqual(observed["contextSwitchIntervals"], 0)
+        self.assertEqual(observed["sampledWaitChannels"], {})
 
     def test_short_lived_child_retains_failed_capture(self):
         child = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(.4)"])

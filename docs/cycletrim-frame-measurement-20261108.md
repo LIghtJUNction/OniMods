@@ -28,6 +28,21 @@
 
 更早约 25–33 FPS、旧 Total 约 27–36 ms 的记录保留为历史线索；计时边界与显示路径没有对齐，因此不据此宣称 e24b534b 提升或降低了实际呈现性能。
 
+### 下一次线程采样
+
+现有只读脚本 [profile_cycletrim_process.py](../scripts/profile_cycletrim_process.py) 已补充每线程等待位置、期末状态以及主动／被动上下文切换次数差。汇总保留状态与等待位置的离散观察次数，并以 `contextSwitchIntervals` 和 `waitChannelUnavailableSamples` 记录覆盖情况。权限不足时保留 CPU 采样；不会把缺失读数补成零次切换。Linux 的 `wchan` 表示读取时内核中的阻塞位置；该读数与状态不是原子快照，不是阻塞持续时间或 GPU 时间，解释依据见 [Linux /proc 文档](https://docs.kernel.org/filesystems/proc.html)。
+
+设置 `oni_game_pid` 为已通过 Steam 启动、已核验加载库的游戏 PID 后，可分别在暂停观察和有独立超时／自动暂停的短步进期间采样。脚本本身不启动或控制游戏，现有输出文件会被拒绝覆盖：
+
+```bash
+python3 scripts/profile_cycletrim_process.py --pid "$oni_game_pid" \
+  --seconds 10 --interval 0.25 --output /tmp/oni-paused-thread-sample.json
+```
+
+运行状态另选新的输出文件，保留相同存档、分辨率、镜头和模组组合。线程采样用于选择后续应分析的 CPU 调用栈或等待路径；正式验收另取无此采样器的完整帧窗口，避免混入观察者成本。
+
+`python3 scripts/verify_cycletrim_process_profile.py` 的 8 项 Linux 回归通过，包括真实忙循环／休眠进程、状态与计数汇总、可选文件权限不足、PID/TID 身份变化、进程提前退出和证据文件保护。这建立采样工具的行为证据，没有产生新的游戏帧率结果。
+
 ## 源码与测试范围
 
 本轮首先读取了 AGENTS.md、RTK.md、UPSTREAM.toml 和 docs/autonomous-iteration.md，并检查当前差异。可访问的云端检出不含交接中的未提交液体改动、原始 hydraulic_tests、测试存档、perf.data 或游戏运行日志。原 Steam／RTX 4060 主机没有接入此执行环境。

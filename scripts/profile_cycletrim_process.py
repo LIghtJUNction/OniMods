@@ -57,6 +57,20 @@ def process_snapshot(pid, proc=Path("/proc")):
         try:
             thread = stat_fields((directory / "stat").read_text())
             thread["name"] = (directory / "comm").read_text().strip()
+            # Optional, point-in-time kernel observations. Reading state and
+            # wchan is not atomic and neither establishes a blocked duration.
+            try:
+                thread["waitChannel"] = (directory / "wchan").read_text().strip() or None
+            except OSError:
+                thread["waitChannel"] = None
+            try:
+                status = key_values(directory / "status")
+                for source, target in (("voluntary_ctxt_switches", "voluntaryContextSwitches"),
+                                       ("nonvoluntary_ctxt_switches", "involuntaryContextSwitches")):
+                    if source in status:
+                        thread[target] = status[source]
+            except OSError:
+                pass
             try:
                 scheduler = [int(x) for x in (directory / "schedstat").read_text().split()]
                 thread.update(runtimeNs=scheduler[0], runqueueWaitNs=scheduler[1], slices=scheduler[2])
@@ -97,8 +111,10 @@ def interval(before, after, hz):
         if prior is None or prior["startTicks"] != current["startTicks"]:
             continue
         row = {"tid": int(tid), "name": current["name"],
-               "cpuSeconds": (current["cpuTicks"] - prior["cpuTicks"]) / hz}
-        for key in ("runtimeNs", "runqueueWaitNs", "slices"):
+               "cpuSeconds": (current["cpuTicks"] - prior["cpuTicks"]) / hz,
+               "endState": current["state"], "endWaitChannel": current.get("waitChannel")}
+        for key in ("runtimeNs", "runqueueWaitNs", "slices",
+                    "voluntaryContextSwitches", "involuntaryContextSwitches"):
             if key in current and key in prior:
                 row[key] = current[key] - prior[key]
         rows.append(row)
@@ -139,10 +155,22 @@ def summarize(samples, intervals):
             # TID plus start time prevents a recycled thread being merged.
             key = (thread["tid"], samples[index + 1]["threads"][str(thread["tid"])]["startTicks"])
             item = totals.setdefault(key, {"tid": thread["tid"], "name": thread["name"],
-                                           "cpuSeconds": 0})
-            for name in ("cpuSeconds", "runtimeNs", "runqueueWaitNs"):
+                                           "cpuSeconds": 0, "sampledStates": {},
+                                           "sampledWaitChannels": {}, "waitChannelUnavailableSamples": 0,
+                                           "contextSwitchIntervals": 0})
+            for name in ("cpuSeconds", "runtimeNs", "runqueueWaitNs",
+                         "voluntaryContextSwitches", "involuntaryContextSwitches"):
                 if name in thread:
                     item[name] = item.get(name, 0) + thread[name]
+            if "voluntaryContextSwitches" in thread and "involuntaryContextSwitches" in thread:
+                item["contextSwitchIntervals"] += 1
+            state = thread["endState"]
+            item["sampledStates"][state] = item["sampledStates"].get(state, 0) + 1
+            channel = thread["endWaitChannel"]
+            if channel is None:
+                item["waitChannelUnavailableSamples"] += 1
+            else:
+                item["sampledWaitChannels"][channel] = item["sampledWaitChannels"].get(channel, 0) + 1
     cpu = sum(row["processCpuSeconds"] for row in intervals)
     wall = sum(row["wallSeconds"] for row in intervals)
     return {"wallSeconds": wall, "processCpuSeconds": cpu,
@@ -166,6 +194,9 @@ def collect(pid, seconds, cadence):
               "librariesBefore": loaded_libraries(pid), "samples": [first], "intervals": [], "complete": False,
               "limits": "Read-only diagnostic, not FPS or a speedup. Thread totals omit unmatched/exited threads; "
               "schedstat wait is runnable queue wait, not total sleep. Process CPU includes the host/FFI. "
+              "Context-switch deltas and sampled state/wchan counts do not measure blocked duration or GPU time; "
+              "wchan may be 0/unavailable, and state/wchan reads are not atomic. "
+              "contextSwitchIntervals records counter coverage; missing reads are not zero switches. "
               "Samples are sequential, not atomic; readSeconds records observer cost. Mapped DLLs may omit managed assemblies; "
               "still verify the in-game loaded assembly receipt. Profile separately from acceptance timings."}
     deadline = first["monotonicSeconds"] + seconds
