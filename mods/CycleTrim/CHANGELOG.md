@@ -1,3 +1,10 @@
+## Unreleased — simulation time and complete frame measurements (2026-11-08)
+
+- Preserve the original `SimEveryTick` input and accumulated simulation time; remove the frame patch's unconditional `2/60` second truncation.
+- Measure consecutive `Game.Update` entry intervals with a monotonic clock, including the Update-to-LateUpdate gap. Derive FPS, mean, p50/p95/p99 and maximum from the same bounded window; label callback cadence and unattributed time explicitly.
+- Keep inclusive method timings separate from the frame total, close re-entrant and exceptional scopes safely, reset captures across game lifetimes and frame discontinuities, and report GC collection-count deltas. Timing-only hooks remain absent when diagnostics are disabled.
+- Extend real Harmony host regressions for time preservation and capture behavior. All optimization host families and the managed onim reference build pass; Steam liquid and graphical FPS acceptance remain pending.
+
 ## Unreleased — source review fixes (2026-11-08)
 
 - Preserve the game's evaluated chore costs by removing the automatic GPU recosting patch and its unused managed bridge. The standalone jump-flood API is documented as a geometric-distance experiment; its estimates can cross walls and must not replace navigation costs.

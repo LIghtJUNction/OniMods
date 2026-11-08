@@ -8,6 +8,8 @@
 
 用户交接中的 32 格宽深岩浆池在 1000 次更新后，两侧柱质量约为 4844.86 kg 与 6003.26 kg，差约 1158 kg，仍按失败处理。此前实机副本池面超过两格的高度差也仍按失败处理。本轮没有运行该原始 fixture 或游戏副本。
 
+本轮完成了仿真时间截断和整帧计时口径的源码修复，全部 10 个优化宿主回归族通过，并通过 onim 的托管参考构建。实机液体与图形性能仍缺原游戏主机和未提交工作区，不能用本轮宿主结果替代。
+
 ## 源码与测试范围
 
 本轮首先读取了 AGENTS.md、RTK.md、UPSTREAM.toml 和 docs/autonomous-iteration.md，并检查当前差异。可访问的云端检出不含交接中的未提交液体改动、原始 hydraulic_tests、测试存档、perf.data 或游戏运行日志。原 Steam／RTX 4060 主机没有接入此执行环境。
@@ -23,6 +25,50 @@ cargo test --release --locked --offline \
 ```
 
 结果为 `0 passed; 0 failed; 100 filtered out`。这表示没有选中交接用例，不能记为液体回归通过。不得用早先的完整测试数量替代当前缺失的失败场景。
+
+## 本轮完成的修正
+
+**帧率补丁保留原始仿真时间。** 删除 Game.simDt 的反射写入和 ref dt 截断；SimEveryTick 补丁只承担诊断，关闭诊断时不安装。宿主回归同时检查诊断开、关两种模式下传入的 0.25 秒与 0.25 秒积压保持不变。取消截断后，低帧率时需要执行的仿真工作可能增加，实际帧率与仿真进度须重新成对测量。
+
+**完整区间按相邻 Game.Update 入口的单调时钟计量。** 首次入口建立基线，下次入口结算前一完整区间，纳入此前漏掉的 Update→LateUpdate 空档。统计达到 1 秒或 2048 个样本时完整结窗，FPS、均值、p50/p95/p99 和最大值使用同一组样本，下一窗口沿用上一次入口边界。
+
+**各项耗时保留其测量边界。** 日志明确标为 Game.Update cadence；Unattributed 包含其他回调、引擎工作、等待、呈现相关工作以及探针自身开销。Update/LateUpdate 的覆盖时间按嵌套并集扣除；SimEveryTick、StepTheSim 仅作为 inclusive 子指标。GCCollectionsDelta 记录各代回收次数差，没有将次数解释成 GC 耗时。
+
+**捕获状态随调用和生命周期隔离。** 使用原有 Hook 目标，每次调用保存独立 state，finalizer 关闭异常和重入作用域并保留原异常。新 Game、游戏与菜单 OnSpawn、帧号不连续或非单调时间戳重新建立基线；旧窗口和旧 generation 的计时不会写进新窗口。诊断默认关闭，不分配捕获数组。
+
+实现：[FrameRateUnlockPatch](../mods/CycleTrim/Patches/FrameRateUnlockPatch.cs)、[FrameTimingWindow](../mods/CycleTrim/Core/FrameTimingWindow.cs)。回归：[FrameRateDiagnosticsRegression](../tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs)。
+
+## 本轮验证结果
+
+| 验证 | 实际结果 | 证据范围 |
+| --- | --- | --- |
+| 原实现时间输入反例 | 加强断言后退出 1 | 3c745da8 的原生产补丁改变了 0.25 秒输入／积压 |
+| 原实现计时空档反例 | 独立计量空档约 20.091 ms，旧 Total 约 0.13 ms | 宿主夹具中的计时边界缺口，未测游戏 FPS |
+| 候选定向 frame-rate 回归 | 退出 0 | 确定性时间戳、真实 Harmony 宿主、时间输入保持 |
+| 全部优化回归 | Release，10 个回归族通过 | 同一测试项目中的其他生产补丁及共享夹具回归 |
+| onim 托管参考构建 | 成功，0 errors；28 个 Jlib 既有警告 | net48、固定参考程序集、IncludeOniSim=false |
+| 独立源码复审 | 未发现阻断问题 | 五个代码／测试候选文件的全文及完整差异 |
+| Steam 图形与液体副本 | 未执行 | 原游戏主机与交接中的未提交液体实现不可访问 |
+
+宿主测试使用 .NET SDK 10.0.401。定向与完整命令如下：
+
+```bash
+dotnet run --project tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj \
+  -- --regression-frame-rate
+dotnet run --project tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj \
+  -c Release --no-restore
+```
+
+构建使用 onim 0.1.13。当前执行环境的并行依赖恢复返回失败，使用下列串行调度命令完成构建；未修改生产源代码、参考版本或警告校验规则来通过构建：
+
+```bash
+BuildInParallel=false RestoreBuildInParallel=false \
+  ./target/release/onim build -m CycleTrim --release
+```
+
+本地构建配置为 `IncludeOniSim=false`、`TreatWarningsAsErrors=true`，引用仓库清单验证的 22 个 DLL。清单声明 ONI 737790，辅助 Unity 模块为 2021.3.33。这是托管参考构建，不是当前游戏版本的运行验收；本次包未包含原生库。
+
+编译得到的 `CycleTrim.dll` 为 191488 字节，SHA-256 为 `f4d060b7b21845a677ab42f95b782458b2344d6b7247bfc26f2e74f33b725abf`，与包内 `implementation/CycleTrim.dll` 相同。尚未核验游戏进程加载此 DLL，未部署到 Steam 游戏目录。精确提交以本文件及对应源码的版本历史为准。
 
 ## 已确认的帧计时问题
 
@@ -69,4 +115,4 @@ cargo test --release --locked --offline \
 | 表述是否清楚 | 用户交接数据、本轮宿主结果、源码推断分别标注 |
 | 实验是否支持性能提升 | 尚无本轮实机 FPS 数据，不报告性能提升 |
 | 验收是否完整 | 原液体 fixture、实机副本、图形性能分解均待完成 |
-| 修复是否满足语义约束 | 候选须保持原始仿真时间输入，且不得放宽液体断言 |
+| 修复是否满足语义约束 | 宿主回归已确认原始仿真时间输入保持；液体断言与原生实现未修改，实机行为待验证 |

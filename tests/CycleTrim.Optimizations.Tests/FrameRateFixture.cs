@@ -13,6 +13,7 @@ public sealed partial class Game
     public int SimEveryTickCalls;
     public float LastTickDt;
     public float LastSimulationBacklog;
+    public Action FrameUpdateAction;
 
     public void SetSimulationBacklogForTest(float value) { simDt = value; }
 
@@ -20,7 +21,11 @@ public sealed partial class Game
     public void OnSpawn() { }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public void Update() { FrameUpdateCalls++; }
+    public void Update()
+    {
+        FrameUpdateCalls++;
+        FrameUpdateAction?.Invoke();
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void LateUpdate() { FrameLateUpdateCalls++; }
