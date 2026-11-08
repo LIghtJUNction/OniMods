@@ -196,7 +196,6 @@ impl<'a> PreparedStep<'a> {
         } = self;
         world.scan_direction = -world.scan_direction;
         crate::gas::rise_bubbles(world, elements, events);
-        crate::gas::settle_liquid_droplets(world, elements, events);
         world.sync_read_from_write();
         crate::multicomponent_flux::refresh_active_gas_channels(world, elements);
 

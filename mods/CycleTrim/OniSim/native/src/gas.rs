@@ -86,7 +86,8 @@ pub(crate) fn rise_bubbles(world: &mut PhysicsWorld, tables: &ElementTable, even
     // the remaining cell fields, while preserving top-to-bottom and left-to-
     // right ordering for every span that can contain a bubble. NaNs must not
     // be classified as empty: the original `mass <= 0` test doesn't do so.
-    for y in (1..world.height).rev() {
+    let mut droplets = Vec::new();
+    for y in (1..=world.height).rev() {
         for start in (1..=world.width).step_by(64) {
             let end = (start + 64).min(world.width + 1);
             let row = y * world.stride;
@@ -98,6 +99,12 @@ pub(crate) fn rise_bubbles(world: &mut PhysicsWorld, tables: &ElementTable, even
                 let dst = src + world.stride;
                 let mass = world.mixture_mass[src];
                 let element = world.mixture_element[src];
+                if y > 1 && mass.is_finite() && mass > 0.0
+                    && phase(tables, world.write.element[src]) == 1 && phase(tables, element) == 2 {
+                    droplets.push(src);
+                    continue;
+                }
+                if y == world.height { continue; }
                 if mass <= 0.0 || phase(tables, world.write.element[src]) != 2
                     || phase(tables, element) != 1 || world.write.properties[dst] & 1 != 0 {
                     continue;
@@ -126,49 +133,42 @@ pub(crate) fn rise_bubbles(world: &mut PhysicsWorld, tables: &ElementTable, even
             }
         }
     }
+    settle_liquid_droplets(world, tables, events, &droplets);
 }
 
 /// Settle liquid droplets suspended as a secondary component in gas.
 /// Process bottom to top so a droplet moves at most one cell per step.
-pub(crate) fn settle_liquid_droplets(world: &mut PhysicsWorld, tables: &ElementTable, events: &mut EventQueues) {
-    for y in 2..=world.height {
-        let row = y * world.stride;
-        for start in (1..=world.width).step_by(64) {
-            let end = (start + 64).min(world.width + 1);
-            if world.mixture_mass[row + start..row + end].iter().all(|&mass| mass <= 0.0) { continue; }
-            for x in start..end {
-                let src = row + x;
-                let dst = src - world.stride;
-                let mass = world.mixture_mass[src];
-                let element = world.mixture_element[src];
-                if !mass.is_finite() || mass <= 0.0 || phase(tables, world.write.element[src]) != 1
-                    || phase(tables, element) != 2 || world.write.properties[dst] & 1 != 0 { continue; }
-                let target = world.write.element[dst];
-                let target_phase = phase(tables, target);
-                if target == world.vacuum_element && world.mixture_mass[dst] <= 0.0 {
-                    world.write.element[dst] = element;
-                    world.write.mass[dst] = mass;
-                    world.write.temperature[dst] = world.write.temperature[src];
-                } else if target == element || (target_phase == 1
-                    && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element)) {
-                    let cp = |id: u16| tables.elements[id as usize].record.specific_heat_capacity.max(0.0);
-                    let old_capacity = world.write.mass[dst] * cp(target)
-                        + world.mixture_mass[dst].max(0.0) * cp(world.mixture_element[dst]);
-                    let incoming_capacity = mass * cp(element);
-                    let total = old_capacity + incoming_capacity;
-                    if total > 0.0 {
-                        world.write.temperature[dst] = (world.write.temperature[dst] * old_capacity
-                            + world.write.temperature[src] * incoming_capacity) / total;
-                    }
-                    if target == element { world.write.mass[dst] += mass; }
-                    else { world.mixture_element[dst] = element; world.mixture_mass[dst] += mass; }
-                } else { continue; }
-                world.mixture_element[src] = world.vacuum_element;
-                world.mixture_mass[src] = 0.0;
-                notify(world, events, src);
-                notify(world, events, dst);
+fn settle_liquid_droplets(world: &mut PhysicsWorld, tables: &ElementTable, events: &mut EventQueues, droplets: &[usize]) {
+    for &src in droplets.iter().rev() {
+        let dst = src - world.stride;
+        let mass = world.mixture_mass[src];
+        let element = world.mixture_element[src];
+        if !mass.is_finite() || mass <= 0.0 || phase(tables, world.write.element[src]) != 1
+            || phase(tables, element) != 2 || world.write.properties[dst] & 1 != 0 { continue; }
+        let target = world.write.element[dst];
+        let target_phase = phase(tables, target);
+        if target == world.vacuum_element && world.mixture_mass[dst] <= 0.0 {
+            world.write.element[dst] = element;
+            world.write.mass[dst] = mass;
+            world.write.temperature[dst] = world.write.temperature[src];
+        } else if target == element || (target_phase == 1
+            && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element)) {
+            let cp = |id: u16| tables.elements[id as usize].record.specific_heat_capacity.max(0.0);
+            let old_capacity = world.write.mass[dst] * cp(target)
+                + world.mixture_mass[dst].max(0.0) * cp(world.mixture_element[dst]);
+            let incoming_capacity = mass * cp(element);
+            let total = old_capacity + incoming_capacity;
+            if total > 0.0 {
+                world.write.temperature[dst] = (world.write.temperature[dst] * old_capacity
+                    + world.write.temperature[src] * incoming_capacity) / total;
             }
-        }
+            if target == element { world.write.mass[dst] += mass; }
+            else { world.mixture_element[dst] = element; world.mixture_mass[dst] += mass; }
+        } else { continue; }
+        world.mixture_element[src] = world.vacuum_element;
+        world.mixture_mass[src] = 0.0;
+        notify(world, events, src);
+        notify(world, events, dst);
     }
 }
 
@@ -251,11 +251,11 @@ mod bubble_tests {
         world.mixture_element[top] = 3;
         world.mixture_mass[top] = 1.0;
         let mut events = EventQueues::default();
-        settle_liquid_droplets(&mut world, &table, &mut events);
+        rise_bubbles(&mut world, &table, &mut events);
         assert_eq!(world.mixture_mass[top], 0.0);
         assert_eq!(world.mixture_mass[middle], 1.0);
         assert_eq!(world.write.mass[bottom], 10.0);
-        settle_liquid_droplets(&mut world, &table, &mut events);
+        rise_bubbles(&mut world, &table, &mut events);
         assert_eq!(world.mixture_mass[middle], 0.0);
         assert_eq!(world.write.mass[bottom], 11.0);
         assert!((world.write.temperature[bottom] - (2400.0 / 11.0)).abs() < 0.001);
@@ -274,10 +274,10 @@ mod bubble_tests {
         world.write.mass[bottom] = 1.0;
         world.mixture_element[bottom] = 5;
         world.mixture_mass[bottom] = 1.0;
-        settle_liquid_droplets(&mut world, &table, &mut EventQueues::default());
+        rise_bubbles(&mut world, &table, &mut EventQueues::default());
         assert_eq!(world.mixture_mass[top], 1.0);
         world.write.element[bottom] = 2;
-        settle_liquid_droplets(&mut world, &table, &mut EventQueues::default());
+        rise_bubbles(&mut world, &table, &mut EventQueues::default());
         assert_eq!(world.mixture_mass[top], 1.0);
     }
 
