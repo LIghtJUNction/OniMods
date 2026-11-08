@@ -15,6 +15,7 @@
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchActivationPolicy.cs" Link="FetchPatchActivationPolicy.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />
+    <Compile Include="../../mods/Jlib/PLibCore/PThreadLocalPool.cs" Link="PThreadLocalPool.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FetchCandidateBuffer.cs" Link="FetchCandidateBuffer.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FetchLayoutControl.cs" Link="FetchLayoutControl.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/FetchLayoutExperiment.cs" Link="FetchLayoutExperiment.cs" />
