@@ -419,6 +419,24 @@ impl ThermalDiffusionGpu {
         }
         let mut previous=self.previous_temperature.borrow_mut();
         if !self.temperature_cache_valid.get() || self.temperature_externally_exposed.get() {previous.clear();}
+        static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        static PROFILE_COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        if *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+            && previous.len()==self.cells*4 && PROFILE_COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<8 {
+            let bytes:&[u8]=bytemuck::cast_slice(temperature);
+            let mut stats=[(0usize,0usize);3];
+            for (slot,block) in [16384usize,4096,1024].into_iter().enumerate() {
+                let mut in_run=false;
+                for start in (0..bytes.len()).step_by(block) {
+                    let end=(start+block).min(bytes.len());
+                    let changed=previous[start..end]!=bytes[start..end];
+                    if changed {stats[slot].0+=end-start;if !in_run {stats[slot].1+=1;}}
+                    in_run=changed;
+                }
+            }
+            eprintln!("[CycleTrim OniSim] temperature block profile bytes/runs 4096cells={}/{} 1024cells={}/{} 256cells={}/{}",
+                stats[0].0,stats[0].1,stats[1].0,stats[1].1,stats[2].0,stats[2].1);
+        }
         let mut temperature_dirty=vec![false;self.cells.div_ceil(4096)];
         let uploaded=upload_changed_bytes(&self.queue,self.current_temperature_buffer(),bytemuck::cast_slice(temperature),&mut previous,16384,&mut temperature_dirty);
         self.temperature_upload_bytes.set(uploaded);
