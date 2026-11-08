@@ -244,13 +244,10 @@ impl Engine {
         }
         if !reuse_derived {
             output.presentation.update(&self.world, &self.elements)?;
-            output.multicomponent.update_from_grid_with_mixture_at(
+            output.multicomponent.update_from_world(
                 &output.grid,
                 &self.elements,
-                |public| {
-                    let internal = self.world.internal_index(public);
-                    (self.world.mixture_element[internal], self.world.mixture_mass[internal])
-                },
+                &self.world,
             );
         }
         output.grid.set_num_frames(frame_count);

@@ -1,4 +1,15 @@
-# onim 原生发布开发进度（2026-11-02）
+# onim 原生发布开发进度
+
+## 2026-11-08 状态更新
+
+- 原生 Legacy ZIP 发布已随 `onim 0.1.12` 发布到 crates.io（原计划的 `0.2.0` 版本号未使用）。
+  0.1.12 新增 `--update-preview`，`onim workshop page show/set` 不再依赖本机游戏路径。
+- Jlib 创意工坊条目已存在：`3835083839`，更新流程见 [jlib-steam-publishing.md](jlib-steam-publishing.md)。
+- 下文「下次继续」第 3 项中的 Jlib ID 登记已完成；其余条目（自动前置关系回读、
+  OniOnline 上架、独立 `onim init` 工程的 Jlib 引导层）在本文更新时仍未逐项验收，保留原记录。
+- 禁止 SteamCMD / `SetItemContent` 目录上传的规则不变。
+
+## 2026-11-02 记录
 
 当前源码候选为 `onim 0.2.0`。用户已要求先提交推送，后续开发与实际发布留待下次。
 本轮没有创建 Jlib 工坊条目，也没有更新已有条目的内容或依赖关系；安装中的 onim 未升级。

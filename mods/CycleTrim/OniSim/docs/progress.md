@@ -1,6 +1,50 @@
 # OniSim engineering log
 
-## Current status (2026-11-07)
+## Current status (2026-11-08)
+
+### Runtime policy
+
+- Since CycleTrim 0.4.5 OniSim is always mapped at startup; the PLib
+  `EnableOniSimExperimental` toggle and the official-SimDLL fallback were
+  removed. `CYCLETRIM_ONISIM_ENABLE=0` is an emergency kill switch only.
+- `CYCLETRIM_ONISIM_WORKERS` defaults to 8 when unset (0.4.6).
+- 0.4.7/0.4.8: `FLAG_MULTICOMPONENT_COEXISTENCE` lets a second gas species share
+  a cell when classic `displace_gas` fails; the multicomponent CPU upwind flux
+  runs in the native tick. Saves still store the dominant element plus a
+  runtime mixture overlay.
+
+### GPU pipeline
+
+- `GpuSimulation` (wgpu 30, Vulkan) is created at engine construction unless
+  `CYCLETRIM_ONISIM_GPU=0`; failure falls back to CPU with a log line.
+- Committed and in the tick: whole-grid thermal diffusion with resident
+  temperatures and compressed mixture-presence uploads; regional gas
+  multicomponent diffusion / pressure projection / transport / thermal chained
+  between GPU buffers; sparse liquid multicomponent diffusion overlapped with
+  the CPU gas-pressure pass; diffusion snapshots limited to the active region.
+- CPU-side tick changes: bubble simulation skips empty spans, liquid droplets
+  settle, bubbles and droplets share one sparse scan, and idle zero-time frames
+  reuse the previous publication.
+- Working tree (uncommitted): GPU bubble/droplet movement, phase-transition
+  selection, gas pressure faces and liquid head/flow, disease diffusion and
+  growth, radiation regions and inactive-cell decay are wired into
+  `simulation_step.rs` behind `systems.gpu`, with the CPU functions kept as the
+  no-GPU path. `cargo check --release` passes for the native crate. No unit
+  test run, differential fixture or in-game log has been recorded for these
+  passes yet.
+- Last game evidence: `Player.log` from 2026-11-08 00:26 reports
+  `GPU acceleration active on Vulkan device: NVIDIA GeForce RTX 4060 Laptop GPU
+  (grid 738x306)`. It predates all 2026-11-08 commits listed above.
+
+### Open gates
+
+- Per-step upload / device wait / readback remains; not a device-resident loop.
+- Pressure, partial-pressure and liquid-volume-fraction publication, three or
+  more species per cell and full save/load of all components are incomplete.
+- No whole-game FPS, long-duration, DLC or other-Mod acceptance for the current
+  source.
+
+## Status snapshot (2026-11-07)
 
 ### Message routing audit
 
@@ -44,12 +88,12 @@ official simulation is unresolved and must not be guessed or marked complete.
 
 ### Safety and CI
 
-- PR [#568](https://github.com/LIghtJUNction/OniMods/pull/568) changes the CycleTrim
-  option to a new `EnableOniSimExperimental` key, default off. The old persisted
-  `EnableOniSim` key is intentionally not reused, preventing an old default-true
-  value from silently enabling takeover after upgrade.
-- The standalone loader is also default-off; it requires an explicit
-  `CYCLETRIM_ONISIM_ENABLE=1/true/on` opt-in.
+- PR [#568](https://github.com/LIghtJUNction/OniMods/pull/568) changed the CycleTrim
+  option to a new `EnableOniSimExperimental` key, default off. *(Superseded by
+  0.4.5: the toggle was removed and OniSim is always mapped.)*
+- The standalone loader was also default-off, requiring an explicit
+  `CYCLETRIM_ONISIM_ENABLE=1/true/on` opt-in. *(Superseded by 0.4.5 for the
+  CycleTrim package; `=0` remains the kill switch.)*
 - The original `tools/OniHarness` gitlink pointed at an unreachable commit
   (`107fee3c…`). The PR pins reachable OniHarness main
   (`c149819e…`) so checkout can proceed. Checkout success alone is not test acceptance.

@@ -1,24 +1,22 @@
 # CycleTrim OniSim loader
 
 This loader is part of CycleTrim's OniSim core integration. Windows x64, macOS x64 and Linux x64 builds
-include the native library by default, but the loader does not map it by default.
-CycleTrim's PLib option is a separate explicit opt-in and defaults off. The
-mapping and game behavior remain unverified; `gameReady=false` still applies. Building the project
+include the native library by default, and since CycleTrim 0.4.5 the loader
+**maps it by default**; the former PLib opt-in was removed. The
+mapping and game behavior still lack complete acceptance; `gameReady=false` still applies. Building the project
 does not load Mono, the native core, or the game and does not copy anything into
 the ONI installation or mods directory.
 
 The `KMod.UserMod2.OnLoad` entry keeps the official `Sim`, `SimMessages`, and Mod
-call surfaces intact. It installs no Harmony patches. The standalone entry is
-disabled unless `CYCLETRIM_ONISIM_ENABLE=1`, `true` or `on` is explicitly
-provided at startup. Only then does it attempt one assembly-scoped mapping of
-the official `SimDLL` import name to the bundled native library or the caller's
-absolute override path. No private Mono layout, detour,
+call surfaces intact. It installs no Harmony patches. The entry attempts one
+assembly-scoped mapping of the official `SimDLL` import name to the bundled
+native library or the caller's absolute override path unless
+`CYCLETRIM_ONISIM_ENABLE` disables it. No private Mono layout, detour,
 custom message protocol, or managed Grid mirror is used.
 
-`CYCLETRIM_ONISIM_ENABLE` is a startup safety gate: set it to `0`, `false`, or
-`off` to force-disable mapping; `1`, `true`, or `on` explicitly opts in.
-When CycleTrim's PLib option is used, that option must also be enabled. Other
-nonempty values are refused. `CYCLETRIM_ONISIM_NATIVE_PATH` may name an absolute library override;
+`CYCLETRIM_ONISIM_ENABLE` is an emergency startup gate: set it to `0`, `false`, or
+`off` to force-disable mapping; unset, `1`, `true`, or `on` map OniSim.
+Other nonempty values are refused. `CYCLETRIM_ONISIM_NATIVE_PATH` may name an absolute library override;
 when unset, the loader uses the platform library under `OniSim/linux-x64/`,
 `OniSim/windows-x64/` or `OniSim/macos-x64/` beside the Mod assembly.
 These switches control mapping; they do not establish gameplay compatibility.

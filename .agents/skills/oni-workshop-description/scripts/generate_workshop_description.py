@@ -47,6 +47,9 @@ KNOWN_BANNERS = {
 def render_description_en(data: Dict[str, Any]) -> str:
     """Build English BBCode description."""
     parts = []
+    if data.get("ai_warning_banner_url"):
+        parts.append(f"[img]{data['ai_warning_banner_url']}[/img]")
+    parts.append("[h1]WARNING[/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
 
     # 1. Header Banner
     if data.get("banner_url"):
@@ -135,6 +138,9 @@ def render_description_en(data: Dict[str, Any]) -> str:
 def render_description_zh(data: Dict[str, Any]) -> str:
     """Build Simplified Chinese BBCode description."""
     parts = []
+    if data.get("ai_warning_banner_url"):
+        parts.append(f"[img]{data['ai_warning_banner_url']}[/img]")
+    parts.append("[h1]WARNING[/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
 
     # 1. Header Banner
     if data.get("banner_url"):
@@ -252,9 +258,12 @@ def main():
     parser.add_argument("--discord", default="", help="Discord URL")
     parser.add_argument("--output-dir", default="", help="Directory to save steam-description-en.md and zh.md")
 
+    parser.add_argument("--ai-warning-banner", default="", help="Verified public URL of the English AI-generated warning image")
+
     args = parser.parse_args()
 
     data = {
+        "ai_warning_banner_url": args.ai_warning_banner,
         "name": args.name,
         "name_zh": args.name_zh,
         "tagline": args.tagline,

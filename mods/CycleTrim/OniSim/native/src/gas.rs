@@ -7,45 +7,99 @@ use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
 
 /// Exchange composition across a fluid edge without changing either cell's
-/// total mass. An edge requiring three species is left untouched until the
-/// storage can represent it, rather than dropping a component.
+/// total mass. Supports arbitrary species mixtures across adjacent cells.
 fn diffuse_pair(world: &mut PhysicsWorld, tables: &ElementTable, events: &mut EventQueues, a: usize, b: usize) {
     let ea = world.write.element[a];
     let eb = world.write.element[b];
     let pa = phase(tables, ea);
-    if (pa != 1 && pa != 2) || phase(tables, eb) != pa || world.write.properties[a] & 1 != 0 || world.write.properties[b] & 1 != 0 { return; }
-    let mut ids = [ea, ea];
-    let mut count = 1;
-    for (id, mass) in [(eb, world.write.mass[b]), (world.mixture_element[a], world.mixture_mass[a]), (world.mixture_element[b], world.mixture_mass[b])] {
-        if mass <= 0.0 || ids[..count].contains(&id) { continue; }
-        if count == 2 { return; }
-        ids[count] = id;
-        count += 1;
-    }
-    if count != 2 || phase(tables, ids[1]) != pa { return; }
-    if pa == 2 && !crate::fluid_helpers::are_liquids_miscible(&tables.elements[ids[0] as usize].record, &tables.elements[ids[1] as usize].record) { return; }
-    let total_a = world.write.mass[a] + world.mixture_mass[a];
-    let total_b = world.write.mass[b] + world.mixture_mass[b];
-    if total_a <= 0.0 || total_b <= 0.0 { return; }
-    let amount = |cell: usize, id: u16| -> f32 {
-        (if world.write.element[cell] == id { world.write.mass[cell] } else { 0.0 }) +
-        (if world.mixture_element[cell] == id { world.mixture_mass[cell] } else { 0.0 })
-    };
-    let a0 = amount(a, ids[0]);
-    let b0 = amount(b, ids[0]);
-    let transfer = (a0 / total_a - b0 / total_b) * total_a.min(total_b) * 0.05;
-    if transfer.abs() < 0.000001 { return; }
-    for (cell, total, first) in [(a, total_a, a0 - transfer), (b, total_b, b0 + transfer)] {
-        let first = first.clamp(0.0, total);
-        let second = total - first;
-        if first >= second {
-            world.write.element[cell] = ids[0]; world.write.mass[cell] = first;
-            world.mixture_element[cell] = ids[1]; world.mixture_mass[cell] = second;
-        } else {
-            world.write.element[cell] = ids[1]; world.write.mass[cell] = second;
-            world.mixture_element[cell] = ids[0]; world.mixture_mass[cell] = first;
+    let pb = phase(tables, eb);
+    if pa != 1 || pb != 1 || world.write.properties[a] & 1 != 0 || world.write.properties[b] & 1 != 0 { return; }
+
+    let mut ids = [0u16; 16];
+    let mut count = 0;
+    world.for_each_cell_species(a, |id, mass| {
+        if mass > 0.0 && phase(tables, id) == 1 && !ids[..count].contains(&id) && count < 16 {
+            ids[count] = id;
+            count += 1;
         }
-        notify(world, events, cell);
+    });
+    world.for_each_cell_species(b, |id, mass| {
+        if mass > 0.0 && phase(tables, id) == 1 && !ids[..count].contains(&id) && count < 16 {
+            ids[count] = id;
+            count += 1;
+        }
+    });
+    if count <= 1 { return; }
+
+    let species_mass_at = |world: &PhysicsWorld, cell: usize, target: u16| -> f32 {
+        let mut m = 0.0f32;
+        world.for_each_cell_species(cell, |id, mass| {
+            if id == target { m += mass; }
+        });
+        m
+    };
+
+    let mut total_a = 0.0f32;
+    world.for_each_cell_species(a, |_, m| total_a += m);
+    let mut total_b = 0.0f32;
+    world.for_each_cell_species(b, |_, m| total_b += m);
+    if total_a <= 0.0 || total_b <= 0.0 { return; }
+
+    let is_vertical = b == a + world.stride;
+    let mut any_transfer = false;
+    let min_total = total_a.min(total_b);
+    for &id in &ids[..count] {
+        let a_mass = species_mass_at(world, a, id);
+        let b_mass = species_mass_at(world, b, id);
+        let conc_diff = a_mass / total_a - b_mass / total_b;
+
+        // 真实自然物理：气体趋向于先向四周充分扩散，垂直方向附带温和的分子量沉降偏好
+        let transfer = if is_vertical {
+            // a 为下方格子，b 为上方格子。
+            let molar = tables.elements.get(id as usize)
+                .map(|e| e.record.molar_mass.max(1.0))
+                .unwrap_or(32.0);
+            // 相对氧气(32)基准：重气体(CO2 44, 氯气 71)温和偏好向下沉至 a，轻气体(氢气 2, 甲烷 16)温和偏好向上浮至 b
+            let drift_bias = ((molar - 32.0) / 44.0) * 0.006;
+            (conc_diff + drift_bias) * min_total * 0.05
+        } else {
+            // 水平方向：高通量向四周充分扩散平推
+            conc_diff * min_total * 0.08
+        };
+        if transfer.abs() >= 1e-6 {
+            if transfer > 0.0 {
+                let real_transfer = transfer.min(a_mass);
+                world.add_species_mass(tables, b, id, real_transfer);
+                if world.write.element[a] == id {
+                    world.write.mass[a] = (world.write.mass[a] - real_transfer).max(0.0);
+                } else if world.mixture_element[a] == id {
+                    world.mixture_mass[a] = (world.mixture_mass[a] - real_transfer).max(0.0);
+                } else if let Some(extras) = world.extra_mixtures.get_mut(&a) {
+                    if let Some(pos) = extras.iter().position(|(e, _)| *e == id) {
+                        extras[pos].1 = (extras[pos].1 - real_transfer).max(0.0);
+                    }
+                }
+            } else {
+                let real_transfer = (-transfer).min(b_mass);
+                world.add_species_mass(tables, a, id, real_transfer);
+                if world.write.element[b] == id {
+                    world.write.mass[b] = (world.write.mass[b] - real_transfer).max(0.0);
+                } else if world.mixture_element[b] == id {
+                    world.mixture_mass[b] = (world.mixture_mass[b] - real_transfer).max(0.0);
+                } else if let Some(extras) = world.extra_mixtures.get_mut(&b) {
+                    if let Some(pos) = extras.iter().position(|(e, _)| *e == id) {
+                        extras[pos].1 = (extras[pos].1 - real_transfer).max(0.0);
+                    }
+                }
+            }
+            any_transfer = true;
+        }
+    }
+    if any_transfer {
+        world.normalize_cell_mixtures(a);
+        world.normalize_cell_mixtures(b);
+        notify(world, events, a);
+        notify(world, events, b);
     }
 }
 
@@ -54,13 +108,34 @@ pub(crate) fn diffuse_region(world: &mut PhysicsWorld, tables: &ElementTable, ev
     let min_y = region.min_y.max(1) as usize;
     let max_x = (region.max_x as usize).min(world.width + 1);
     let max_y = (region.max_y as usize).min(world.height + 1);
+    let gpu_max_x = (region.max_x as usize).min(world.width);
+    let gpu_max_y = (region.max_y as usize).min(world.height);
+    let gpu_width = gpu_max_x.saturating_sub(min_x);
+    let gpu_height = gpu_max_y.saturating_sub(min_y);
+    // A fully open gas mask excludes positive-mass liquid cells; a fully open
+    // liquid mask consists entirely of representable liquid cells. Either
+    // case leaves only the boundary strip for the ordered CPU fallback.
+    let full_mask = |mask: Option<&[u32]>| mask.is_some_and(|m|
+        gpu_width >= 2 && gpu_height >= 2 && m.len() == gpu_width * gpu_height
+            && m.iter().all(|&value| value == 0));
+    if full_mask(gpu_solid) || full_mask(liquid_solid) {
+        for y in min_y..max_y {
+            let start_x = if y + 1 < gpu_max_y { gpu_max_x.saturating_sub(1).max(min_x) } else { min_x };
+            for x in start_x..max_x {
+                let cell = y * world.stride + x;
+                if x + 1 < max_x && !(x + 1 < gpu_max_x && y < gpu_max_y) {
+                    diffuse_pair(world, tables, events, cell, cell + 1);
+                }
+                if y + 1 < max_y && !(x < gpu_max_x && y + 1 < gpu_max_y) {
+                    diffuse_pair(world, tables, events, cell, cell + world.stride);
+                }
+            }
+        }
+        return;
+    }
     for y in min_y..max_y {
         for x in min_x..max_x {
             let cell = y * world.stride + x;
-            let gpu_max_x = (region.max_x as usize).min(world.width);
-            let gpu_max_y = (region.max_y as usize).min(world.height);
-            let gpu_width = gpu_max_x.saturating_sub(min_x);
-            let gpu_height = gpu_max_y.saturating_sub(min_y);
             let eligible = |ax: usize, ay: usize, bx: usize, by: usize| {
                 let phase = phase(tables, world.write.element[ay * world.stride + ax]);
                 let mask = if phase == 1 { gpu_solid } else if phase == 2 { liquid_solid } else { None };
@@ -410,22 +485,24 @@ pub(crate) fn do_gas_pressure_displacement(
         return 0.0;
     }
 
-    // 激进真实物理：相邻不同气体直接进行分子扩散与压力渗透混合，形成多组分共存相
+    // 激进真实物理：相邻不同气体直接进行分子扩散与压力渗透混合，形成多组分共存相（支持任意数量混合）
     if element_a != element_b {
         let diff = (old_mass - world.read.mass[b]).abs();
         let amount = smin(smax(diff * 0.1, 0.05 * old_mass), world.write.mass[a] * 0.25);
-        if amount > 0.001 && (world.mixture_mass[b] <= 0.0 || world.mixture_element[b] == element_a) {
-            world.mixture_element[b] = element_a;
-            world.mixture_mass[b] += amount;
-            world.write.mass[a] = smax(world.write.mass[a] - amount, 0.0);
-            if world.mixture_mass[b] > world.write.mass[b] {
-                let dom_elem = world.mixture_element[b];
-                let dom_mass = world.mixture_mass[b];
-                world.mixture_element[b] = world.write.element[b];
-                world.mixture_mass[b] = world.write.mass[b];
-                world.write.element[b] = dom_elem;
-                world.write.mass[b] = dom_mass;
+        if amount > 0.001 {
+            let heat = |id: u16| tables.elements[id as usize].record.specific_heat_capacity.max(0.0);
+            let prev_temp = world.write.temperature[b];
+            let added_capacity = amount * heat(element_a);
+            let mut previous_capacity = 0.0f32;
+            world.for_each_cell_species(b, |id, m| {
+                previous_capacity += m * heat(id);
+            });
+            if previous_capacity + added_capacity > 0.0 {
+                world.write.temperature[b] = (prev_temp * previous_capacity
+                    + world.write.temperature[a] * added_capacity) / (previous_capacity + added_capacity);
             }
+            world.add_species_mass(tables, b, element_a, amount);
+            world.write.mass[a] = smax(world.write.mass[a] - amount, 0.0);
             notify(world, events, a);
             notify(world, events, b);
             return amount;
@@ -489,31 +566,9 @@ pub(crate) fn displace_gas(
             continue;
         }
         let target = world.write.element[dst];
-        let target_phase = phase(tables, target);
-        let allows_gas = if target == element || target == world.vacuum_element {
-            true
-        } else if target_phase == 2 {
-            // 当液体未占满 1m³ 格子时，空隙允许气体进入分压
-            let target_max = tables.elements[target as usize].record.max_mass.max(1.0);
-            let liq_vol = world.write.mass[dst] / target_max;
-            liq_vol < 0.95 && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element)
-        } else {
-            false
-        };
+        let allows_gas = target == element || target == world.vacuum_element;
 
         if allows_gas && world.write.properties[dst] & 1 == 0 {
-            if target_phase == 2 {
-                // 液体未占满格：气体作为共存相进入空隙容积
-                let gas_mass = world.write.mass[src];
-                let _gas_temp = world.write.temperature[src];
-                world.mixture_element[dst] = element;
-                world.mixture_mass[dst] += gas_mass;
-                world.write.mass[src] = 0.0;
-                world.write.element[src] = world.vacuum_element;
-                notify(world, events, src);
-                notify(world, events, dst);
-                return true;
-            }
             do_displacement(world, tables, diseases, events, src, dst);
             return true;
         }
@@ -574,43 +629,18 @@ fn coexist_gas_into(
     {
         return false;
     }
-    // Only one mixture slot for now. Refuse rather than silently drop mass.
-    if world.mixture_mass[dst] > 0.0 && world.mixture_element[dst] != src_element {
-        return false;
-    }
-
     let src_temperature = world.write.temperature[src];
     let dst_temperature = world.write.temperature[dst];
-    let mix_add = src_mass;
-    let existing_mix = if world.mixture_element[dst] == src_element {
-        world.mixture_mass[dst]
-    } else {
-        0.0
-    };
-    let new_mix = existing_mix + mix_add;
-
-    // Keep the heavier species on the legacy single-element ABI fields.
-    if dst_mass >= new_mix {
-        world.mixture_element[dst] = src_element;
-        world.mixture_mass[dst] = new_mix;
-        let total = dst_mass + new_mix;
+    let total = dst_mass + src_mass;
+    if total > 0.0 {
         world.write.temperature[dst] =
-            (dst_temperature * dst_mass + src_temperature * mix_add) / total;
-    } else {
-        // Promote incoming gas to primary; demote previous primary into mixture.
-        world.mixture_element[dst] = dst_element;
-        world.mixture_mass[dst] = dst_mass;
-        world.write.element[dst] = src_element;
-        world.write.mass[dst] = new_mix;
-        let total = dst_mass + new_mix;
-        world.write.temperature[dst] =
-            (dst_temperature * dst_mass + src_temperature * mix_add) / total;
+            (dst_temperature * dst_mass + src_temperature * src_mass) / total;
     }
+    world.add_species_mass(tables, dst, src_element, src_mass);
 
     world.write.mass[src] = 0.0;
     world.write.element[src] = world.vacuum_element;
-    world.mixture_mass[src] = 0.0;
-    world.mixture_element[src] = world.vacuum_element;
+    world.clear_cell_mixtures(src);
     crate::multicomponent_flux::clear_species_cell(world, src);
     crate::multicomponent_flux::ingest_write_cell(world, tables, dst);
     clear_disease(&mut world.write, src);

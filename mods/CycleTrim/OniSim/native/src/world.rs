@@ -57,14 +57,16 @@ pub(crate) struct PhysicsWorld {
     pub(crate) building_contact_heat_transfer_scale: f32,
     // Aggressive gas coexistence overlay: second species per padded cell.
     // Legacy Grid ABI still publishes the dominant element/mass only; the
-    // multicomponent publication advertises both when mixture_mass > 0.
+    // multicomponent publication advertises all components.
     pub(crate) mixture_element: Vec<u16>,
     pub(crate) mixture_mass: Vec<f32>,
+    pub(crate) extra_mixtures: std::collections::HashMap<usize, Vec<(u16, f32)>>,
     // Dense NHWC gas channels (production promotion of the GPU operator layout).
     pub(crate) species_mass: Vec<f32>,
     pub(crate) gas_channel_of_element: Vec<u8>,
     pub(crate) gas_element_of_channel: [u16; crate::multicomponent_flux::GAS_CHANNELS],
     pub(crate) gas_channel_count: usize,
+    pub(crate) element_phase: Vec<u8>,
 }
 
 fn special(elements: &ElementTable, hash: u32) -> Result<u16> {
@@ -149,6 +151,7 @@ impl PhysicsWorld {
             building_contact_heat_transfer_scale: f32::from_bits(0x3a83126f),
             mixture_element: filled(count, vacuum_element)?,
             mixture_mass: filled(count, 0.0)?,
+            extra_mixtures: std::collections::HashMap::new(),
             species_mass: filled(
                 count
                     .checked_mul(crate::multicomponent_flux::GAS_CHANNELS)
@@ -160,6 +163,7 @@ impl PhysicsWorld {
             gas_channel_of_element: filled(elements.elements.len().max(1), u8::MAX)?,
             gas_element_of_channel: [0; crate::multicomponent_flux::GAS_CHANNELS],
             gas_channel_count: 0,
+            element_phase: elements.elements.iter().map(|e| (e.record.state & 3) as u8).collect(),
         };
         crate::multicomponent_flux::rebuild_gas_channels(&mut world, elements);
         Ok(world)
@@ -229,6 +233,144 @@ impl PhysicsWorld {
     }
     pub(crate) fn sync_read_from_write(&mut self) {
         self.read.copy_from(&self.write);
+    }
+
+    pub(crate) fn for_each_cell_species(&self, cell: usize, mut f: impl FnMut(u16, f32)) {
+        if self.write.mass[cell] > 0.0 {
+            f(self.write.element[cell], self.write.mass[cell]);
+        }
+        if self.mixture_mass[cell] > 0.0 && self.mixture_element[cell] != self.write.element[cell] {
+            f(self.mixture_element[cell], self.mixture_mass[cell]);
+        }
+        if let Some(extras) = self.extra_mixtures.get(&cell) {
+            for &(element, mass) in extras {
+                if mass > 0.0 && element != self.write.element[cell] && element != self.mixture_element[cell] {
+                    f(element, mass);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn clear_cell_mixtures(&mut self, cell: usize) {
+        self.mixture_mass[cell] = 0.0;
+        self.mixture_element[cell] = self.vacuum_element;
+        self.extra_mixtures.remove(&cell);
+    }
+
+    pub(crate) fn add_species_mass(&mut self, tables: &ElementTable, cell: usize, element: u16, mass: f32) {
+        if mass <= 0.0 || !mass.is_finite() {
+            return;
+        }
+        if self.write.mass[cell] <= 0.0 || self.write.element[cell] == self.vacuum_element {
+            self.write.element[cell] = element;
+            self.write.mass[cell] = mass;
+            return;
+        }
+        let cur_elem = self.write.element[cell];
+        let p_cur = self.element_phase.get(cur_elem as usize).copied().unwrap_or(0);
+        let p_new = self.element_phase.get(element as usize).copied().unwrap_or(0);
+        // 严格物态隔离：气体仅能与气体共存，液体仅能与液体共存；绝不允许气液在单格混合
+        if p_cur != p_new || (p_cur != 1 && p_cur != 2) {
+            return;
+        }
+        if p_cur == 2 {
+            let r_cur = &tables.elements[cur_elem as usize].record;
+            let r_new = &tables.elements[element as usize].record;
+            if !crate::fluid_helpers::are_liquids_miscible(r_cur, r_new) {
+                return;
+            }
+        }
+        if self.write.element[cell] == element {
+            self.write.mass[cell] += mass;
+            return;
+        }
+        if self.mixture_mass[cell] <= 0.0 || self.mixture_element[cell] == self.vacuum_element {
+            self.mixture_element[cell] = element;
+            self.mixture_mass[cell] = mass;
+            if self.mixture_mass[cell] > self.write.mass[cell] {
+                let dom_elem = self.mixture_element[cell];
+                let dom_mass = self.mixture_mass[cell];
+                self.mixture_element[cell] = self.write.element[cell];
+                self.mixture_mass[cell] = self.write.mass[cell];
+                self.write.element[cell] = dom_elem;
+                self.write.mass[cell] = dom_mass;
+            }
+            return;
+        }
+        if self.mixture_element[cell] == element {
+            self.mixture_mass[cell] += mass;
+            if self.mixture_mass[cell] > self.write.mass[cell] {
+                let dom_elem = self.mixture_element[cell];
+                let dom_mass = self.mixture_mass[cell];
+                self.mixture_element[cell] = self.write.element[cell];
+                self.mixture_mass[cell] = self.write.mass[cell];
+                self.write.element[cell] = dom_elem;
+                self.write.mass[cell] = dom_mass;
+            }
+            return;
+        }
+        let list = self.extra_mixtures.entry(cell).or_default();
+        if let Some(pos) = list.iter().position(|(e, _)| *e == element) {
+            list[pos].1 += mass;
+        } else {
+            list.push((element, mass));
+        }
+        self.normalize_cell_mixtures(cell);
+    }
+
+    pub(crate) fn normalize_cell_mixtures(&mut self, cell: usize) {
+        let mut components = [(0u16, 0.0f32); 16];
+        let mut count = 0;
+        let cur_elem = self.write.element[cell];
+        let cur_phase = self.element_phase.get(cur_elem as usize).copied().unwrap_or(0);
+        if self.write.mass[cell] > 0.0 {
+            components[count] = (cur_elem, self.write.mass[cell]);
+            count += 1;
+        }
+        if self.mixture_mass[cell] > 0.0 && self.mixture_element[cell] != cur_elem {
+            let m_phase = self.element_phase.get(self.mixture_element[cell] as usize).copied().unwrap_or(0);
+            if m_phase == cur_phase {
+                components[count] = (self.mixture_element[cell], self.mixture_mass[cell]);
+                count += 1;
+            }
+        }
+        if let Some(extras) = self.extra_mixtures.get(&cell) {
+            for &(elem, mass) in extras {
+                let e_phase = self.element_phase.get(elem as usize).copied().unwrap_or(0);
+                if mass > 0.0 && e_phase == cur_phase && count < 16 && !components[..count].iter().any(|(e, _)| *e == elem) {
+                    components[count] = (elem, mass);
+                    count += 1;
+                }
+            }
+        }
+        components[..count].sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        if count == 0 {
+            self.mixture_mass[cell] = 0.0;
+            self.mixture_element[cell] = self.vacuum_element;
+            self.extra_mixtures.remove(&cell);
+        } else if count == 1 {
+            self.write.element[cell] = components[0].0;
+            self.write.mass[cell] = components[0].1;
+            self.mixture_mass[cell] = 0.0;
+            self.mixture_element[cell] = self.vacuum_element;
+            self.extra_mixtures.remove(&cell);
+        } else if count == 2 {
+            self.write.element[cell] = components[0].0;
+            self.write.mass[cell] = components[0].1;
+            self.mixture_element[cell] = components[1].0;
+            self.mixture_mass[cell] = components[1].1;
+            self.extra_mixtures.remove(&cell);
+        } else {
+            self.write.element[cell] = components[0].0;
+            self.write.mass[cell] = components[0].1;
+            self.mixture_element[cell] = components[1].0;
+            self.mixture_mass[cell] = components[1].1;
+            let extras = self.extra_mixtures.entry(cell).or_default();
+            extras.clear();
+            for &(e, m) in &components[2..count] {
+                extras.push((e, m));
+            }
+        }
     }
 
     pub(crate) fn thermal_boundary_element(elements: &ElementTable) -> Result<u16> {

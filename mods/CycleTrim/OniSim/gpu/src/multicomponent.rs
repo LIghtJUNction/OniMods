@@ -807,10 +807,19 @@ impl MulticomponentGpu {
                 return Err("invalid sparse liquid cell".into());
             }
             if blocked==0 {
+                let min_mass = 1e-6f32;
                 let combined = if cell.first==cell.second {cell.first_mass+cell.second_mass} else {cell.first_mass};
-                let a=combined*cell.temperature*species[cell.first as usize].specific_heat_capacity;
-                let b=if cell.first==cell.second {0.0} else {cell.second_mass*cell.temperature*species[cell.second as usize].specific_heat_capacity};
-                if !a.is_finite() || !b.is_finite() || (combined>0.0 && a<=0.0) || (cell.first!=cell.second && cell.second_mass>0.0 && b<=0.0) {
+                let a = if combined > min_mass {
+                    (combined * cell.temperature * species[cell.first as usize].specific_heat_capacity).max(f32::MIN_POSITIVE)
+                } else {
+                    0.0
+                };
+                let b = if cell.first != cell.second && cell.second_mass > min_mass {
+                    (cell.second_mass * cell.temperature * species[cell.second as usize].specific_heat_capacity).max(f32::MIN_POSITIVE)
+                } else {
+                    0.0
+                };
+                if !a.is_finite() || !b.is_finite() {
                     return Err(format!("invalid sparse enthalpy: mass={combined:?},{:?} temperature={:?} heat={:?},{:?} energy={a:?},{b:?}", cell.second_mass, cell.temperature, species[cell.first as usize].specific_heat_capacity, species[cell.second as usize].specific_heat_capacity));
                 }
             }

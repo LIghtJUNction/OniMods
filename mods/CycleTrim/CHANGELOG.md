@@ -1,3 +1,23 @@
+## Unreleased — GPU simulation data flow (2026-11-08)
+
+Committed on `main`:
+
+- Wire wgpu/Vulkan `GpuSimulation` into the OniSim tick, on by default; `CYCLETRIM_ONISIM_GPU=0` disables it and initialization failures fall back to CPU with a log line.
+- Whole-grid GPU thermal diffusion and species sensible-enthalpy conversion; reuse resident temperatures across steps, compress mixture-presence uploads and profile upload block density.
+- Chain regional gas pressure projection, transport and thermal work between GPU buffers; optimize multicomponent stencil isolation.
+- Sparse GPU liquid multicomponent diffusion overlapped with the CPU gas-pressure pass; limit diffusion snapshots to the active region.
+- Bubbles skip empty spans, liquid droplets settle, and both share one sparse scan.
+- Reuse the previous publication for idle zero-time frames (with debug-update diagnostics).
+- `--cycletrim-gpu-profile` Steam launch argument sets `CYCLETRIM_GPU_PROFILE=1` for sampled GPU timing logs.
+- Far-zoom render throttling retuned (static-object animation stride up to 30 frames, overlay update interval up to 30 frames; duplicants stay at stride 1–2); Jlib texture-lerper and timelapse-camera optimizations applied; frame-setting repair logs once.
+- Patch installation failures are written to the console before rethrowing.
+
+Working tree (uncommitted; compiles with `cargo check --release`, no in-game acceptance yet):
+
+- New WGSL operators wired behind the GPU path: bubble/droplet movement, phase-transition selection, gas pressure faces with liquid hydraulic head, liquid flow, disease diffusion and growth, radiation regions, inactive-cell mass decay; shared resident SoA buffers for operator chaining.
+
+Still pending: per-step upload/readback remains, pressure/partial-pressure publication, three or more species, full save/load, and whole-game FPS acceptance.
+
 ## Unreleased — pickup and liquid-overlay hot paths
 
 - Preserve resource-panel semantics: enumerate the same `WorldInventory.GetPickupables(tag)` collection as vanilla, but cache `Pickupable` → `KAnimControllerBase` references with weak keys and clear only controllers highlighted by the current UI element.

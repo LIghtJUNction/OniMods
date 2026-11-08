@@ -193,6 +193,10 @@ pub(crate) fn swap_material(
     world.write.disease_growth.swap(a, b);
     world.mixture_element.swap(a, b);
     world.mixture_mass.swap(a, b);
+    let extra_a = world.extra_mixtures.remove(&a);
+    let extra_b = world.extra_mixtures.remove(&b);
+    if let Some(ea) = extra_a { world.extra_mixtures.insert(b, ea); }
+    if let Some(eb) = extra_b { world.extra_mixtures.insert(a, eb); }
     notify(world, events, a);
     notify(world, events, b);
 }

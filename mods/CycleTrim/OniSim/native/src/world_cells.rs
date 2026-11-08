@@ -93,6 +93,24 @@ impl Cells {
         self.radiation.copy_from_slice(&other.radiation);
     }
 
+    /// Fluid passes change material and disease fields but not cell properties.
+    pub(crate) fn copy_fluid_from(&mut self, other: &Self) {
+        #[cfg(test)]
+        {
+            assert_eq!(self.properties, other.properties);
+            assert_eq!(self.insulation, other.insulation);
+            assert_eq!(self.strength, other.strength);
+            assert_eq!(self.radiation, other.radiation);
+        }
+        self.element.copy_from_slice(&other.element);
+        self.temperature.copy_from_slice(&other.temperature);
+        self.mass.copy_from_slice(&other.mass);
+        self.disease_idx.copy_from_slice(&other.disease_idx);
+        self.disease_count.copy_from_slice(&other.disease_count);
+        self.disease_infestation.copy_from_slice(&other.disease_infestation);
+        self.disease_growth.copy_from_slice(&other.disease_growth);
+    }
+
     /// Copy a rectangular portion of the padded grid after a region-local pass.
     pub(crate) fn copy_region_from(&mut self, other: &Self, stride: usize,
         min_x: usize, max_x: usize, min_y: usize, max_y: usize) {
@@ -112,6 +130,24 @@ impl Cells {
             copy_field!(disease_infestation);
             copy_field!(disease_growth);
             copy_field!(radiation);
+        }
+    }
+
+    /// Copy fluid fields for a rectangular region.
+    pub(crate) fn copy_fluid_region_from(&mut self, other: &Self, stride: usize,
+        min_x: usize, max_x: usize, min_y: usize, max_y: usize) {
+        for y in min_y..max_y {
+            let range = y * stride + min_x..y * stride + max_x;
+            macro_rules! copy_field {
+                ($field:ident) => { self.$field[range.clone()].copy_from_slice(&other.$field[range.clone()]); };
+            }
+            copy_field!(element);
+            copy_field!(temperature);
+            copy_field!(mass);
+            copy_field!(disease_idx);
+            copy_field!(disease_count);
+            copy_field!(disease_infestation);
+            copy_field!(disease_growth);
         }
     }
 }

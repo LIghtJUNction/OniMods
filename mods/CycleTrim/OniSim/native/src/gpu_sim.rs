@@ -1,15 +1,22 @@
-//! Experimental GPU simulation for the worker. Gas pressure, transport and
-//! heat share device buffers; CPU game systems still require final readback.
+//! Experimental GPU simulation for the worker. Most operators still pack
+//! CPU-owned state and read results back between stages.
 
 use std::{collections::VecDeque, sync::Arc};
 use onisim_gpu::{
+    disease_diffusion::{ActiveCell as DiffusionActive, Disease as DiffusionDisease, DiseaseDiffusionGpu, DiseaseElement as DiffusionElement, SnapshotCell as DiffusionSnapshot},
+    disease_growth::{DiseaseCell, DiseaseElementMetadata, DiseaseGrowthGpu, DiseaseMetadata},
+    gas_pressure_faces::{GasCell, GasPressureFacesGpu, GasResult},
+    inactive_decay::{Cell as DecayCell, InactiveDecayGpu, PendingDecay},
+    bubble_settling::{Cell as BubbleCell, Material as BubbleMaterial, ResultCell as BubbleResult, BubbleSettlingGpu, PendingBubble},
+    phase_transition::{PhaseCell, PhaseDecision, PhaseMaterial, PhaseTransitionGpu},
+    radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult},
     gpu_context::GpuContext,
     multicomponent::{MulticomponentGpu, State},
     pressure_projection::PressureProjectionGpu,
     thermal_diffusion::ThermalDiffusionGpu,
     thermal_enthalpy::ThermalEnthalpyGpu,
 };
-use crate::tables::ElementTable;
+use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
 
 pub(crate) struct GpuSimulation {
@@ -17,10 +24,51 @@ pub(crate) struct GpuSimulation {
     pub(crate) thermal: ThermalDiffusionGpu,
     region_map: Vec<u32>,
     region_bounds: Vec<(i32,i32,i32,i32)>,
+    thermal_properties: Vec<[u32; 2]>,
+    thermal_flags: Vec<u32>,
     region_map_initialized: bool,
     pub(crate) total_steps: u64,
     gas: VecDeque<GasPipeline>,
     liquid_diffusion: VecDeque<MulticomponentGpu>,
+    disease_growth: DiseaseGrowthGpu,
+    disease_cells: Vec<DiseaseCell>,
+    disease_growth_indices: Vec<usize>,
+    disease_diffusion: DiseaseDiffusionGpu,
+    disease_old: Vec<DiffusionSnapshot>,
+    disease_active: Vec<DiffusionActive>,
+    phase_transition: PhaseTransitionGpu,
+    phase_cells: Vec<PhaseCell>,
+    phase_decisions: Vec<PhaseDecision>,
+    phase_indices: Vec<usize>,
+    phase_materials: Vec<PhaseMaterial>,
+    phase_metadata_keys: Vec<[u32; 15]>,
+    phase_has_zero_id: bool,
+    disease_metadata_ready: bool,
+    disease_growth_meta: Vec<DiseaseMetadata>,
+    disease_growth_elements: Vec<DiseaseElementMetadata>,
+    disease_diffusion_meta: Vec<DiffusionDisease>,
+    disease_diffusion_elements: Vec<DiffusionElement>,
+    radiation_region: RadiationRegionGpu,
+    radiation_cells: Vec<RadiationCell>,
+    radiation_result: Vec<RadiationResult>,
+    gas_pressure_faces: GasPressureFacesGpu,
+    pressure_cells: Vec<GasCell>,
+    pressure_result: Vec<GasResult>,
+    pub(crate) gas_displacement_unneeded: bool,
+    inactive_decay: InactiveDecayGpu,
+    decay_cells: Vec<DecayCell>,
+    decay_results: Vec<f32>,
+    decay_indices: Vec<usize>,
+    bubble_settling: BubbleSettlingGpu,
+    bubble_columns: Vec<usize>,
+    bubble_active: Vec<bool>,
+    bubble_cells: Vec<BubbleCell>,
+    bubble_results: Vec<BubbleResult>,
+    bubble_materials: Vec<BubbleMaterial>,
+    bubble_y0: usize,
+    bubble_height: usize,
+    pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
+    pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
 }
 
 struct GasPipeline {
@@ -29,6 +77,12 @@ struct GasPipeline {
     thermal: ThermalDiffusionGpu,
     enthalpy: ThermalEnthalpyGpu,
 }
+
+pub(crate) struct PendingRadiationRegion {
+    pending: PendingRadiation,
+    bounds: (usize, usize, usize, usize),
+}
+pub(crate) struct PendingDecayRegion { pending: PendingDecay }
 
 impl GpuSimulation {
     fn liquid_pipeline(&mut self, width: usize, height: usize, channels: usize) -> Result<&mut MulticomponentGpu, String> {
@@ -64,16 +118,596 @@ impl GpuSimulation {
             "[CycleTrim OniSim] GPU acceleration active on Vulkan device: {} (grid {}x{})",
             adapter_name, width, height
         );
+        let disease_growth = DiseaseGrowthGpu::new(context.clone());
+        let disease_diffusion = DiseaseDiffusionGpu::new(context.clone());
+        let phase_transition = PhaseTransitionGpu::new(context.clone());
+        let radiation_region = RadiationRegionGpu::new(context.clone());
+        let gas_pressure_faces = GasPressureFacesGpu::new(context.clone());
+        let inactive_decay = InactiveDecayGpu::new(context.clone());
+        let bubble_settling = BubbleSettlingGpu::new(context.clone());
+        let pathfinder = onisim_gpu::gpu_pathfinder::GpuPathfinder::new(context.clone());
+        let resident = onisim_gpu::resident_cells::ResidentCells::new(context.clone(), cells).ok();
         Ok(Self {
             context,
             thermal,
+            resident,
             region_map: vec![0; cells],
             region_bounds: Vec::new(),
+            thermal_properties: Vec::new(),
+            thermal_flags: Vec::new(),
             region_map_initialized: false,
             total_steps: 0,
             gas: VecDeque::new(),
             liquid_diffusion: VecDeque::new(),
+            disease_growth,
+            disease_cells: Vec::new(),
+            disease_growth_indices: Vec::new(),
+            disease_diffusion,
+            disease_old: Vec::new(),
+            disease_active: Vec::new(),
+            phase_transition,
+            phase_cells: Vec::new(),
+            phase_decisions: Vec::new(),
+            phase_indices: Vec::new(),
+            phase_materials: Vec::new(),
+            phase_metadata_keys: Vec::new(),
+            phase_has_zero_id: false,
+            disease_metadata_ready: false,
+            disease_growth_meta: Vec::new(),
+            disease_growth_elements: Vec::new(),
+            disease_diffusion_meta: Vec::new(),
+            disease_diffusion_elements: Vec::new(),
+            radiation_region,
+            radiation_cells: Vec::new(),
+            radiation_result: Vec::new(),
+            gas_pressure_faces,
+            pressure_cells: Vec::new(),
+            pressure_result: Vec::new(),
+            gas_displacement_unneeded: false,
+            inactive_decay,
+            decay_cells: Vec::new(),
+            decay_results: Vec::new(),
+            decay_indices: Vec::new(),
+            bubble_settling,
+            bubble_columns: Vec::new(),
+            bubble_active: vec![false; width],
+            bubble_cells: Vec::new(),
+            bubble_results: Vec::new(),
+            bubble_materials: Vec::new(),
+            bubble_y0: 0,
+            bubble_height: 0,
+            pathfinder,
         })
+    }
+
+    pub(crate) fn begin_move_bubbles(&mut self, world: &PhysicsWorld, table: &ElementTable) -> Result<Option<PendingBubble>, String> {
+        self.bubble_active.resize(world.width, false);
+        self.bubble_active.fill(false);
+        let mut lowest = world.height;
+        let mut highest = 0usize;
+        for y in 1..=world.height {
+            let base = y * world.stride;
+            let row = &world.mixture_mass[base + 1..base + world.width + 1];
+            for (block, masses) in row.chunks(64).enumerate() {
+                // Match the original unordered comparison: NaNs must not be
+                // treated as empty, even though they are not positive.
+                if masses.iter().all(|&mass| mass <= 0.0) { continue; }
+                lowest = lowest.min(y); highest = highest.max(y);
+                for (offset, &mass) in masses.iter().enumerate() {
+                    if !(mass <= 0.0) { self.bubble_active[block * 64 + offset] = true; }
+                }
+            }
+        }
+        self.bubble_columns.clear();
+        self.bubble_columns.extend(self.bubble_active.iter().enumerate().filter_map(|(x, &active)| active.then_some(x + 1)));
+        if self.bubble_columns.is_empty() { return Ok(None); }
+        self.bubble_y0 = lowest.saturating_sub(1).max(1);
+        self.bubble_height = highest.saturating_add(1).min(world.height) - self.bubble_y0 + 1;
+        let stride = self.bubble_columns.len() + 2;
+        let count = stride.checked_mul(self.bubble_height + 2).ok_or("bubble packed grid overflow")?;
+        let empty = BubbleCell { element: u32::from(world.vacuum_element), mixture_element: u32::from(world.vacuum_element),
+            properties: 0, flags: 0, mass: 0.0, mixture_mass: 0.0, temperature: 0.0, padding: 0 };
+        self.bubble_cells.clear(); self.bubble_cells.resize(count, empty);
+        for y in self.bubble_y0..self.bubble_y0 + self.bubble_height { for (column, &x) in self.bubble_columns.iter().enumerate() {
+            let i = y * world.stride + x;
+            let secondary = if world.mixture_mass[i] <= 0.0 { world.vacuum_element } else { world.mixture_element[i] };
+            if secondary as usize >= table.len() { return Err("bubble cell has an invalid secondary element".into()); }
+            self.bubble_cells[(y - self.bubble_y0 + 1) * stride + column + 1] = BubbleCell {
+                element: u32::from(world.write.element[i]), mixture_element: u32::from(secondary),
+                properties: u32::from(world.write.properties[i]), flags: 0, mass: world.write.mass[i],
+                mixture_mass: world.mixture_mass[i], temperature: world.write.temperature[i], padding: 0,
+            };
+        }}
+        self.bubble_materials.clear();
+        self.bubble_materials.extend(table.elements.iter().map(|e| BubbleMaterial {
+            phase: u32::from(e.record.state & 3), heat: e.record.specific_heat_capacity,
+        }));
+        self.bubble_settling.begin(self.bubble_columns.len() as u32, self.bubble_height as u32, u32::from(world.vacuum_element),
+            &self.bubble_cells, &self.bubble_materials).map(Some)
+    }
+
+    pub(crate) fn finish_move_bubbles(&mut self, world: &mut PhysicsWorld, events: &mut crate::events::EventQueues,
+        pending: PendingBubble) -> Result<(), String> {
+        self.bubble_results.resize(self.bubble_columns.len() * self.bubble_height, BubbleResult {
+            element: 0, mixture_element: 0, flags: 0, mass: 0.0, mixture_mass: 0.0, temperature: 0.0 });
+        pending.finish(&mut self.bubble_results)?;
+        for y in self.bubble_y0..self.bubble_y0 + self.bubble_height { for (column, &x) in self.bubble_columns.iter().enumerate() {
+            let result = self.bubble_results[(y - self.bubble_y0) * self.bubble_columns.len() + column];
+            if result.flags & 1 == 0 { continue; }
+            let i = y * world.stride + x;
+            world.write.element[i] = result.element as u16;
+            world.write.mass[i] = result.mass;
+            world.write.temperature[i] = result.temperature;
+            world.mixture_element[i] = result.mixture_element as u16;
+            world.mixture_mass[i] = result.mixture_mass;
+            crate::fluid_helpers::notify(world, events, i);
+        }}
+        Ok(())
+    }
+
+    pub(crate) fn begin_inactive_decay(&mut self, world: &mut PhysicsWorld, elements: &ElementTable,
+        bounds: (usize, usize, usize, usize)) -> Result<Option<PendingDecayRegion>, String> {
+        let Some(mask) = world.inactive_mask.as_ref() else { return Ok(None); };
+        let (x0, x1, y0, y1) = bounds;
+        if x0 >= x1 || y0 >= y1 { return Ok(None); }
+        if x1 > world.stride || y1 > world.padded_height { return Err("inactive decay region out of bounds".into()); }
+        if (y0..y1).all(|y| mask[y * world.stride + x0..y * world.stride + x1].iter().all(|&v| v != u8::MAX)) { return Ok(None); }
+        self.decay_cells.clear();
+        self.decay_indices.clear();
+        for y in y0..y1 { for x in x0..x1 {
+            let i = y * world.stride + x;
+            if mask[i] != u8::MAX || world.backwall_element[i] != world.vacuum_element { continue; }
+            let phase = elements.elements[world.write.element[i] as usize].record.state & 3;
+            if phase == 3 { continue; }
+            self.decay_indices.push(i);
+            self.decay_cells.push(DecayCell { mass: world.write.mass[i], phase: u32::from(phase) });
+        }}
+        if self.decay_cells.is_empty() { return Ok(None); }
+        if self.decay_cells.len() < 8192 && !cfg!(test) {
+            let dt = crate::simulation_step::FIXED_DT;
+            let decay_gas = f32::from_bits(0x3ca3d70a);
+            for (&i, cell) in self.decay_indices.iter().zip(&self.decay_cells) {
+                let decay = if cell.phase == 1 { decay_gas } else if cell.phase == 2 { 20.0 } else { 0.0 };
+                world.write.mass[i] = (cell.mass - decay).max(0.0);
+                world.flow[i] = [-dt, dt, dt, -dt];
+            }
+            return Ok(None);
+        }
+        let pending = self.inactive_decay.begin(&self.decay_cells)?;
+        Ok(Some(PendingDecayRegion { pending }))
+    }
+
+    pub(crate) fn finish_inactive_decay(&mut self, world: &mut PhysicsWorld, work: PendingDecayRegion) -> Result<(), String> {
+        self.decay_results.resize(self.decay_indices.len(), 0.0);
+        work.pending.finish(&mut self.decay_results)?;
+        for (&i, &mass) in self.decay_indices.iter().zip(&self.decay_results) {
+            world.write.mass[i] = mass;
+            let dt = crate::simulation_step::FIXED_DT;
+            world.flow[i] = [-dt, dt, dt, -dt];
+        }
+        Ok(())
+    }
+
+    /// Reuse transition metadata across steps unless a relevant element field
+    /// changes. Comparing actual values also handles tables replaced in place.
+    pub(crate) fn begin_step(&mut self, table: &ElementTable) {
+        self.disease_metadata_ready = false;
+        let key = |r: &crate::tables::ElementRecord| [
+            r.id as u32, u32::from(r.low_transition), u32::from(r.high_transition),
+            r.low_ore_id as u32, r.high_ore_id as u32,
+            r.low_temperature.to_bits(), r.high_temperature.to_bits(),
+            r.low_ore_conversion.to_bits(), r.high_ore_conversion.to_bits(),
+            r.thermal_conductivity.to_bits(), r.specific_heat_capacity.to_bits(), u32::from(r.state & 3),
+            r.surface_area_solid.to_bits(), r.surface_area_liquid.to_bits(), r.surface_area_gas.to_bits(),
+        ];
+        if self.phase_has_zero_id == table.has_zero_id && self.phase_metadata_keys.len() == table.len()
+            && self.phase_metadata_keys.iter().zip(&table.elements).all(|(old, element)| *old == key(&element.record)) {
+            return;
+        }
+        self.phase_metadata_keys.clear();
+        self.phase_metadata_keys.extend(table.elements.iter().map(|element| key(&element.record)));
+        self.phase_has_zero_id = table.has_zero_id;
+        let mut indices = std::collections::HashMap::with_capacity(table.len());
+        for (i, element) in table.elements.iter().enumerate() { indices.entry(element.record.id).or_insert(i as u16); }
+        let ore = |id: i32| -> u32 {
+            if id as u32 == 0x2d39_bf75 || (id == 0 && !table.has_zero_id) { 65535 }
+            else { u32::from(*indices.get(&id).unwrap_or(&u16::MAX)) }
+        };
+        self.phase_materials.clear();
+        self.phase_materials.extend(table.elements.iter().map(|item| {
+            let r = &item.record;
+            PhaseMaterial { low_target: u32::from(r.low_transition), high_target: u32::from(r.high_transition),
+                low_ore: ore(r.low_ore_id), high_ore: ore(r.high_ore_id), low_temperature: r.low_temperature,
+                high_temperature: r.high_temperature, low_conversion: r.low_ore_conversion, high_conversion: r.high_ore_conversion,
+                conductivity: r.thermal_conductivity, specific_heat: r.specific_heat_capacity, phase: u32::from(r.state & 3), padding0: 0,
+                surface_solid: r.surface_area_solid, surface_liquid: r.surface_area_liquid, surface_gas: r.surface_area_gas, padding1: 0 }
+        }));
+    }
+
+    fn prepare_disease_metadata(&mut self, table: &DiseaseTable) {
+        if self.disease_metadata_ready { return; }
+        let values = |range: &crate::tables::RangeInfo| [range.min_viable, range.min_growth, range.max_growth, range.max_viable];
+        let same_float = |a: f32, b: f32| a.to_bits() == b.to_bits();
+        let header_matches = self.disease_growth_meta.len() == table.diseases.len()
+            && self.disease_diffusion_meta.len() == table.diseases.len()
+            && table.diseases.iter().zip(self.disease_growth_meta.iter().zip(&self.disease_diffusion_meta))
+                .all(|(d, (growth, diffusion))| {
+                    growth.temperature_range.iter().zip(values(&d.temperature_range)).all(|(&a, b)| same_float(a, b))
+                        && growth.temperature_half_lives.iter().zip(values(&d.temperature_half_lives)).all(|(&a, b)| same_float(a, b))
+                        && same_float(growth.radiation_kill_rate, d.radiation_kill_rate)
+                        && same_float(diffusion.strength, d.strength)
+                });
+        let element_count = table.diseases.iter().map(|d| d.elements.len()).sum::<usize>();
+        let element_matches = self.disease_growth_elements.len() == element_count
+            && self.disease_diffusion_elements.len() == element_count
+            && table.diseases.iter().flat_map(|d| &d.elements)
+                .zip(self.disease_growth_elements.iter().zip(&self.disease_diffusion_elements))
+                .all(|(e, (growth, diffusion))| {
+                    same_float(growth.min_count_per_kg, e.min_count_per_kg)
+                        && same_float(growth.max_count_per_kg, e.max_count_per_kg)
+                        && same_float(growth.under_population_death_rate, e.under_population_death_rate)
+                        && same_float(growth.over_population_half_life, e.over_population_half_life)
+                        && same_float(growth.population_half_life, e.population_half_life)
+                        && same_float(diffusion.diffusion_scale, e.diffusion_scale)
+                        && diffusion.min_diffusion_count == e.min_diffusion_count
+                        && diffusion.min_infestation_tick == u32::from(e.min_infestation_tick)
+                });
+        if header_matches && element_matches {
+            self.disease_metadata_ready = true;
+            return;
+        }
+        self.disease_growth_meta.clear();
+        self.disease_growth_meta.extend(table.diseases.iter().map(|d| DiseaseMetadata {
+            temperature_range: values(&d.temperature_range), temperature_half_lives: values(&d.temperature_half_lives),
+            radiation_kill_rate: d.radiation_kill_rate, padding: [0.0; 3],
+        }));
+        self.disease_diffusion_meta.clear();
+        self.disease_diffusion_meta.extend(table.diseases.iter().map(|d| DiffusionDisease { strength: d.strength }));
+        self.disease_growth_elements.clear(); self.disease_diffusion_elements.clear();
+        for element in table.diseases.iter().flat_map(|d| d.elements.iter()) {
+            self.disease_growth_elements.push(DiseaseElementMetadata {
+                min_count_per_kg: element.min_count_per_kg, max_count_per_kg: element.max_count_per_kg,
+                under_population_death_rate: element.under_population_death_rate,
+                over_population_half_life: element.over_population_half_life, population_half_life: element.population_half_life,
+                padding: [0.0; 3],
+            });
+            self.disease_diffusion_elements.push(DiffusionElement { diffusion_scale: element.diffusion_scale,
+                min_diffusion_count: element.min_diffusion_count, min_infestation_tick: u32::from(element.min_infestation_tick), padding: 0 });
+        }
+        self.disease_metadata_ready = true;
+    }
+
+    /// Use face-based pressure for gas or homogeneous liquid regions.
+    /// Other regions retain the ordered CPU sweep while migration continues.
+    pub(crate) fn pressure_region(&mut self, world: &mut PhysicsWorld, table: &ElementTable,
+        events: &mut crate::events::EventQueues, region: crate::world::Region, fluid_phase: u8) -> Result<bool, String> {
+        self.gas_displacement_unneeded = false;
+        if region.min_x < 1 || region.min_y < 1
+            || region.max_x <= region.min_x || region.max_y <= region.min_y { return Ok(false); }
+        let x0 = region.min_x as usize - 1; let y0 = region.min_y as usize - 1;
+        let x1 = region.max_x as usize; let y1 = region.max_y as usize;
+        if x1 >= world.stride || y1 >= world.padded_height { return Ok(false); }
+        let width = x1 - x0 + 1; let height = y1 - y0 + 1;
+        if width * height < 8192 && !cfg!(test) { return Ok(false); }
+        self.pressure_cells.clear();
+        let mut first_id = None;
+        let mut multiple_species = false;
+        let mut needs_head = false;
+        let mut primary_gas = None;
+        let mut multiple_primary_gases = false;
+        for y in y0..=y1 { for x in x0..=x1 {
+            let i = y * world.stride + x; let mut id = world.read.element[i];
+            let mut phase = table.elements[id as usize].record.state & 3;
+            if fluid_phase == 1 && phase == 1 {
+                if primary_gas.is_some_and(|previous| previous != id) { multiple_primary_gases = true; }
+                else if primary_gas.is_none() { primary_gas = Some(id); }
+            }
+            let blocking_bit = if fluid_phase == 2 { 2 } else { 1 };
+            let blocked = world.read.properties[i] & blocking_bit != 0 || phase == 3;
+            let mut mass = world.read.mass[i];
+            // This pass writes absolute projected masses, not deltas. In a
+            // halo the active state may already have changed since the read
+            // snapshot, so using that snapshot would discard earlier work.
+            if !blocked && (world.write.element[i] != id || world.write.mass[i] != mass) {
+                return Ok(false);
+            }
+            let mut gas_element = world.vacuum_element;
+            let mut gas_mass = 0.0;
+            let mut gas_heat = 0.0;
+            if !blocked && world.mixture_mass[i] != 0.0 {
+                let mixed_id = world.mixture_element[i];
+                let Some(mixed) = table.elements.get(mixed_id as usize) else { return Ok(false); };
+                let mixed_phase = mixed.record.state & 3;
+                if !world.mixture_mass[i].is_finite() || world.mixture_mass[i] <= 0.0
+                    || !((phase == 1 && mixed_phase == 2) || (phase == 2 && mixed_phase == 1)) {
+                    return Ok(false);
+                }
+                if phase != fluid_phase {
+                    gas_element = id; gas_mass = mass;
+                    gas_heat = table.elements[id as usize].record.specific_heat_capacity;
+                    id = mixed_id; mass = world.mixture_mass[i]; phase = fluid_phase;
+                } else {
+                    gas_element = mixed_id; gas_mass = world.mixture_mass[i];
+                    gas_heat = mixed.record.specific_heat_capacity;
+                }
+                if !gas_heat.is_finite() || gas_heat <= 0.0 || !gas_mass.is_finite() || gas_mass <= 0.0 { return Ok(false); }
+            }
+            // Represent the liquid in a gas-pressure pass as a stationary
+            // component. Its unoccupied volume is available to incoming gas.
+            if !blocked && fluid_phase == 1 && phase == 2 && world.mixture_mass[i] == 0.0 {
+                if !mass.is_finite() || mass <= 0.0 {
+                    return Ok(false);
+                }
+                gas_element = id; gas_mass = mass;
+                gas_heat = table.elements[id as usize].record.specific_heat_capacity;
+                if !gas_heat.is_finite() || gas_heat <= 0.0 { return Ok(false); }
+                id = world.vacuum_element; phase = 0; mass = 0.0;
+            }
+            let mut available_volume = 1.0_f32;
+            if !blocked && fluid_phase == 1 && gas_mass > 0.0 {
+                let liquid = &table.elements[gas_element as usize].record;
+                if !liquid.max_mass.is_finite() || liquid.max_mass <= 0.0 { return Ok(false); }
+                available_volume = (1.0 - gas_mass / liquid.max_mass).clamp(0.0, 1.0);
+            }
+            let record = &table.elements[id as usize].record;
+            if !blocked {
+                if (phase != 0 && phase != fluid_phase && !(fluid_phase == 2 && phase == 1)) || id == world.sink_element
+                    || world.read.disease_idx[i] != u8::MAX || world.write.disease_idx[i] != u8::MAX
+                    || world.read.disease_count[i] != 0 || world.write.disease_count[i] != 0
+                    || !mass.is_finite() || mass < 0.0
+                    || !world.write.temperature[i].is_finite() || !record.flow.is_finite() || record.flow < 0.0 {
+                    return Ok(false);
+                }
+                if phase == 2 && (!record.max_mass.is_finite() || record.max_mass <= 0.0
+                    || !record.viscosity.is_finite() || record.viscosity < 0.0) { return Ok(false); }
+                if phase != 0 && (!record.specific_heat_capacity.is_finite() || record.specific_heat_capacity <= 0.0) { return Ok(false); }
+                if phase == 0 && (id != world.vacuum_element || mass != 0.0) { return Ok(false); }
+                if phase == fluid_phase {
+                    if first_id.is_some_and(|previous| previous != id) { multiple_species = true; }
+                    else if first_id.is_none() { first_id = Some(id); }
+                }
+            }
+            self.pressure_cells.push(GasCell { element: u32::from(id), phase: u32::from(phase), blocked: u32::from(blocked), padding: 0,
+                mass, temperature: world.write.temperature[i],
+                coefficient: if fluid_phase == 2 { record.specific_heat_capacity } else { record.flow }, padding1: 0.0,
+                max_mass: if fluid_phase == 1 { available_volume } else { record.max_mass }, viscosity: record.viscosity,
+                min_horizontal_flow: record.min_horizontal_flow, min_vertical_flow: record.min_vertical_flow,
+                gas_element: u32::from(gas_element), gas_mass, gas_heat,
+                phase_heat: if phase == 0 { 0.0 } else { record.specific_heat_capacity } });
+        }}
+        if first_id.is_none() { return Ok(false); }
+        if fluid_phase == 2 {
+            'head: for y in 1..height - 1 { for x in 1..width - 1 {
+                let current = self.pressure_cells[y * width + x];
+                if current.blocked != 0 || current.phase != 2 || current.mass <= 0.0 || current.viscosity <= 0.0 { continue; }
+                let above = self.pressure_cells[(y + 1) * width + x];
+                if above.blocked == 0 && (above.phase != 2 || above.element == current.element)
+                    && (above.phase != 2 || above.mass < current.max_mass) {
+                    needs_head = true;
+                    break 'head;
+                }
+            }}
+        }
+        if fluid_phase == 2 && multiple_species {
+            // Different liquids may share a region as long as no gas/vacuum
+            // target can receive two distinct liquids in this pass. Such a
+            // target would need a third component and cannot be projected to
+            // the current two-slot cell representation without losing mass.
+            for y in 0..height { for x in 0..width {
+                let current = self.pressure_cells[y * width + x];
+                if current.blocked != 0 || current.phase == 2 { continue; }
+                let mut incoming = None;
+                for (dx, dy) in [(-1isize, 0isize), (1, 0), (0, -1), (0, 1)] {
+                    let nx = x as isize + dx; let ny = y as isize + dy;
+                    if nx < 0 || ny < 0 || nx >= width as isize || ny >= height as isize { continue; }
+                    let other = self.pressure_cells[ny as usize * width + nx as usize];
+                    if other.blocked != 0 || other.phase != 2 || other.mass <= 0.0 { continue; }
+                    if incoming.is_some_and(|id| id != other.element) { return Ok(false); }
+                    incoming = Some(other.element);
+                }
+            }}
+        }
+        if fluid_phase == 1 && multiple_species {
+            // A vacuum cell has one primary slot. When multiple species enter,
+            // they are recorded and handled via multicomponent mixtures.
+        }
+        self.pressure_result.resize(self.pressure_cells.len(), GasResult { element: 0, changed: 0, mass: 0.0,
+            temperature: 0.0, flow_left: 0.0, flow_right: 0.0, flow_up: 0.0, flow_down: 0.0,
+            mixture_element: 0, mixture_mass: 0.0 });
+        self.gas_pressure_faces.run(width as u32, height as u32, u32::from(world.vacuum_element), u32::from(fluid_phase), world.scan_direction, needs_head,
+            &self.pressure_cells, &mut self.pressure_result)?;
+        let mut n = 0;
+        for y in y0..=y1 { for x in x0..=x1 {
+            let i = y * world.stride + x; let r = self.pressure_result[n]; n += 1;
+            if r.changed == 0 { continue; }
+            let previous = world.write.element[i];
+            world.write.element[i] = r.element as u16; world.write.mass[i] = r.mass; world.write.temperature[i] = r.temperature;
+            world.mixture_element[i] = r.mixture_element as u16; world.mixture_mass[i] = r.mixture_mass;
+            world.write.disease_infestation[i] = 0; world.write.disease_growth[i] = 0.0;
+            world.flow[i][0] += r.flow_left; world.flow[i][1] += r.flow_right;
+            world.flow[i][2] += r.flow_up; world.flow[i][3] += r.flow_down;
+            if previous != world.write.element[i] || r.mixture_mass > 0.0 { crate::fluid_helpers::notify(world, events, i); }
+        }}
+        // The native displacement traversal may extend down to row 3 even
+        // for higher regions; only use this region's species inventory when
+        // the input rectangle covers that entire traversal and its halo.
+        self.gas_displacement_unneeded = fluid_phase == 1 && region.min_y <= 3 && !multiple_primary_gases;
+        Ok(true)
+    }
+
+    pub(crate) fn begin_radiation_region(&mut self, world: &PhysicsWorld, elements: &ElementTable,
+        diseases: &DiseaseTable, region: crate::world::Region) -> Result<Option<PendingRadiationRegion>, String> {
+        let (min_x, max_x, min_y, max_y) = (region.min_x as usize, region.max_x as usize, region.min_y as usize, region.max_y as usize);
+        if min_x >= max_x || min_y > max_y { return Ok(None); }
+        if max_x >= world.stride || max_y >= world.padded_height { return Err("radiation region out of bounds".into()); }
+        let width = max_x - min_x + 1; let height = max_y - min_y + 1;
+        if width * height < 8192 && !cfg!(test) { return Ok(None); }
+        self.radiation_cells.clear();
+        for y in min_y..=max_y { for x in min_x..=max_x {
+            let i = y * world.stride + x;
+            let record = &elements.elements[world.write.element[i] as usize].record;
+            self.radiation_cells.push(RadiationCell { mass: world.write.mass[i], radiation: world.write.radiation[i],
+                absorption: record.radiation_absorption, emission: record.radiation_per_1000_mass,
+                properties: u32::from(world.write.properties[i]), disease: u32::from(world.write.disease_idx[i]),
+                disease_count: world.write.disease_count[i], padding: 0 });
+        }}
+        let p = world.radiation_params;
+        let nuclear = diseases.diseases.iter().rposition(|d| d.hash as u32 == 0xd49f_77d6).map_or(255, |i| i as u32);
+        let pending = self.radiation_region.begin(RadiationParams { width: width as u32, height: height as u32, nuclear, padding: 0,
+            dose: p.dose_scale, cosmic: region.cosmic_radiation, absorption_solid: p.absorption_solid,
+            absorption_mass_scale: p.absorption_mass_scale, mass_scale: p.mass_scale, absorption_base: p.absorption_base,
+            padding0: 0.0, padding1: 0.0 }, &self.radiation_cells)?;
+        Ok(Some(PendingRadiationRegion { pending, bounds: (min_x, max_x, min_y, max_y) }))
+    }
+
+    pub(crate) fn finish_radiation_region(&mut self, world: &mut PhysicsWorld, work: PendingRadiationRegion) -> Result<(), String> {
+        let (min_x, max_x, min_y, max_y) = work.bounds;
+        let count = (max_x - min_x + 1) * (max_y - min_y + 1);
+        self.radiation_result.resize(count, RadiationResult { radiation: 0.0, transmission: 0.0 });
+        work.pending.finish(&mut self.radiation_result)?;
+        let mut n = 0;
+        for y in min_y..=max_y { for x in min_x..=max_x {
+            let i = y * world.stride + x; let result = self.radiation_result[n]; n += 1;
+            world.write.radiation[i] = result.radiation;
+            if x < max_x { world.radiation_transmission[i] = result.transmission; }
+        }}
+        Ok(())
+    }
+
+    pub(crate) fn transition_region(&mut self, world: &mut PhysicsWorld, table: &ElementTable,
+        events: &mut crate::events::EventQueues, region: crate::world::Region) -> Result<(), String> {
+        self.phase_cells.clear();
+        self.phase_indices.clear();
+        for y in region.min_y..region.max_y { for x in region.min_x..region.max_x {
+            let i = y as usize * world.stride + x as usize;
+            let cell = world.read.element[i]; let wall = world.backwall_element[i];
+            let enabled = world.read.mass[i] > 0.0 && world.backwall_mass[i] > 0.0
+                && wall != u16::MAX && wall != world.vacuum_element && cell != world.vacuum_element
+                && wall != world.boundary_element && cell != world.boundary_element;
+            let material = &self.phase_materials[cell as usize];
+            let temp = world.write.temperature[i];
+            let transition_possible = !(world.write.mass[i] <= 0.0)
+                && ((material.low_target != u16::MAX as u32 && !(material.low_temperature - 3.0 <= temp))
+                    || (material.high_target != u16::MAX as u32 && !(temp <= material.high_temperature + 3.0)));
+            if !enabled && !transition_possible { continue; }
+            self.phase_indices.push(i);
+            self.phase_cells.push(PhaseCell { element: u32::from(cell), mass: world.write.mass[i],
+                temperature: world.write.temperature[i], wall_element: u32::from(wall),
+                old_temperature: world.read.temperature[i], old_mass: world.read.mass[i],
+                wall_temperature: world.backwall_temperature[i], wall_mass: world.backwall_mass[i],
+                insulation: u32::from(world.read.insulation[i]), enabled: u32::from(enabled), padding: [0; 2] });
+        }}
+        if self.phase_cells.is_empty() { return Ok(()); }
+        self.phase_decisions.resize(self.phase_cells.len(), PhaseDecision { target_id: 65535, ore: 65535, conversion: 0.0, temperature: 0.0,
+            wall_temperature: 0.0, wall_changed: 0, wall_transition: 0, cell_temperature: 0.0 });
+        self.phase_transition.select(&self.phase_cells, &self.phase_materials, &mut self.phase_decisions)?;
+        for (&i, &result) in self.phase_indices.iter().zip(&self.phase_decisions) {
+            if result.wall_changed != 0 {
+                world.write.temperature[i] = result.cell_temperature;
+                world.backwall_temperature[i] = result.wall_temperature;
+                if result.wall_transition != 0 {
+                    if let Some(game_cell) = crate::fluid_helpers::game_index(world, i) { events.backwall_should_transition(game_cell); }
+                }
+            }
+        }
+        for (&i, &result) in self.phase_indices.iter().zip(&self.phase_decisions) {
+            if result.target_id != u16::MAX as u32 {
+                crate::transition::apply_selected_transition(world, table, events, i, result.target_id as u16,
+                    result.ore as u16, result.conversion, result.temperature);
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn diffuse_diseases(&mut self, world: &mut PhysicsWorld, elements: &ElementTable,
+        table: &DiseaseTable, region: crate::world::Region) -> Result<(), String> {
+        let (min_x, max_x, min_y, max_y) = (region.min_x as usize, region.max_x as usize, region.min_y as usize, region.max_y as usize);
+        if min_x >= max_x || min_y >= max_y { return Ok(()); }
+        if max_x >= world.stride || max_y >= world.padded_height { return Err("disease diffusion region out of bounds".into()); }
+        let width = max_x - min_x + 1;
+        let height = max_y - min_y + 1;
+        if width * height < 8192 && !cfg!(test) {
+            let mut events = crate::events::EventQueues::default();
+            return crate::simulation_step::disease_diffusion(world, elements, table, &mut events, region).map_err(|e| e.message);
+        }
+        // Most regions have no germs. Check the compact ID field before
+        // packing two wider snapshots and touching element metadata.
+        if (min_y..=max_y).all(|y| {
+            let start = y * world.stride + min_x;
+            world.read.disease_idx[start..start + width].iter().all(|&id| id == u8::MAX)
+        }) { return Ok(()); }
+        self.disease_old.clear();
+        self.disease_active.clear();
+        for y in min_y..=max_y { for x in min_x..=max_x {
+            let i = y * world.stride + x;
+            let element = world.read.element[i];
+            self.disease_old.push(DiffusionSnapshot {
+                element: u32::from(element), phase: u32::from(elements.elements[element as usize].record.state & 3),
+                disease: u32::from(world.read.disease_idx[i]), infestation: u32::from(world.read.disease_infestation[i]),
+                count: world.read.disease_count[i], padding: [0; 3],
+            });
+            self.disease_active.push(DiffusionActive {
+                disease: u32::from(world.write.disease_idx[i]), count: world.write.disease_count[i],
+                infestation: u32::from(world.write.disease_infestation[i]), growth: world.write.disease_growth[i],
+            });
+        }}
+        self.prepare_disease_metadata(table);
+        self.disease_diffusion.run(width, height, &self.disease_old, &mut self.disease_active,
+            &self.disease_diffusion_meta, &self.disease_diffusion_elements, table.element_count)?;
+        let mut local = 0;
+        for y in min_y..=max_y { for x in min_x..=max_x {
+            let i = y * world.stride + x;
+            let cell = self.disease_active[local]; local += 1;
+            world.write.disease_idx[i] = cell.disease as u8;
+            world.write.disease_count[i] = cell.count;
+            world.write.disease_infestation[i] = cell.infestation as u8;
+            world.write.disease_growth[i] = cell.growth;
+        }}
+        Ok(())
+    }
+
+    pub(crate) fn grow_diseases(&mut self, world: &mut PhysicsWorld, table: &DiseaseTable,
+        bounds: (usize, usize, usize, usize)) -> Result<(), String> {
+        let (min_x, max_x, min_y, max_y) = bounds;
+        if max_x > world.stride || max_y > world.padded_height || min_x > max_x || min_y > max_y {
+            return Err("disease region is out of range".into());
+        }
+        self.disease_cells.clear();
+        self.disease_growth_indices.clear();
+        for y in min_y..max_y {
+            let range = y * world.stride + min_x..y * world.stride + max_x;
+            if world.write.disease_idx[range.clone()].iter().all(|&id| id == u8::MAX)
+                && world.write.disease_count[range.clone()].iter().all(|&count| count == 0)
+                && world.write.disease_infestation[range.clone()].iter().all(|&value| value == 1)
+                && world.write.disease_growth[range].iter().all(|value| value.to_bits() == 0) { continue; }
+            for x in min_x..max_x {
+            let i = y * world.stride + x;
+            if world.write.disease_idx[i] == u8::MAX && world.write.disease_count[i] == 0
+                && world.write.disease_infestation[i] == 1 && world.write.disease_growth[i].to_bits() == 0 { continue; }
+            self.disease_growth_indices.push(i);
+            self.disease_cells.push(DiseaseCell {
+                element: u32::from(world.write.element[i]), disease: u32::from(world.write.disease_idx[i]),
+                count: world.write.disease_count[i], infestation: u32::from(world.write.disease_infestation[i]),
+                temperature: world.write.temperature[i], mass: world.write.mass[i], radiation: world.write.radiation[i],
+                growth: world.write.disease_growth[i],
+            });
+        }}
+        if self.disease_cells.is_empty() { return Ok(()); }
+        if self.disease_cells.len() < 8192 && !cfg!(test) {
+            return crate::disease::post_process_bounds(
+                world, table, min_x, max_x, min_y, max_y,
+            ).map_err(|e| e.message);
+        }
+        self.prepare_disease_metadata(table);
+        self.disease_growth.run_cells(&mut self.disease_cells, &self.disease_growth_meta,
+            &self.disease_growth_elements, table.element_count, world.radiation_enabled)?;
+        for (&i, &cell) in self.disease_growth_indices.iter().zip(&self.disease_cells) {
+            world.write.disease_idx[i] = cell.disease as u8;
+            world.write.disease_count[i] = cell.count;
+            world.write.disease_infestation[i] = cell.infestation as u8;
+            world.write.disease_growth[i] = cell.growth;
+        }
+        Ok(())
     }
 
     #[cfg(test)]
@@ -284,15 +918,17 @@ impl GpuSimulation {
             return Err("grid dimension mismatch".into());
         }
 
-        let properties: Vec<_> = elements.elements.iter().map(|element| {
+        self.thermal_properties.clear();
+        self.thermal_properties.extend(elements.elements.iter().map(|element| {
             [element.record.thermal_conductivity.to_bits(), element.record.specific_heat_capacity.to_bits()]
-        }).collect();
-        self.thermal.prepare_materials_by_element(&world.read.element, &properties)?;
+        }));
+        self.thermal.prepare_materials_by_element(&world.read.element, &self.thermal_properties)?;
         static LOG_MATERIAL:std::sync::Once=std::sync::Once::new();
         LOG_MATERIAL.call_once(||eprintln!("[CycleTrim OniSim] GPU thermal material lookup enabled ({count} cells)"));
         self.thermal.upload_state(&world.read.temperature, &world.read.mass)?;
-        let bounds:Vec<_>=world.regions.iter().map(|r|(r.min_x,r.min_y,r.max_x,r.max_y)).collect();
-        if !self.region_map_initialized || self.region_bounds!=bounds {
+        let bounds_changed = self.region_bounds.len() != world.regions.len()
+            || self.region_bounds.iter().zip(&world.regions).any(|(old, r)| *old != (r.min_x,r.min_y,r.max_x,r.max_y));
+        if !self.region_map_initialized || bounds_changed {
         self.region_map.fill(0);
         for (index, region) in world.regions.iter().enumerate() {
             let min_x = region.min_x.max(1) as usize;
@@ -304,14 +940,17 @@ impl GpuSimulation {
                 self.region_map[y*world.stride+min_x..y*world.stride+max_x].fill((index+1) as u32);
             }
         }
-        self.region_bounds=bounds; self.region_map_initialized=true;
+        self.region_bounds.clear();
+        self.region_bounds.extend(world.regions.iter().map(|r|(r.min_x,r.min_y,r.max_x,r.max_y)));
+        self.region_map_initialized=true;
         }
-        let flags:Vec<u32>=(0..elements.len().max(world.gas_channel_of_element.len())).map(|id| {
+        self.thermal_flags.clear();
+        self.thermal_flags.extend((0..elements.len().max(world.gas_channel_of_element.len())).map(|id| {
             let mapped=world.gas_channel_of_element.get(id).is_some_and(|&c|c!=u8::MAX);
             let primary=mapped && elements.elements.get(id).is_some_and(|e|e.record.state&3==1);
             u32::from(primary) | (u32::from(mapped)<<1)
-        }).collect();
-        self.thermal.prepare_deferred_groups_on_gpu(&world.mixture_element,&world.mixture_mass,&world.read.properties,&self.region_map,&flags)?;
+        }));
+        self.thermal.prepare_deferred_groups_on_gpu(&world.mixture_element,&world.mixture_mass,&world.read.properties,&self.region_map,&self.thermal_flags)?;
         let prepared = started.elapsed();
         self.thermal.step(dt, 0.25, &mut world.write.temperature)?;
         if profiling {
@@ -612,8 +1251,11 @@ mod material_range_tests {
         let totals = |world: &PhysicsWorld| -> Vec<f32> {
             [4u16, 5, 12].iter().map(|&id| (1..4).flat_map(|y|(1..6).map(move |x|(x,y)))
                 .map(|(x,y)| { let c=y*world.stride+x;
-                    (if world.write.element[c] == id { world.write.mass[c] } else { 0.0 }) +
-                    (if world.mixture_element[c] == id { world.mixture_mass[c] } else { 0.0 })
+                    let mut sum = 0.0f32;
+                    world.for_each_cell_species(c, |elem_id, mass| {
+                        if elem_id == id { sum += mass; }
+                    });
+                    sum
                 }).sum()).collect()
         };
         let before = totals(&world);

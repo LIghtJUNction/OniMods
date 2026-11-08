@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/OniMcp/preview.png" width="47%" /></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 下个版本实验拆掉一格一物" src="mods/CycleTrim/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust 仿真内核 + GPU 算子 + 一格多物实验" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
 <p align="center">
@@ -33,10 +33,11 @@
 
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
 - `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地。
-- `CycleTrim`：早期实验性性能模组。下个版本实验拆掉一格一物，把组分通量核搬到 GPU。先加速，再兼容。
+- `CycleTrim`：高风险实验性性能模组。启动即用 Rust 仿真内核 OniSim 接管官方 SimDLL；热扩散和符合条件的气体/液体区域已在时间步内走 Vulkan（wgpu）GPU 算子，并实验一格多物。先加速，再兼容。
 - `OniOnline`：联机框架。安装后默认是大厅和聊天，其他玩法由单独模组注册。
-- `Jlib`：OniMcp 和 CycleTrim 共用的 PLib 兼容前置库。游戏里要单独启用，并排在依赖它的模组前面。
+- `Jlib`：OniMcp 和 CycleTrim 共用的 PLib 兼容前置库（[创意工坊 3835083839](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839)）。游戏里要单独启用，并排在依赖它的模组前面。
 - `OniModTemplate`：用 `onim init` 开新模组时的目录模板。
+- `OniHarness`：缺氧 Mod 测试工具（子模块），支持任意形状物理地图、建筑模拟、Mod 安装测试与无窗口实机启动。
 
 > **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
@@ -60,10 +61,11 @@
 |------|------|------|
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
-| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 早期实验。下个版本试着用 GPU 通量核替换一格一物，先加速再兼容 |
+| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 高风险实验。Rust 仿真内核 + GPU 热扩散/气液区域算子 + 一格多物，先加速再兼容；进度见 [OniSim/gpu](mods/CycleTrim/OniSim/gpu/README.md) |
 | `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 联机框架，内置大厅和聊天；其他玩法由单独模组提供 |
 | `Jlib` | [mods/Jlib/](mods/Jlib/) | 可独立安装的 PLib 兼容共享前置库 |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | `onim init` 使用的新模组目录模板 |
+| `OniHarness` | [tools/OniHarness/](tools/OniHarness/) · [说明](docs/oniharness.md) | Mod 测试、物理地图与建筑模拟、无窗口实机启动 |
 | `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |
 | 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
@@ -129,6 +131,8 @@ onim dev -m MyMod
 每次构建必须生成新的 `dist/<AssemblyName>.zip`；编译成功但没有新包也会失败并恢复旧包。
 安装先解压、检查 DLL 和 `mod_info.yaml`，再替换目录；解压或 Dev 启用失败会保留原安装。
 它只启用选定的 Dev 条目，不会顺带启用同一 Mod 的其他副本。
+同一 `staticID` 在 Local、Dev、创意工坊之间只保留一份启用安装；核实的重复副本移到 `mods/.onim-recovery`，
+Jlib 等前置会自动排在消费模组之前。
 配置已写入但备份清理失败时，会单独警告，不把安装误报为失败。
 
 ## 常用工作流
@@ -153,7 +157,8 @@ onim info                  # 查看已安装的 Mod
 
 # 6. 正式发布
 onim install -m MyMod      # Release 构建并安装到 Local 目录
-onim publish -m MyMod      # 上传到 Steam 创意工坊
+onim publish -m MyMod --dry-run   # 只构建并生成发布计划，不上传
+onim publish -m MyMod      # 单文件 Legacy ZIP 原生上传到 Steam 创意工坊
 
 # 7. 清理
 onim uninstall -m MyMod    # 从游戏目录卸载
@@ -179,11 +184,14 @@ cp Directory.Build.props.example Directory.Build.props
 | `onim init <name>` | 从模板创建新 Mod |
 | `onim build` | 构建 Mod，`--release` 为 Release 构建 |
 | `onim dev` | 构建并安装到游戏 `mods/Dev/` |
-| `onim install` | Release 构建并安装到 `mods/Local/` |
+| `onim install` | Release 构建并安装到 `mods/Local/`；`--release OWNER/REPO` / `--repo OWNER/REPO` 从 GitHub 安装 |
 | `onim uninstall` | 卸载 Mod，支持 `--scope dev/local/all` |
 | `onim info` | 查看已安装的 Dev、Local 和 Steam Mod |
-| `onim publish` | 发布到 Steam 创意工坊，支持 `--gui` |
+| `onim publish` | 默认用原生单文件 Legacy ZIP 发布器上传；支持 `--dry-run`、`--preflight`、`--create`、`--resume`、`--update-preview`、`--gui` |
+| `onim workshop` | `search` / `install` / `uninstall` 创意工坊条目；`page show/set` 修改自有条目页面（不上传 ZIP） |
 | `onim list` | 列出配置文件中的 Mod |
+
+> **创意工坊硬性禁止**：不要用 SteamCMD `workshop_build_item` 或 `SteamUGC.SetItemContent` 目录模式上传，转换不可逆且会让缺氧无法安装该条目。详见 [Steam 发布说明](docs/steam-publishing.md)。
 
 ## 目录结构
 
@@ -200,14 +208,20 @@ cp Directory.Build.props.example Directory.Build.props
 │   │   ├── ModInfo.cs     # 仅入口
 │   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
 │   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
-│   ├── CycleTrim/         # 早期实验性性能模组，方向是把运算搬到 GPU
+│   ├── CycleTrim/         # 高风险实验性性能模组，方向是把运算搬到 GPU
 │   │   ├── ModInfo.cs     # 仅入口
 │   │   ├── Core/          # 非补丁核心逻辑
-│   │   └── Patches/       # Harmony 补丁
+│   │   ├── Patches/       # Harmony 补丁
+│   │   └── OniSim/        # Rust 仿真内核、wgpu/WGSL GPU 算子、Lean 证明
 │   ├── OniOnline/         # 联机框架，默认大厅和聊天
 │   └── Jlib/              # 共享前置库（子模块）
+├── sdk/                   # OniOnline.Framework SDK、Jlib.Bootstrap
+├── examples/              # OniOnline 第三方玩法示例
+├── tools/                 # OniHarness（子模块）、Legacy ZIP Steam 发布器
+├── tests/  benchmarks/    # 宿主回归测试与消融基准
+├── oni-skills/            # 可选：缺氧高阶攻略与工程模块库
 ├── docs/                  # 参考文档
-└── scripts/               # 辅助与校验脚本
+└── scripts/               # 辅助、校验与 Legacy ZIP 发布脚本
 ```
 
 ## 依赖

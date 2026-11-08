@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README_EN.md"><img alt="OniMcp — MCP-native colony operations" src="mods/OniMcp/preview.png" width="47%"></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — next version experiments past one element per cell" src="mods/CycleTrim/preview.png" width="47%"></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust SimDLL with GPU passes and experimental multicomponent cells" src="mods/CycleTrim/preview.png" width="47%"></a>
 </p>
 
 <p align="center">
@@ -37,10 +37,11 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | --- | --- | --- |
 | **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
 | **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) · [Rust CLI](docs/oni-mcp-cli.md) |
-| **CycleTrim** | Early experiment. Next version tries replacing one-element-per-cell flow with a GPU flux kernel. Speed first | [Module docs](mods/CycleTrim/README.md) |
+| **CycleTrim** | High-risk experiment. A Rust SimDLL (OniSim) replaces the official one at startup; thermal diffusion and eligible gas/liquid regions already run on Vulkan (wgpu) GPU passes, with experimental multicomponent cells. Speed first | [Module docs](mods/CycleTrim/README.md) · [GPU status](mods/CycleTrim/OniSim/gpu/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
-| **Jlib** | A standalone shared PLib-compatible prerequisite library | [Source and install notes](mods/Jlib/README.md) |
+| **Jlib** | A standalone shared PLib-compatible prerequisite library ([Workshop 3835083839](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839)) | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
+| **OniHarness** | Headless/real-game test harness: arbitrary-geometry physics maps, building simulation, mod install tests | [Notes](docs/oniharness.md) · [Submodule](tools/OniHarness/) |
 | **oni-skills** *(optional)* | Colony engineering notes for SPOM, cooling, ranching and power | [Guides](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) |
 
 The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules. Every mod here is developed, tested, and published with onim: `onim dev`, `onim build`, `onim publish`. Project: [OniMods](https://github.com/LIghtJUNction/OniMods).
@@ -75,11 +76,14 @@ init → dev → inspect → install → publish
 | `onim init <name>` | Scaffold a mod from the maintained template |
 | `onim dev -m <name>` | Build and install into the game's `mods/Dev` directory |
 | `onim info` | Inspect installed Dev, Local and Steam modules |
-| `onim install -m <name>` | Produce and install a release build |
-| `onim publish -m <name>` | Publish through the Steam Workshop workflow |
+| `onim install -m <name>` | Produce and install a release build (`--release OWNER/REPO` / `--repo OWNER/REPO` install from GitHub) |
+| `onim publish -m <name>` | Upload a single-file Legacy ZIP through the native publisher (`--dry-run`, `--preflight`, `--create`, `--resume`, `--update-preview`, `--gui`) |
+| `onim workshop …` | Search, install and uninstall Workshop items; `workshop page show/set` edits an owned page without uploading a ZIP |
 | `onim uninstall -m <name>` | Remove a selected Dev/Local installation |
 
-`onim dev` only rewrites `mods.json` when configuration actually changes, retains the latest five valid backups, and reports cleanup failures separately. Installation validates the new archive, DLL and metadata before replacing the previous copy.
+`onim dev` only rewrites `mods.json` when configuration actually changes, retains the latest five valid backups, and reports cleanup failures separately. Installation validates the new archive, DLL and metadata before replacing the previous copy. Only one installation per `staticID` stays active across Local, Dev and Workshop; verified duplicates move to `mods/.onim-recovery`, and prerequisites such as Jlib are ordered before their consumers.
+
+> **Workshop safety:** never publish with SteamCMD `workshop_build_item` or `SteamUGC.SetItemContent`. Directory-mode uploads irreversibly break ONI items. See [Steam publishing](docs/steam-publishing.md).
 
 ## OniMcp: the operational boundary
 
@@ -100,15 +104,21 @@ Critical operations remain bounded and should be preceded by read-only inspectio
 
 ```text
 .
-├── src/                         onim Rust CLI
+├── src/                         onim Rust CLI (+ oni-mcp client binary)
 ├── mods/
 │   ├── OniMcp/                  MCP server mod
-│   ├── CycleTrim/               early GPU-first performance experiment
+│   ├── CycleTrim/               GPU-first performance experiment
+│   │   └── OniSim/              Rust SimDLL, wgpu/WGSL operators, Lean proofs
 │   ├── OniOnline/               multiplayer framework, lobby and chat
 │   ├── Jlib/                    shared PLib-compatible library (submodule)
 │   └── OniModTemplate/          reusable mod scaffold
+├── sdk/                         OniOnline.Framework SDK, Jlib.Bootstrap
+├── examples/                    sample OniOnline gameplay mod
+├── tools/                       OniHarness (submodule), Legacy ZIP Steam publisher
+├── tests/ · benchmarks/         host regressions and ablation benchmarks
+├── oni-skills/                  optional colony engineering guides
 ├── docs/                        architecture, testing and publishing notes
-├── scripts/                     verification helpers
+├── scripts/                     verification and Legacy ZIP publishing helpers
 ├── Cargo.toml                   onim package definition
 └── onim.toml                    workspace aliases and defaults
 ```
@@ -117,7 +127,7 @@ Critical operations remain bounded and should be preceded by read-only inspectio
 
 Before opening a pull request:
 
-Shipped mods depend on the standalone [Jlib](https://github.com/LIghtJUNction/Jlib) mod. The source checkout uses the `mods/Jlib` submodule.
+Shipped mods depend on the standalone [Jlib](https://github.com/LIghtJUNction/Jlib) mod ([Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839)). The source checkout uses the `mods/Jlib` submodule; in game, enable Jlib and keep it above its consumers.
 
 ```bash
 onim doctor
@@ -131,7 +141,8 @@ Keep changes focused, update the affected changelog, and open an issue first whe
 ## Releases and further reading
 
 - [OniMcp changelog](mods/OniMcp/CHANGELOG.md)
-- [CycleTrim changelog](mods/CycleTrim/CHANGELOG.md)
+- [CycleTrim changelog](mods/CycleTrim/CHANGELOG.md) · [OniSim progress](mods/CycleTrim/OniSim/docs/progress.md)
+- [onim changelog](CHANGELOG-onim.md)
 - [OniOnline](mods/OniOnline/README.md)
 - [Jlib](mods/Jlib/README.md)
 - [Template changelog](mods/OniModTemplate/CHANGELOG.md)

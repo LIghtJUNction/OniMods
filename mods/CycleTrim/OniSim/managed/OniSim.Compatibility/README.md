@@ -7,13 +7,13 @@ native simulator. It is not installed in ONI and has no runtime acceptance yet.
 Only Linux x64 little-endian is supported. `Open` requires the caller's explicit
 absolute path to `liboni_sim_core.so`.
 
-This standalone facade does not currently take over the game's `Sim` or
-`SimMessages` calls. CycleTrim's PLib Mod setting uses the new
-`EnableOniSimExperimental` key and defaults off; the old persisted
-`EnableOniSim` key is not reused. Its separate
-[OniSim.Mod loader](../OniSim.Mod/README.md) also defaults off and requires an
-explicit `CYCLETRIM_ONISIM_ENABLE=1` opt-in. The Mono mapping and game lifecycle
-remain unverified. Set `CYCLETRIM_ONISIM_ENABLE=0` before startup to force-disable it.
+This standalone facade does not itself take over the game's `Sim` or
+`SimMessages` calls; mapping is done by the
+[OniSim.Mod loader](../OniSim.Mod/README.md). Since CycleTrim 0.4.5 the loader
+maps OniSim by default (the PLib `EnableOniSimExperimental` toggle was removed)
+and `CYCLETRIM_ONISIM_ENABLE=0`/`false`/`off` is the only startup kill switch.
+CycleTrim also uses this facade's publication reader for multicomponent data.
+The Mono mapping and full game lifecycle remain without complete acceptance.
 
 `SendMessage` forwards any message ID and owned byte payload to native validation.
 Managed checks cover nulls, buffer lengths, and allocation bounds; the native

@@ -1,8 +1,10 @@
 # CycleTrim
 
-A disruptive, experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later.
+**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) first, then restart the game. Consumer packages no longer embed Jlib.
 
-The next version will experiment with removing one-element-per-cell flow. A cell becomes a fixed set of component masses, updated by face flux, with no search for a cell that can accept the displaced element. That kernel is the one to try on the GPU. The 0.4.0 build and OniSim still use one element per cell. The argument, the limits, and the next step are in [next cell representation](docs/next-cell-representation.md).
+A disruptive, high-risk experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. **Use it only with disposable test saves.**
+
+The current build (0.4.8 plus later commits on `main`) has started removing one-element-per-cell flow: OniSim lets a second gas species share a cell (`FLAG_MULTICOMPONENT_COEXISTENCE`), and multicomponent gas flux plus GPU thermal diffusion run inside the native tick. Saves still store the dominant element plus a runtime mixture overlay; three or more species and full save/load are not done. The original argument and limits are in [next cell representation](docs/next-cell-representation.md); the current GPU wiring is in [GPU progress](#gpu-progress-2026-11-08).
 
 The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
 
@@ -11,6 +13,8 @@ This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is
 ## Index (summary page)
 
 - [Next version: replace one element per cell](docs/next-cell-representation.md)
+- [GPU progress (2026-11-08)](#gpu-progress-2026-11-08)
+- [Multicomponent assumptions audit](docs/multicomponent-assumptions-audit.md)
 - [Algorithm evolution and mathematical models (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#algorithm-evolution-from-per-cell-displacement-to-gpu-poisson-pressure-projection-stage-221)
 - [What it does](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#what-it-does)
 - [Usage](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#usage)
@@ -51,7 +55,22 @@ The new formulation treats fluid as a variable-density finite-volume continuum e
 $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
 The complete physical loop remains resident in GPU Device Memory, leaving the CPU to manage high-level entity interactions, state publishing, and gameplay queries.
 
-> **Status**: The Stage 2 CPU mathematical reference (residual $10^{-7}$, divergence decay, zero-velocity fixed point, and semantic comparators) and Stage 2.1 WGSL kernels (7 GPU operator tests and benchmark harness) are completed. The production solver remains isolated until full behavioral compatibility is validated.
+> **Status**: The Stage 2 CPU mathematical reference (residual $10^{-7}$, divergence decay, zero-velocity fixed point, and semantic comparators) and Stage 2.1 WGSL kernels (7 GPU operator tests and benchmark harness) are completed. Regional gas pressure projection, transport and thermal work now chain between GPU buffers inside the native tick; a global Poisson solver has not replaced the vanilla displacement path.
+
+## GPU progress (2026-11-08)
+
+OniSim creates a `GpuSimulation` on wgpu 30 (Vulkan backend) at startup, enabled by default. `CYCLETRIM_ONISIM_GPU=0` disables it before launch; an initialization failure is logged and the CPU path is used. `CYCLETRIM_GPU_PROFILE=1`, or the Steam launch argument `--cycletrim-gpu-profile`, enables sampled timing logs.
+
+**Committed on `main` and wired into the tick:**
+
+- Whole-grid GPU thermal diffusion (variable-coefficient finite volume) and species sensible-enthalpy conversion. Temperatures stay resident across steps; species-presence masks are compressed and uploads are block-incremental.
+- Eligible gas regions: multicomponent concentration diffusion, density-gradient velocity, pressure projection, transport and thermal work chained between GPU buffers.
+- Eligible liquid regions: sparse GPU multicomponent diffusion, overlapped with the CPU gas-pressure pass; diffusion snapshots cover only the active region.
+- CPU side: bubble simulation skips empty spans, liquid droplets settle, bubbles and droplets share one sparse scan, and idle zero-time frames reuse the previous publication.
+
+**Working tree (uncommitted, no in-game acceptance yet):** new WGSL operators for bubble/droplet movement, phase-transition selection, gas pressure faces with liquid hydraulic head, liquid flow, disease diffusion and growth, radiation regions and inactive-cell mass decay, plus shared resident SoA buffers (`resident_cells`) for chaining operators. `cargo check --release` passes; there is no matching `Player.log` run or differential acceptance for these paths.
+
+**Still open:** every step still uploads, waits on the GPU and reads back — this is not a fully device-resident pipeline. Event application, building interaction and publication stay on the CPU. Pressure, partial-pressure and liquid-volume-fraction publication, three or more species and full save/load are incomplete, and whole-game FPS gains are not fully validated. The latest `Player.log` (2026-11-08 00:26) shows GPU acceleration active on an RTX 4060 Laptop; later commits have no new in-game log yet. Details: [OniSim/gpu/README.md](OniSim/gpu/README.md), [OniSim/docs/progress.md](OniSim/docs/progress.md).
 
 ## What it does
 
@@ -61,6 +80,8 @@ The complete physical loop remains resident in GPU Device Memory, leaving the CP
 - Reuses immutable component type metadata during saves.
 - Reuses repeated circuit demand queries within each power overlay update.
 - Optionally samples gas/liquid conduit display mesh rebuilding while retaining simulation calls, every-frame drawing and audio.
+- At far zoom levels, time-slices animation updates for static objects and throttles material/conduit overlay updates by zoom (duplicants keep a higher refresh rate); texture-lerper and timelapse-camera optimizations come from Jlib.
+- Forces VSync off and an uncapped frame rate, re-applying (and logging once) if something restores the defaults.
 
 ## Usage
 
@@ -90,17 +111,16 @@ See the [implementation, complete measurements and acceptance scope](../../docs/
 
 ## Compatibility
 
-- Supports base game and DLC content.
-- Behavior-safe by default for long-running colonies.
+- Supports base game and DLC content, but OniSim takeover is experimental: use disposable saves.
 - CycleTrim no longer intercepts `SmartReservoir` automation signaling; vanilla repeated notifications are preserved for stock reservoirs and third-party buildings that reuse the component.
 
 ### OniSim native simulation core
 
-OniSim is CycleTrim's experimental native simulation core, with source under [`OniSim/`](OniSim/). Windows, macOS and Linux packages include the native library, but runtime mapping is disabled by default and the official SimDLL remains active. Explicitly enable the new PLib option `EnableOniSimExperimental` and restart ONI to attempt mapping. The old `EnableOniSim` config key is intentionally not reused, so a previously persisted default-true value cannot silently re-enable takeover after upgrade. Mapping cannot be hot-reverted. `CYCLETRIM_ONISIM_ENABLE=0`, `false`, or `off` remains available as a startup override to disable it.
+OniSim is CycleTrim's experimental native simulation core, with source under [`OniSim/`](OniSim/). Windows x64, macOS x64 and Linux x64 packages include the native library, and since 0.4.5 it is **always mapped at startup**, replacing the official SimDLL. The former PLib `EnableOniSimExperimental` toggle and the official-SimDLL runtime fallback were removed. Mapping cannot be hot-reverted. `CYCLETRIM_ONISIM_ENABLE=0`, `false`, or `off` remains only as an emergency kill switch before startup.
 
-Use only with a disposable test save. All 62 official message IDs are now accounted for in source routing, but that is not proof of full semantic equivalence. Gas-interaction rules are parsed and stored, while the helper has no Rust fixed-step caller; static inspection also found no incoming call to the legacy helper in the pinned official control flow, so its required role remains unresolved rather than a proven missing phase. Limited save/load receipts apply only to their exact historical binaries, not automatically to the current source. DLC, other-Mod, graphical, long-duration, large-colony, and whole-game performance acceptance remain open; OniSim is not a complete replacement yet. The loader accepts only the statically inspected ONI `Assembly-CSharp` and Mono fingerprints; other game versions are refused with a log message.
+Use only with a disposable test save. All 62 official message IDs are now accounted for in source routing, but that is not proof of full semantic equivalence. Gas-interaction rules are parsed and stored, while the helper has no Rust fixed-step caller; static inspection also found no incoming call to the legacy helper in the pinned official control flow, so its required role remains unresolved rather than a proven missing phase. Limited save/load receipts apply only to their exact historical binaries, not automatically to the current source. DLC, other-Mod, graphical, long-duration, large-colony, and whole-game performance acceptance remain open; OniSim is not a complete replacement yet. Linux keeps the inspected `Assembly-CSharp` and Mono whole-file fingerprint checks; Windows/macOS require the ONI 744825 release with the same native interface and message layouts. Other versions are refused with a log message.
 
-Linux x86_64 builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. Runtime mapping stays disabled unless `EnableOniSimExperimental` is explicitly enabled in CycleTrim's Mod settings and ONI is restarted. `CYCLETRIM_ONISIM_ENABLE=0` can force-disable it before startup; `1` permits loading only when the PLib option is enabled. The standalone OniSim.Mod entry requires the environment variable as its explicit opt-in. `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute `.so` path; when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
+Builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. `CYCLETRIM_ONISIM_WORKERS` defaults to 8 (set `1` to disable kernel parallelism). `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute path; when unset, the loader uses the `.dll`, `.dylib` or `.so` under `OniSim/<platform>/` in the Mod folder. macOS needs an x64 game process (Rosetta on Apple Silicon). Three-platform CI builds and host loader tests are not in-game acceptance on every platform.
 
 ## Benchmark summary
 
@@ -145,9 +165,12 @@ Full scenario notes are in [dist/CycleTrim/README.md](../../dist/CycleTrim/READM
 ```text
 mods/CycleTrim/
 ├── ModInfo.cs          # KMod entry
+├── OniSim/             # native simulation core, C ABI and loader
+│   ├── native/         # Rust SimDLL (tick, multicomponent flux, publication)
+│   └── gpu/            # wgpu/WGSL GPU operators and benchmarks
 ├── Core/               # non-patch core logic (e.g. BrainRateCap)
 ├── Patches/            # Harmony patches
-├── docs/               # Steam descriptions
+├── docs/               # Steam descriptions, design/audit notes, screenshots
 └── CycleTrim.csproj
 ```
 

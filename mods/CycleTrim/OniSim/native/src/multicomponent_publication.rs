@@ -74,7 +74,7 @@ pub(crate) struct MulticomponentBuffers {
     validation_error: Option<Error>,
 }
 
-const MAX_SPECIES_PER_CELL: usize = 4;
+const MAX_SPECIES_PER_CELL: usize = 8;
 
 impl MulticomponentBuffers {
     pub(crate) fn new(count: usize) -> Result<Self> {
@@ -111,6 +111,92 @@ impl MulticomponentBuffers {
                 mixture_mass.and_then(|m| m.get(cell).copied()).unwrap_or(0.0),
             )
         });
+    }
+
+    pub(crate) fn update_from_world(
+        &mut self,
+        grid: &Grid,
+        elements: &ElementTable,
+        world: &crate::world::PhysicsWorld,
+    ) {
+        self.species_len = 0;
+        self.flags = FLAG_MULTICOMPONENT_COEXISTENCE;
+        self.validation_error = None;
+
+        let species_cap = self.cells.len().saturating_mul(MAX_SPECIES_PER_CELL);
+        if self.cells.len() != grid.len() || self.species.len() < species_cap {
+            self.validation_error = Some(Error::new(
+                Status::InvalidState,
+                "multicomponent buffers do not match grid cell count",
+            ));
+            return;
+        }
+
+        let mut next_species = 0usize;
+        for cell in 0..grid.len() {
+            let internal = world.internal_index(cell);
+            self.cells[cell] = OniSimMulticomponentCellHeader {
+                species_offset: next_species as u32,
+                ..Default::default()
+            };
+            let mass = grid.mass[cell];
+            let temperature = grid.temperature[cell];
+            if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
+                self.validation_error = Some(Error::new(
+                    Status::InvalidState,
+                    format!("cell {cell} contains invalid mass or temperature"),
+                ));
+                return;
+            }
+
+            let species_offset = next_species;
+            let mut species_count = 0u16;
+            let mut total_mass = 0.0f32;
+
+            world.for_each_cell_species(internal, |elem_id, elem_mass| {
+                if elem_mass <= 0.0 || !elem_mass.is_finite() {
+                    return;
+                }
+                let element_index = elem_id as usize;
+                let Some(element) = elements.elements.get(element_index) else {
+                    return;
+                };
+                let phase = element.record.state & 3;
+                if phase == 0 || phase > 3 {
+                    return;
+                }
+                if next_species >= self.species.len() {
+                    return;
+                }
+                self.species[next_species] = OniSimMulticomponentSpeciesRecord {
+                    element_id: elem_id,
+                    phase,
+                    reserved: 0,
+                    mass: elem_mass,
+                    temperature,
+                    volume_fraction: 0.0,
+                    partial_pressure_kpa: 0.0,
+                };
+                next_species += 1;
+                species_count += 1;
+                total_mass += elem_mass;
+            });
+
+            self.cells[cell] = OniSimMulticomponentCellHeader {
+                species_offset: species_offset as u32,
+                species_count,
+                reserved: if species_count == 0 {
+                    0
+                } else {
+                    CELL_FLAG_HAS_SPECIES
+                },
+                total_mass,
+                gas_pressure_kpa: 0.0,
+                liquid_pressure_kpa: 0.0,
+                liquid_volume_fraction: 0.0,
+            };
+        }
+        self.species_len = next_species;
     }
 
     pub(crate) fn update_from_grid_with_mixture_at(

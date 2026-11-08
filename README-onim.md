@@ -62,10 +62,15 @@ path. Identity-confirmed duplicates across Local, Dev and Workshop are moved to
   `mods/.onim-recovery`; `mods.json` is backed up before it is changed.
 - `onim info`, `onim list` and `onim uninstall` inspect and manage configured mods.
 - `onim publish` uploads directly to Steam Workshop via the headless Legacy ZIP publisher (or `--gui` for OniUploader); it never uses incompatible SteamCMD directory uploads.
+  Useful flags: `--preflight` (read-only account/item check), `--dry-run`
+  (build and write an immutable plan without uploading), `--create` (first
+  upload, created Private and verified before `--visibility` applies),
+  `--resume PLAN` (continue a journaled plan without repeating uncertain
+  writes), `--update-preview`, `--expected-owner STEAMID` and `--auto-note`.
 
 See the [OniMods repository](https://github.com/LIghtJUNction/OniMods) for the full guide, troubleshooting and source.
 
-The source candidate for `onim 0.2.0` adds native Legacy ZIP publishing through
-the game's Steam API. Its real upload acceptance is still pending; see
-[native publishing progress](docs/onim-native-publishing.md). This candidate has
-not been installed or published as a new CLI release.
+Native Legacy ZIP publishing through the game's Steam API ships in the released
+CLI (current version `0.1.12`, see [CHANGELOG-onim.md](CHANGELOG-onim.md)).
+Remaining acceptance items for the native path are tracked in
+[native publishing progress](docs/onim-native-publishing.md).

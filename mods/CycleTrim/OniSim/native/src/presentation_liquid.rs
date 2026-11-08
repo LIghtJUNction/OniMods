@@ -40,31 +40,31 @@ pub(super) fn update(
                 255
             };
             let gradient = estimated_gradient(cell, true, exposed, world, elements);
-            let mut rgb = gradient_color(element, gradient) & 0x00ff_ffff;
-            // 真实多组分混合液体视觉渲染：将副组分液体的颜色按质量占比动态混合！
-            let mix_elem_idx = world.mixture_element[cell] as usize;
-            let mix_mass = world.mixture_mass[cell];
-            if mix_mass > 0.0 && mix_elem_idx < elements.elements.len() {
-                let mix_record = &elements.elements[mix_elem_idx].record;
-                if mix_record.state & 3 == 2 {
-                    let mix_rgb = gradient_color(mix_record, gradient) & 0x00ff_ffff;
-                    let total_mass = mass + mix_mass;
-                    if total_mass > 0.0 {
-                        let w1 = (mix_mass / total_mass).clamp(0.0, 1.0);
-                        let w0 = 1.0 - w1;
-                        let r0 = (rgb & 0xff) as f32;
-                        let g0 = ((rgb >> 8) & 0xff) as f32;
-                        let b0 = ((rgb >> 16) & 0xff) as f32;
-                        let r1 = (mix_rgb & 0xff) as f32;
-                        let g1 = ((mix_rgb >> 8) & 0xff) as f32;
-                        let b1 = ((mix_rgb >> 16) & 0xff) as f32;
-                        let r = (r0 * w0 + r1 * w1).round() as u32;
-                        let g = (g0 * w0 + g1 * w1).round() as u32;
-                        let b = (b0 * w0 + b1 * w1).round() as u32;
-                        rgb = (r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16);
-                    }
-                }
-            }
+            // 真实多组分混合液体视觉渲染：将所有组分液体的颜色按质量占比物理混合（支持任意数量混合）！
+            let mut total_liquid_mass = 0.0f32;
+            let mut total_r = 0.0f32;
+            let mut total_g = 0.0f32;
+            let mut total_b = 0.0f32;
+
+            world.for_each_cell_species(cell, |elem_id, sp_mass| {
+                if sp_mass <= 0.0 || elem_id as usize >= elements.elements.len() { return; }
+                let rec = &elements.elements[elem_id as usize].record;
+                if rec.state & 3 != 2 { return; }
+                let sp_rgb = gradient_color(rec, gradient) & 0x00ff_ffff;
+                total_liquid_mass += sp_mass;
+                total_r += sp_mass * (sp_rgb & 0xff) as f32;
+                total_g += sp_mass * ((sp_rgb >> 8) & 0xff) as f32;
+                total_b += sp_mass * ((sp_rgb >> 16) & 0xff) as f32;
+            });
+
+            let rgb = if total_liquid_mass > 0.0 {
+                let r = ((total_r / total_liquid_mass).round() as u32).min(255);
+                let g = ((total_g / total_liquid_mass).round() as u32).min(255);
+                let b = ((total_b / total_liquid_mass).round() as u32).min(255);
+                (r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16)
+            } else {
+                gradient_color(element, gradient) & 0x00ff_ffff
+            };
             liquid[public] = (alpha << 24) | rgb;
             liquid_data[public] =
                 transition_color(element, world.write.temperature[cell], elements);

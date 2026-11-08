@@ -5,35 +5,39 @@ using System.Text;
 
 namespace OniSim.Compatibility
 {
-    internal sealed class NativeApi
+    public sealed class NativeApi
     {
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int MessageCallback(int id, IntPtr data);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void InitializeDelegate(MessageCallback callback);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void VoidDelegate();
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate IntPtr MessageDelegate(int id, int length, IntPtr data);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate IntPtr MessagesDelegate(int id, int length, int count, IntPtr data);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate IntPtr BeginSaveDelegate(IntPtr size, int x, int y);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate IntPtr PointerDelegate();
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate uint VersionDelegate();
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int StatusDelegate();
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate ulong GenerationDelegate();
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int CopyImageDelegate(IntPtr destination, int capacity);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int MessageCallback(int id, IntPtr data);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void InitializeDelegate(MessageCallback callback);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void VoidDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate IntPtr MessageDelegate(int id, int length, IntPtr data);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate IntPtr MessagesDelegate(int id, int length, int count, IntPtr data);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate IntPtr BeginSaveDelegate(IntPtr size, int x, int y);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate IntPtr PointerDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate uint VersionDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int StatusDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate ulong GenerationDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int CopyImageDelegate(IntPtr destination, int capacity);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int GpuPathfinderInitGridDelegate(uint width, uint height, IntPtr navMask, uint count);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int GpuPathfinderEvaluateChoresDelegate(uint originCell, IntPtr chores, uint count);
 
         private static readonly object Gate = new object();
         private static NativeApi instance;
         private readonly IntPtr library;
-        internal readonly InitializeDelegate Initialize, TryInitialize;
-        internal readonly VoidDelegate Shutdown, EndSave, DebugCrash, ReleaseSystemInfo;
-        internal readonly MessageDelegate HandleMessage;
-        internal readonly MessagesDelegate HandleMessages;
-        internal readonly BeginSaveDelegate BeginSave;
-        internal readonly PointerDelegate AcquireSystemInfo, GetLastError, GetCapabilities, GetGrid, AcquireMulticomponentUpdate;
-        internal readonly VoidDelegate ReleaseMulticomponentUpdate;
-        internal readonly VersionDelegate GetAbiVersion;
-        internal readonly StatusDelegate GetLastStatus;
-        internal readonly GenerationDelegate GetGeneration;
-        internal readonly CopyImageDelegate CopyGridImage, CopyMulticomponentImage;
-        internal readonly string Path;
+        public readonly InitializeDelegate Initialize, TryInitialize;
+        public readonly VoidDelegate Shutdown, EndSave, DebugCrash, ReleaseSystemInfo;
+        public readonly MessageDelegate HandleMessage;
+        public readonly MessagesDelegate HandleMessages;
+        public readonly BeginSaveDelegate BeginSave;
+        public readonly PointerDelegate AcquireSystemInfo, GetLastError, GetCapabilities, GetGrid, AcquireMulticomponentUpdate;
+        public readonly VoidDelegate ReleaseMulticomponentUpdate;
+        public readonly VersionDelegate GetAbiVersion;
+        public readonly StatusDelegate GetLastStatus;
+        public readonly GenerationDelegate GetGeneration;
+        public readonly CopyImageDelegate CopyGridImage, CopyMulticomponentImage;
+        public readonly GpuPathfinderInitGridDelegate GpuPathfinderInitGrid;
+        public readonly GpuPathfinderEvaluateChoresDelegate GpuPathfinderEvaluateChores;
+        public readonly string Path;
 
         private NativeApi(string path)
         {
@@ -60,11 +64,13 @@ namespace OniSim.Compatibility
             CopyMulticomponentImage = TryLoad<CopyImageDelegate>("ONISIM_CopyMulticomponentImage");
             AcquireMulticomponentUpdate = TryLoad<PointerDelegate>("ONISIM_AcquireMulticomponentUpdate");
             ReleaseMulticomponentUpdate = TryLoad<VoidDelegate>("ONISIM_ReleaseMulticomponentUpdate");
+            GpuPathfinderInitGrid = TryLoad<GpuPathfinderInitGridDelegate>("ONISIM_GpuPathfinder_InitGrid");
+            GpuPathfinderEvaluateChores = TryLoad<GpuPathfinderEvaluateChoresDelegate>("ONISIM_GpuPathfinder_EvaluateChores");
             uint version = GetAbiVersion();
             if (version != 1) throw new NotSupportedException("Native ABI version " + version + " is not supported.");
         }
 
-        internal static NativeApi LoadExplicit(string path)
+        public static NativeApi LoadExplicit(string path)
         {
             if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathRooted(path))
                 throw new ArgumentException("An explicit absolute native library path is required.", "path");

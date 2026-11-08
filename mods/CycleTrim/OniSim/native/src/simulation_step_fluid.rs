@@ -24,7 +24,20 @@ pub(crate) fn gas_phase(
     events: &mut EventQueues,
     region: Region,
 ) -> bool {
-    let mut changed = crate::pressure_sweep::run(world, elements, diseases, events, region);
+    gas_phase_with_pressure(world, elements, diseases, events, region, false, false)
+}
+
+pub(crate) fn gas_phase_with_pressure(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    diseases: &DiseaseTable,
+    events: &mut EventQueues,
+    region: Region,
+    pressure_already_applied: bool,
+    displacement_unneeded: bool,
+) -> bool {
+    let mut changed = pressure_already_applied || crate::pressure_sweep::run(world, elements, diseases, events, region);
+    if displacement_unneeded { return changed; }
     let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
     for y in min_y..max_y {
         for x in min_x..max_x {
@@ -92,7 +105,18 @@ pub(crate) fn liquid_phase(
     events: &mut EventQueues,
     region: Region,
 ) -> bool {
-    let mut changed = false;
+    liquid_phase_with_flow(world, elements, diseases, events, region, false)
+}
+
+pub(crate) fn liquid_phase_with_flow(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    diseases: &DiseaseTable,
+    events: &mut EventQueues,
+    region: Region,
+    flow_already_applied: bool,
+) -> bool {
+    let mut changed = flow_already_applied;
     if region.min_x == region.max_x {
         return false;
     }

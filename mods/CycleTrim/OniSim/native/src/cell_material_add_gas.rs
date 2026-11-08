@@ -33,21 +33,10 @@ pub(crate) fn add_gas(
     }
     let state = phase(elements, previous);
     if state == 1 {
-        // 多组分气体混合：气体与气体共存，不强行排挤，形成道尔顿分压混合相
-        if world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element {
-            world.mixture_element[cell] = element;
-            world.mixture_mass[cell] += mass;
-            if world.mixture_mass[cell] > world.write.mass[cell] {
-                let dom_elem = world.mixture_element[cell];
-                let dom_mass = world.mixture_mass[cell];
-                world.mixture_element[cell] = world.write.element[cell];
-                world.mixture_mass[cell] = world.write.mass[cell];
-                world.write.element[cell] = dom_elem;
-                world.write.mass[cell] = dom_mass;
-            }
-            notify(world, events, cell);
-            return;
-        }
+        // 多组分气体混合：气体与气体共存，不强行排挤，形成道尔顿分压混合相（支持任意数量混合）
+        world.add_species_mass(elements, cell, element, mass);
+        notify(world, events, cell);
+        return;
     } else if state == 2 {
         // 激进真实物理：气体进入液体中（微气泡、气相分压），绝不湮灭！
         if world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element {

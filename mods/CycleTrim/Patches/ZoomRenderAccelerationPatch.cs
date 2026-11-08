@@ -43,10 +43,11 @@ namespace CycleTrim.Patches
                 if (__instance == null || dt <= 0f)
                     return true;
 
-                float zoom = GetCurrentZoom();
-                if (zoom <= 25f)
-                    return true; // 正常视距保持 1:1
+                // Offscreen culling: if the controller is off-screen and not moving, skip CPU matrix calculations entirely
+                if (!__instance.IsVisible() && !__instance.IsMoving)
+                    return false;
 
+                float zoom = GetCurrentZoom();
                 bool isMinion = false;
                 string name = __instance.name;
                 if (name != null && name.IndexOf("Minion", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -61,10 +62,10 @@ namespace CycleTrim.Patches
                 }
                 else
                 {
-                    if (zoom > 100f) stride = 30; // 远景下每秒仅更新一次骨骼动画
+                    if (zoom > 100f) stride = 30;
                     else if (zoom > 60f) stride = 15;
-                    else if (zoom > 40f) stride = 6;
-                    else stride = 2;
+                    else if (zoom > 30f) stride = 6;
+                    else stride = 4; // 即使在正常视距下，静止建筑与装饰也进行 4 帧间隔分帧，释放主线程 CPU
                 }
 
                 if (stride > 1 && (((__instance.GetInstanceID() & 0x7FFFFFFF) + Time.frameCount) % stride) != 0)

@@ -2,9 +2,9 @@
 
 **前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。消费者包不再内嵌一份 Jlib。
 
-极具颠覆性的实验性性能优化 Mod，目前仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。
+极具颠覆性的高风险实验性性能优化 Mod，仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。**只在可丢弃的测试存档上使用。**
 
-下个版本会实验拆掉「一格一物」：格子改成固定的一小组分质量，用界面通量平流，不再搜索空格把旧物质挤走，并把这个核放到 GPU 上测。当前 0.4.0 和 OniSim 仍是一格一物。分析、界限和下一步写在 [下个版本：实验替换一格一物](docs/next-cell-representation.md)。
+当前版本（0.4.8 + main 上的后续提交）已经开始拆「一格一物」：OniSim 允许一格内第二种气体共存（`FLAG_MULTICOMPONENT_COEXISTENCE`），多组分气体通量与 GPU 热扩散已接入原生时间步。存档仍只保存主元素 + 运行时组分叠加，三种以上组分与完整存读档尚未贯通。原始分析与界限见 [下个版本：实验替换一格一物](docs/next-cell-representation.md)，GPU 接入现状见下文 [GPU 进度](#gpu-进度2026-11-08)。
 
 下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
 
@@ -13,6 +13,8 @@
 ## 快速索引（本页为总览）
 
 - [下个版本：实验替换一格一物](docs/next-cell-representation.md)
+- [GPU 进度（2026-11-08）](#gpu-进度2026-11-08)
+- [多组分假设审计](docs/multicomponent-assumptions-audit.md)
 - [算法演进与数学模型 (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#算法演进从一格一物排挤到-gpu-泊松压力投影-stage-221)
 - [核心优化](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#核心功能简要)
 - [架构与优化原理](../../docs/architecture-and-principles.md)
@@ -54,7 +56,22 @@
 $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
 完整物理循环完全驻留在 GPU Device Memory，CPU 仅保留状态快照、接口与上层游戏发布。
 
-> **阶段说明**：Stage 2 的 CPU 数值参考（残差 $10^{-7}$、散度收敛、零速度不动点等 6 项测试）与 Stage 2.1 的 WGSL 核心算子（7 项 GPU Operator 测试及 Benchmark）均已就绪。生产管线保持隔离，先加速并完成严格行为兼容性验收后才推进生产替换。
+> **阶段说明**：Stage 2 的 CPU 数值参考（残差 $10^{-7}$、散度收敛、零速度不动点等 6 项测试）与 Stage 2.1 的 WGSL 核心算子（7 项 GPU Operator 测试及 Benchmark）均已就绪。区域气体的压力投影、传输与热计算已在原生时间步里于 GPU 缓冲区之间接力；全局泊松求解器仍未替换原版排挤路径。
+
+## GPU 进度（2026-11-08）
+
+OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开启；`CYCLETRIM_ONISIM_GPU=0` 可在启动前关闭，初始化失败时打印原因并回到 CPU 路径。`CYCLETRIM_GPU_PROFILE=1` 或 Steam 启动参数 `--cycletrim-gpu-profile` 打开抽样耗时日志。
+
+**已提交（main）并接入时间步：**
+
+- 全图 GPU 热扩散（变系数有限体积）与组分显热焓换算；温度在步间驻留显存，组分存在掩码压缩上传，按变化块上传。
+- 符合条件的气体区域：多组分浓度扩散、密度梯度速度、压力投影、传输与热计算在 GPU 缓冲区间接力。
+- 符合条件的液体区域：GPU 多组分稀疏扩散，与 CPU 气压遍历重叠执行；扩散快照只覆盖活动区域。
+- CPU 侧：气泡模拟跳过空段，液滴沉降，气泡与液滴共用一次稀疏扫描；空闲零时长帧复用上一帧发布结果。
+
+**工作区（尚未提交、尚未实机验收）：** 新增气泡/液滴移动、相变判定、气体压力面通量与液体水头、液体流动、疾病扩散与生长、辐射区域、非活动格质量衰减等 WGSL 算子，以及供算子串联的常驻 SoA 缓冲（`resident_cells`）。`cargo check --release` 可通过，但这些路径还没有对应的 `Player.log` 实机记录与差分验收。
+
+**仍未完成：** 每个时间步仍有 CPU 上传、GPU 等待与读回，不是全流程显存驻留；事件应用、建筑交互和结果发布仍在 CPU；气压/分压/液体体积占比发布值、三种以上组分、完整存读档未贯通；整局帧率提升未完整验证。最近一份 `Player.log`（11-08 00:26）记录 GPU 在 RTX 4060 Laptop 上激活，之后的提交尚无新的实机日志。细节见 [OniSim/gpu/README.md](OniSim/gpu/README.md) 与 [OniSim/docs/progress.md](OniSim/docs/progress.md)。
 
 ## 核心功能（简要）
 
@@ -66,6 +83,8 @@ $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \te
 - 输送轨道构建中，重复搜索较多的长路径可使用临时索引。
 - 动画覆盖数据逐位相同时，避免重复增加版本号和复制纹理数据。
 - 可选降低气液管道显示网格的重建频率；模拟更新、每帧绘制和音效保留原路径。
+- 大地图远景缩放时按缩放级别对静止物体动画、材料视图与管道视图更新分帧降频（复制人保留更高刷新率）；纹理插值与延时摄影相机优化由 Jlib 提供。
+- 强制关闭 VSync 并解除帧率上限；被其他代码恢复时重新应用并记录一次日志。
 
 ## 使用方式
 
@@ -102,7 +121,7 @@ $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \te
 
 OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包，启动时强制映射接管官方 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的紧急关闭开关。
 
-疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
+疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。GPU 算子相关开关见上文 [GPU 进度](#gpu-进度2026-11-08)。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
 
 历史二进制的隔离实测曾通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)；这些回执只适用于记录中的精确二进制，不代表当前源码已通过游戏验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
 
@@ -155,9 +174,11 @@ Brain 限流已接入生产 Harmony 补丁，但只作用于原版普通 `Creatu
 mods/CycleTrim/
 ├── ModInfo.cs          # KMod 入口
 ├── OniSim/             # 原生仿真核心、C ABI 与加载器
+│   ├── native/         # Rust SimDLL（时间步、多组分通量、发布）
+│   └── gpu/            # wgpu/WGSL GPU 算子与基准
 ├── Core/               # 与游戏补丁无关的核心逻辑（如 BrainRateCap）
 ├── Patches/            # Harmony 补丁
-├── docs/               # Steam 描述等
+├── docs/               # Steam 描述、设计与审计文档、截图
 └── CycleTrim.csproj
 ```
 

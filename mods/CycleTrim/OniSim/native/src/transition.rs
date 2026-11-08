@@ -18,7 +18,7 @@ fn record(table: &ElementTable, index: u16) -> &ElementRecord {
     &table.elements[index as usize].record
 }
 
-fn resolve_ore(table: &ElementTable, hash: i32) -> u16 {
+pub(crate) fn resolve_ore(table: &ElementTable, hash: i32) -> u16 {
     if hash as u32 == VACUUM_HASH {
         return u16::MAX;
     }
@@ -108,6 +108,21 @@ fn do_state_transition_from_element(
         )
     };
 
+    apply_selected_transition(world, elements, events, cell, target, ore, conversion, shifted_temperature);
+    true
+}
+
+/// Apply a preselected transition and emit its ordered game events.
+pub(crate) fn apply_selected_transition(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    events: &mut EventQueues,
+    cell: usize,
+    target: u16,
+    ore: u16,
+    conversion: f32,
+    shifted_temperature: f32,
+) {
     world.write.temperature[cell] = shifted_temperature;
     world.write.element[cell] = target;
 
@@ -198,5 +213,4 @@ fn do_state_transition_from_element(
         events.substance_change(game_cell);
     }
     world.mark_dirty(cell, 0x1f);
-    true
 }

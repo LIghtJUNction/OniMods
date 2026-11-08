@@ -1,6 +1,15 @@
 //! Targeted experimental operators, deliberately not enabled in the game.
 //! The CPU helper is also called by native presentation; GPU code is not.
 pub mod gpu_context;
+pub mod disease_growth;
+pub mod disease_diffusion;
+pub mod inactive_decay;
+pub mod bubble_settling;
+pub mod phase_transition;
+pub mod radiation_region;
+pub mod resident_cells;
+pub mod gpu_pathfinder;
+pub mod gas_pressure_faces;
 pub mod material_eos;
 pub mod multicomponent;
 pub mod pressure_projection;

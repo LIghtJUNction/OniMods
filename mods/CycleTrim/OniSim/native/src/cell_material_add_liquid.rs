@@ -63,37 +63,10 @@ pub(crate) fn add_liquid(
             return;
         }
         if state == 2 && crate::fluid_helpers::are_liquids_miscible(&elements.elements[element as usize].record, old_record) {
-            // 互溶液体混溶：形成多组分液体相
-            if world.mixture_mass[destination] <= 0.0 || world.mixture_element[destination] == element {
-                world.mixture_element[destination] = element;
-                world.mixture_mass[destination] += mass;
-                if world.mixture_mass[destination] > world.write.mass[destination] {
-                    let dom_elem = world.mixture_element[destination];
-                    let dom_mass = world.mixture_mass[destination];
-                    world.mixture_element[destination] = world.write.element[destination];
-                    world.mixture_mass[destination] = world.write.mass[destination];
-                    world.write.element[destination] = dom_elem;
-                    world.write.mass[destination] = dom_mass;
-                }
-                notify(world, events, destination);
-                return;
-            }
-        }
-        if state == 1 {
-            // 液体进入气体格：若液体体积 < 0.95，气体保留在剩余空隙容积
-            let max_m = elements.elements[element as usize].record.max_mass.max(1.0);
-            let liq_vol = mass / max_m;
-            if liq_vol < 0.95 {
-                let gas_elem = old_element;
-                let gas_mass = world.write.mass[destination];
-                world.write.element[destination] = element;
-                world.write.mass[destination] = mass;
-                world.write.temperature[destination] = temperature;
-                world.mixture_element[destination] = gas_elem;
-                world.mixture_mass[destination] = gas_mass;
-                notify(world, events, destination);
-                return;
-            }
+            // 互溶液体混溶：形成多组分液体相（支持任意数量混合）
+            world.add_species_mass(elements, destination, element, mass);
+            notify(world, events, destination);
+            return;
         }
         let displaced = if state == 1 {
             displace_gas(world, elements, diseases, events, destination, old_element)

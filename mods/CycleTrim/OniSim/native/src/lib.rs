@@ -42,6 +42,7 @@ mod frames_engine;
 mod frames_plan;
 mod gas;
 pub(crate) mod gpu_sim;
+pub mod gpu_pathfinder_ffi;
 mod grid;
 mod interactions;
 mod mass_components;

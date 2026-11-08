@@ -1,12 +1,14 @@
 # OniSim：CycleTrim 的 Rust 仿真内核与 C# 兼容层
 
 OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与可观测行为实现 Rust 版本。
-它已纳入 CycleTrim 源码与构建工程；游戏接管、性能和 Mod 兼容性仍在验收，当前不能当作已经验证的替代内核。
+它已纳入 CycleTrim 源码与构建工程，自 0.4.5 起启动即强制接管官方 SimDLL；性能和 Mod 兼容性仍在验收，当前不能当作已经验证的替代内核。
 
-当前内核仍是一格一物，气体排挤在 `native/src/gas.rs` 的 `displace_gas`。下个版本要实验的是另一套格子：固定组分质量、界面通量、无排挤搜索，并把该核放到 GPU 上。那不是本内核已经完成的替换，说明见 [下个版本：实验替换一格一物](../docs/next-cell-representation.md)。
+一格一物正在拆：`displace_gas` 失败时允许第二种气体与主元素共存（`FLAG_MULTICOMPONENT_COEXISTENCE`），多组分气体通量（`native/src/multicomponent_flux.rs`）已接入固定步进；存档仍只保存主元素 + 运行时组分叠加。原始设想见 [下个版本：实验替换一格一物](../docs/next-cell-representation.md)，发布架构见 [docs/multicomponent-publication.md](docs/multicomponent-publication.md)。
 
-当前源代码快照已接入 inline thermal command queue，47 项 Release Rust 测试通过。该结果只证明对应源码的单元测试；
-不代表整局 FPS、RSS 或单/四线程加速。四线程整体性能门禁仍未通过；当前快照没有对应的真实游戏验收，旧二进制的运行回执不能替代。
+GPU：`native` 依赖 `gpu/` crate，启动时创建 wgpu（Vulkan）`GpuSimulation`，默认开启，`CYCLETRIM_ONISIM_GPU=0` 关闭。热扩散、符合条件的气体区域与液体扩散已在时间步内走 GPU；工作区还在接入相变、气泡、液体流动、疾病、辐射与衰减算子。逐项状态见 [gpu/README.md](gpu/README.md)。
+
+历史源代码检查点（inline thermal command queue）曾有 47 项 Release Rust 测试通过；该结果只证明对应源码的单元测试，
+不代表整局 FPS、RSS 或单/四线程加速。四线程整体性能门禁仍未通过；当前快照没有完整的真实游戏验收，旧二进制的运行回执不能替代。
 详见 [docs/progress.md](docs/progress.md)。
 
 质量搜索的 FIFO 去重及早期热／气体实验的整合范围，见
@@ -30,10 +32,9 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 - 调度已接入 Step 批次、双 GameData、ready 屏障与异步工作线程，完整调度等价性仍待验收。
   细节见 [docs/frame-sync.md](docs/frame-sync.md)。
 - C# 独立调用层提供长度边界、错误检查、会话生命周期和借用指针视图。
-  CycleTrim 的 PLib 设置使用新的 `EnableOniSimExperimental` 字段显式 opt-in，默认关闭；
-  旧版 `EnableOniSim` 配置键不再读取，避免历史默认开启值在升级后继续接管。修改后需要重启。
-  `CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭。真实游戏完整兼容性尚未验收。
-- 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。验收与复现见 [docs/parallel-validation.md](docs/parallel-validation.md)。
+  0.4.5 起移除了 PLib `EnableOniSimExperimental` 开关与官方 SimDLL 运行时回退，启动即映射；
+  `CYCLETRIM_ONISIM_ENABLE=0` 仅作为启动前的紧急熔断。真实游戏完整兼容性尚未验收。
+- 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，设置为 `1` 可关闭内核并行。验收与复现见 [docs/parallel-validation.md](docs/parallel-validation.md)。
 - 疾病发射器的菱形遍历经过 Lean 4.19 证明和 65,040 个差分场景验证；该组件基准在记录的场景中快 13.894 倍，不代表整局性能提升。详见 [lean-lab/README.md](lean-lab/README.md)。
 
 本轮实际运行结果与边界见 [docs/runtime-validation.md](docs/runtime-validation.md)。`gameReady=false`、`runtimeValidated=false`
@@ -58,6 +59,7 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 | 物理阶段与并行约束 | [docs/simulation.md](docs/simulation.md) |
 | 原生存档格式 | [docs/save-format.md](docs/save-format.md) |
 | 多组分发布架构 | [docs/multicomponent-publication.md](docs/multicomponent-publication.md) |
+| GPU 算子与接入状态 | [gpu/README.md](gpu/README.md) |
 | C 调用声明 | [oni_sim.h](native/include/oni_sim.h) |
 | 官方二进制指纹和 16 个导出 | [official-abi.json](official-abi.json) |
 
@@ -71,9 +73,9 @@ rtk dotnet build mods/CycleTrim/OniSim/managed/OniSim.Host/OniSim.Host.csproj -c
 ```
 
 编译通过只证明源码和 ABI 边界可构建，不证明游戏行为、存档、DLC 或其他 Mod 兼容。
-CycleTrim 在支持的 Linux x64 环境默认保留官方 SimDLL，不接管游戏物理管线。只有在 PLib 设置页
-显式开启 `EnableOniSimExperimental` 并重启后才会尝试映射；`CYCLETRIM_ONISIM_ENABLE=0`
-可在启动前强制关闭。在完成多场景、长时与原版对照验收前，不要把它当作已验证的原版替代品。
+CycleTrim 在 Windows x64、macOS x64、Linux x64 包内默认携带 OniSim，并在启动时强制映射；
+`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前紧急关闭，`CYCLETRIM_ONISIM_GPU=0` 只关闭 GPU 算子。
+在完成多场景、长时与原版对照验收前，不要把它当作已验证的原版替代品。
 
 ## Rust 工具链与依赖
 

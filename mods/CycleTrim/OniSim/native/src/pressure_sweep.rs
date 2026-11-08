@@ -159,6 +159,24 @@ fn pressure_cell(
     };
     world.flow[cell][2] += vertical;
     world.flow[upper][3] -= vertical;
+    let down = cell.wrapping_sub(world.stride);
+    if cell >= world.stride
+        && world.write.element[cell] == element
+        && pressure_target(world, elements, element, source_phase, down)
+        && (old_phase(world, elements, down) == 0 || world.read.mass[down] < world.read.mass[cell])
+    {
+        update_pressure(
+            world,
+            elements,
+            diseases,
+            events,
+            cell,
+            element,
+            source_phase,
+            coefficient,
+            down,
+        );
+    }
     if (old_phase(world, elements, upper) | old_phase(world, elements, side)) != 3
         && world.write.element[cell] == element
         && pressure_target(world, elements, element, source_phase, side + world.stride)

@@ -12,6 +12,10 @@ namespace CycleTrim.Patches
     {
         private static int targetFrameRate = 500;
         private static bool loggedFrameRepair;
+        private static int frameCounter;
+        private static float accumulatedTime;
+        private static int reportInterval = 3;
+        private static int reportsLogged;
 
         internal static void Configure(int value)
         {
@@ -21,8 +25,11 @@ namespace CycleTrim.Patches
         public static void Apply(string reason)
         {
             QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = targetFrameRate;
-            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=" + targetFrameRate + ", vSyncCount=0");
+            // On Mono/Linux, setting a positive targetFrameRate causes Unity's internal
+            // frame limiter to use nanosleep(), which oversleeps by 10-16ms and locks FPS to ~45-60.
+            // Using -1 disables Unity's sleep throttle completely.
+            Application.targetFrameRate = -1;
+            Debug.Log("[CycleTrim] VSync unlocked (" + reason + "); targetFrameRate=-1 (uncapped), vSyncCount=0");
         }
 
         [HarmonyPatch(typeof(Game), "OnSpawn")]
@@ -51,17 +58,33 @@ namespace CycleTrim.Patches
             [HarmonyPostfix]
             public static void Postfix()
             {
-                if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate == targetFrameRate)
-                    return;
-                int now = Time.frameCount;
-                if (!loggedFrameRepair)
+                if (QualitySettings.vSyncCount != 0 || Application.targetFrameRate != -1)
                 {
-                    loggedFrameRepair = true;
-                    Debug.Log("[CycleTrim] Restoring frame settings from target=" + Application.targetFrameRate +
-                        ", vSync=" + QualitySettings.vSyncCount + " at frame " + now);
+                    int now = Time.frameCount;
+                    if (!loggedFrameRepair)
+                    {
+                        loggedFrameRepair = true;
+                        Debug.Log("[CycleTrim] Restoring frame settings from target=" + Application.targetFrameRate +
+                            ", vSync=" + QualitySettings.vSyncCount + " at frame " + now);
+                    }
+                    QualitySettings.vSyncCount = 0;
+                    Application.targetFrameRate = -1;
                 }
-                QualitySettings.vSyncCount = 0;
-                Application.targetFrameRate = targetFrameRate;
+
+                frameCounter++;
+                accumulatedTime += Time.unscaledDeltaTime;
+                if (accumulatedTime >= 1.0f)
+                {
+                    float currentFps = frameCounter / accumulatedTime;
+                    frameCounter = 0;
+                    accumulatedTime = 0f;
+                    reportsLogged++;
+                    if (reportsLogged % reportInterval == 1)
+                    {
+                        Debug.Log(string.Format("[CycleTrim FPS] Live Frame Rate: {0:F1} FPS (targetFrameRate={1}, vSync={2})",
+                            currentFps, Application.targetFrameRate, QualitySettings.vSyncCount));
+                    }
+                }
             }
         }
 

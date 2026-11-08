@@ -113,46 +113,39 @@ pub(crate) fn clear_species_cell(world: &mut PhysicsWorld, cell: usize) {
     if end <= world.species_mass.len() {
         world.species_mass[start..end].fill(0.0);
     }
-    world.mixture_mass[cell] = 0.0;
-    world.mixture_element[cell] = world.vacuum_element;
+    world.clear_cell_mixtures(cell);
 }
 
-/// Mirror the legacy primary/mixture fields into the dense species tensor.
+/// Mirror the primary/mixture/extra fields into the dense species tensor.
 pub(crate) fn ingest_write_cell(world: &mut PhysicsWorld, elements: &ElementTable, cell: usize) {
     let start = cell * GAS_CHANNELS;
     if start + GAS_CHANNELS > world.species_mass.len() {
         return;
     }
     world.species_mass[start..start + GAS_CHANNELS].fill(0.0);
-    let element = world.write.element[cell] as usize;
-    let mass = world.write.mass[cell];
-    if mass > 0.0
-        && element < elements.elements.len()
-        && elements.elements[element].record.state & 3 == 1
-    {
-        let channel = world.gas_channel_of_element.get(element).copied().unwrap_or(u8::MAX);
-        if channel != u8::MAX {
-            world.species_mass[start + channel as usize] = mass;
+    let mut species = [(0u16, 0.0f32); 16];
+    let mut count = 0;
+    world.for_each_cell_species(cell, |elem_id, mass| {
+        if count < 16 {
+            species[count] = (elem_id, mass);
+            count += 1;
         }
-    }
-    let mix_mass = world.mixture_mass[cell];
-    let mix_element = world.mixture_element[cell] as usize;
-    if mix_mass > 0.0
-        && mix_element < elements.elements.len()
-        && elements.elements[mix_element].record.state & 3 == 1
-    {
-        let channel = world
-            .gas_channel_of_element
-            .get(mix_element)
-            .copied()
-            .unwrap_or(u8::MAX);
-        if channel != u8::MAX {
-            world.species_mass[start + channel as usize] += mix_mass;
+    });
+    for &(elem_id, mass) in &species[..count] {
+        let element = elem_id as usize;
+        if mass > 0.0
+            && element < elements.elements.len()
+            && elements.elements[element].record.state & 3 == 1
+        {
+            let channel = world.gas_channel_of_element.get(element).copied().unwrap_or(u8::MAX);
+            if channel != u8::MAX {
+                world.species_mass[start + channel as usize] += mass;
+            }
         }
     }
 }
 
-/// Project dense species back onto legacy Grid + mixture overlay (top two masses).
+/// Project dense species back onto Grid, mixture overlay, and extra_mixtures (all representable species).
 pub(crate) fn project_cell_to_write(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
@@ -168,34 +161,52 @@ pub(crate) fn project_cell_to_write(
         return;
     }
 
-    let mut best = (0usize, 0.0f32);
-    let mut second = (0usize, 0.0f32);
+    let mut ch_masses = [(0usize, 0.0f32); GAS_CHANNELS];
+    let mut count = 0;
     for channel in 0..channels {
         let mass = world.species_mass[start + channel].max(0.0);
         world.species_mass[start + channel] = mass;
-        if mass > best.1 {
-            second = best;
-            best = (channel, mass);
-        } else if mass > second.1 {
-            second = (channel, mass);
+        if mass > 0.0 {
+            ch_masses[count] = (channel, mass);
+            count += 1;
         }
     }
+    ch_masses[..count].sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    if best.1 <= 0.0 {
+    if count == 0 {
         if world.write.mass[cell] > 0.0
             && elements.elements[world.write.element[cell] as usize].record.state & 3 == 1
         {
             world.write.mass[cell] = 0.0;
             world.write.element[cell] = world.vacuum_element;
-            world.mixture_mass[cell] = 0.0;
-            world.mixture_element[cell] = world.vacuum_element;
+            world.clear_cell_mixtures(cell);
             notify(world, events, cell);
         }
         return;
     }
 
-    project_gases(world, events, cell, world.gas_element_of_channel[best.0], best.1,
-        world.gas_element_of_channel[second.0], second.1);
+    let primary_ch = ch_masses[0].0;
+    let primary_mass = ch_masses[0].1;
+    let primary_element = world.gas_element_of_channel[primary_ch];
+
+    let (mix_element, mix_mass) = if count >= 2 {
+        let mix_ch = ch_masses[1].0;
+        (world.gas_element_of_channel[mix_ch], ch_masses[1].1)
+    } else {
+        (world.vacuum_element, 0.0)
+    };
+
+    if count >= 3 {
+        let extras = world.extra_mixtures.entry(cell).or_default();
+        extras.clear();
+        for &(ch, mass) in &ch_masses[2..count] {
+            extras.push((world.gas_element_of_channel[ch], mass));
+        }
+    } else {
+        world.extra_mixtures.remove(&cell);
+    }
+
+    project_gases(world, events, cell, primary_element, primary_mass, mix_element, mix_mass);
 }
 
 fn project_gases(world: &mut PhysicsWorld, events: &mut EventQueues, cell: usize,
@@ -604,7 +615,10 @@ pub(crate) fn step_region_with_mask(
                 }
             }
         }}
-        if !active.is_empty() && active.len() <= MAX_REGION_GASES {
+        if active.len() < 2 {
+            return Ok(false);
+        }
+        if active.len() <= MAX_REGION_GASES {
             local_elements = active;
             local_projection = true;
         }
@@ -617,12 +631,13 @@ pub(crate) fn step_region_with_mask(
 
     // Packed sparse cells use 16 bytes, equal to three dense channels plus
     // temperature, and avoid expanding the channel tensor on the CPU.
-    let sparse = gpu.is_some() && channels >= 3 && local_projection;
+    let use_gpu = gpu.is_some() && (cfg!(test) || count >= 256);
+    let sparse = use_gpu && channels >= 3 && local_projection;
     let mut sparse_cells = if sparse { vec![onisim_gpu::multicomponent::PackedSparseCell::default(); count] } else { Vec::new() };
     let mut masks = if sparse { vec![0u16; count] } else { Vec::new() };
     let mut any_mixture = false;
     let mut mass = if sparse { Vec::new() } else { vec![0.0f32; count * channels] };
-    let mut enthalpy = if gpu.is_some() { Vec::new() } else { vec![0.0f32; count * channels] };
+    let mut enthalpy = if use_gpu { Vec::new() } else { vec![0.0f32; count * channels] };
     let mut temperature = if sparse { Vec::new() } else { vec![1.0f32; count] };
     let mut solid = vec![0u32; count];
     // Sparse GPU input generates velocity on the device; no host arrays are read.
@@ -676,15 +691,21 @@ pub(crate) fn step_region_with_mask(
             }
             let base = local * channels;
             if sparse {
-                let first = if world.write.mass[cell]>0.0 {primary_channel} else {0};
-                let second = if world.mixture_mass[cell]>0.0 {mixture_channel} else {first};
+                let m1 = world.write.mass[cell];
+                let m2 = world.mixture_mass[cell];
+                let has_m1 = m1 > 1e-6 && m1.is_finite();
+                let has_m2 = m2 > 1e-6 && m2.is_finite();
+                let first = if has_m1 { primary_channel } else { 0 };
+                let second = if has_m2 { mixture_channel } else { first };
+                let first_m = if has_m1 { m1 } else { 0.0 };
+                let second_m = if has_m2 { m2 } else { 0.0 };
                 sparse_cells[local] = onisim_gpu::multicomponent::PackedSparseCell {
-                    first:first as u16, second:second as u16,
-                    first_mass:world.write.mass[cell].max(0.0), second_mass:world.mixture_mass[cell].max(0.0),
-                    temperature:cell_temperature,
+                    first: first as u16, second: second as u16,
+                    first_mass: first_m, second_mass: second_m,
+                    temperature: cell_temperature,
                 };
-                if world.write.mass[cell]>0.0 {masks[local] |= 1u16 << first; any_mixture=true;}
-                if world.mixture_mass[cell]>0.0 {masks[local] |= 1u16 << second; any_mixture=true;}
+                if first_m > 0.0 { masks[local] |= 1u16 << first; any_mixture = true; }
+                if second_m > 0.0 { masks[local] |= 1u16 << second; any_mixture = true; }
                 continue;
             }
             if world.write.mass[cell] > 0.0 && phase == 1 {
@@ -721,13 +742,13 @@ pub(crate) fn step_region_with_mask(
     let dt = FIXED_DT * 0.25;
     // Three masses plus temperature already occupy 16 bytes per cell, the
     // same as compact projection; select channels on the GPU instead.
-    let packed_gpu = gpu.is_some() && channels >= 3;
+    let packed_gpu = use_gpu && channels >= 3;
     let mut next_mass = if packed_gpu { Vec::new() } else { vec![0.0f32; mass.len()] };
     let mut projected = if packed_gpu { vec![onisim_gpu::multicomponent::ProjectedLiquidCell::default();count] } else { Vec::new() };
-    let mut next_enthalpy = if gpu.is_none() { vec![0.0f32; mass.len()] } else { Vec::new() };
-    let mut next_temperature = if gpu.is_some() && !packed_gpu { vec![0.0f32; count] } else { Vec::new() };
-    let used_gpu = gpu.is_some();
-    if let Some(gpu) = gpu {
+    let mut next_enthalpy = if !use_gpu { vec![0.0f32; mass.len()] } else { Vec::new() };
+    let mut next_temperature = if use_gpu && !packed_gpu { vec![0.0f32; count] } else { Vec::new() };
+    let used_gpu = use_gpu;
+    if let Some(gpu) = if use_gpu { gpu } else { None } {
         let gpu_species: Vec<_> = species.iter().map(|s| onisim_gpu::multicomponent::SpeciesInfo {
             element_id: s.element_id,
             phase: 1,
@@ -756,14 +777,6 @@ pub(crate) fn step_region_with_mask(
     } else {
         cpu_step(&mass, &enthalpy, &velocity_x, &velocity_y, &solid, &species,
             width, height, channels, dt, &mut next_mass, &mut next_enthalpy);
-    }
-
-    // Legacy cells can expose only two species. Never partially commit a
-    // conservative transfer that would silently discard a third species.
-    if !packed_gpu && !can_project_without_losing_species(&next_mass, channels) {
-        static WARN_ONCE: std::sync::Once = std::sync::Once::new();
-        WARN_ONCE.call_once(|| eprintln!("[CycleTrim OniSim] Gas region transport skipped: a cell needs more than two representable species"));
-        return Ok(false);
     }
 
     for y in 0..height {

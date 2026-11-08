@@ -266,8 +266,15 @@ pub(crate) fn cell(
     events: &mut EventQueues,
     cell: usize,
 ) -> Result<()> {
-    // PostProcessCell retains this metadata pointer across swaps and phase edits.
     let source_element = world.write.element[cell];
+    if source_element == world.vacuum_element {
+        return Ok(());
+    }
+    if world.write.mass[cell] <= 1e-6 {
+        world.flow[cell] = [0.0; 4];
+        crate::fluid_displacement::evaporate(world, events, cell);
+        return Ok(());
+    }
     let state = elements.elements[source_element as usize].record.state;
     match state & 3 {
         2 => liquid(world, elements, diseases, events, cell, source_element),

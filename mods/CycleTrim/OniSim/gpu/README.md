@@ -1,10 +1,49 @@
-# OniSim Vulkan compute experiments
+# OniSim Vulkan compute operators
 
-This is a **local operator test project**, not a GPU-enabled game build. It uses
-Rust 1.99.1, wgpu **30.0.1**, hand-written WGSL and the Vulkan backend. OpenCL,
-CUDA, OpenGL and software fallback adapters are not used. The shader and resource
-layout are vendor-independent; actual AMD hardware acceptance is still required.
+This crate started as a **local operator test project** and is now a dependency
+of the native core (`native/Cargo.toml` → `onisim-gpu`). It uses Rust 1.99.1,
+wgpu **30.0.1**, hand-written WGSL and the Vulkan backend. OpenCL, CUDA, OpenGL
+and software fallback adapters are not used. The shader and resource layout are
+vendor-independent; actual AMD hardware acceptance is still required.
 
+> The crate-level doc comment in `src/lib.rs` still says the operators are
+> "deliberately not enabled in the game"; that sentence predates the
+> production wiring described below.
+
+## Production wiring (2026-11-08)
+
+`native/src/frames_engine.rs` creates a `GpuSimulation` (`native/src/gpu_sim.rs`)
+at startup unless `CYCLETRIM_ONISIM_GPU=0`. Initialization failure is logged as
+`[CycleTrim OniSim] GPU initialization failed: …` and the CPU path is used;
+success logs `GPU acceleration active on Vulkan device: …`.
+`CYCLETRIM_GPU_PROFILE` (or the Steam launch argument `--cycletrim-gpu-profile`)
+enables sampled per-operator timing.
+
+| Operator | Module | Status |
+| --- | --- | --- |
+| Thermal diffusion (variable-coefficient FV), resident temperatures, compressed mixture-presence upload | `thermal_diffusion.rs`, `thermal_enthalpy.rs` | committed, in tick |
+| Gas multicomponent diffusion, density-gradient velocity, pressure projection, transport | `multicomponent.rs`, `pressure_projection.rs`, `material_eos.rs` | committed, in tick for eligible regions |
+| Sparse liquid multicomponent diffusion (overlapped with CPU gas pressure) | `multicomponent.rs` | committed, in tick for eligible regions |
+| Bubble / droplet movement | `bubble_settling.rs` | working tree only |
+| Phase-transition selection (event application stays ordered on CPU) | `phase_transition.rs` | working tree only |
+| Gas pressure faces + liquid hydraulic head / liquid flow | `gas_pressure_faces.rs`, `liquid_head.wgsl` | working tree only |
+| Disease diffusion and growth | `disease_diffusion.rs`, `disease_growth.rs` | working tree only |
+| Radiation regions | `radiation_region.rs` | working tree only |
+| Inactive-cell mass decay | `inactive_decay.rs` | working tree only |
+| Shared resident SoA buffers for operator chaining | `resident_cells.rs` | working tree only, not yet consumed |
+
+"Working tree only" means uncommitted at the time of writing: the native crate
+passes `cargo check --release`, but there is no matching `Player.log` run,
+differential fixture or FPS measurement for these passes. Every tick still
+uploads inputs, waits on the device and reads results back; event application,
+building interaction and publication remain on the CPU. The last recorded game
+log (2026-11-08 00:26) shows GPU acceleration active on an RTX 4060 Laptop and
+predates the later commits.
+
+The sections below are the original isolated-operator records and remain valid
+as historical measurements.
+
+## Flow presentation operator (historical)
 The first operator computes the flow presentation image from padded CellSOA
 arrays. Each invocation reads one cell and writes one independent output. This
 does not move the ordered fluid/thermal solver to the GPU. CPU buffers retained
@@ -69,9 +108,10 @@ the GPU roundtrip was about 12.5x slower than that helper. A follow-up run showe
 this flow image pass, not simulation frames or game FPS. Host/GPU contention
 must be recorded with each run; these numbers are not a hardware-wide ranking.
 
-Only the CPU helper is connected to `PresentationBuffers::update`. The Vulkan
-project has no dependency edge from the native core and is excluded from the
-game build. Its failed shader remains an explicit experimental candidate. The
+Only the CPU helper is connected to `PresentationBuffers::update`. At the time
+of this measurement the Vulkan project had no dependency edge from the native
+core; that changed with the production wiring above, but the flow presentation
+shader itself is still not used by the game. Its failed shader remains an explicit experimental candidate. The
 CPU helper still needs full conformance and real-game acceptance before release.
 
 Further GPU work needs a more compute-heavy stage or multiple dependent stages

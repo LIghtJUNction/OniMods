@@ -9,7 +9,6 @@
 use crate::events::EventQueues;
 use crate::mass_components::MassComponents;
 use crate::radiation::RadiationEmitters;
-use crate::simulation_step_fluid::{gas_phase, liquid_phase};
 use crate::status::{Error, Result, Status};
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::thermal_components::ThermalComponents;
@@ -195,7 +194,17 @@ impl<'a> PreparedStep<'a> {
             diseases,
         } = self;
         world.scan_direction = -world.scan_direction;
-        crate::gas::rise_bubbles(world, elements, events);
+        if let Some(gpu) = systems.gpu.as_deref_mut() {
+            let pending = gpu.begin_move_bubbles(world, elements).map_err(|error|
+                Error::new(Status::InternalFailure, format!("GPU bubble movement failed: {error}")))?;
+            gpu.begin_step(elements);
+            if let Some(pending) = pending {
+                gpu.finish_move_bubbles(world, events, pending).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU bubble readback failed: {error}")))?;
+            }
+        } else {
+            crate::gas::rise_bubbles(world, elements, events);
+        }
         world.sync_read_from_write();
         crate::multicomponent_flux::refresh_active_gas_channels(world, elements);
 
@@ -227,22 +236,33 @@ impl<'a> PreparedStep<'a> {
             };
             let mut temperature_events = EventQueues::default();
             if gpu_thermal_active {
-                temperature_transitions_only(world, elements, &mut temperature_events, region);
+                if let Some(gpu) = systems.gpu.as_deref_mut() {
+                    gpu.transition_region(world, elements, &mut temperature_events, region).map_err(|error|
+                        Error::new(Status::InternalFailure, format!("GPU phase transition failed: {error}")))?;
+                }
             } else {
                 temperature_phase(world, elements, &mut temperature_events, region);
             }
-            world.sync_read_from_write();
+            world.read.copy_region_from(&world.write, world.stride,
+                region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
+                region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             let temperature_ms = lap();
-            // Pressure traversal only mutates gas or vacuum cells. Liquid GPU
-            // inputs are limited to liquid-primary cells, so its upload and
-            // diffusion can run while the CPU performs the gas pressure pass.
+            let (gpu_pressure, skip_gas_displacement) = if let Some(gpu) = systems.gpu.as_deref_mut() {
+                let ran = gpu.pressure_region(world, elements, events, region, 1).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU gas pressure failed: {error}")))?;
+                (ran, ran && gpu.gas_displacement_unneeded)
+            } else { (false, false) };
+            if crate::simulation_step_fluid::gas_phase_with_pressure(world, elements, diseases, events, region, gpu_pressure, skip_gas_displacement) {
+                world.read.copy_fluid_region_from(&world.write, world.stride,
+                    region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
+                    region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
+            }
+            let gas_phase_ms = lap();
+            // Gas pressure can now introduce gas into a liquid cell. Snapshot
+            // the liquid diffusion input only after that update is visible.
             let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
                 crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
             } else { None };
-            if gas_phase(world, elements, diseases, events, region) {
-                world.sync_read_from_write();
-            }
-            let gas_phase_ms = lap();
             let gpu_diffusion = gpu_thermal_active && world.gas_channel_count > 0;
             let mut diffusion_solid = Vec::new();
             let gpu_transport_ran = crate::multicomponent_flux::step_region_with_mask(
@@ -271,16 +291,50 @@ impl<'a> PreparedStep<'a> {
             // read and write Cells are equal at phase entry. If no cell-mutating
             // helper was reached, copying those same bytes again is redundant.
             // Flow/event work still executes in its original order.
-            if liquid_phase(world, elements, diseases, events, region) {
-                world.sync_read_from_write();
+            let gpu_liquid_flow = false;
+            if crate::simulation_step_fluid::liquid_phase_with_flow(world, elements, diseases, events, region, gpu_liquid_flow) {
+                world.read.copy_fluid_region_from(&world.write, world.stride,
+                    region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
+                    region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             }
-            disease_diffusion(world, elements, diseases, events, region)?;
-            if world.radiation_enabled {
-                crate::radiation::update_region(world, elements, diseases, region)?;
+            if let Some(gpu) = systems.gpu.as_deref_mut() {
+                gpu.diffuse_diseases(world, elements, diseases, region).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU disease diffusion failed: {error}")))?;
+            } else {
+                disease_diffusion(world, elements, diseases, events, region)?;
             }
-            update_components(world, elements, diseases, events, systems, &region)?;
+            let pending_radiation = if world.radiation_enabled {
+                if let Some(gpu) = systems.gpu.as_deref_mut() {
+                    let maybe = gpu.begin_radiation_region(world, elements, diseases, region).map_err(|error|
+                        Error::new(Status::InternalFailure, format!("GPU radiation failed: {error}")))?;
+                    if maybe.is_none() {
+                        crate::radiation::update_region(world, elements, diseases, region)?;
+                    }
+                    maybe
+                } else {
+                    crate::radiation::update_region(world, elements, diseases, region)?;
+                    None
+                }
+            } else { None };
+            update_nonradiation_components(world, elements, diseases, events, systems, &region)?;
             let bounds = postprocess_bounds(world, region);
-            decay_inactive(world, elements, bounds);
+            let pending_decay = if let Some(gpu) = systems.gpu.as_deref_mut() {
+                gpu.begin_inactive_decay(world, elements, bounds).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU inactive decay failed: {error}")))?
+            } else { None };
+            if let Some(work) = pending_radiation {
+                let gpu = systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending radiation has no GPU"))?;
+                gpu.finish_radiation_region(world, work).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU radiation readback failed: {error}")))?;
+            }
+            systems.radiation.update(FIXED_DT, world, elements, region)?;
+            if let Some(work) = pending_decay {
+                let gpu = systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending inactive decay has no GPU"))?;
+                gpu.finish_inactive_decay(world, work).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU inactive decay readback failed: {error}")))?;
+            } else if systems.gpu.is_none() {
+                decay_inactive(world, elements, bounds);
+            }
             for y in bounds.2..bounds.3 {
                 for x in bounds.0..bounds.1 {
                     crate::postprocess::cell(
@@ -292,9 +346,14 @@ impl<'a> PreparedStep<'a> {
                     )?;
                 }
             }
-            crate::disease::post_process_bounds(
-                world, diseases, bounds.0, bounds.1, bounds.2, bounds.3,
-            )?;
+            if let Some(gpu) = systems.gpu.as_deref_mut() {
+                gpu.grow_diseases(world, diseases, bounds).map_err(|error|
+                    Error::new(Status::InternalFailure, format!("GPU disease growth failed: {error}")))?;
+            } else {
+                crate::disease::post_process_bounds(
+                    world, diseases, bounds.0, bounds.1, bounds.2, bounds.3,
+                )?;
+            }
             let remaining_ms = lap();
             if profiling {
                 eprintln!("[CycleTrim OniSim] region profile index={index} temperature+sync={temperature_ms:.3}ms gas+sync={gas_phase_ms:.3}ms transport={transport_ms:.3}ms diffusion+sync={diffusion_ms:.3}ms remaining={remaining_ms:.3}ms");
@@ -342,7 +401,7 @@ fn consolidate_events(events: &mut EventQueues, task: &mut EventQueues) {
     );
 }
 
-fn update_components(
+fn update_nonradiation_components(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     diseases: &DiseaseTable,
@@ -372,9 +431,6 @@ fn update_components(
     systems
         .mass
         .update_disease_consumers(world, diseases, FIXED_DT, region, events)?;
-    systems
-        .radiation
-        .update(FIXED_DT, world, elements, *region)?;
     Ok(())
 }
 
@@ -434,33 +490,7 @@ fn temperature_phase(
     }
 }
 
-fn temperature_transitions_only(
-    world: &mut PhysicsWorld,
-    elements: &ElementTable,
-    events: &mut EventQueues,
-    region: Region,
-) {
-    for y in region.min_y..region.max_y {
-        for x in region.min_x..region.max_x {
-            let cell = y as usize * world.stride + x as usize;
-            if world.read.mass[cell] > 0.0 && world.backwall_mass[cell] > 0.0 {
-                crate::thermal::update_backwall_temperature(world, elements, events, cell);
-            }
-        }
-    }
-    for y in region.min_y..region.max_y {
-        for x in region.min_x..region.max_x {
-            crate::transition::do_state_transition(
-                world,
-                elements,
-                events,
-                y as usize * world.stride + x as usize,
-            );
-        }
-    }
-}
-
-fn disease_diffusion(
+pub(crate) fn disease_diffusion(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     diseases: &DiseaseTable,
