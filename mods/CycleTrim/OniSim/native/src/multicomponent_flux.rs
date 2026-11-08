@@ -507,6 +507,23 @@ fn isolate_stencil_masks(masks:&[u16], solid:&mut [u32], width:usize, height:usi
         for x in 0..width {
             let cell = y * width + x;
             if solid[cell] != 0 { continue; }
+            // The vast majority of cells in a region are away from its edge.
+            // Unroll the two supported stencils there; the checked path below
+            // still handles narrow regions and any other radius.
+            if (radius == 1 || radius == 2)
+                && x >= radius as usize && y >= radius as usize
+                && x + (radius as usize) < width && y + (radius as usize) < height {
+                let mut mask = masks[cell] | masks[cell - 1] | masks[cell + 1]
+                    | masks[cell - width] | masks[cell + width];
+                if radius == 2 {
+                    mask |= masks[cell - 2] | masks[cell + 2]
+                        | masks[cell - 2 * width] | masks[cell + 2 * width]
+                        | masks[cell - width - 1] | masks[cell - width + 1]
+                        | masks[cell + width - 1] | masks[cell + width + 1];
+                }
+                if mask.count_ones() > 2 { solid[cell] = 1; }
+                continue;
+            }
             let mut mask = 0u16;
             for dy in -radius..=radius {
                 for dx in -radius..=radius {
@@ -816,8 +833,8 @@ mod tests {
 
     #[test]
     fn stencil_mask_matches_full_neighbour_union() {
-        let (width,height)=(13usize,9usize);
         let mut seed=1234567u32;
+        for (width,height) in [(13usize,9usize),(1,1),(1,9),(9,1),(2,2),(4,5),(5,4)] {
         for radius in [1isize,2] {
             for _ in 0..20 {
                 let mut masks=vec![0u16;width*height];
@@ -840,6 +857,7 @@ mod tests {
                 isolate_stencil_masks(&masks,&mut solid,width,height,radius);
                 assert_eq!(solid,expected);
             }
+        }
         }
     }
 
