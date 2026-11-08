@@ -10,13 +10,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
 internal static class LegacySseDisconnectActivityRegression
 {
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     internal static void Run()
     {
@@ -26,8 +27,9 @@ internal static class LegacySseDisconnectActivityRegression
 
     private static void RunLongLivedSseDisconnectRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         DateTime now = new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc);
         var server = StartServerWithPolicy(TimeSpan.FromMinutes(5), 4, () => now);
         try

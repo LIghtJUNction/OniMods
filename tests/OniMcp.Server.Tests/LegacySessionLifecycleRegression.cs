@@ -11,13 +11,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
 internal static class LegacySessionLifecycleRegression
 {
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     internal static void Run()
     {
@@ -28,8 +29,9 @@ internal static class LegacySessionLifecycleRegression
 
     private static void RunLifecycleRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         int mainThreadId = Thread.CurrentThread.ManagedThreadId;
         DateTime now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var clockThreads = new ConcurrentBag<int>();
@@ -133,8 +135,9 @@ internal static class LegacySessionLifecycleRegression
 
     private static void RunBoundedCleanupStressRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         DateTime now = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc);
         var server = StartServerWithPolicy(TimeSpan.FromMinutes(5), 64, () => now);
         try

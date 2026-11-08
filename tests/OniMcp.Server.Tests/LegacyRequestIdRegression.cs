@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -15,7 +16,7 @@ using OniMcp.Tools;
 
 internal static class LegacyRequestIdRegression
 {
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     internal static void Run()
     {
@@ -25,8 +26,9 @@ internal static class LegacyRequestIdRegression
 
     private static void RunLegacyRequestIdRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
 
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });

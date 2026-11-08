@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -19,12 +20,13 @@ internal static class HttpAdmissionRegression
 {
     private const int ExpectedCapacity = 20;
     private const int BusyErrorCode = -32000;
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     public static void Run()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
         var server = new McpHttpServer();
@@ -391,7 +393,7 @@ internal static class HttpAdmissionRegression
 
     private static int QueuedActions()
     {
-        var type = typeof(MainThreadBridge);
+        var type = typeof(JlibDispatcher);
         var queueLock = type.GetField("_queueLock", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_bridge);
         lock (queueLock)
         {
