@@ -1,0 +1,57 @@
+Build started 11/08/2026 08:38:51.
+     1>Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" on node 1 (Restore target(s)).
+     1>_GetAllRestoreProjectPathItems:
+         Determining projects to restore...
+     1>Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (1) is building "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:8) on node 1 (_GenerateProjectRestoreGraph target(s)).
+   2:8>Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:8) is building "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:11) on node 1 (_GenerateProjectRestoreGraphPerFramework target(s)).
+     2>AddPrunePackageReferences:
+         Loaded prune package data from framework packages
+     2>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (_GenerateProjectRestoreGraphPerFramework target(s)).
+   2:8>Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:8) is building "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:12) on node 1 (_GenerateProjectRestoreGraphPerFramework target(s)).
+     2>AddPrunePackageReferences:
+         Loaded prune package data from framework packages
+     2>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (_GenerateProjectRestoreGraphPerFramework target(s)).
+     2>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (_GenerateProjectRestoreGraph target(s)).
+     1>Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (1) is building "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (1:6) on node 1 (_GenerateProjectRestoreGraph target(s)).
+     1>AddPrunePackageReferences:
+         Loading prune package data from PrunePackageData folder
+         Failed to load prune package data from PrunePackageData folder, loading from targeting packs instead
+         Looking for targeting packs in /workspace/scratch/6c1cf53f37e8/toolchain/dotnet/packs/Microsoft.NETCore.App.Ref
+         Pack directories found: /workspace/scratch/6c1cf53f37e8/toolchain/dotnet/packs/Microsoft.NETCore.App.Ref/10.0.12
+         Found package overrides file /workspace/scratch/6c1cf53f37e8/toolchain/dotnet/packs/Microsoft.NETCore.App.Ref/10.0.12/data/PackageOverrides.txt
+     1>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (_GenerateProjectRestoreGraph target(s)).
+     1>Restore:
+         X.509 certificate chain validation will use the fallback certificate bundle at '/workspace/scratch/6c1cf53f37e8/toolchain/dotnet/sdk/10.0.401/trustedroots/codesignctl.pem'.
+         X.509 certificate chain validation will use the fallback certificate bundle at '/workspace/scratch/6c1cf53f37e8/toolchain/dotnet/sdk/10.0.401/trustedroots/timestampctl.pem'.
+         Assets file has not changed. Skipping assets file writing. Path: /workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/obj/project.assets.json
+         Assets file has not changed. Skipping assets file writing. Path: /workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/obj/project.assets.json
+         Restored /workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj (in 61 ms).
+         Restored /workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj (in 61 ms).
+
+         NuGet Config files used:
+             /workspace/scratch/6c1cf53f37e8/toolchain/dotnet-cli/.nuget/NuGet/NuGet.Config
+
+         Feeds used:
+             https://api.nuget.org/v3/index.json
+         All projects are up-to-date for restore.
+     1>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (Restore target(s)).
+   1:7>Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" on node 1 (default targets).
+   1:7>Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (1:7) is building "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (2:16) on node 1 (default targets).
+     2>PrepareForBuild:
+         Creating directory "bin/Release/netstandard2.1/".
+         Creating directory "obj/Release/netstandard2.1/".
+     2>/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj(99,5): error : Set OniManagedPath or ONI_MANAGED_PATH to your installed OxygenNotIncluded_Data/Managed directory. Game assemblies are compile-only references and are never redistributed. [TargetFramework=netstandard2.1]
+     2>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (default targets) -- FAILED.
+     1>Done Building Project "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (default targets) -- FAILED.
+
+Build FAILED.
+
+       "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj" (default target) (1:7) ->
+       "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj" (default target) (2:16) ->
+       (ValidateGameReferences target) ->
+         /workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj(99,5): error : Set OniManagedPath or ONI_MANAGED_PATH to your installed OxygenNotIncluded_Data/Managed directory. Game assemblies are compile-only references and are never redistributed. [TargetFramework=netstandard2.1]
+
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.46

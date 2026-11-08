@@ -1,0 +1,516 @@
+{
+  "schema": "onimods.ci-receipt.v1",
+  "capturedAtUtc": "2026-11-08 16:41:41 UTC",
+  "commit": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+  "tree": "b7e27b479992395573f713d3361706678476583b",
+  "allRunsTerminal": true,
+  "allRunAndJobHeadsMatch": true,
+  "outcome": "Mod quality succeeded; native and diamond full gates failed on retained GPU initialization expectations; reference compatibility was cancelled before API baseline and netstandard2.1 checks.",
+  "runs": [
+    {
+      "id": 42500498135,
+      "name": "OniSim native platforms",
+      "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135",
+      "createdAt": "2026-11-08T16:33:29Z",
+      "completedUpdatedAt": "2026-11-08T16:37:59Z",
+      "jobs": [
+        {
+          "id": 128791981902,
+          "name": "native (macos-15-intel, macos-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135/job/128791981902",
+          "status": "completed",
+          "conclusion": "failure",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:34Z",
+          "completedAt": "2026-11-08T16:37:58Z",
+          "criticalSteps": [
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "conclusion": "success"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "skipped"
+            }
+          ],
+          "testResults": [
+            {
+              "outcome": "ok",
+              "passed": 1,
+              "failed": 0,
+              "ignored": 0,
+              "measured": 0,
+              "filtered": 51,
+              "seconds": 0
+            },
+            {
+              "outcome": "FAILED",
+              "passed": 99,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filtered": 0,
+              "seconds": 1.12
+            }
+          ],
+          "hydraulicTestsPassed": 16,
+          "keyErrors": [
+            "left: -1",
+            "right: 0",
+            "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+          ],
+          "failureComparisonWithE7": {
+            "jobId": 128791981902,
+            "previousJobId": 128787594195,
+            "newFailures": [],
+            "resolvedFailures": [
+              "messages_tests::empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change",
+              "messages_tests::frame_batches_publish_every_submitted_frame",
+              "messages_tests::zone_changes_are_queued_and_saved_options_work_after_worker_ownership"
+            ],
+            "unchangedFailures": 11
+          }
+        },
+        {
+          "id": 128791982147,
+          "name": "native (windows-2022, windows-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135/job/128791982147",
+          "status": "completed",
+          "conclusion": "failure",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:34Z",
+          "completedAt": "2026-11-08T16:36:26Z",
+          "criticalSteps": [
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "skipped"
+            }
+          ],
+          "testResults": [
+            {
+              "outcome": "FAILED",
+              "passed": 99,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filtered": 0,
+              "seconds": 1.14
+            }
+          ],
+          "hydraulicTestsPassed": 16,
+          "keyErrors": [
+            "left: -1",
+            "right: 0",
+            "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+          ],
+          "failureComparisonWithE7": {
+            "jobId": 128791982147,
+            "previousJobId": 128787594216,
+            "newFailures": [],
+            "resolvedFailures": [],
+            "unchangedFailures": 11
+          }
+        },
+        {
+          "id": 128791982228,
+          "name": "native (ubuntu-22.04, linux-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135/job/128791982228",
+          "status": "completed",
+          "conclusion": "failure",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:33Z",
+          "completedAt": "2026-11-08T16:34:46Z",
+          "criticalSteps": [
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "skipped"
+            }
+          ],
+          "testResults": [
+            {
+              "outcome": "FAILED",
+              "passed": 103,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filtered": 0,
+              "seconds": 0.97
+            }
+          ],
+          "hydraulicTestsPassed": 16,
+          "keyErrors": [
+            "left: -1",
+            "right: 0",
+            "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+          ],
+          "failureComparisonWithE7": {
+            "jobId": 128791982228,
+            "previousJobId": 128787594095,
+            "newFailures": [],
+            "resolvedFailures": [],
+            "unchangedFailures": 11
+          }
+        },
+        {
+          "id": 128793135338,
+          "name": "bundle",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135/job/128793135338",
+          "status": "completed",
+          "conclusion": "skipped",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:37:59Z",
+          "completedAt": "2026-11-08T16:37:58Z",
+          "criticalSteps": []
+        }
+      ]
+    },
+    {
+      "id": 42500498098,
+      "name": "ONI reference compatibility",
+      "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498098",
+      "createdAt": "2026-11-08T16:33:29Z",
+      "completedUpdatedAt": "2026-11-08T16:40:07Z",
+      "jobs": [
+        {
+          "id": 128791981984,
+          "name": "compile-and-surface",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498098/job/128791981984",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:33Z",
+          "completedAt": "2026-11-08T16:40:07Z",
+          "criticalSteps": [
+            {
+              "name": "Build CycleTrim against pinned references",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify compiled CycleTrim release safety guards",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build OniMcp against pinned references",
+              "conclusion": "success"
+            },
+            {
+              "name": "Run source and host regressions",
+              "conclusion": "cancelled"
+            },
+            {
+              "name": "Verify Harmony target API baseline",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Compile CycleTrim against .NET Standard 2.1",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Compile OniMcp against .NET Standard 2.1",
+              "conclusion": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 42500498085,
+      "name": "Mod quality",
+      "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498085",
+      "createdAt": "2026-11-08T16:33:29Z",
+      "completedUpdatedAt": "2026-11-08T16:39:07Z",
+      "jobs": [
+        {
+          "id": 128791982434,
+          "name": "regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498085/job/128791982434",
+          "status": "completed",
+          "conclusion": "success",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:33Z",
+          "completedAt": "2026-11-08T16:39:06Z",
+          "criticalSteps": [
+            {
+              "name": "Check Mod source contracts and host behavior",
+              "conclusion": "success"
+            },
+            {
+              "name": "Report CycleTrim synthetic performance evidence",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 42500498055,
+      "name": "OniSim diamond proof and regression",
+      "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055",
+      "createdAt": "2026-11-08T16:33:29Z",
+      "completedUpdatedAt": "2026-11-08T16:34:39Z",
+      "jobs": [
+        {
+          "id": 128791981524,
+          "name": "component-regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055/job/128791981524",
+          "status": "completed",
+          "conclusion": "failure",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:32Z",
+          "completedAt": "2026-11-08T16:34:38Z",
+          "criticalSteps": [
+            {
+              "name": "Test the complete native Rust kernel without game files",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Run differential correctness cases",
+              "conclusion": "skipped"
+            }
+          ],
+          "testResults": [
+            {
+              "outcome": "FAILED",
+              "passed": 103,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filtered": 0,
+              "seconds": 0.71
+            }
+          ],
+          "hydraulicTestsPassed": 16,
+          "keyErrors": [
+            "left: -1",
+            "right: 0",
+            "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+          ],
+          "failureComparisonWithE7": {
+            "jobId": 128791981524,
+            "previousJobId": 128787594071,
+            "newFailures": [],
+            "resolvedFailures": [],
+            "unchangedFailures": 11
+          }
+        },
+        {
+          "id": 128791981627,
+          "name": "gpu-operator",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055/job/128791981627",
+          "status": "completed",
+          "conclusion": "failure",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:32Z",
+          "completedAt": "2026-11-08T16:34:19Z",
+          "criticalSteps": [
+            {
+              "name": "Validate WGSL and run CPU transport invariants",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Compile Vulkan benchmark executables",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Smoke-test the EOS calibration CLI with synthetic records",
+              "conclusion": "skipped"
+            }
+          ],
+          "testResults": [
+            {
+              "outcome": "FAILED",
+              "passed": 20,
+              "failed": 25,
+              "ignored": 6,
+              "measured": 0,
+              "filtered": 0,
+              "seconds": 0.06
+            }
+          ],
+          "hydraulicTestsPassed": 0,
+          "keyErrors": [
+            "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+            "GPU creation failed: \"no hardware Vulkan adapter available\""
+          ],
+          "failureComparisonWithE7": {
+            "jobId": 128791981627,
+            "previousJobId": 128787594092,
+            "newFailures": [],
+            "resolvedFailures": [],
+            "unchangedFailures": 25
+          }
+        },
+        {
+          "id": 128791981635,
+          "name": "memory-probe-protocol",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055/job/128791981635",
+          "status": "completed",
+          "conclusion": "success",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:32Z",
+          "completedAt": "2026-11-08T16:34:03Z",
+          "criticalSteps": []
+        },
+        {
+          "id": 128791981682,
+          "name": "pressure-projection-reference",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055/job/128791981682",
+          "status": "completed",
+          "conclusion": "success",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:32Z",
+          "completedAt": "2026-11-08T16:33:39Z",
+          "criticalSteps": []
+        },
+        {
+          "id": 128791981702,
+          "name": "lean-proof",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055/job/128791981702",
+          "status": "completed",
+          "conclusion": "success",
+          "headSha": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+          "startedAt": "2026-11-08T16:33:33Z",
+          "completedAt": "2026-11-08T16:33:47Z",
+          "criticalSteps": []
+        }
+      ]
+    }
+  ],
+  "macosFix": {
+    "jobUrl": "https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135/job/128791981902",
+    "constructorTest": [
+      "test gpu_context::tests::unavailable_vulkan_backend_returns_errors_from_both_constructors ... ok"
+    ],
+    "constructorResult": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 51
+    },
+    "restoredMessageTests": [
+      "test messages_tests::empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change ... ok",
+      "test messages_tests::frame_batches_publish_every_submitted_frame ... ok",
+      "test messages_tests::zone_changes_are_queued_and_saved_options_work_after_worker_ownership ... ok"
+    ],
+    "nativeResult": {
+      "passed": 99,
+      "failed": 11,
+      "ignored": 4
+    },
+    "hydraulicTestsPassed": 16,
+    "remainingFailureCount": 11,
+    "newFailedTestsComparedWithE7": [],
+    "observedInitializationError": "Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))",
+    "note": "Both constructors were exercised on the actual Apple target. This proves error propagation for an unavailable backend, not GPU execution."
+  },
+  "referenceCancellation": {
+    "runId": 42500498098,
+    "jobId": 128791981984,
+    "lastCompletedNonCleanupStep": {
+      "number": 16,
+      "name": "Pack shared Jlib package for host regressions",
+      "conclusion": "success"
+    },
+    "interruptedStep": {
+      "number": 17,
+      "name": "Run source and host regressions",
+      "conclusion": "cancelled"
+    },
+    "logExcerpt": "2026-11-08T16:40:04.9330484Z ##[error]The operation was canceled.",
+    "unverifiedGates": [
+      {
+        "name": "Verify Harmony target API baseline",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Compile CycleTrim against .NET Standard 2.1",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Compile OniMcp against .NET Standard 2.1",
+        "conclusion": "skipped"
+      }
+    ],
+    "successor": {
+      "commit": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+      "runId": 42501031143,
+      "createdAt": "2026-11-08T16:39:51Z",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42501031143"
+    },
+    "workflowConcurrency": {
+      "file": ".github/workflows/oni-reference-compat.yml",
+      "group": "oni-reference-compat-${{ github.workflow }}-${{ github.ref }}",
+      "cancelInProgress": true
+    },
+    "causeAssessment": "Inference: the same-main successor run and cancel-in-progress configuration are consistent with concurrency cancellation. The fetched run/job APIs and log do not identify the cancelling actor or an explicit reason."
+  },
+  "baselineComparison": {
+    "commit": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+    "receipt": "ci-e7d3597e-receipt.json",
+    "allComparedJobsHaveNoNewFailedTestNames": true,
+    "onlyResolvedFailures": "The three macOS messages_tests listed above; the 11 existing native GPU-dependent expectations and 25 gpu-operator expectations remain failed."
+  },
+  "limits": [
+    "No CI rerun, source edit, local build or test was performed during this monitoring task.",
+    "All three native jobs retained the complete native test gate; their library receipt, platform loader and artifact stages were skipped after failures. The bundle job was skipped.",
+    "Reference API baseline and both netstandard2.1 compiles remain unverified for this exact run because they were skipped following cancellation.",
+    "No hardware GPU success, real game/save validation, simulation/render performance or 500 FPS acceptance is established.",
+    "Only compact counts, step outcomes, URLs and key errors are saved here; full logs remain attached to the GitHub jobs."
+  ]
+}

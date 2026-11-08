@@ -1,0 +1,54 @@
+{
+  "command": [
+    "dotnet",
+    "run",
+    "--project",
+    "tests/OniSim.Loader.Tests",
+    "-c",
+    "Release",
+    "-p:ImportDirectoryBuildProps=false",
+    "-p:BuildInParallel=false",
+    "-p:RestoreBuildInParallel=false",
+    "-p:OniManagedPath=/workspace/scratch/6c1cf53f37e8/oni-managed",
+    "--",
+    "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/obj/Release/OniSimBundle"
+  ],
+  "head": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+  "exitCode": 0,
+  "elapsedSeconds": 6.544205965999936,
+  "binarySha256": "729fa105ec1928d018d665d3cb192f0b5fcdd7bf92af824dbe345ce82993dc22",
+  "binaryStable": true,
+  "scope": "Host loader against the onim-built Linux library, not game mapping or gameplay",
+  "gameRuntimeTested": false,
+  "referenceScope": "Explicit compile-only path because ImportDirectoryBuildProps=false omits local configuration",
+  "logSha256": "0a01840567b8351bef8d3b731364f7a2f53d06a804755b71ad3cfdabc475aafb",
+  "firstAttempt": {
+    "exitCode": 1,
+    "reason": "ImportDirectoryBuildProps=false removed the local OniManagedPath; Jlib compilation required the explicit compile-only reference path.",
+    "diagnosticCommand": [
+      "dotnet",
+      "build",
+      "tests/OniSim.Loader.Tests",
+      "-c",
+      "Release",
+      "-p:ImportDirectoryBuildProps=false",
+      "-p:BuildInParallel=false",
+      "-p:RestoreBuildInParallel=false",
+      "-v",
+      "normal"
+    ],
+    "diagnosticLog": "followup-linux-loader-build.log"
+  },
+  "repositoryLogs": {
+    "followup-linux-loader-build.log": {
+      "rawSha256": "c02fffb4832c8507dbecb5b34f2bf607544a92dbdd1b1d9acf8490652ecffcd5",
+      "sha256": "243881faec734e687a3bab2b55c7d64b638eb58d345da9c7c3fdf0f42f257afc",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "followup-linux-loader-configured.log": {
+      "rawSha256": "0a01840567b8351bef8d3b731364f7a2f53d06a804755b71ad3cfdabc475aafb",
+      "sha256": "0a01840567b8351bef8d3b731364f7a2f53d06a804755b71ad3cfdabc475aafb",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    }
+  }
+}

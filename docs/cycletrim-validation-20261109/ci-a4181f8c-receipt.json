@@ -1,0 +1,198 @@
+{
+  "schema": "onimods.ci-receipt.v1",
+  "capturedAtUtc": "2026-11-08 16:47:34 UTC",
+  "commit": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+  "allRunsTerminal": true,
+  "allRunAndJobHeadsMatch": true,
+  "outcome": "Both ONI reference compatibility and Mod quality succeeded for a4181f8c; all required API baseline and netstandard2.1 steps executed successfully.",
+  "runs": [
+    {
+      "id": 42501031143,
+      "name": "ONI reference compatibility",
+      "headSha": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42501031143",
+      "createdAt": "2026-11-08T16:39:51Z",
+      "completedUpdatedAt": "2026-11-08T16:46:34Z",
+      "jobs": [
+        {
+          "id": 128793678810,
+          "name": "compile-and-surface",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42501031143/job/128793678810",
+          "headSha": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-08T16:40:10Z",
+          "completedAt": "2026-11-08T16:46:33Z",
+          "checkedSteps": [
+            {
+              "name": "Verify reference provenance and lag status",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:30Z"
+            },
+            {
+              "name": "Fetch and verify pinned reference assemblies",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:32Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 NavGrid method-body contract",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:32Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 fetch method-body contract",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:33Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 research queue method-body contract",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:33Z"
+            },
+            {
+              "name": "Verify CycleTrim reflected Harmony API against pinned references",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:46Z"
+            },
+            {
+              "name": "Build CycleTrim against pinned references",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:41:44Z"
+            },
+            {
+              "name": "Verify compiled CycleTrim release safety guards",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:41:46Z"
+            },
+            {
+              "name": "Build OniMcp against pinned references",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:42:20Z"
+            },
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:42:23Z"
+            },
+            {
+              "name": "Run source and host regressions",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:46:13Z"
+            },
+            {
+              "name": "Verify Harmony target API baseline",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:46:25Z"
+            },
+            {
+              "name": "Compile CycleTrim against .NET Standard 2.1",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:46:28Z"
+            },
+            {
+              "name": "Compile OniMcp against .NET Standard 2.1",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:46:32Z"
+            }
+          ],
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 42501031266,
+      "name": "Mod quality",
+      "headSha": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42501031266",
+      "createdAt": "2026-11-08T16:39:51Z",
+      "completedUpdatedAt": "2026-11-08T16:45:03Z",
+      "jobs": [
+        {
+          "id": 128793612967,
+          "name": "regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42501031266/job/128793612967",
+          "headSha": "a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-08T16:39:55Z",
+          "completedAt": "2026-11-08T16:45:02Z",
+          "checkedSteps": [
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:22Z"
+            },
+            {
+              "name": "Test onim CLI regressions",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:40:41Z"
+            },
+            {
+              "name": "Check Mod source contracts and host behavior",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:44:55Z"
+            },
+            {
+              "name": "Report CycleTrim synthetic performance evidence",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:44:57Z"
+            },
+            {
+              "name": "Verify pinned FastTrack Fetch compatibility contract",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:44:58Z"
+            },
+            {
+              "name": "Verify pinned FastTrack stationary-critter compatibility contract",
+              "conclusion": "success",
+              "completedAt": "2026-11-08T16:44:59Z"
+            }
+          ],
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "dependencyEvidence": {
+    "jlibCommit": "b57443c957b3c9094b0612277978a324e94a4865",
+    "referenceCheckoutLine": "Submodule path 'mods/Jlib': checked out 'b57443c957b3c9094b0612277978a324e94a4865'",
+    "qualityCheckoutLine": "Submodule path 'mods/Jlib': checked out 'b57443c957b3c9094b0612277978a324e94a4865'"
+  },
+  "targetedEvidence": {
+    "harmonyBaselineLine": "PASS Harmony target API baseline (19 target types)",
+    "zoomAnimation": "PASS zoom animation original-call regressions (13 scenarios)",
+    "nativeBundleFixturePassCount": 9,
+    "nativeBundleFixturePassLines": [
+      "test_added_or_removed_shader_refuses_old_bundle (test_native_bundle.NativeBundleTests.test_added_or_removed_shader_refuses_old_bundle) ... ok",
+      "test_all_three_matching_platforms (test_native_bundle.NativeBundleTests.test_all_three_matching_platforms) ... ok",
+      "test_changed_binary_refused (test_native_bundle.NativeBundleTests.test_changed_binary_refused) ... ok",
+      "test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) ... ok",
+      "test_checkout_line_endings_preserve_source_identity (test_native_bundle.NativeBundleTests.test_checkout_line_endings_preserve_source_identity) ... ok",
+      "test_missing_platform_refused (test_native_bundle.NativeBundleTests.test_missing_platform_refused) ... ok",
+      "test_stale_source_refused (test_native_bundle.NativeBundleTests.test_stale_source_refused) ... ok",
+      "test_unexpected_file_refused (test_native_bundle.NativeBundleTests.test_unexpected_file_refused) ... ok",
+      "test_wrong_architecture_refused_even_with_matching_checksum (test_native_bundle.NativeBundleTests.test_wrong_architecture_refused_even_with_matching_checksum) ... ok"
+    ]
+  },
+  "previousCommit": {
+    "commit": "6014c0f92ed684d0b4236e1b7e6858eaf7014b6e",
+    "referenceRun": 42500498098,
+    "referenceConclusion": "cancelled",
+    "referenceUnexecutedGates": [
+      "Harmony target API baseline",
+      "Compile CycleTrim against .NET Standard 2.1",
+      "Compile OniMcp against .NET Standard 2.1"
+    ],
+    "receipt": "ci-6014c0f9-receipt.json",
+    "note": "The successful runs in this receipt apply only to a4181f8c; they do not change the previous exact-SHA cancellation result."
+  },
+  "limits": [
+    "Read-only CI monitoring: no source/workflow edits, CI reruns, local builds or test executions.",
+    "Compilation against pinned references and host fixtures do not establish actual game/save behavior, hardware GPU correctness, whole-frame performance or 500 FPS.",
+    "The retained native and diamond GPU-dependent failures on 6014c0f9 remain recorded in its separate receipt."
+  ]
+}

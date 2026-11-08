@@ -8,7 +8,7 @@
 
 用户最新回传再次确认：32 格宽深岩浆池在 1000 次更新后，两侧柱质量约为 4844.86 kg 与 6003.26 kg，差约 1158.40 kg，仍按失败处理。此前实机副本池面超过两格的高度差也仍按失败处理。云端尚未取得该原始 fixture、未提交液体差异或原始游戏日志。
 
-本轮新增的 16 项合成液压回归已经通过，并完成包含 Linux 原生库的 onim 候选构建；这些证据和用户原场景分开记账。本地完整原生门仍有 11 项硬件 GPU 测试失败；e7d3597e 的三个平台 CI 均通过这 16 项液压回归，但完整门仍失败，详见后文。新增原生候选没有部署、启动 Steam 或取得游戏进程加载记录。
+本轮新增的 16 项合成液压回归已经通过，并完成包含 Linux 原生库的 onim 候选构建；这些证据和用户原场景分开记账。本地完整原生门仍有 11 项硬件 GPU 测试失败；6014c0f9 的三个平台 CI 均通过这 16 项液压回归，但完整门仍失败，详见后文。之后已保留并集成另一项 main 上的 Jlib 更新，重新通过 onim 构建与宿主加载器核验。新增原生候选没有部署、启动 Steam 或取得游戏进程加载记录。
 
 前一轮完成了仿真时间截断和整帧计时口径的源码修复，全部 10 个优化宿主回归族通过，并通过 onim 的托管参考构建。用户现已回报该代码在原主机构建、部署以及加载 DLL/原生库哈希核对成功；该回传补充了实机证据，但没有满足液体收敛与 500 FPS 门槛。
 
@@ -249,6 +249,26 @@ macOS 初始化另作最小修正：两个 Vulkan 构造入口在创建 Instance
 | Linux ZIP | `a1e5dfca9532d845c37062c2f1dd2b1d2c18fae812864670431e2702b7896538` |
 
 [后续构建收据](cycletrim-validation-20261109/followup-linux-receipt.json)中的 e7d3597e 仍是构建时基准 HEAD，未提交候选由源码 digest 和逐文件哈希绑定。此包未部署到原主机，没有 Steam 运行或新 FPS 证据；后续提交的 CI 结论另按精确 SHA 记录。
+
+### 6014c0f9 的实际 CI 结果
+
+修复提交 `6014c0f92ed684d0b4236e1b7e6858eaf7014b6e` 的 [native CI](https://github.com/LIghtJUNction/OniMods/actions/runs/42500498135) 已完成。macOS 的双构造器测试 **1 通过、0 失败、0 忽略**；之前受 panic 影响的三个 CPU 消息测试均恢复通过。完整 native 结果变为 Linux **103／11／4**、Windows **99／11／4**、macOS **99／11／4**（通过／失败／既有忽略），三者均通过全部 16 个液压用例。
+
+剩余 GPU 测试没有放宽断言。Linux／Windows 仍找不到硬件 Vulkan，macOS 返回明确的未编译 Vulkan 错误；macOS 不再出现此前的 wgpu 后端 panic。各平台完整 native 门仍失败，后续 CI 库构建、加载器与 bundle 步骤仍未执行。[Diamond CI](https://github.com/LIghtJUNction/OniMods/actions/runs/42500498055)同样保留硬件 GPU 失败。[Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42500498085) 成功。
+
+本提交的 reference CI 结果为 **cancelled**：source／host 回归被中断，后续 Harmony baseline 和两个 netstandard2.1 编译步骤被跳过，不能当作通过。当时 main 收到后继提交 a4181f8c，新 reference run 已启动；结合工作流的 cancel-in-progress 设置，时间顺序符合并发取消，但日志未给出取消操作者或明确原因。[精确 CI 收据](cycletrim-validation-20261109/ci-6014c0f9-receipt.json)保留这些边界。
+
+此外，已用本地 onim 产物运行宿主加载器：平台选择、未知 profile 拒绝、导出符号、初始化、关闭和已加载模块查询均通过。第一次命令因绕过本地 props 而缺少 Jlib 的编译参考路径失败；显式提供固定参考路径后通过，没有更改源码绕过检查。详见[宿主加载器收据](cycletrim-validation-20261109/followup-linux-loader-receipt.json)。这仍不是游戏进程映射或实机副本验收。
+
+### 集成 main 上的 Jlib 更新
+
+并行提交 [a4181f8c](https://github.com/LIghtJUNction/OniMods/commit/a4181f8cbeebe7de1d62a1cbd3e062d11c92aa74) 将 Jlib 从 0519ec0f 更新到 `b57443c957b3c9094b0612277978a324e94a4865`，并跟踪其 main。这项贡献已原样快进保留；本轮没有将它计作液压或整帧性能成果。
+
+在该精确提交上再次执行 onim 完整 Linux 构建，退出 0、约 10.78 秒，28 条 Jlib C# 告警、36 条 Rust 告警、0 errors；原生输入及 Jlib 编译输入前后哈希一致。宿主加载器复测退出 0。原生库仍为 `729fa105ec1928d018d665d3cb192f0b5fcdd7bf92af824dbe345ce82993dc22`；新的 implementation/CycleTrim.dll 为 `6045aa0383f2fc968cfd1a32614c25595bd42d45edb3a804a86bd8655142345e`，Linux ZIP 为 `7af5880520f441c6c73cd26370f0027c0eeafec3473cb9e410c137e44d8dfecd`。包内副本一致，未打入游戏参考 DLL；Jlib 本身仍是独立运行时模组。
+
+[集成构建与加载器收据](cycletrim-validation-20261109/integrated-linux-receipt.json)绑定 a4181f8c 与 Jlib b57443c9。游戏测试时必须另外记录实际加载的 Jlib 版本及模组组合，不能把这次依赖更新前后的运行数据直接当作单一 CycleTrim 变量的对照。
+
+该集成提交的两条 CI 已取得终态：[Mod quality 42501031266](https://github.com/LIghtJUNction/OniMods/actions/runs/42501031266) 于 2026-11-08 16:45:03 UTC 成功，[ONI reference compatibility 42501031143](https://github.com/LIghtJUNction/OniMods/actions/runs/42501031143) 于 16:46:34 UTC 成功。后者实际完成了 source／host 回归、19 项 Harmony 目标基线、CycleTrim netstandard2.1 和 OniMcp netstandard2.1 编译。[集成 CI 收据](cycletrim-validation-20261109/ci-a4181f8c-receipt.json)绑定这个结果与 a4181f8c；6014c0f9 的取消状态保持原记录。完整原生 GPU 门及真实游戏验收没有因此转为通过。
 
 ## 液体源码基线审计与剩余范围
 
