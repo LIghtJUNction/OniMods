@@ -1,5 +1,6 @@
-// Only game/configuration boundaries are stubbed. Every Server implementation and
-// protocol type is compiled from production source, including HttpListener transport.
+// Only game/configuration and shared-Jlib boundaries are stubbed. Every Server
+// implementation and protocol type is compiled from production source, including
+// HttpListener transport.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,19 @@ namespace UnityEngine
         protected GameObject gameObject { get; } = new GameObject("host-test");
         protected static void Destroy(object value) { }
         protected static void DontDestroyOnLoad(object value) { }
+    }
+}
+
+namespace Jlib.Runtime
+{
+    public sealed class JlibDispatcher
+    {
+        private static readonly JlibDispatcher instance = new JlibDispatcher();
+        public static JlibDispatcher Instance { get { return instance; } }
+        public static JlibDispatcher EnsureInitialized() { return instance; }
+        public static void Enqueue(Action action) { action(); }
+        public static void EnqueueDeferred(Action action) { action(); }
+        public static T Invoke<T>(Func<T> func, int timeoutMs = 10000) { return func(); }
     }
 }
 
