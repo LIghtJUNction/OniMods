@@ -311,7 +311,7 @@ impl GpuSimulation {
         let prepared = started.elapsed();
         self.thermal.step(dt, 0.25, &mut world.write.temperature)?;
         if profiling {
-            eprintln!("[CycleTrim OniSim] GPU thermal profile cells={count} deferred_groups=gpu mass_upload_bytes={} preparation={:.3}ms submit+wait+readback={:.3}ms", self.thermal.last_mass_upload_bytes(),prepared.as_secs_f64()*1000.0, (started.elapsed()-prepared).as_secs_f64()*1000.0);
+            eprintln!("[CycleTrim OniSim] GPU thermal profile cells={count} deferred_groups=gpu mass_upload_bytes={} temperature_upload_bytes={} preparation={:.3}ms submit+wait+readback={:.3}ms", self.thermal.last_mass_upload_bytes(),self.thermal.last_temperature_upload_bytes(),prepared.as_secs_f64()*1000.0, (started.elapsed()-prepared).as_secs_f64()*1000.0);
         }
 
         self.total_steps += 1;

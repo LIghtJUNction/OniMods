@@ -73,6 +73,10 @@ pub struct ThermalDiffusionGpu {
     gather_pipeline: wgpu::ComputePipeline,
     gather_groups: [wgpu::BindGroup; 2],
     temperature_in: wgpu::Buffer,
+    previous_temperature: RefCell<Vec<u8>>,
+    temperature_cache_valid: Cell<bool>,
+    temperature_externally_exposed: Cell<bool>,
+    temperature_upload_bytes: Cell<usize>,
     mass: wgpu::Buffer,
     previous_mass: RefCell<Vec<u8>>,
     mass_upload_bytes: Cell<usize>,
@@ -206,6 +210,10 @@ impl ThermalDiffusionGpu {
             gather_pipeline,
             gather_groups,
             temperature_in,
+            previous_temperature: RefCell::new(Vec::new()),
+            temperature_cache_valid: Cell::new(false),
+            temperature_externally_exposed: Cell::new(false),
+            temperature_upload_bytes: Cell::new(0),
             mass,
             previous_mass: RefCell::new(Vec::new()),
             mass_upload_bytes: Cell::new(0),
@@ -393,7 +401,8 @@ impl ThermalDiffusionGpu {
         if let Some(data)=&self.material_expansion {data.valid.set(false);}
         self.previous_mass.borrow_mut().clear();
         self.queue
-            .write_buffer(self.temperature_buffer(), 0, bytemuck::cast_slice(temperature));
+            .write_buffer(self.current_temperature_buffer(), 0, bytemuck::cast_slice(temperature));
+        self.temperature_cache_valid.set(false);
         self.queue
             .write_buffer(&self.mass, 0, bytemuck::cast_slice(mass));
         self.queue
@@ -408,7 +417,12 @@ impl ThermalDiffusionGpu {
         if temperature.len() != self.cells || mass.len() != self.cells {
             return Err("input length mismatch".into());
         }
-        self.queue.write_buffer(self.temperature_buffer(), 0, bytemuck::cast_slice(temperature));
+        let mut previous=self.previous_temperature.borrow_mut();
+        if !self.temperature_cache_valid.get() || self.temperature_externally_exposed.get() {previous.clear();}
+        let mut temperature_dirty=vec![false;self.cells.div_ceil(4096)];
+        let uploaded=upload_changed_bytes(&self.queue,self.current_temperature_buffer(),bytemuck::cast_slice(temperature),&mut previous,16384,&mut temperature_dirty);
+        self.temperature_upload_bytes.set(uploaded);
+        self.temperature_cache_valid.set(!self.temperature_externally_exposed.get());
         let mut dirty=vec![false;self.cells.div_ceil(4096)];
         let bytes=upload_changed_bytes(&self.queue,&self.mass,bytemuck::cast_slice(mass),&mut self.previous_mass.borrow_mut(),16384,&mut dirty);
         self.mass_upload_bytes.set(bytes);
@@ -416,6 +430,7 @@ impl ThermalDiffusionGpu {
     }
 
     pub fn last_mass_upload_bytes(&self) -> usize { self.mass_upload_bytes.get() }
+    pub fn last_temperature_upload_bytes(&self) -> usize { self.temperature_upload_bytes.get() }
 
     /// Replace a contiguous range of material properties in device-local storage.
     pub fn upload_material_range(&self, start: usize, conductivity: &[f32], specific_heat: &[f32]) -> Result<(), String> {
@@ -468,12 +483,13 @@ impl ThermalDiffusionGpu {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Thermal step encoder") });
         self.encode_resident(&mut encoder, dt, max_transfer_fraction)?;
         if copy_for_readback {
-            encoder.copy_buffer_to_buffer(self.temperature_buffer(), 0, &self.readback, 0, (self.cells * 4) as u64);
+            encoder.copy_buffer_to_buffer(self.current_temperature_buffer(), 0, &self.readback, 0, (self.cells * 4) as u64);
         }
         Ok(self.queue.submit(Some(encoder.finish())))
     }
 
     pub fn encode_resident(&mut self, encoder:&mut wgpu::CommandEncoder, dt:f32, max_transfer_fraction:f32) -> Result<(), String> {
+        self.temperature_cache_valid.set(false);
         let uniform = ThermalParams {
             width: self.width as u32,
             height: self.height as u32,
@@ -519,7 +535,7 @@ impl ThermalDiffusionGpu {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Thermal readback encoder"),
         });
-        encoder.copy_buffer_to_buffer(self.temperature_buffer(), 0, &self.readback, 0, (self.cells * 4) as u64);
+        encoder.copy_buffer_to_buffer(self.current_temperature_buffer(), 0, &self.readback, 0, (self.cells * 4) as u64);
         let submission = self.queue.submit(Some(encoder.finish()));
         self.finish_readback(output_temp, submission)
     }
@@ -547,6 +563,12 @@ impl ThermalDiffusionGpu {
                 .get_mapped_range(..)
                 .map_err(|e| e.to_string())?;
             output_temp.copy_from_slice(bytemuck::cast_slice(&view));
+            if !self.temperature_externally_exposed.get() {
+                let mut previous=self.previous_temperature.borrow_mut();
+                previous.clear();
+                previous.extend_from_slice(&view);
+                self.temperature_cache_valid.set(true);
+            }
         }
         self.readback.unmap();
         Ok(())
@@ -554,12 +576,20 @@ impl ThermalDiffusionGpu {
 
     /// Access the device temperature buffer directly for GPU-resident chaining
     pub fn temperature_buffer(&self) -> &wgpu::Buffer {
+        // Callers may retain a clone and mutate it later through the queue.
+        self.temperature_externally_exposed.set(true);
+        self.temperature_cache_valid.set(false);
+        self.current_temperature_buffer()
+    }
+
+    fn current_temperature_buffer(&self) -> &wgpu::Buffer {
         if self.current == 0 { &self.temperature_in } else { &self.temperature_out }
     }
 
     pub fn upload_temperature(&self, temperature: &[f32]) -> Result<(), String> {
         if temperature.len() != self.cells { return Err("temperature length mismatch".into()); }
-        self.queue.write_buffer(self.temperature_buffer(), 0, bytemuck::cast_slice(temperature));
+        self.temperature_cache_valid.set(false);
+        self.queue.write_buffer(self.current_temperature_buffer(), 0, bytemuck::cast_slice(temperature));
         Ok(())
     }
 
@@ -715,6 +745,52 @@ mod tests {
             gpu.step(0.2,0.25,&mut actual).unwrap(); reference.step(0.2,0.25,&mut expected).unwrap();
             assert_eq!(actual,expected);
         }
+    }
+
+    #[test]
+    #[ignore = "manual temperature upload benchmark"]
+    fn benchmark_temperature_changed_blocks() {
+        let (w,h)=(738,306);let n=w*h;let mass=vec![1.0f32;n];let cond=vec![1.0f32;n];let heat=vec![2.0f32;n];
+        let mut partial=pollster::block_on(ThermalDiffusionGpu::new(w,h)).unwrap();
+        let mut full=pollster::block_on(ThermalDiffusionGpu::new(w,h)).unwrap();
+        let input=vec![300.0f32;n]; let mut next=vec![0.0f32;n];
+        for gpu in [&mut partial,&mut full] {gpu.upload(&input,&mass,&cond,&heat).unwrap();gpu.step(0.2,0.25,&mut next).unwrap();}
+        let _=full.temperature_buffer(); // retained external access disables the cache
+        let mut samples=[Vec::new(),Vec::new()];
+        for round in 0..30 {for index in [round%2,1-round%2] {
+            next[n/2]=if round%2==0 {301.0} else {300.0};
+            let gpu=if index==0 {&partial} else {&full};
+            let start=std::time::Instant::now();gpu.upload_state(&next,&mass).unwrap();
+            if round>=5 {samples[index].push(start.elapsed().as_secs_f64()*1000.0);}
+        }}
+        for (index,values) in samples.iter_mut().enumerate() {values.sort_by(f64::total_cmp);eprintln!("temperature {}: median {:.3} ms p95 {:.3} ms, upload={} bytes",if index==0 {"partial"} else {"full"},values[12],values[23],if index==0 {partial.last_temperature_upload_bytes()} else {full.last_temperature_upload_bytes()});}
+    }
+
+    #[test]
+    fn temperature_upload_tracks_gpu_results_and_external_access() {
+        let (width,height)=(65,65); let count=width*height;
+        let mut gpu=pollster::block_on(ThermalDiffusionGpu::new(width,height)).unwrap();
+        let mut reference=pollster::block_on(ThermalDiffusionGpu::new(width,height)).unwrap();
+        let mut temp=vec![300.0f32;count]; temp[100]=500.0;
+        let mass=vec![1.0f32;count]; let cond=vec![1.0f32;count]; let heat=vec![2.0f32;count];
+        gpu.upload(&temp,&mass,&cond,&heat).unwrap(); reference.upload(&temp,&mass,&cond,&heat).unwrap();
+        let mut actual=vec![0.0;count]; let mut expected=vec![0.0;count];
+        gpu.step(0.2,0.25,&mut actual).unwrap(); reference.step(0.2,0.25,&mut expected).unwrap();
+        assert_eq!(actual,expected);
+        gpu.upload_state(&actual,&mass).unwrap();
+        assert_eq!(gpu.last_temperature_upload_bytes(),0);
+        actual[count-1]+=10.0;
+        gpu.upload_state(&actual,&mass).unwrap();
+        assert_eq!(gpu.last_temperature_upload_bytes(),(count-4096)*4);
+        reference.upload_state(&actual,&mass).unwrap();
+        gpu.step(0.2,0.25,&mut actual).unwrap(); reference.step(0.2,0.25,&mut expected).unwrap();
+        assert_eq!(actual,expected);
+        let exposed=gpu.temperature_buffer().clone();
+        gpu.queue.write_buffer(&exposed,0,bytemuck::cast_slice(&[999.0f32]));
+        gpu.upload_state(&actual,&mass).unwrap();
+        assert_eq!(gpu.last_temperature_upload_bytes(),count*4);
+        gpu.step(0.2,0.25,&mut actual).unwrap(); reference.upload_state(&expected,&mass).unwrap();
+        reference.step(0.2,0.25,&mut expected).unwrap(); assert_eq!(actual,expected);
     }
 
     #[test]
