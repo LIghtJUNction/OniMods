@@ -22,8 +22,14 @@ TARGETS = {
 
 def source_digest():
     digest = hashlib.sha256()
-    paths = [CORE / "rust-toolchain.toml", CORE / "native/Cargo.toml", CORE / "native/Cargo.lock"]
-    paths.extend((CORE / "native/src").rglob("*.rs"))
+    paths = [CORE / "rust-toolchain.toml", CORE / "native/Cargo.toml",
+             CORE / "native/Cargo.lock", CORE / "gpu/Cargo.toml"]
+    # The native crate compiles this path dependency, including its embedded
+    # shaders. Its dependency resolution uses native/Cargo.lock, not gpu's
+    # standalone benchmark lockfile.
+    for source_root in (CORE / "native/src", CORE / "gpu/src"):
+        for pattern in ("*.rs", "*.wgsl"):
+            paths.extend(source_root.rglob(pattern))
     for path in sorted(paths):
         digest.update(path.relative_to(CORE).as_posix().encode() + b"\0")
         digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")

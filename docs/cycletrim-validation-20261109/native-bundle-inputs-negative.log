@@ -1,0 +1,53 @@
+test_added_or_removed_shader_refuses_old_bundle (test_native_bundle.NativeBundleTests.test_added_or_removed_shader_refuses_old_bundle) ... FAIL
+test_all_three_matching_platforms (test_native_bundle.NativeBundleTests.test_all_three_matching_platforms) ... ok
+test_changed_binary_refused (test_native_bundle.NativeBundleTests.test_changed_binary_refused) ... ok
+test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) ...
+  test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/Cargo.toml') ... FAIL
+  test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/src/lib.rs') ... FAIL
+  test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/src/flow.wgsl') ... FAIL
+test_checkout_line_endings_preserve_source_identity (test_native_bundle.NativeBundleTests.test_checkout_line_endings_preserve_source_identity) ... ok
+test_missing_platform_refused (test_native_bundle.NativeBundleTests.test_missing_platform_refused) ... ok
+test_stale_source_refused (test_native_bundle.NativeBundleTests.test_stale_source_refused) ... ok
+test_unexpected_file_refused (test_native_bundle.NativeBundleTests.test_unexpected_file_refused) ... ok
+test_wrong_architecture_refused_even_with_matching_checksum (test_native_bundle.NativeBundleTests.test_wrong_architecture_refused_even_with_matching_checksum) ... ok
+
+======================================================================
+FAIL: test_added_or_removed_shader_refuses_old_bundle (test_native_bundle.NativeBundleTests.test_added_or_removed_shader_refuses_old_bundle)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/test_native_bundle.py", line 100, in test_added_or_removed_shader_refuses_old_bundle
+    with self.assertRaisesRegex(ValueError, "does not match current source"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/Cargo.toml')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/test_native_bundle.py", line 92, in test_changed_path_dependency_inputs_refuse_old_bundle
+    with self.assertRaisesRegex(ValueError, "does not match current source"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/src/lib.rs')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/test_native_bundle.py", line 92, in test_changed_path_dependency_inputs_refuse_old_bundle
+    with self.assertRaisesRegex(ValueError, "does not match current source"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) (input='gpu/src/flow.wgsl')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/6c1cf53f37e8/OniMods/tests/OniSim.Loader.Tests/test_native_bundle.py", line 92, in test_changed_path_dependency_inputs_refuse_old_bundle
+    with self.assertRaisesRegex(ValueError, "does not match current source"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.022s
+
+FAILED (failures=4)

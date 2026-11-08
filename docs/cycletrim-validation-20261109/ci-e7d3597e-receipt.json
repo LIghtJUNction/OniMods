@@ -1,0 +1,494 @@
+{
+  "schema": 1,
+  "capturedAtUtc": "2026-11-08 16:27:24 UTC",
+  "commit": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+  "allRunsTerminal": true,
+  "outcome": {
+    "success": 1,
+    "failure": 4,
+    "cancelled": 0
+  },
+  "referenceApiFailure": {
+    "jobId": 128787594239,
+    "step": "Verify Harmony target API baseline",
+    "removedTargets": [
+      "KBatchedAnimController"
+    ],
+    "addedTargets": [],
+    "baselineIndex": "ci/oni-harmony-api-surface-baseline/index.json",
+    "reason": "The removed animation Hook changed the extracted target set; the baseline still contains the removed target. This is independent of the GPU runner failures.",
+    "laterNetstandard21CompileSteps": "skipped"
+  },
+  "nativeMatrix": {
+    "newHydraulicTestsPassedOnEveryPlatform": 16,
+    "fullNativeTestGatePassed": false,
+    "platformLibraryReceiptBuildSteps": "skipped after test failures",
+    "platformLoaderSteps": "skipped after test failures",
+    "allPlatformBundle": "skipped"
+  },
+  "evidenceLimits": [
+    "Linux and Windows native jobs fail on unavailable hardware Vulkan adapters; the FFI initialization assertion returns -1 instead of 0.",
+    "macOS additionally panics because no wgpu backend implemented for the target platform is enabled. The exact same 14 failed tests and panic occur in the inspected f07 baseline job.",
+    "The entire GPU subtree, native GPU test/FFI files and native workflow are unchanged in the inspected f07-to-e7 comparison.",
+    "New hydraulic tests passing does not make the complete native gate pass.",
+    "Cross-platform native receipt construction, platform loader smoke tests and combined bundle did not run after native test failures.",
+    "GPU runtime tests did not complete successfully; no game launch, frame-rate measurement or user GPU acceptance occurred.",
+    "No reruns, workflow changes, ignore changes, source edits or additional local builds were performed by this monitoring task."
+  ],
+  "runs": [
+    {
+      "id": 42499054665,
+      "name": "ONI reference compatibility",
+      "head_sha": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054665",
+      "updated_at": "2026-11-08T16:23:06Z",
+      "jobs": [
+        {
+          "id": 128787594239,
+          "name": "compile-and-surface",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054665/job/128787594239",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Verify Harmony target API baseline",
+              "number": 22,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:23:02Z",
+              "completed_at": "2026-11-08T16:23:02Z"
+            }
+          ],
+          "skippedSteps": [
+            "Prepare allowlisted CycleTrim reference-API diagnostics on failure",
+            "Upload CycleTrim reference-API diagnostics on failure",
+            "Compile CycleTrim against .NET Standard 2.1",
+            "Compile OniMcp against .NET Standard 2.1",
+            "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68"
+          ],
+          "diagnostics": {
+            "testCounts": null,
+            "newHydraulicTestsPassed": 0,
+            "uniqueErrors": [
+              "FAIL: Harmony target API baseline drifted",
+              "Harmony target set changed: removed=['KBatchedAnimController'], added=[]",
+              "##[error]Process completed with exit code 1."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 42499054650,
+      "name": "OniSim transport proof and regression",
+      "head_sha": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054650",
+      "updated_at": "2026-11-08T16:17:57Z",
+      "jobs": [
+        {
+          "id": 128787594233,
+          "name": "historical-component-regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054650/job/128787594233",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        },
+        {
+          "id": 128787594480,
+          "name": "lean-proof",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054650/job/128787594480",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        },
+        {
+          "id": 128787594562,
+          "name": "current-native-regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054650/job/128787594562",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Test current native code including the FIFO differential",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:16:52Z",
+              "completed_at": "2026-11-08T16:17:54Z"
+            }
+          ],
+          "skippedSteps": [],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 103,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 16,
+            "uniqueErrors": [
+              "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+              "assertion `left == right` failed",
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 42499054648,
+      "name": "OniSim diamond proof and regression",
+      "head_sha": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648",
+      "updated_at": "2026-11-08T16:18:08Z",
+      "jobs": [
+        {
+          "id": 128787593833,
+          "name": "memory-probe-protocol",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648/job/128787593833",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        },
+        {
+          "id": 128787594071,
+          "name": "component-regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648/job/128787594071",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Test the complete native Rust kernel without game files",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:17:05Z",
+              "completed_at": "2026-11-08T16:18:06Z"
+            }
+          ],
+          "skippedSteps": [
+            "Run differential correctness cases"
+          ],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 103,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 16,
+            "uniqueErrors": [
+              "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+              "assertion `left == right` failed",
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 128787594083,
+          "name": "lean-proof",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648/job/128787594083",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        },
+        {
+          "id": 128787594092,
+          "name": "gpu-operator",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648/job/128787594092",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Validate WGSL and run CPU transport invariants",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:16:48Z",
+              "completed_at": "2026-11-08T16:17:21Z"
+            }
+          ],
+          "skippedSteps": [
+            "Compile Vulkan benchmark executables",
+            "Smoke-test the EOS calibration CLI with synthetic records"
+          ],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 20,
+              "failed": 25,
+              "ignored": 6,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 0,
+            "uniqueErrors": [
+              "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 128787594128,
+          "name": "pressure-projection-reference",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054648/job/128787594128",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        }
+      ]
+    },
+    {
+      "id": 42499054704,
+      "name": "Mod quality",
+      "head_sha": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054704",
+      "updated_at": "2026-11-08T16:22:04Z",
+      "jobs": [
+        {
+          "id": 128787594111,
+          "name": "regression",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054704/job/128787594111",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        }
+      ]
+    },
+    {
+      "id": 42499054663,
+      "name": "OniSim native platforms",
+      "head_sha": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054663",
+      "updated_at": "2026-11-08T16:19:42Z",
+      "jobs": [
+        {
+          "id": 128787594095,
+          "name": "native (ubuntu-22.04, linux-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054663/job/128787594095",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Test native simulation behavior",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:17:01Z",
+              "completed_at": "2026-11-08T16:18:01Z"
+            }
+          ],
+          "skippedSteps": [
+            "Build native library and identity receipt",
+            "Test platform loader against the built native library",
+            "Run actions/upload-artifact@v4",
+            "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68"
+          ],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 103,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 16,
+            "uniqueErrors": [
+              "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+              "assertion `left == right` failed",
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 128787594195,
+          "name": "native (macos-15-intel, macos-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054663/job/128787594195",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Test native simulation behavior",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:17:23Z",
+              "completed_at": "2026-11-08T16:19:11Z"
+            }
+          ],
+          "skippedSteps": [
+            "Build native library and identity receipt",
+            "Test platform loader against the built native library",
+            "Run actions/upload-artifact@v4",
+            "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68"
+          ],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 96,
+              "failed": 14,
+              "ignored": 4,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 16,
+            "uniqueErrors": [
+              "No wgpu backend feature that is implemented for the target platform was enabled. See `wgpu::Instance::enabled_backend_features()` for more information.",
+              "assertion `left == right` failed",
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 128787594216,
+          "name": "native (windows-2022, windows-x64)",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054663/job/128787594216",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            {
+              "name": "Test native simulation behavior",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "failure",
+              "started_at": "2026-11-08T16:17:35Z",
+              "completed_at": "2026-11-08T16:19:38Z"
+            }
+          ],
+          "skippedSteps": [
+            "Build native library and identity receipt",
+            "Test platform loader against the built native library",
+            "Run actions/upload-artifact@v4",
+            "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68"
+          ],
+          "diagnostics": {
+            "testCounts": {
+              "passed": 99,
+              "failed": 11,
+              "ignored": 4,
+              "measured": 0,
+              "filteredOut": 0
+            },
+            "newHydraulicTestsPassed": 16,
+            "uniqueErrors": [
+              "assertion `left == right` failed",
+              "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+              "##[error]Process completed with exit code 1."
+            ]
+          }
+        },
+        {
+          "id": 128788396336,
+          "name": "bundle",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42499054663/job/128788396336",
+          "status": "completed",
+          "conclusion": "skipped",
+          "failedSteps": [],
+          "skippedSteps": [],
+          "diagnostics": {}
+        }
+      ]
+    }
+  ],
+  "priorBaselineComparison": {
+    "baselineCommit": "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f",
+    "jobUrl": "https://github.com/LIghtJUNction/OniMods/actions/runs/42486999855/job/128750940038",
+    "headSha": "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f",
+    "completedAt": "2026-11-08T13:54:48Z",
+    "testResults": [
+      "test result: FAILED. 80 passed; 14 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.18s"
+    ],
+    "uniqueReasons": [
+      "No wgpu backend feature that is implemented for the target platform was enabled. See `wgpu::Instance::enabled_backend_features()` for more information.",
+      "assertion `left == right` failed"
+    ],
+    "sameFailedTestsAsCurrent": true,
+    "baselineFailedTests": [
+      "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+      "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+      "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+      "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+      "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+      "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+      "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+      "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+      "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+      "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+      "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+      "messages_tests::empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change",
+      "messages_tests::frame_batches_publish_every_submitted_frame",
+      "messages_tests::zone_changes_are_queued_and_saved_options_work_after_worker_ownership"
+    ],
+    "addedFailures": [],
+    "sourceVersionEvidence": [
+      {
+        "path": "mods/CycleTrim/OniSim/gpu/Cargo.toml",
+        "blobs": {
+          "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f": "ba28cdba1d1f91e7f4044e2044755a243bd5138a",
+          "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9": "ba28cdba1d1f91e7f4044e2044755a243bd5138a"
+        },
+        "unchanged": true
+      },
+      {
+        "path": "mods/CycleTrim/OniSim/gpu/src/lib.rs",
+        "blobs": {
+          "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f": "445e41457b59da90a26344a971170d234addf731",
+          "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9": "445e41457b59da90a26344a971170d234addf731"
+        },
+        "unchanged": true
+      },
+      {
+        "path": "mods/CycleTrim/OniSim/native/src/gpu_sim.rs",
+        "blobs": {
+          "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f": "5a2e98b5a3195d9ccadcf8c59fe21dc9a2491677",
+          "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9": "5a2e98b5a3195d9ccadcf8c59fe21dc9a2491677"
+        },
+        "unchanged": true
+      },
+      {
+        "path": "mods/CycleTrim/OniSim/native/src/gpu_pathfinder_ffi.rs",
+        "blobs": {
+          "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f": "d82f8c063c787efb7559934e2d75c8ca7bab6c98",
+          "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9": "d82f8c063c787efb7559934e2d75c8ca7bab6c98"
+        },
+        "unchanged": true
+      },
+      {
+        "path": ".github/workflows/onisim-native.yml",
+        "blobs": {
+          "f07d9bc887b6b698d7d7623aae0cdfabba6fad9f": "e45b7474f502f5553fd977ce29f03d4e0e2b08fd",
+          "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9": "e45b7474f502f5553fd977ce29f03d4e0e2b08fd"
+        },
+        "unchanged": true
+      }
+    ],
+    "gpuSubtree": {
+      "path": "mods/CycleTrim/OniSim/gpu",
+      "beforeTree": "4e76d8c5b967205ba7cd320e4a21d3bf5069fbaf",
+      "currentTree": "4e76d8c5b967205ba7cd320e4a21d3bf5069fbaf"
+    },
+    "gpuContextBlob": "79c8395bc6d3b4753dc7f06cb8016fda4e4cff95"
+  }
+}

@@ -1,0 +1,249 @@
+    Blocking waiting for file lock on package cache
+   Compiling onisim-gpu v0.1.0 (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/gpu)
+   Compiling oni-sim-core v0.1.0 (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/native)
+warning: function `update_cells` is never used
+   --> src/disease.rs:150:15
+    |
+150 | pub(crate) fn update_cells(
+    |               ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `post_process` is never used
+   --> src/disease.rs:366:15
+    |
+366 | pub(crate) fn post_process(
+    |               ^^^^^^^^^^^^
+
+warning: function `reachable_cells` is never used
+  --> src/disease_emitters.rs:96:15
+   |
+96 | pub(crate) fn reachable_cells(
+   |               ^^^^^^^^^^^^^^^
+
+warning: fields `element_a`, `element_b`, `min_mass`, `destroy_percent`, `required_multiplier`, and `creation_multiplier` are never read
+   --> src/gas.rs:430:16
+    |
+429 | pub(crate) struct GasObliteration {
+    |                   --------------- fields in this struct
+430 |     pub(crate) element_a: u16,
+    |                ^^^^^^^^^
+431 |     pub(crate) element_b: u16,
+    |                ^^^^^^^^^
+...
+434 |     pub(crate) min_mass: f32,
+    |                ^^^^^^^^
+435 |     pub(crate) destroy_percent: f32,
+    |                ^^^^^^^^^^^^^^^
+436 |     pub(crate) required_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+437 |     pub(crate) creation_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `GasObliteration` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: function `do_gas_interaction_pair` is never used
+   --> src/gas.rs:653:15
+    |
+653 | pub(crate) fn do_gas_interaction_pair(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `do_gas_interaction` is never used
+   --> src/gas.rs:705:15
+    |
+705 | pub(crate) fn do_gas_interaction(
+    |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `pathfinder` and `resident` are never read
+  --> src/gpu_sim.rs:70:16
+   |
+22 | pub(crate) struct GpuSimulation {
+   |                   ------------- fields in this struct
+...
+70 |     pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
+   |                ^^^^^^^^^^
+71 |     pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
+   |                ^^^^^^^^
+
+warning: method `disease_growth` is never used
+   --> src/grid.rs:164:19
+    |
+ 45 | impl Grid {
+    | --------- method in this implementation
+...
+164 |     pub(crate) fn disease_growth(&self, index: usize) -> f32 {
+    |                   ^^^^^^^^^^^^^^
+
+warning: method `len` is never used
+  --> src/mass_components.rs:46:19
+   |
+45 | impl PendingCommands {
+   | -------------------- method in this implementation
+46 |     pub(crate) fn len(&self) -> usize {
+   |                   ^^^
+
+warning: constant `FLAG_LEGACY_SINGLE_ELEMENT` is never used
+  --> src/multicomponent_publication.rs:21:18
+   |
+21 | pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `transfer` is never used
+  --> src/offgas.rs:10:15
+   |
+10 | pub(crate) fn transfer(
+   |               ^^^^^^^^
+
+warning: constant `MELT_MASS` is never used
+  --> src/partial_melt.rs:10:7
+   |
+10 | const MELT_MASS: f32 = 5.0;
+   |       ^^^^^^^^^
+
+warning: constant `TEMP_MARGIN` is never used
+  --> src/partial_melt.rs:11:7
+   |
+11 | const TEMP_MARGIN: f32 = 3.0;
+   |       ^^^^^^^^^^^
+
+warning: constant `MIN_SOURCE_HEADROOM` is never used
+  --> src/partial_melt.rs:12:7
+   |
+12 | const MIN_SOURCE_HEADROOM: f32 = 6.0;
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `rec` is never used
+  --> src/partial_melt.rs:14:4
+   |
+14 | fn rec(table: &ElementTable, id: u16) -> &ElementRecord {
+   |    ^^^
+
+warning: function `pair` is never used
+  --> src/partial_melt.rs:18:4
+   |
+18 | fn pair(
+   |    ^^^^
+
+warning: function `apply` is never used
+   --> src/partial_melt.rs:114:15
+    |
+114 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: method `overlaps_storage` is never used
+  --> src/presentation.rs:74:19
+   |
+26 | impl PresentationBuffers {
+   | ------------------------ method in this implementation
+...
+74 |     pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: function `update` is never used
+   --> src/radiation.rs:434:15
+    |
+434 | pub(crate) fn update(
+    |               ^^^^^^
+
+warning: function `apply` is never used
+   --> src/sublimation.rs:157:15
+    |
+157 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: associated function `is_message` is never used
+   --> src/thermal_components.rs:193:19
+    |
+184 | impl ThermalComponents {
+    | ---------------------- associated function in this implementation
+...
+193 |     pub(crate) fn is_message(id: i32) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: method `request_stop` is never used
+   --> src/worker.rs:284:19
+    |
+207 | impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
+    | ------------------------------------------------------------- method in this implementation
+...
+284 |     pub(crate) fn request_stop(&self) {
+    |                   ^^^^^^^^^^^^
+
+warning: method `public_index` is never used
+  --> src/worker_shape.rs:28:19
+   |
+13 | impl WorldShape {
+   | --------------- method in this implementation
+...
+28 |     pub(crate) fn public_index(&self, internal: usize) -> Option<usize> {
+   |                   ^^^^^^^^^^^^
+
+warning: field `sunlight` is never read
+  --> src/world.rs:18:16
+   |
+13 | pub(crate) struct Region {
+   |                   ------ field in this struct
+...
+18 |     pub(crate) sunlight: f32,
+   |                ^^^^^^^^
+   |
+   = note: `Region` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `gas_scan_direction` is never read
+  --> src/world.rs:42:16
+   |
+22 | pub(crate) struct PhysicsWorld {
+   |                   ------------ field in this struct
+...
+42 |     pub(crate) gas_scan_direction: i32,
+   |                ^^^^^^^^^^^^^^^^^^
+
+warning: method `sync_write_from_read` is never used
+   --> src/world.rs:231:19
+    |
+ 86 | impl PhysicsWorld {
+    | ----------------- method in this implementation
+...
+231 |     pub(crate) fn sync_write_from_read(&mut self) {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: method `copy_fluid_from` is never used
+  --> src/world_cells.rs:97:19
+   |
+63 | impl Cells {
+   | ---------- method in this implementation
+...
+97 |     pub(crate) fn copy_fluid_from(&mut self, other: &Self) {
+   |                   ^^^^^^^^^^^^^^^
+
+warning: `oni-sim-core` (lib test) generated 27 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.47s
+     Running unittests src/lib.rs (mods/CycleTrim/OniSim/native/target/debug/deps/oni_sim_core-1d760905a56a9498)
+
+running 19 tests
+test messages_tests::benchmark_empty_publication_reuse ... ignored, manual full-grid empty-publication benchmark
+test messages_tests::compact_legacy_load_preserves_omitted_fields_and_clears_unknown_radiation ... ok
+test messages_tests::compact_load_plan_maps_offset_rows_without_touching_other_cells ... ok
+test messages_tests::component_batch_registers_distinct_handles_in_callback_order ... ok
+test messages_tests::dispatched_cell_commands_wait_for_their_frame_and_preserve_order ... ok
+test messages_tests::batch_load_commits_in_order_and_rejects_invalid_later_images_atomically ... ok
+test messages_tests::interaction_registration_owns_records_and_rejects_invalid_replacement ... ok
+test messages_tests::invalid_later_cell_record_keeps_the_existing_queue_unchanged ... ok
+test messages_tests::full_modify_cell_dispatch_emits_the_requested_callback_and_updates_material ... ok
+test messages_tests::initialize_accepts_managed_zero_capacity_tail_but_rejects_nonzero_tail ... ok
+test messages_tests::invalid_radiation_batch_never_applies_an_earlier_delta ... ok
+[CycleTrim OniSim] GPU initialization failed: no hardware Vulkan adapter available
+test messages_tests::prepared_next_step_revalidates_mutated_state ... ok
+test messages_tests::prepared_step_rejects_invalid_ids_without_activity_flags ... ok
+test messages_tests::prepared_step_accepts_nullable_disease_and_backwall_ids ... ok
+test messages_tests::prepared_step_rejects_invalid_elapsed_without_mutation ... ok
+test messages_tests::prepared_step_validates_once_before_one_advance ... ok
+test messages_tests::zone_changes_are_queued_and_saved_options_work_after_worker_ownership ... ok
+[CycleTrim OniSim] GPU initialization failed: no hardware Vulkan adapter available
+[CycleTrim OniSim] GPU initialization failed: no hardware Vulkan adapter available
+[CycleTrim OniSim] Reusing derived data for empty batches
+[CycleTrim OniSim] Reusing derived data for zero-time frames
+test messages_tests::frame_batches_publish_every_submitted_frame ... ok
+test messages_tests::empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change ... ok
+
+test result: ok. 18 passed; 0 failed; 1 ignored; 0 measured; 99 filtered out; finished in 0.01s

@@ -48,6 +48,12 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.401'
+      - name: Test unavailable Vulkan backend on Apple
+        if: runner.os == 'macOS'
+        working-directory: mods/CycleTrim/OniSim
+        run: >-
+          cargo +1.99.1 test --release --locked --manifest-path gpu/Cargo.toml --lib
+          gpu_context::tests::unavailable_vulkan_backend_returns_errors_from_both_constructors -- --exact
       - name: Test native simulation behavior
         working-directory: mods/CycleTrim/OniSim
         run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml

@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "baseHead": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+  "scope": "Backend initialization and build-source identity; no game runtime evidence",
+  "gpuCheckCommand": [
+    "cargo",
+    "check",
+    "--locked",
+    "--manifest-path",
+    "mods/CycleTrim/OniSim/gpu/Cargo.toml",
+    "--all-targets"
+  ],
+  "gpuCheckExit": 0,
+  "messagesSelection": {
+    "passed": 18,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 99
+  },
+  "appleConstructorTest": "Not executable on this Linux runner; a dedicated macOS workflow step precedes the unchanged full native test gate.",
+  "bundleRegressionCommand": [
+    "python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "tests/OniSim.Loader.Tests",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "bundleNegative": {
+    "tests": 9,
+    "reportedFailures": 4,
+    "exitCode": 1,
+    "reason": "Old source digest accepted modified GPU manifest/Rust/WGSL and an added shader."
+  },
+  "bundleCandidate": {
+    "tests": 9,
+    "failed": 0,
+    "exitCode": 0
+  },
+  "sourceInputs": "rust-toolchain.toml; native Cargo.toml/Cargo.lock; gpu Cargo.toml; native/gpu src Rust and WGSL. The native workspace lockfile controls dependency resolution.",
+  "logs": {
+    "native-bundle-inputs-negative.log": {
+      "rawSha256": "94bd66464c10a0939e68dbed1eecab35c114130244dd551ca583656989a008b3",
+      "sha256": "c3fb2fad5127178392d1a7550d078cda05403cdb6fa5a0acdd11bab347446faa",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "native-bundle-inputs-candidate.log": {
+      "rawSha256": "3d5f3dd7c78339d9a39a0f28edea1ee740fb9d308d145bfc1195a6e5b8f619ea",
+      "sha256": "3d5f3dd7c78339d9a39a0f28edea1ee740fb9d308d145bfc1195a6e5b8f619ea",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "gpu_backend_guard_linux_check.log": {
+      "rawSha256": "465a65b51730cb12fc06cf8dccf4f78f32a8013ccf2acae167f97e9fecdf130d",
+      "sha256": "465a65b51730cb12fc06cf8dccf4f78f32a8013ccf2acae167f97e9fecdf130d",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "gpu_backend_guard_messages_tests.log": {
+      "rawSha256": "50fcd3cc338307febf408fe50148a9874203d173fb87cda627e78d89e668c54d",
+      "sha256": "79fac1a18d004df2597891620c25be8876fa0f761d6bcf65f42d457c15ddae79",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    }
+  }
+}

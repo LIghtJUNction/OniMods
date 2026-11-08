@@ -53,10 +53,7 @@ impl FlowGpu {
         if count == 0 || count > u32::MAX as usize || padded > u32::MAX as usize {
             return Err("grid must be nonempty and fit u32 addressing".into());
         }
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::VULKAN,
-            ..wgpu::InstanceDescriptor::new_without_display_handle()
-        });
+        let instance = gpu_context::new_vulkan_instance()?;
         let adapters = instance.enumerate_adapters(wgpu::Backends::VULKAN).await;
         let adapter = adapters
             .into_iter()

@@ -1,0 +1,2 @@
+FAIL: Harmony target API baseline drifted
+Harmony target set changed: removed=['KBatchedAnimController'], added=[]

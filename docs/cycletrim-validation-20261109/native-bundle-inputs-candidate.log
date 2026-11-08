@@ -1,0 +1,14 @@
+test_added_or_removed_shader_refuses_old_bundle (test_native_bundle.NativeBundleTests.test_added_or_removed_shader_refuses_old_bundle) ... ok
+test_all_three_matching_platforms (test_native_bundle.NativeBundleTests.test_all_three_matching_platforms) ... ok
+test_changed_binary_refused (test_native_bundle.NativeBundleTests.test_changed_binary_refused) ... ok
+test_changed_path_dependency_inputs_refuse_old_bundle (test_native_bundle.NativeBundleTests.test_changed_path_dependency_inputs_refuse_old_bundle) ... ok
+test_checkout_line_endings_preserve_source_identity (test_native_bundle.NativeBundleTests.test_checkout_line_endings_preserve_source_identity) ... ok
+test_missing_platform_refused (test_native_bundle.NativeBundleTests.test_missing_platform_refused) ... ok
+test_stale_source_refused (test_native_bundle.NativeBundleTests.test_stale_source_refused) ... ok
+test_unexpected_file_refused (test_native_bundle.NativeBundleTests.test_unexpected_file_refused) ... ok
+test_wrong_architecture_refused_even_with_matching_checksum (test_native_bundle.NativeBundleTests.test_wrong_architecture_refused_even_with_matching_checksum) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.027s
+
+OK

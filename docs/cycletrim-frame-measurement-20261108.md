@@ -8,7 +8,7 @@
 
 用户最新回传再次确认：32 格宽深岩浆池在 1000 次更新后，两侧柱质量约为 4844.86 kg 与 6003.26 kg，差约 1158.40 kg，仍按失败处理。此前实机副本池面超过两格的高度差也仍按失败处理。云端尚未取得该原始 fixture、未提交液体差异或原始游戏日志。
 
-本轮新增的 16 项合成液压回归已经通过，并完成包含 Linux 原生库的 onim 候选构建；这些证据和用户原场景分开记账。完整原生门仍有 11 项硬件 GPU 测试失败。新增原生候选没有部署、启动 Steam 或取得游戏进程加载记录。
+本轮新增的 16 项合成液压回归已经通过，并完成包含 Linux 原生库的 onim 候选构建；这些证据和用户原场景分开记账。本地完整原生门仍有 11 项硬件 GPU 测试失败；e7d3597e 的三个平台 CI 均通过这 16 项液压回归，但完整门仍失败，详见后文。新增原生候选没有部署、启动 Steam 或取得游戏进程加载记录。
 
 前一轮完成了仿真时间截断和整帧计时口径的源码修复，全部 10 个优化宿主回归族通过，并通过 onim 的托管参考构建。用户现已回报该代码在原主机构建、部署以及加载 DLL/原生库哈希核对成功；该回传补充了实机证据，但没有满足液体收敛与 500 FPS 门槛。
 
@@ -206,7 +206,7 @@ cargo test --release --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo
 
 负对照、最终 16 项回归、完整失败门、ABBA 原始采样及六份源码指纹均保存在[液压验证收据](cycletrim-validation-20261109/hydraulic-receipt.json)及同目录日志。保留失败日志作为证据，没有用单独筛选的通过数量替代完整门。
 
-### 包含原生库的 onim 构建
+### e7d3597e 液压候选的 onim 构建
 
 最终冻结源码通过 `onim build -m CycleTrim --release` 构建，`IncludeOniSim=true`、`OniSimNativeBundle` 留空，仅生成当前 Linux x64 原生库。退出码 0，墙时约 60.38 秒，0 errors；日志分别有 28 条 Jlib C# 告警和 36 条 Rust 未使用项告警。托管层使用固定的编译参考镜像，不代表已验证当前游戏二进制兼容性。
 
@@ -220,6 +220,35 @@ cargo test --release --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo
 构建前后及最终核验时，95 个原生 Rust 源文件、manifest、GPU 输入和动画源码均保持相同哈希。Cargo 实际 `.so`、bundle、bin、dist 与 ZIP 条目逐字节一致；managed 实现也与 ZIP 条目一致。包中没有分发游戏编译参考 DLL。
 
 构建时原生改动尚未提交，因此 `build.json.commit` 的 `84207e7b` 是基准 HEAD；绑定候选实际原生代码的是上述 source digest。`gameRuntimeTested=false`。详细检查保存在[完整 Linux 构建收据](cycletrim-validation-20261109/full-linux-receipt.json)，不能将包内一致性核验表述为游戏进程已经加载此库。
+
+## CI 复核与构建入口修复
+
+`e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9` 的五条 CI 已全部结束：Mod quality 成功；ONI reference compatibility、native platforms、transport、diamond 失败。[CI 收据](cycletrim-validation-20261109/ci-e7d3597e-receipt.json)保留精确 run/job URL、测试计数、失败步骤及历史对照。
+
+| e7 原生平台 | 通过／失败／既有忽略 | 本轮新增液压用例 | 失败原因 |
+| --- | --- | --- | --- |
+| Linux | 103／11／4 | 16／16 通过 | 硬件 Vulkan 初始化失败；FFI 初始化返回 -1 |
+| Windows | 99／11／4 | 16／16 通过 | 同类硬件 Vulkan 初始化失败 |
+| macOS | 96／14／4 | 16／16 通过 | 未编译当前平台可用的 wgpu 后端，额外影响三个 CPU 消息流程 |
+
+macOS 的同一 14 项失败也存在于 `f07d9bc8` 的[原始 CI job](https://github.com/LIghtJUNction/OniMods/actions/runs/42486999855/job/128750940038)，此前为 80 通过、14 失败、4 忽略；所比较的 GPU 子树、相关原生 GPU 文件和原生工作流字节未变。这些具体故障在本轮液压改动前已经存在；当前完整门仍按失败处理。三个平台的库收据构建、加载器验证和合并 bundle 被前置失败阻断，未形成可交付的三平台包。
+
+参考兼容性失败是本轮撤除动画 Hook 后漏同步目标清单所致，错误为 `removed=['KBatchedAnimController'], added=[]`。现已从两份固定参考 DLL 重新提取 API，先重现旧基线失败，再仅删除该目标和对应签名文件；其余 19 个目标、签名、assembly 身份及 reference_source 保持不变。同一个检查脚本退出 0：[基线验证收据](cycletrim-validation-20261109/harmony-baseline-receipt.json)。没有跳过比较门。
+
+macOS 初始化另作最小修正：两个 Vulkan 构造入口在创建 Instance 前检查 `enabled_backend_features()`，未编译 Vulkan 时返回明确错误，恢复 Engine 已有的初始化错误处理。wgpu 30.0.1 [官方 API 文档](https://docs.rs/wgpu/30.0.1/wgpu/struct.Instance.html#method.new)明确说明无平台后端时 `Instance::new` 会 panic；检查的只是编译能力，实际硬件仍由原适配器筛选验证。没有新增 Metal 支持或修改硬件 GPU 测试断言。Linux all-targets check 通过，消息回归 18 通过、0 失败、1 个既有忽略；Apple 双构造器回归由新增 macOS 步骤执行，随后仍运行原完整 native 门。
+
+构建身份检查也补入 GPU 路径依赖的 manifest、Rust 和嵌入式 WGSL。旧脚本对这些输入变更仍接受旧 bundle，负对照出现 4 个失败记录；修复后全部 9 项打包回归通过，包括新增／删除 shader 和不同换行格式。native 构建使用的仍是 `native/Cargo.lock`。详情见[初始化与打包验证收据](cycletrim-validation-20261109/backend-and-bundle-receipt.json)。
+
+这些后续修复再次通过完整 Linux `onim build -m CycleTrim --release`，退出 0，约 19.59 秒；MSBuild 0 警告／0 错误，Rust 36 条未使用项告警。构建前后输入哈希相同，Cargo、bundle、bin、dist 与 ZIP 中的原生库逐字节一致，托管产物也与包内一致。新的源码 digest 包含 GPU 输入，因此与前一版只覆盖 native 的 digest 不可混用。
+
+| 后续候选对象 | SHA-256 |
+| --- | --- |
+| native＋GPU 源码 digest | `491401a5ff678a9505c587825dc695f51bc248c5c714c629220de6513c6d3f07` |
+| Linux 原生库 | `729fa105ec1928d018d665d3cb192f0b5fcdd7bf92af824dbe345ce82993dc22` |
+| implementation/CycleTrim.dll | `cbd3b6ca32318d1f34ed70ac3952b4e263076d1d2d0de0f9e2f78af4d3a6390e` |
+| Linux ZIP | `a1e5dfca9532d845c37062c2f1dd2b1d2c18fae812864670431e2702b7896538` |
+
+[后续构建收据](cycletrim-validation-20261109/followup-linux-receipt.json)中的 e7d3597e 仍是构建时基准 HEAD，未提交候选由源码 digest 和逐文件哈希绑定。此包未部署到原主机，没有 Steam 运行或新 FPS 证据；后续提交的 CI 结论另按精确 SHA 记录。
 
 ## 液体源码基线审计与剩余范围
 

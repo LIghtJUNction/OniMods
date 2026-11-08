@@ -86,13 +86,6 @@
     },
     {
       "assembly": "Assembly-CSharp.dll",
-      "requested_type": "KBatchedAnimController",
-      "resolved_type": "KBatchedAnimController",
-      "signature_file": "Assembly-CSharp__KBatchedAnimController.signatures.txt",
-      "signature_sha256": "2d93634ef17aaa343329ac572da97a93e0ad6a913d0d56f66d0f38d6bccbd1de"
-    },
-    {
-      "assembly": "Assembly-CSharp.dll",
       "requested_type": "LiquidShaderProperties",
       "resolved_type": "LiquidShaderProperties",
       "signature_file": "Assembly-CSharp__LiquidShaderProperties.signatures.txt",

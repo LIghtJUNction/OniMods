@@ -1,0 +1,112 @@
+{
+  "repository_head": "e7d3597e68f43e24fdccb4e68ae0ae6c063a79a9",
+  "scope": "pinned-reference Harmony API surface; not a game runtime result",
+  "ilspycmd_version": "11.0.0.9375",
+  "commands": [
+    {
+      "name": "extract",
+      "command": [
+        "python3",
+        "scripts/extract_harmony_api_surface.py",
+        "/workspace/scratch/6c1cf53f37e8/oni-managed",
+        "--output",
+        "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-api-surface-e7",
+        "--ilspycmd",
+        "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd"
+      ],
+      "started_utc": "2026-11-08T16:27:44.240114+00:00",
+      "duration_seconds": 27.091,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "log": "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-baseline-extract.log",
+      "log_sha256": "ef1ffe208b20cd3bfaf4c2dab1169efbac823537eea97f4b117ff5567f1f1ea5"
+    },
+    {
+      "name": "sanitize",
+      "command": [
+        "python3",
+        "scripts/prepare_oni_api_surface_artifact.py",
+        "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-api-surface-e7"
+      ],
+      "started_utc": "2026-11-08T16:28:11.332152+00:00",
+      "duration_seconds": 0.06,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "log": "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-baseline-sanitize.log",
+      "log_sha256": "534585b4368e8bca27614446719c4d37b934937d92953399116f356b55986905"
+    },
+    {
+      "name": "baseline-before",
+      "command": [
+        "python3",
+        "scripts/check_harmony_api_surface_baseline.py",
+        "--current",
+        "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-api-surface-e7/index.json",
+        "--baseline",
+        "ci/oni-harmony-api-surface-baseline"
+      ],
+      "started_utc": "2026-11-08T16:28:11.392591+00:00",
+      "duration_seconds": 0.061,
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "log": "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-baseline-baseline-before.log",
+      "log_sha256": "480cc2baf898001f1a6c1f65a7242491425ab75c2ac72f17af04713471fae3dd"
+    },
+    {
+      "name": "baseline-after",
+      "command": [
+        "python3",
+        "scripts/check_harmony_api_surface_baseline.py",
+        "--current",
+        "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-api-surface-e7/index.json",
+        "--baseline",
+        "ci/oni-harmony-api-surface-baseline"
+      ],
+      "started_utc": "2026-11-08T16:28:46.421764+00:00",
+      "duration_seconds": 0.059,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "log": "/workspace/scratch/6c1cf53f37e8/toolchain/harmony-baseline-baseline-after.log",
+      "log_sha256": "ad04f84643722357f1b611d28b87ab78486377d045c1af77957471739c0fa559"
+    }
+  ],
+  "preservation": {
+    "target_count_before": 20,
+    "target_count_after": 19,
+    "removed_targets": [
+      "KBatchedAnimController"
+    ],
+    "added_targets": [],
+    "all_remaining_target_metadata_unchanged": true,
+    "all_remaining_signature_bytes_unchanged": true,
+    "reference_source_and_assemblies_unchanged": true,
+    "baseline_index_sha256": "f85659422047ddca3ce99a7cc794e138b3c88ab3ffaf065ad0a9646efb03ca8c",
+    "changed_files": [
+      "ci/oni-harmony-api-surface-baseline/Assembly-CSharp__KBatchedAnimController.signatures.txt",
+      "ci/oni-harmony-api-surface-baseline/index.json"
+    ],
+    "current_surface_index_sha256": "56b799a2fd7e6eb27f3be8ecfe8f3ec361afcff5b2d95453921fa105a8f03537"
+  },
+  "repositoryLogs": {
+    "harmony-baseline-extract.log": {
+      "rawSha256": "ef1ffe208b20cd3bfaf4c2dab1169efbac823537eea97f4b117ff5567f1f1ea5",
+      "sha256": "ef1ffe208b20cd3bfaf4c2dab1169efbac823537eea97f4b117ff5567f1f1ea5",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "harmony-baseline-sanitize.log": {
+      "rawSha256": "534585b4368e8bca27614446719c4d37b934937d92953399116f356b55986905",
+      "sha256": "534585b4368e8bca27614446719c4d37b934937d92953399116f356b55986905",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "harmony-baseline-baseline-before.log": {
+      "rawSha256": "480cc2baf898001f1a6c1f65a7242491425ab75c2ac72f17af04713471fae3dd",
+      "sha256": "480cc2baf898001f1a6c1f65a7242491425ab75c2ac72f17af04713471fae3dd",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    },
+    "harmony-baseline-baseline-after.log": {
+      "rawSha256": "ad04f84643722357f1b611d28b87ab78486377d045c1af77957471739c0fa559",
+      "sha256": "ad04f84643722357f1b611d28b87ab78486377d045c1af77957471739c0fa559",
+      "normalization": "Trailing whitespace and extra final blank lines removed; messages retained."
+    }
+  }
+}
