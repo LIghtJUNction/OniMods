@@ -30,6 +30,8 @@ pub(crate) struct Engine {
     // their derived presentation can be reused on alternating idle batches.
     empty_publication_streak: u8,
     idle_frames_previous: bool,
+    publication_profile: [u32; 4],
+    zero_frame_command_mask: u8,
 }
 
 impl Engine {
@@ -63,6 +65,8 @@ impl Engine {
             gpu,
             empty_publication_streak: 0,
             idle_frames_previous: false,
+            publication_profile: [0; 4],
+            zero_frame_command_mask: 0,
         }
     }
 
@@ -91,9 +95,33 @@ impl Engine {
         self.idle_frames_previous = idle_frames;
         let unchanged_batch = empty_batch || idle_frames;
         let reuse_derived = unchanged_batch && self.empty_publication_streak >= 2;
+        static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some()) {
+            let zero_with_commands = !empty_batch && !idle_frames && frames.iter().all(|frame| frame.elapsed == 0.0);
+            let category = if empty_batch { 0 } else if idle_frames { 1 } else if zero_with_commands { 2 } else { 3 };
+            self.publication_profile[category] += 1;
+            if zero_with_commands {
+                for frame in &frames {
+                    self.zero_frame_command_mask |= u8::from(frame.early.len() != 0)
+                        | (u8::from(!frame.material.is_empty()) << 1)
+                        | (u8::from(!frame.world.is_empty()) << 2)
+                        | (u8::from(!frame.thermal.is_empty()) << 3)
+                        | (u8::from(!frame.mass.is_empty()) << 4)
+                        | (u8::from(!frame.radiation.is_empty()) << 5);
+                }
+            }
+            if self.publication_profile.iter().sum::<u32>() >= 256 {
+                eprintln!("[CycleTrim OniSim] publication profile batches: empty={} idle_zero={} zero_with_commands={} advancing={} zero_command_mask={:#04x} (bits: early=1 material=2 world=4 thermal=8 mass=16 radiation=32)",
+                    self.publication_profile[0], self.publication_profile[1], self.publication_profile[2], self.publication_profile[3], self.zero_frame_command_mask);
+                self.publication_profile = [0; 4];
+                self.zero_frame_command_mask = 0;
+            }
+        }
         if reuse_derived {
-            static LOG_REUSE: std::sync::Once = std::sync::Once::new();
-            LOG_REUSE.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for consecutive idle batches"));
+            static LOG_EMPTY: std::sync::Once = std::sync::Once::new();
+            static LOG_ZERO: std::sync::Once = std::sync::Once::new();
+            if idle_frames { LOG_ZERO.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for zero-time frames")); }
+            else { LOG_EMPTY.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for empty batches")); }
         }
         if !unchanged_batch { self.invalidate_empty_publications(); }
         if !output.retired_slots.is_empty() {
