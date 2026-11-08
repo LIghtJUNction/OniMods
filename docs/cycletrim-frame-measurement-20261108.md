@@ -43,6 +43,20 @@ python3 scripts/profile_cycletrim_process.py --pid "$oni_game_pid" \
 
 `python3 scripts/verify_cycletrim_process_profile.py` 的 8 项 Linux 回归通过，包括真实忙循环／休眠进程、状态与计数汇总、可选文件权限不足、PID/TID 身份变化、进程提前退出和证据文件保护。这建立采样工具的行为证据，没有产生新的游戏帧率结果。
 
+## 后续源码复核：暂停路径与隐藏动画
+
+已固定并核对 `Kupie/ONI_Decomp@8d4ace10c2b6a84cee394653a91b990a5122e636`（声明 build 744825）的参考源码。它说明调用语义；不能证明用户当前游戏在各调用中花费多少时间。
+
+**暂停仍执行原生交接。** [Game.cs](https://github.com/Kupie/ONI_Decomp/blob/8d4ace10c2b6a84cee394653a91b990a5122e636/Assembly-CSharp/Game.cs) 中 `Game.Update` 无条件调用 `SimEveryTick`；不足一个子步时仍执行 `UnsafeSim200ms(0f)`，重建 active-region 列表、发送 `NewGameFrame` 并调用 `StepTheSim`。`LateUpdate` 也没有暂停时的总跳过门，仍会触及导管、可视化、状态图标及音频。因此应先查看既有诊断的 `SimEveryTick(inclusive)` 与 `StepTheSim(inclusive)`，再结合线程 CPU／等待采样定位。不能把暂停区间全部归为渲染。
+
+原版 `SimEveryTick` 自身存在 0.2 秒的输入上限；它与前一轮删除的 CycleTrim 额外 2/60 秒限幅是两处不同代码。此次没有修改原版限幅。仅凭当前摘要，不能确认它对 1.58 游戏秒／墙钟秒的贡献。
+
+**隐藏动画恢复原版更新路径。** [KBatchedAnimController.cs](https://github.com/Kupie/ONI_Decomp/blob/8d4ace10c2b6a84cee394653a91b990a5122e636/Assembly-CSharp/KBatchedAnimController.cs) 在可见性门之前处理 transform／dirty；隐藏的 `OffscreenUpdate` 可以推进时间，`forceRebuild` 可以越过隐藏门。原补丁直接返回 false 会吞掉这些行为。修复复用已有 Hook 和累计时间消费函数：隐藏时交还原版，并只消费一次此前可见期间累计的时间；零 dt 仍交给原版，不消费累计时间。
+
+加强合成 receiver 后、修改生产前缀前，离屏更新回归退出 1：应收到 0.03 秒，实际为 0。修复后同一断言及全部 9 个动画场景通过。receiver 仅表示调度与隐藏门，不模拟完整 Unity 动画系统。旧的“移动但隐藏”测试现在同时检查原版调用次数和原版隐藏门，不再错误假设每次到达原版都会推进动画。
+
+最终三文件候选已通过完整 Release 宿主入口的 10 个回归族，以及 `onim build -m CycleTrim --release` 的托管参考构建（0 errors，28 个既有 Jlib 警告，`IncludeOniSim=false`）。本次候选实现 DLL 的 SHA-256 为 `889a97e6ebbe549923fa3e4a7f9e6db05e773478bf89f196cb7df325d182f0c8`，与包内实现 DLL 一致；三份源码在构建与回归前后保持相同指纹。这次修复没有实机视觉或 FPS 收益证据，也没有新增原生库部署。实现与回归见 [ZoomRenderAccelerationPatch.cs](../mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs)、[ZoomAnimationRegression.cs](../tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs)。
+
 ## 源码与测试范围
 
 本轮首先读取了 AGENTS.md、RTK.md、UPSTREAM.toml 和 docs/autonomous-iteration.md，并检查当前差异。可访问的云端检出不含交接中的未提交液体改动、原始 hydraulic_tests、测试存档、perf.data 或游戏运行日志。原 Steam／RTX 4060 主机没有接入此执行环境。

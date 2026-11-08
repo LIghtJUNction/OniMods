@@ -5,10 +5,10 @@ using UnityEngine;
 namespace CycleTrim.Patches
 {
     /// <summary>
-    /// 全图远景极限渲染优化与 LOD 补丁。
-    /// 彻底击碎大地图缩放（Bigger Camera Zoom Out）及材料概览（F4 / TileMode）下帧率跌至个位数（1~3 FPS）的瓶颈：
-    /// 1. KBatchedAnimController.UpdateAnim 全局实例级时间片分帧（静止物体 96.7% 帧完全跳过，时间步补偿）；
-    /// 2. TileMode.Update（材料视图）与 ConduitMode.Update 遍历全图数十万个物体的极端降频调度；
+    /// 远缩放下的动画与叠层刷新调度。
+    /// 可见静止动画按实例交错更新，累计实际收到的时间步；
+    /// 隐藏与移动控制器保留原版更新路径。
+    /// 材料和管道叠层按帧数刷新，实际刷新时间取决于游戏帧率。
     /// </summary>
     public static class ZoomRenderAccelerationPatch
     {
@@ -51,22 +51,20 @@ namespace CycleTrim.Patches
                 if (__instance == null || dt <= 0f)
                     return true;
 
-                // 复制人与移动生物：绝对禁止抽帧跳步！保证 100% 流畅运动与动画，彻底消除“一卡一卡”
+                // Moving entities reach the original on every call.
                 if (__instance.isMovable || __instance.IsMoving)
                 {
                     ConsumePendingTime(__instance, ref dt);
                     return true;
                 }
 
-                // 视野剔除：不在屏幕内的静止物体直接跳过
+                // The original owns hidden-controller behavior: it can still
+                // process transforms, advance OffscreenUpdate animation or
+                // finish forceRebuild. Flush visible time before handing off.
                 if (!__instance.IsVisible())
                 {
-                    // A culled animation starts fresh when it becomes visible;
-                    // do not accumulate a catch-up jump while it is hidden.
-                    PendingAnimationTime hidden;
-                    if (pendingTimes.TryGetValue(__instance, out hidden))
-                        hidden.Elapsed = 0f;
-                    return false;
+                    ConsumePendingTime(__instance, ref dt);
+                    return true;
                 }
 
                 float zoom = GetCurrentZoom();
@@ -114,8 +112,7 @@ namespace CycleTrim.Patches
                 if (zoom <= 30f)
                     return true;
 
-                // 在全图远景下，地面碎片数十万件，逐个遍历耗时高达数百毫秒
-                // 降频至远景每 30 帧（约 1 秒）刷新一次，避免主线程彻底卡死
+                // Refresh cadence is measured in frames, not elapsed seconds.
                 int interval = zoom > 100f ? 30 : (zoom > 60f ? 15 : 6);
                 if ((Time.frameCount % interval) != 0)
                 {

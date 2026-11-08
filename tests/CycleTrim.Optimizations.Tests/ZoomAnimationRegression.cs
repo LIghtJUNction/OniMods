@@ -12,6 +12,8 @@ namespace CycleTrim.Optimizations.Tests
             new Harmony("CycleTrim.Tests.ZoomAnimation")
                 .CreateClassProcessor(typeof(ZoomRenderAccelerationPatch.BatchedAnimControllerUpdateAnimPatch))
                 .Patch();
+            HiddenOffscreenUpdates();
+            HiddenForcedRebuild();
             UnevenFrames();
             FirstUpdate();
             ZoomTransitions();
@@ -19,7 +21,7 @@ namespace CycleTrim.Optimizations.Tests
             VisibilityTransitions();
             IndependentControllers();
             PausedFrames();
-            Console.WriteLine("PASS zoom animation elapsed-time regressions (7 scenarios)");
+            Console.WriteLine("PASS zoom animation elapsed-time and hidden-controller regressions (9 scenarios)");
         }
 
         private static void Tick(KBatchedAnimController controller, int frame, float dt, float zoom = 50f)
@@ -81,14 +83,54 @@ namespace CycleTrim.Optimizations.Tests
             var controller = new KBatchedAnimController();
             Tick(controller, 21, .010f);
             controller.Visible = false;
+            controller.TransformDirty = true;
             Tick(controller, 22, 10f);
+            Check(controller.Updates == 1 && controller.TransformUpdates == 1,
+                "hidden controllers still process the original transform/dirty path");
+            Equal(0f, controller.Elapsed, "ordinary hidden animation is culled by the original");
             controller.Visible = true;
             Tick(controller, 24, .020f);
-            Equal(.020f, controller.Elapsed, "culling discards pending time without hidden-time catch-up");
+            Equal(.020f, controller.Elapsed, "ordinary hidden animation has no catch-up on return");
             controller.Visible = false;
             controller.IsMoving = true;
             Tick(controller, 25, .030f);
-            Equal(.050f, controller.Elapsed, "moving entities still bypass visibility culling");
+            Check(controller.Updates == 3, "moving entities still reach the original every frame");
+            Equal(.020f, controller.Elapsed, "the original still owns a moving controller's hidden gate");
+        }
+
+        private static void HiddenOffscreenUpdates()
+        {
+            var controller = new KBatchedAnimController { OffscreenUpdates = true };
+            Tick(controller, 41, .010f);
+            Equal(0f, controller.Elapsed, "visible far-zoom time is deferred before hiding");
+            controller.Visible = false;
+            Tick(controller, 42, .020f);
+            Equal(.030f, controller.Elapsed, "OffscreenUpdate receives previously deferred visible time");
+            Tick(controller, 43, .040f);
+            Equal(.070f, controller.Elapsed, "OffscreenUpdate continues while hidden without replaying time");
+            Check(controller.Updates == 2, "hidden OffscreenUpdate reaches the original on every call");
+            controller.Visible = true;
+            Tick(controller, 44, .050f);
+            Equal(.120f, controller.Elapsed, "visible return cannot consume deferred time a second time");
+        }
+
+        private static void HiddenForcedRebuild()
+        {
+            var controller = new KBatchedAnimController();
+            Tick(controller, 49, .010f);
+            controller.Visible = false;
+            controller.ForceRebuild = true;
+            Tick(controller, 50, .020f);
+            Check(controller.Rebuilds == 1 && !controller.ForceRebuild,
+                "hidden forceRebuild reaches and completes the original rebuild");
+            Equal(.030f, controller.Elapsed, "forced hidden rebuild receives deferred visible time");
+            Tick(controller, 51, .040f);
+            Equal(.030f, controller.Elapsed, "after rebuild the original culls ordinary hidden animation");
+            Check(controller.Updates == 2 && controller.Rebuilds == 1,
+                "a completed forced rebuild is not replayed on the next hidden call");
+            controller.Visible = true;
+            Tick(controller, 52, .050f);
+            Equal(.080f, controller.Elapsed, "forced rebuild consumes deferred time exactly once");
         }
 
         private static void IndependentControllers()
@@ -111,7 +153,11 @@ namespace CycleTrim.Optimizations.Tests
         {
             var controller = new KBatchedAnimController();
             Tick(controller, 33, .010f);
+            controller.ForceRebuild = true;
             Tick(controller, 34, 0f);
+            Check(controller.Rebuilds == 1 && !controller.ForceRebuild,
+                "zero-time calls still process the original forced rebuild");
+            Equal(0f, controller.Elapsed, "a paused rebuild cannot consume deferred animation time");
             Tick(controller, 36, .020f);
             Equal(.030f, controller.Elapsed, "zero-time calls do not consume pending elapsed time");
         }
