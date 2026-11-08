@@ -140,6 +140,8 @@ jobs:
             -p:TargetFrameworks=netstandard2.1 \
             -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
       - name: Run source and host regressions
+        env:
+          ONI_MANAGED_PATH: ${{ github.workspace }}/.oni-managed
         run: python3 scripts/check_mods.py --skip-synthetic-performance
       - name: Extract Harmony target API surface
         run: >-
