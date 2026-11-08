@@ -26,6 +26,7 @@
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Support/McpJsonUtil.cs" Link="Support/McpJsonUtil.cs" />
     <Compile Include="../../mods/OniMcp/Support/McpTextContentEncoder.cs" Link="Support/McpTextContentEncoder.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/JlibDispatcher.cs" Link="Jlib/JlibDispatcher.cs" />
     <PackageReference Include="Toon.Format" Version="1.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
