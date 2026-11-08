@@ -30,6 +30,8 @@ namespace CycleTrim
             // an explicit diagnostic-only launch argument as well.
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cycletrim-gpu-profile") >= 0)
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
+            else
+                Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", null);
             FrameRateUnlockPatch.Configure(options.TargetFrameRate);
             FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator

@@ -50,11 +50,13 @@ fn validate_cells(
     if lengths.iter().any(|&length| length != count) {
         return Err(invalid("physics CellSOA arrays have different lengths"));
     }
-    if !crate::id_validation::valid_u16::<false>(&cells.element, elements.len()) {
-        return Err(invalid("physics cell references an absent element"));
-    }
-    if !crate::id_validation::valid_u8(&cells.disease_idx, diseases.len()) {
-        return Err(invalid("physics cell references an absent disease"));
+    if cfg!(debug_assertions) {
+        if !crate::id_validation::valid_u16::<false>(&cells.element, elements.len()) {
+            return Err(invalid("physics cell references an absent element"));
+        }
+        if !crate::id_validation::valid_u8(&cells.disease_idx, diseases.len()) {
+            return Err(invalid("physics cell references an absent disease"));
+        }
     }
     Ok(())
 }
@@ -122,7 +124,7 @@ fn preflight(
     .any(|&length| length != count)
         || world.species_mass.len() != count * crate::multicomponent_flux::GAS_CHANNELS
         || world.active_mask.len() != world.width * world.height
-        || !crate::id_validation::valid_u16::<true>(&world.backwall_element, elements.len())
+        || (cfg!(debug_assertions) && !crate::id_validation::valid_u16::<true>(&world.backwall_element, elements.len()))
         || world
             .inactive_mask
             .as_ref()

@@ -43,37 +43,26 @@ namespace CycleTrim.Patches
                 if (__instance == null || dt <= 0f)
                     return true;
 
-                // Offscreen culling: if the controller is off-screen and not moving, skip CPU matrix calculations entirely
-                if (!__instance.IsVisible() && !__instance.IsMoving)
+                // 复制人与移动生物：绝对禁止抽帧跳步！保证 100% 流畅运动与动画，彻底消除“一卡一卡”
+                if (__instance.isMovable || __instance.IsMoving)
+                    return true;
+
+                // 视野剔除：不在屏幕内的静止物体直接跳过
+                if (!__instance.IsVisible())
                     return false;
 
                 float zoom = GetCurrentZoom();
-                bool isMinion = false;
-                string name = __instance.name;
-                if (name != null && name.IndexOf("Minion", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    isMinion = true;
-                }
+                // 正常视距（<= 35）下静止建筑完全正常渲染，远景下拉大步长
+                if (zoom <= 35f)
+                    return true;
 
-                int stride;
-                if (isMinion)
-                {
-                    stride = zoom > 60f ? 2 : 1;
-                }
-                else
-                {
-                    if (zoom > 100f) stride = 30;
-                    else if (zoom > 60f) stride = 15;
-                    else if (zoom > 30f) stride = 6;
-                    else stride = 4; // 即使在正常视距下，静止建筑与装饰也进行 4 帧间隔分帧，释放主线程 CPU
-                }
-
+                int stride = zoom > 100f ? 20 : (zoom > 60f ? 10 : 4);
                 if (stride > 1 && (((__instance.GetInstanceID() & 0x7FFFFFFF) + Time.frameCount) % stride) != 0)
                 {
-                    return false; // 阻断该帧的 CPU 矩阵与顶点计算
+                    return false;
                 }
 
-                dt *= stride; // 补齐时间步，确保动画推进速度不减慢
+                dt *= stride;
                 return true;
             }
         }

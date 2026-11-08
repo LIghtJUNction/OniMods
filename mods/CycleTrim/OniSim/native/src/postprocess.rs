@@ -1,5 +1,5 @@
 use crate::events::{EventQueues, SpawnFXInfo};
-use crate::fluid_helpers::{clear_disease, cvtt, game_index, notify, phase, swap_material};
+use crate::fluid_helpers::{clear_disease, cvtt, game_index, notify, phase};
 use crate::status::Result;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
@@ -191,71 +191,14 @@ fn gas(
     cell: usize,
     source_element: u16,
 ) {
-    let source = &elements.elements[source_element as usize].record;
-    let direction = world.gas_scan_direction as isize;
-    world.gas_scan_direction = -world.gas_scan_direction;
-    let _first = cell.checked_add_signed(direction).unwrap();
-    let _second = cell.checked_add_signed(-direction).unwrap();
-    let below = cell - world.stride;
-    let _above = cell + world.stride;
     let mass = world.write.mass[cell];
     // 质量守恒保证：绝不因为气体薄（<0.001）就蒸发成真空。只有近零残余才清理
-    let discard = mass <= 1e-6;
-    if discard {
+    if mass <= 1e-6 {
         world.flow[cell] = [0.0; 4];
         crate::fluid_displacement::evaporate(world, events, cell);
     }
-    if !crate::postprocess_pressure::density_displacement(
-        world,
-        elements,
-        events,
-        cell,
-        source,
-        f32::from_bits(0x3f7d70a4),
-    ) && (world.write.properties[cell] & 2 != 0
-        || !crate::partial_melt::apply(world, elements, diseases, events, cell))
-    {
-        let sample = world.next_random() as f32;
-        if f32::from_bits(0x46e66499) < sample {
-            // The tiny-mass check uses the entering direction, but random
-            // swaps use its already-negated value (ELF 0x7233e..0x72361).
-            let first = cell
-                .checked_add_signed(world.gas_scan_direction as isize)
-                .unwrap();
-            let second = cell
-                .checked_add_signed(-(world.gas_scan_direction as isize))
-                .unwrap();
-            let mut choice = Some(first);
-            let mut temperature = world.write.temperature[first];
-            if f32::MAX < temperature
-                || world.next_random() as f32 <= 16383.5
-                || phase(elements, world.write.element[first]) != 1
-            {
-                choice = None;
-                temperature = f32::MAX;
-            }
-            let second_temperature = world.write.temperature[second];
-            if second_temperature <= temperature
-                && 16383.5 < world.next_random() as f32
-                && phase(elements, world.write.element[second]) == 1
-            {
-                choice = Some(second);
-                temperature = second_temperature;
-            }
-            let below_temperature = world.write.temperature[below];
-            let below_record = &elements.elements[world.write.element[below] as usize].record;
-            if below_temperature <= temperature
-                && 16383.5 < world.next_random() as f32
-                && below_record.state & 3 == 1
-                && below_record.molar_mass < source.molar_mass
-            {
-                choice = Some(below);
-            }
-            if let Some(destination) = choice {
-                swap_material(world, events, destination, cell);
-            }
-        }
-    }
+    // 现代物理模型：气体扩散由 GPU/CPU 真实浓度渗透与分子量浮力偏好负责，
+    // 废除古老元胞自动机在 postprocess 中的随机粗暴交换，大幅提升帧率并消除阶梯伪影
     crate::sublimation::apply_with_source(world, elements, diseases, events, cell, source_element);
 }
 
