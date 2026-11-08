@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -29,10 +30,11 @@ internal static class RetiredProtocolRegression
         RunScenario(VerifyResources);
     }
 
-    private static void RunScenario(Action<HttpClient, MainThreadBridge, McpHttpServer> verify)
+    private static void RunScenario(Action<HttpClient, JlibDispatcher, McpHttpServer> verify)
     {
-        var bridge = new MainThreadBridge();
+        var bridge = new JlibDispatcher();
         Invoke(bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         var previousOptions = OniMcpOptions.Current;
         var server = new McpHttpServer();
         try
@@ -62,7 +64,7 @@ internal static class RetiredProtocolRegression
         Console.WriteLine("PASS: " + verify.Method.Name + " supported protocol and retired-wire regressions");
     }
 
-    private static void VerifyDiscovery(HttpClient client, MainThreadBridge bridge, McpHttpServer server)
+    private static void VerifyDiscovery(HttpClient client, JlibDispatcher bridge, McpHttpServer server)
     {
         AssertRetired(client, bridge, server, "server/discover",
             Rpc("server/discover", 1001, ModernMeta()), Retired, null);
@@ -96,7 +98,7 @@ internal static class RetiredProtocolRegression
         }
     }
 
-    private static void VerifyHeaders(HttpClient client, MainThreadBridge bridge, McpHttpServer server)
+    private static void VerifyHeaders(HttpClient client, JlibDispatcher bridge, McpHttpServer server)
     {
         var modernHeaders = new Dictionary<string, string>
         {
@@ -148,7 +150,7 @@ internal static class RetiredProtocolRegression
         Initialize(client, bridge, server);
     }
 
-    private static void VerifyProtocol(HttpClient client, MainThreadBridge bridge, McpHttpServer server)
+    private static void VerifyProtocol(HttpClient client, JlibDispatcher bridge, McpHttpServer server)
     {
         foreach (string invalidVersion in new[] { Retired, "2025-06-18", "2027-01-01" })
             AssertRetired(client, bridge, server, "initialize", "{broken json",
@@ -207,7 +209,7 @@ internal static class RetiredProtocolRegression
             "Supported protocol did not dispatch exactly one tool call");
     }
 
-    private static void VerifyResources(HttpClient client, MainThreadBridge bridge, McpHttpServer server)
+    private static void VerifyResources(HttpClient client, JlibDispatcher bridge, McpHttpServer server)
     {
         foreach (string uri in new[]
         {
@@ -257,7 +259,7 @@ internal static class RetiredProtocolRegression
         }
     }
 
-    private static void AssertRetired(HttpClient client, MainThreadBridge bridge,
+    private static void AssertRetired(HttpClient client, JlibDispatcher bridge,
         McpHttpServer server, string method, string body, string version,
         Dictionary<string, string> headers)
     {
@@ -290,7 +292,7 @@ internal static class RetiredProtocolRegression
             "Rejected retired request dispatched a tool, read a resource or allocated a session: " + method);
     }
 
-    private static string Initialize(HttpClient client, MainThreadBridge bridge, McpHttpServer server)
+    private static string Initialize(HttpClient client, JlibDispatcher bridge, McpHttpServer server)
     {
         using (var response = Post(client, bridge,
             Rpc("initialize", 9001, new JObject { ["protocolVersion"] = Current }),
@@ -335,7 +337,7 @@ internal static class RetiredProtocolRegression
         }.ToString(Formatting.None);
     }
 
-    private static HttpResponseMessage Post(HttpClient client, MainThreadBridge bridge,
+    private static HttpResponseMessage Post(HttpClient client, JlibDispatcher bridge,
         string body, string version, string session = null,
         Dictionary<string, string> extraHeaders = null)
     {

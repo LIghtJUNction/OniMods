@@ -1,0 +1,100 @@
+type public class KBatchedAnimController : KAnimControllerBase , KAnimConverter . IAnimConverter
+member private Canvas GetRootCanvas ( )
+member private Canvas rootCanvas
+member private CanvasScaler scaler
+member private KAnimBatch batch
+member private RectTransform rt
+member private SymbolOverrideController symbolOverrideController
+member private Vector2I lastChunkXY
+member private Vector3 lastPos
+member private Vector3 screenOffset
+member private bool moving
+member private bool suspendUpdates
+member private bool visibilityListenerRegistered
+member private int symbolOverrideControllerVersion
+member private static Action < Transform , bool , object > OnMovementStateChangedDispatcher
+member private ulong movingStateChangedHandlerID
+member private void ConfigureUpdateListener ( )
+member private void ConfigureVisibilityListener ( bool enabled )
+member private void Initialize ( )
+member private void OnDisable ( )
+member private void OnEnable ( )
+member private void OnMovementStateChanged ( bool is_moving )
+member private void RegisterVisibilityListener ( )
+member private void SetBatchGroup ( KAnimFileData kafd )
+member private void UnregisterVisibilityListener ( )
+member protected bool _forceRebuild
+member protected override void DeRegister ( )
+member protected override void Disable ( )
+member protected override void Enable ( )
+member protected override void OnAwake ( )
+member protected override void OnDestroy ( )
+member protected override void OnStart ( )
+member protected override void OnStartQueuedAnim ( )
+member protected override void OnStop ( )
+member protected override void RefreshVisibilityListener ( )
+member protected override void Register ( )
+member protected override void SuspendUpdates ( bool suspend )
+member protected override void UpdateFrame ( float t )
+member public Func < Vector4 > getPositionDataFunctionInUse
+member public Grid . SceneLayer sceneLayer
+member public HashedString GetBatchGroupID ( bool isEditorWindow = false )
+member public HashedString GetBatchGroupIDOverride ( )
+member public KAnimBatch GetBatch ( )
+member public KAnimConverter . PostProcessingEffects postProcessingEffectsAllowed
+member public KBatchedAnimController ( )
+member public KBatchedAnimInstanceData GetBatchInstanceData ( )
+member public KBatchedAnimUpdater . RegistrationState updateRegistrationState
+member public Matrix2x3 GetTransformMatrix ( Vector2 customScale )
+member public Matrix2x3 navMatrix
+member public SymbolOverrideController SetupSymbolOverriding ( )
+member public Vector2 animOverrideSize
+member public Vector2I GetCellXY ( )
+member public Vector4 GetPositionData ( )
+member public bool ApplySymbolOverrides ( )
+member public bool IsActive ( )
+member public bool IsAlwaysVisible ( )
+member public bool IsVisible ( )
+member public bool isMovable
+member public bool setScaleFromAnim
+member public float GetPostProcessingParams ( )
+member public float GetZ ( )
+member public float animScale
+member public float postProcessingParameters
+member public int GetCurrentFrameIndex ( )
+member public int GetCurrentNumFrames ( )
+member public int GetFirstFrameIndex ( )
+member public int GetLayer ( )
+member public int GetMaxVisible ( )
+member public override KAnim . Anim GetAnim ( int index )
+member public override Matrix2x3 GetSymbolLocalTransform ( HashedString symbol , out bool symbolVisible )
+member public override Matrix2x3 GetTransformMatrix ( )
+member public override Matrix4x4 GetSymbolTransform ( HashedString symbol , out bool symbolVisible )
+member public override void SetDirty ( )
+member public override void SetLayer ( int layer )
+member public override void TriggerStop ( )
+member public override void UpdateAllHiddenSymbols ( )
+member public override void UpdateHiddenSymbol ( KAnimHashedString symbolToUpdate )
+member public override void UpdateHiddenSymbolSet ( HashSet < KAnimHashedString > symbolsToUpdate )
+member public string GetName ( )
+member public ulong movementChangedHandlerId
+member public virtual KAnimConverter . PostProcessingEffects GetPostProcessingEffectsCompatibility ( )
+member public void CopyBlendValue ( KAnimControllerBase source )
+member public void LoadAnims ( )
+member public void SetBatch ( KAnimBatch new_batch )
+member public void SetBatchGroupOverride ( HashedString id )
+member public void SetBlendValue ( KBatchedAnimInstanceData . BlendActiveOptions blendType , bool isActive )
+member public void SetSceneLayer ( Grid . SceneLayer layer )
+member public void SetSymbolOverride ( int symbol_idx , ref KAnim . Build . SymbolFrameInstance symbol_frame_instance )
+member public void SetSymbolOverrides ( int symbol_start_idx , int symbol_num_frames , int atlas_idx , KBatchGroupData source_data , int source_start_idx , int source_num_frames )
+member public void SetSymbolScale ( KAnimHashedString symbol_name , float scale )
+member public void SetSymbolTint ( KAnimHashedString symbol_name , Color color )
+member public void SetVisiblity ( bool is_visible )
+member public void SwapAnims ( KAnimFile [ ] anims )
+member public void UpdateAnim ( float dt )
+member public void UpdateFromSync ( )
+member static KBatchedAnimController ( )
+property protected bool forceRebuild { get ; set ; }
+property public HashedString batchGroupID { get ; private set ; }
+property public HashedString batchGroupIDOverride { get ; private set ; }
+property public bool IsMoving { get ; }

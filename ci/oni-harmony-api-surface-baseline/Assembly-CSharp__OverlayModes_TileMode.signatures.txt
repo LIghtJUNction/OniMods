@@ -1,0 +1,18 @@
+type public class TileMode : Mode
+member private ColorHighlightCondition [ ] highlightConditions
+member private HashSet < PrimaryElement > layerTargets
+member private HashSet < Tag > targetIDs
+member private int cameraLayerMask
+member private int targetLayer
+member private static Util . IterationInstruction updateVisitor ( object obj , ref ( TileMode , Vector2I , Vector2I ) context )
+member private void TryAddObject ( PrimaryElement pe , Vector2I min , Vector2I max )
+member public TileMode ( )
+member public override HashedString ViewMode ( )
+member public override ToolParameterMenu . ToggleData [ ] CreateDefaultFilters ( )
+member public override string GetSoundName ( )
+member public override void Disable ( )
+member public override void Enable ( )
+member public override void OnFiltersChanged ( )
+member public override void Update ( )
+member public static readonly HashedString ID
+member static TileMode ( )

@@ -1,0 +1,79 @@
+type public class MainMenu : KScreen
+member private BuildWatermark buildWatermark
+member private CanvasGroup uiCanvas
+member private ColorStyleSetting normalButtonStyle
+member private ColorStyleSetting topButtonStyle
+member private DLCToggle expansion1Toggle
+member private Dictionary < string , SaveFileEntry > saveFileEntries
+member private EventInstance ambientLoop
+member private GameObject GameSettingsScreen
+member private GameObject buttonParent
+member private GameObject expansion1Ad
+member private GameObject logoGroup
+member private GameObject logoPackPrefab
+member private HierarchyReferences logoDLC1
+member private KButton Button_NewGame
+member private KButton MakeButton ( ButtonInfo info )
+member private KButton buttonPrefab
+member private KButton lockerButton
+member private MainMenu_Motd motd
+member private NextUpdateTimer nextUpdateTimer
+member private PatchNotesScreen patchNotesScreenPrefab
+member private bool dlcTooltipsBottom
+member private bool itemDropOpenFlag
+member private bool m_screenshotMode
+member private bool refreshResumeButton
+member private bool reverseDlcLogoOrder
+member private int m_cheatInputCounter
+member private static MainMenu _instance
+member private static bool HasAutoresumedOnce
+member private static int LANGUAGE_CONFIRMATION_VERSION
+member private string ambientLoopEventName
+member private string menuMusicEventName
+member private void BuildDlcLogoWidgets ( )
+member private void CheckDoubleBoundKeys ( )
+member private void CheckForAudioDriverIssue ( )
+member private void CheckPlayerPrefsCorruption ( )
+member private void ConfigureDlcLogoWidget ( HierarchyReferences widgetInstance , DlcManager . DlcInfo dlcInfo )
+member private void InitLoadScreen ( )
+member private void LoadGame ( )
+member private void Mods ( )
+member private void NewGame ( )
+member private void OnApplicationFocus ( bool focus )
+member private void Options ( )
+member private void PlayMouseClickSound ( )
+member private void PlayMouseOverSound ( )
+member private void QuitGame ( )
+member private void RefreshInventoryNotification ( )
+member private void RestartGame ( )
+member private void ResumeGame ( )
+member private void ShowLanguageConfirmation ( )
+member private void SpawnVideoScreen ( )
+member private void Translations ( )
+member private void Update ( )
+member protected override void OnActivate ( )
+member protected override void OnDeactivate ( )
+member protected override void OnForcedCleanUp ( )
+member protected override void OnLoadLevel ( )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member public KButton Button_ResumeGame
+member public MainMenu ( )
+member public const string AutoResumeSaveFileKey = "AutoResumeSaveFile"
+member public const string PLAY_SHORT_ON_LAUNCH = "PlayShortOnLaunch"
+member public override void OnKeyDown ( KButtonEvent e )
+member public override void ScreenUpdate ( bool topLevel )
+member public static void ActivateInventoyScreen ( )
+member public static void ActivateLockerMenu ( )
+member public static void ActivateRetiredColoniesScreen ( GameObject parent , string colonyID = "" )
+member public static void ActivateRetiredColoniesScreenFromData ( GameObject parent , RetiredColonyData data )
+member public string GetDLCStatusString ( string dlcID , bool tooltip = false )
+member public string IntroShortName
+member public void RefreshResumeButton ( bool simpleCheck = false )
+member public void StartFEAudio ( )
+member public void StopAmbience ( )
+member public void StopMainMenuMusic ( )
+member static MainMenu ( )
+nested private struct ButtonInfo
+nested private struct SaveFileEntry
+property public static MainMenu Instance { get ; }

@@ -86,6 +86,19 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", result.stdout)
 
+    def test_compatibility_compiles_keep_per_project_sdk_paths(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github/workflows/oni-reference-compat.yml").read_text(
+                        encoding="utf-8")
+        self.assertNotIn("BaseIntermediateOutputPath", workflow)
+        self.assertNotIn('compat_root="$RUNNER_TEMP/', workflow)
+        self.assertEqual(
+            1,
+            workflow.count(
+                "dotnet restore mods/CycleTrim/OniSim/managed/"
+                "OniSim.Compatibility/OniSim.Compatibility.csproj"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

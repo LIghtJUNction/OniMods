@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -19,7 +20,7 @@ using OniMcp.Tools;
 internal static class Program
 {
     private static int _passed;
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _dispatcher;
 
     private static void Main()
     {
@@ -30,8 +31,9 @@ internal static class Program
             Throws<InvalidOperationException>(() => MainThreadBridge.Enqueue(() => called = true));
             Assert(!called, "An uninitialized bridge executed game code");
         });
-        _bridge = new MainThreadBridge();
-        Invoke(_bridge, "Awake");
+        _dispatcher = new JlibDispatcher();
+        Invoke(_dispatcher, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         try
         {
             Check("main-thread invocation preserves result and exception", () =>
@@ -46,7 +48,7 @@ internal static class Program
             {
                 bool called = false;
                 Task.Run(() => Throws<TimeoutException>(() => MainThreadBridge.Invoke(() => called = true, 10))).GetAwaiter().GetResult();
-                Invoke(_bridge, "Update");
+                Invoke(_dispatcher, "Update");
                 Assert(!called, "Timed-out queued game action still executed");
             });
             Check("in-flight invocation completes safely after timeout", () =>
@@ -123,10 +125,10 @@ internal static class Program
             {
                 bool called = false;
                 var work = Task.Run(() => Throws<InvalidOperationException>(() => MainThreadBridge.Invoke(() => called = true, Timeout.Infinite)));
-                var queueLock = typeof(MainThreadBridge).GetField("_queueLock", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_bridge);
-                var cancellations = (HashSet<Action>)typeof(MainThreadBridge).GetField("_pendingCancellations", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_bridge);
+                var queueLock = typeof(JlibDispatcher).GetField("_queueLock", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_dispatcher);
+                var cancellations = (HashSet<Action>)typeof(JlibDispatcher).GetField("_pendingCancellations", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_dispatcher);
                 Assert(SpinWait.SpinUntil(() => { lock (queueLock) return cancellations.Count > 0; }, 1000), "Invocation was never queued");
-                Invoke(_bridge, "OnDestroy");
+                Invoke(_dispatcher, "OnDestroy");
                 Assert(work.Wait(1000) && !called, "Destroyed bridge left caller blocked or executed game code");
             });
             Check("delayed settings restart survives bridge destruction", () =>
@@ -136,7 +138,7 @@ internal static class Program
                 Thread.Sleep(400);
             });
         }
-        finally { Invoke(_bridge, "OnDestroy"); }
+        finally { Invoke(_dispatcher, "OnDestroy"); }
         RetiredProtocolRegression.Run();
         HttpAdmissionRegression.Run();
         HttpFrontDoorAdmissionRegression.Run();
@@ -170,7 +172,7 @@ internal static class Program
         Assert(((McpTaskInfo)Process(server, "tasks/get", "owner", taskId)).Status == "working", "Foreign cancellation changed task");
         Assert(((McpTaskInfo)Process(server, "tasks/cancel", "owner", taskId)).Status == "cancelled", "Owner cancellation failed");
         int calls = OniToolRegistry.Calls;
-        Invoke(_bridge, "Update");
+        Invoke(_dispatcher, "Update");
         Assert(OniToolRegistry.Calls == calls, "Cancelled task executed");
     }
 
@@ -300,7 +302,7 @@ internal static class Program
                             Assert(response.StatusCode == HttpStatusCode.NoContent, "Delete failed");
                     }
                     int calls = OniToolRegistry.Calls;
-                    Invoke(_bridge, "Update");
+                    Invoke(_dispatcher, "Update");
                     Assert(OniToolRegistry.Calls == calls, "Deleted session task still executed");
                     Assert(((ListTasksResult)Process(server, "tasks/list", sessionId)).Tasks.Count == 0, "Deleted session retained tasks");
                     var rejected = Throws<TargetInvocationException>(() => Process(server, "tools/call", sessionId,
@@ -377,7 +379,7 @@ internal static class Program
         var elapsed = Stopwatch.StartNew();
         while (!work.IsCompleted && elapsed.ElapsedMilliseconds < 5000)
         {
-            Invoke(_bridge, "Update");
+            Invoke(_dispatcher, "Update");
             Thread.Sleep(1);
         }
         Assert(work.IsCompleted, "Work did not finish before test deadline");
