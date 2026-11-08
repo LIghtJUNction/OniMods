@@ -140,7 +140,7 @@ def render_description_zh(data: Dict[str, Any]) -> str:
     parts = []
     if data.get("ai_warning_banner_url"):
         parts.append(f"[img]{data['ai_warning_banner_url']}[/img]")
-    parts.append("[h1]CONGRATULATIONS![/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
+    parts.append("[h1]恭喜！[/h1]\n[b]这个 Mod 完全由 AI 生成！[/b]\n")
 
     # 1. Header Banner
     if data.get("banner_url"):
