@@ -8,9 +8,25 @@ using OniMcp.Core;
 
 namespace UnityEngine
 {
-    public class MonoBehaviour
+    public class Object
     {
-        protected object gameObject { get; } = new object();
+        public static T FindFirstObjectByType<T>() where T : Object { return null; }
+    }
+
+    public sealed class GameObject : Object
+    {
+        public GameObject(string name) { }
+        public T AddComponent<T>() where T : MonoBehaviour, new() { return new T(); }
+    }
+
+    public static class Debug
+    {
+        public static void LogError(object message) { }
+    }
+
+    public class MonoBehaviour : Object
+    {
+        protected GameObject gameObject { get; } = new GameObject("host-test");
         protected static void Destroy(object value) { }
         protected static void DontDestroyOnLoad(object value) { }
     }
