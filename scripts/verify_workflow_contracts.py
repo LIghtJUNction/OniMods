@@ -92,6 +92,12 @@ class WorkflowContractTests(unittest.TestCase):
                         encoding="utf-8")
         self.assertNotIn("BaseIntermediateOutputPath", workflow)
         self.assertNotIn('compat_root="$RUNNER_TEMP/', workflow)
+        self.assertEqual(
+            1,
+            workflow.count(
+                "dotnet restore mods/CycleTrim/OniSim/managed/"
+                "OniSim.Compatibility/OniSim.Compatibility.csproj"),
+        )
 
 
 if __name__ == "__main__":

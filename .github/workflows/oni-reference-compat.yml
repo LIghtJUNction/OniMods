@@ -183,6 +183,10 @@ jobs:
             -p:TargetFramework=netstandard2.1 \
             -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
             -p:ImportDirectoryBuildProps=false
+          # The root TargetFramework override is global during restore. Restore
+          # the fixed netstandard2.0 ProjectReference again with its own target.
+          dotnet restore mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj \
+            -p:ImportDirectoryBuildProps=false
           dotnet msbuild mods/CycleTrim/CycleTrim.csproj \
             -target:Compile \
             -property:Configuration=Release \
