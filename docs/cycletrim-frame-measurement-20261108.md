@@ -48,7 +48,11 @@ cargo test --release --locked --offline \
 | 全部优化回归 | Release，10 个回归族通过 | 同一测试项目中的其他生产补丁及共享夹具回归 |
 | onim 托管参考构建 | 成功，0 errors；28 个 Jlib 既有警告 | net48、固定参考程序集、IncludeOniSim=false |
 | 独立源码复审 | 未发现阻断问题 | 五个代码／测试候选文件的全文及完整差异 |
+| GitHub Mod quality | completed / success | 精确代码提交 e24b534b；[运行 42488038103](https://github.com/LIghtJUNction/OniMods/actions/runs/42488038103) |
+| GitHub ONI reference compatibility | completed / success | 精确代码提交 e24b534b；[运行 42488038076](https://github.com/LIghtJUNction/OniMods/actions/runs/42488038076) |
 | Steam 图形与液体副本 | 未执行 | 原游戏主机与交接中的未提交液体实现不可访问 |
+
+上述两条 GitHub 工作流均对应代码提交 [e24b534b5420fe17670813327649203bf08e468f](https://github.com/LIghtJUNction/OniMods/commit/e24b534b5420fe17670813327649203bf08e468f)，分别于 2026-11-08 22:10:21、22:12:50（Asia/Taipei）完成。它们补充了该提交的宿主回归与参考兼容性证据，没有执行原始宽池 fixture 或 Steam 游戏验收，也不构成全部原生测试通过的声明。
 
 宿主测试使用 .NET SDK 10.0.401。定向与完整命令如下：
 
@@ -68,7 +72,7 @@ BuildInParallel=false RestoreBuildInParallel=false \
 
 本地构建配置为 `IncludeOniSim=false`、`TreatWarningsAsErrors=true`，引用仓库清单验证的 22 个 DLL。清单声明 ONI 737790，辅助 Unity 模块为 2021.3.33。这是托管参考构建，不是当前游戏版本的运行验收；本次包未包含原生库。
 
-编译得到的 `CycleTrim.dll` 为 191488 字节，SHA-256 为 `f4d060b7b21845a677ab42f95b782458b2344d6b7247bfc26f2e74f33b725abf`，与包内 `implementation/CycleTrim.dll` 相同。尚未核验游戏进程加载此 DLL，未部署到 Steam 游戏目录。精确提交以本文件及对应源码的版本历史为准。
+编译得到的 `CycleTrim.dll` 为 191488 字节，SHA-256 为 `f4d060b7b21845a677ab42f95b782458b2344d6b7247bfc26f2e74f33b725abf`，与包内 `implementation/CycleTrim.dll` 相同；本次编译采用的帧计时代码与 e24b534b 一致。尚未核验游戏进程加载此 DLL，未部署到 Steam 游戏目录。
 
 ## 已确认的帧计时问题
 
