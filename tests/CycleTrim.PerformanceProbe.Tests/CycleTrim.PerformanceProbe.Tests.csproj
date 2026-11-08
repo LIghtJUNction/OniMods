@@ -24,6 +24,7 @@
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentTypes.cs" Link="Jlib/MulticomponentTypes.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentCellAccess.cs" Link="Jlib/MulticomponentCellAccess.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentPatches.cs" Link="Jlib/MulticomponentPatches.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentOverlayPatch.cs" Link="Jlib/MulticomponentOverlayPatch.cs" />
     <Compile Include="../../mods/CycleTrim/Core/MulticomponentCellAccess.cs" Link="MulticomponentCellAccess.cs" />
     <Compile Include="../../mods/CycleTrim/Core/OniSimMulticomponentProvider.cs" Link="OniSimMulticomponentProvider.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPhysiologyPatches.cs" Link="MulticomponentPhysiologyPatches.cs" />
