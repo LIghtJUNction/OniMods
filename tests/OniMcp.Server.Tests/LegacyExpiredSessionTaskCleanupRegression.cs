@@ -9,12 +9,13 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Server;
 
 internal static class LegacyExpiredSessionTaskCleanupRegression
 {
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     internal static void Run()
     {
@@ -25,8 +26,9 @@ internal static class LegacyExpiredSessionTaskCleanupRegression
 
     private static void RunExpiredSessionTaskCleanupRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         DateTime now = new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc);
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
@@ -106,8 +108,9 @@ internal static class LegacyExpiredSessionTaskCleanupRegression
 
     private static void RunDirectExpiredSessionTaskCleanupRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
         DateTime now = new DateTime(2026, 1, 4, 0, 0, 0, DateTimeKind.Utc);
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });

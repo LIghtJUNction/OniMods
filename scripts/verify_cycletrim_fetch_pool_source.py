@@ -9,12 +9,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs"
 POOL = ROOT / "mods/CycleTrim/Core/ThreadLocalObjectPool.cs"
+SHARED_POOL = ROOT / "mods/Jlib/PLibCore/PThreadLocalPool.cs"
 BUFFER = ROOT / "mods/CycleTrim/Core/FetchCandidateBuffer.cs"
 
 
 def main() -> int:
     patch = PATCH.read_text(encoding="utf-8")
     pool = POOL.read_text(encoding="utf-8")
+    shared_pool = SHARED_POOL.read_text(encoding="utf-8")
     buffer = BUFFER.read_text(encoding="utf-8")
     failures = []
 
@@ -44,15 +46,17 @@ def main() -> int:
     if "indices.Clear();" not in buffer or "values.Clear();" not in buffer:
         failures.append("compact cleanup must release both keys and candidate references")
 
-    if "[ThreadStatic]" not in pool:
+    if "PThreadLocalPool<T>.Rent()" not in pool or "PThreadLocalPool<T>.Return(value)" not in pool:
+        failures.append("CycleTrim compatibility shim must forward rentals to Jlib's shared pool")
+    if "[ThreadStatic]" not in shared_pool:
         failures.append("ThreadLocalObjectPool storage must remain thread-local")
-    if "private static T item;" not in pool:
+    if "private static T item;" not in shared_pool:
         failures.append("ThreadLocalObjectPool must retain a single object per thread")
-    if "Stack<T>" in pool or "ConcurrentStack" in pool:
+    if "Stack<T>" in shared_pool or "ConcurrentStack" in shared_pool:
         failures.append("ThreadLocalObjectPool must not retain an unbounded collection per thread")
-    if "item = null;" not in pool:
+    if "item = null;" not in shared_pool:
         failures.append("Rent must clear the retained slot before returning an object")
-    if not re.search(r"if\s*\(item\s*==\s*null\)\s*\{\s*item\s*=\s*value;\s*\}", pool, re.DOTALL):
+    if not re.search(r"if\s*\(item\s*==\s*null\)\s*(?:\{\s*)?item\s*=\s*value;", shared_pool, re.DOTALL):
         failures.append("Return must keep at most one object in the thread-local slot")
 
     if failures:

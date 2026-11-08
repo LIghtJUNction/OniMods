@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jlib.Runtime;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -14,7 +15,7 @@ using OniMcp.Tools;
 
 internal static class LegacyAcceptNegotiationRegression
 {
-    private static MainThreadBridge _bridge;
+    private static JlibDispatcher _bridge;
 
     internal static void Run()
     {
@@ -24,8 +25,9 @@ internal static class LegacyAcceptNegotiationRegression
 
     private static void RunLegacyAcceptNegotiationRegression()
     {
-        _bridge = new MainThreadBridge();
+        _bridge = new JlibDispatcher();
         Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
 
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });

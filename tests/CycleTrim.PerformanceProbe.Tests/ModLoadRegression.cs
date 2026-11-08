@@ -111,6 +111,7 @@ namespace CycleTrim.Patches
 
     internal static class FrameRateUnlockPatch
     {
+        internal static void Configure(int targetFrameRate) { }
         internal static void Apply(string reason) { }
     }
 

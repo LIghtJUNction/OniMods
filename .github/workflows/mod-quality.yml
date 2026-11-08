@@ -86,6 +86,8 @@ jobs:
       - name: Test onim CLI regressions
         run: cargo +1.99.1 test --locked
       - name: Check Mod source contracts and host behavior
+        env:
+          ONI_MANAGED_PATH: ${{ github.workspace }}/.oni-managed
         run: python3 scripts/check_mods.py --skip-synthetic-performance
       - name: Report CycleTrim synthetic performance evidence
         run: python3 scripts/run_cycletrim_synthetic_performance.py
