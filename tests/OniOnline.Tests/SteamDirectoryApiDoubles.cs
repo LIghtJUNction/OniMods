@@ -2,14 +2,19 @@ using System;
 using System.Collections.Generic;
 using OniOnline.Network;
 
-// Only SteamRoomDirectory is production code in this fixture. Tests deliver SDK
-// callbacks explicitly; no Steam client, Unity runtime or third-party assembly runs.
+// The production directory and transport run against explicit SDK callbacks and
+// lobby state; no Steam client, Unity runtime or third-party assembly runs.
 namespace Steamworks
 {
     internal struct CSteamID
     {
         internal ulong m_SteamID;
         internal CSteamID(ulong value) { m_SteamID = value; }
+        internal bool IsValid() { return m_SteamID != 0; }
+        public static bool operator ==(CSteamID left, CSteamID right) { return left.m_SteamID == right.m_SteamID; }
+        public static bool operator !=(CSteamID left, CSteamID right) { return !(left == right); }
+        public override bool Equals(object value) { return value is CSteamID other && this == other; }
+        public override int GetHashCode() { return m_SteamID.GetHashCode(); }
     }
     internal struct SteamAPICall_t { internal ulong Value; }
     internal enum ELobbyType { k_ELobbyTypePublic }
@@ -20,6 +25,51 @@ namespace Steamworks
     internal struct LobbyCreated_t { internal EResult m_eResult; internal ulong m_ulSteamIDLobby; }
     internal struct LobbyEnter_t { internal uint m_EChatRoomEnterResponse; internal ulong m_ulSteamIDLobby; }
     internal struct LobbyMatchList_t { internal uint m_nLobbiesMatching; }
+
+    internal sealed class Callback<T> : IDisposable
+    {
+        internal static Callback<T> Create(Action<T> callback) { return new Callback<T>(); }
+        public void Dispose() { }
+    }
+
+    internal struct SteamNetworkingIdentity
+    {
+        private ulong id;
+        internal ulong GetSteamID64() { return id; }
+        internal void SetSteamID64(ulong value) { id = value; }
+    }
+    internal struct SteamNetworkingMessagesSessionRequest_t
+    { internal SteamNetworkingIdentity m_identityRemote; }
+    internal struct SteamNetworkingMessage_t
+    {
+        internal SteamNetworkingIdentity m_identityPeer;
+        internal int m_cbSize;
+        internal IntPtr m_pData;
+        internal SteamNetworkingMessage_t(SteamNetworkingIdentity peer, IntPtr data, int size)
+        { m_identityPeer = peer; m_pData = data; m_cbSize = size; }
+        internal static SteamNetworkingMessage_t FromIntPtr(IntPtr pointer) { throw new NotSupportedException(); }
+        internal static void Release(IntPtr pointer) { throw new NotSupportedException(); }
+    }
+    internal static class Constants
+    {
+        internal const int k_nSteamNetworkingSend_Reliable = 8;
+        internal const int k_nSteamNetworkingSend_Unreliable = 0;
+        internal const int k_nSteamNetworkingSend_NoNagle = 1;
+    }
+    internal static class SteamUser
+    { internal static CSteamID GetSteamID() { return new CSteamID(1); } }
+    internal static class SteamNetworkingUtils
+    { internal static void InitRelayNetworkAccess() { } }
+    internal static class SteamNetworkingMessages
+    {
+        internal static readonly List<string> ClosedChannels = new List<string>();
+        internal static bool AcceptSessionWithUser(ref SteamNetworkingIdentity identity) { return true; }
+        internal static int ReceiveMessagesOnChannel(int channel, IntPtr[] messages, int maximum) { return 0; }
+        internal static EResult SendMessageToUser(ref SteamNetworkingIdentity identity, IntPtr data, uint size, int flags, int channel)
+        { return EResult.k_EResultOK; }
+        internal static bool CloseChannelWithUser(ref SteamNetworkingIdentity identity, int channel)
+        { ClosedChannels.Add(identity.GetSteamID64() + ":" + channel); return true; }
+    }
 
     internal sealed class CallResult<T> : IDisposable
     {
@@ -46,6 +96,7 @@ namespace Steamworks
         private static readonly Dictionary<string, string> data = new Dictionary<string, string>();
         internal static SteamAPICall_t LastCreate, LastJoin, LastSearch;
         internal static readonly List<ulong> LeftLobbies = new List<ulong>();
+        internal static readonly Dictionary<ulong, CSteamID> Owners = new Dictionary<ulong, CSteamID>();
         private static SteamAPICall_t Call() { return new SteamAPICall_t { Value = ++nextCall }; }
         internal static SteamAPICall_t CreateLobby(ELobbyType type, int capacity) { return LastCreate = Call(); }
         internal static SteamAPICall_t JoinLobby(CSteamID id) { return LastJoin = Call(); }
@@ -60,22 +111,15 @@ namespace Steamworks
         internal static void AddRequestLobbyListResultCountFilter(int count) { }
         internal static void AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter filter) { }
         internal static CSteamID GetLobbyByIndex(int index) { return default(CSteamID); }
-        internal static int GetNumLobbyMembers(CSteamID id) { return 1; }
+        internal static CSteamID GetLobbyOwner(CSteamID id)
+        { CSteamID owner; return Owners.TryGetValue(id.m_SteamID, out owner) ? owner : SteamUser.GetSteamID(); }
+        internal static int GetNumLobbyMembers(CSteamID id) { return GetLobbyOwner(id) == SteamUser.GetSteamID() ? 1 : 2; }
+        internal static CSteamID GetLobbyMemberByIndex(CSteamID id, int index)
+        { return index == 0 ? SteamUser.GetSteamID() : GetLobbyOwner(id); }
     }
 }
 
 namespace OniOnline.Runtime
 {
     internal static class SteamRoomCleanup { internal static bool ClientAvailable { get { return true; } } }
-    internal sealed class SteamRoomTransport : IRoomTransport
-    {
-        internal SteamRoomTransport(Steamworks.CSteamID lobby) { }
-        public bool IsHost { get { return true; } }
-        public string HostPeer { get { return "host"; } }
-        public bool TryReceive(out TransportEvent item) { item = null; return false; }
-        public bool Send(string peer, byte[] data) { return false; }
-        public void Disconnect(string peer) { }
-        public void Poll() { }
-        public void Dispose() { }
-    }
 }

@@ -132,8 +132,9 @@ namespace OniOnline.Runtime
             if (disposed || !ready) return;
             if (SteamMatchmaking.GetLobbyOwner(lobby) != owner)
             {
-                inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = "host_changed" });
-                Dispose();
+                // Cleanup discards queued packets; publish the terminal reason afterwards.
+                try { Dispose(); }
+                finally { inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = "host_changed" }); }
                 return;
             }
             var members = Members();

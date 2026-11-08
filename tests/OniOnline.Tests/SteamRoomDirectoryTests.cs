@@ -26,7 +26,8 @@ internal static class SteamRoomDirectoryTests
         SearchFailureDuringJoin(check);
         RoomFailuresStaySeparate(check);
         SearchRetryAndCancellation(check);
-        Console.WriteLine("Steam directory: production callback routing with explicit Steam API/transport/cleanup doubles; no SDK or game runtime claim.");
+        SteamRoomTransportTests.Run(check);
+        Console.WriteLine("Steam directory and transport: production routing with explicit Steam API/cleanup doubles; no SDK or game runtime claim.");
     }
 
     private static void SearchFailureDuringHost(Action<bool, string> check)
