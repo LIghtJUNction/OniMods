@@ -66,6 +66,13 @@ pub(crate) struct RadiationCommands {
     params: Vec<(i32, f32)>,
 }
 
+impl RadiationCommands {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.add.is_empty() && self.modify.is_empty() && self.remove.is_empty()
+            && self.cell.is_empty() && self.params.is_empty()
+    }
+}
+
 pub(crate) fn is_message(id: i32) -> bool {
     matches!(
         id,

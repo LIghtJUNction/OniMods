@@ -86,7 +86,16 @@ fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() 
         }
         let [first, second] = &mut buffers;
         let (output, old) = if iteration % 2 == 0 { (first, &*second) } else { (second, &*first) };
-        ok(engine.run_batch(Vec::new(), &[], output, old));
+        // Prepare normally recycles each returned frame slot before reuse.
+        output.retired_slots.clear();
+        let frames = if (iteration / 4) % 2 == 0 { Vec::new() } else {
+            vec![crate::frames::QueuedFrame {
+                elapsed: 0.0, early: Default::default(), material: Default::default(),
+                world: Default::default(), thermal: Default::default(), mass: Default::default(),
+                radiation: Default::default(),
+            }]
+        };
+        ok(engine.run_batch(frames, &[], output, old));
         let cached = snapshot(output);
         ok(output.presentation.update(&engine.world, &engine.elements));
         output.multicomponent.update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {
@@ -120,16 +129,22 @@ fn benchmark_empty_publication_reuse() {
         std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass), std::mem::take(&mut state.radiation_emitters));
     engine.gpu = None;
     let mut step = 0usize;
-    for reuse in [false, true, true, false] {
+    for (zero_frame, reuse) in [(false,false),(false,true),(true,false),(true,true),(true,true),(true,false)] {
         let start = Instant::now();
         for _ in 0..30 {
             if !reuse { engine.invalidate_empty_publications(); }
             let [first, second] = &mut buffers;
             let (output, old) = if step % 2 == 0 { (first, &*second) } else { (second, &*first) };
-            ok(engine.run_batch(Vec::new(), &[], output, old));
+            output.retired_slots.clear();
+            let frames = if zero_frame { vec![crate::frames::QueuedFrame {
+                elapsed: 0.0, early: Default::default(), material: Default::default(),
+                world: Default::default(), thermal: Default::default(), mass: Default::default(),
+                radiation: Default::default(),
+            }] } else { Vec::new() };
+            ok(engine.run_batch(frames, &[], output, old));
             step += 1;
         }
-        eprintln!("empty publication reuse={reuse}: {:.3} ms/batch", start.elapsed().as_secs_f64() * 1000.0 / 30.0);
+        eprintln!("idle publication zero_frame={zero_frame} reuse={reuse}: {:.3} ms/batch", start.elapsed().as_secs_f64() * 1000.0 / 30.0);
     }
 }
 

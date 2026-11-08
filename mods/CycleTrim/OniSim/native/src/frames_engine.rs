@@ -27,8 +27,9 @@ pub(crate) struct Engine {
     pub(crate) residual_time: f32,
     pub(crate) gpu: Option<crate::gpu_sim::GpuSimulation>,
     // Both GameData buffers must have seen the same unchanged world before
-    // their derived presentation can be reused on alternating empty batches.
+    // their derived presentation can be reused on alternating idle batches.
     empty_publication_streak: u8,
+    idle_frames_previous: bool,
 }
 
 impl Engine {
@@ -61,6 +62,7 @@ impl Engine {
             residual_time: 0.0,
             gpu,
             empty_publication_streak: 0,
+            idle_frames_previous: false,
         }
     }
 
@@ -78,12 +80,22 @@ impl Engine {
         old: &GameData,
     ) -> Result<()> {
         let empty_batch = frames.is_empty();
-        let reuse_derived = empty_batch && self.empty_publication_streak >= 2;
+        let idle_frames = !empty_batch && frames.iter().all(|frame| {
+            frame.elapsed == 0.0 && frame.early.len() == 0 && frame.material.is_empty()
+                && frame.world.is_empty() && frame.thermal.is_empty() && frame.mass.is_empty()
+                && frame.radiation.is_empty()
+        });
+        // Empty batches do not synchronize world.read, whereas zero-time
+        // frames do. Fill both publication buffers again when switching modes.
+        if idle_frames != self.idle_frames_previous { self.empty_publication_streak = 0; }
+        self.idle_frames_previous = idle_frames;
+        let unchanged_batch = empty_batch || idle_frames;
+        let reuse_derived = unchanged_batch && self.empty_publication_streak >= 2;
         if reuse_derived {
             static LOG_REUSE: std::sync::Once = std::sync::Once::new();
-            LOG_REUSE.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for consecutive empty batches"));
+            LOG_REUSE.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for consecutive idle batches"));
         }
-        if !empty_batch { self.invalidate_empty_publications(); }
+        if !unchanged_batch { self.invalidate_empty_publications(); }
         if !output.retired_slots.is_empty() {
             return Err(Error::new(
                 Status::InternalFailure,
@@ -129,7 +141,7 @@ impl Engine {
             let (ticks, residual) = crate::frames::subdivide(frame.elapsed, self.residual_time)?;
             self.process_commands(&mut frame, &mut output.events)?;
             if ticks == 0 {
-                self.world.sync_read_from_write();
+                if !reuse_derived { self.world.sync_read_from_write(); }
                 self.update_data_lists(&mut output.events)?;
             } else {
                 let diseases = self.diseases.as_deref().ok_or_else(|| {
@@ -208,7 +220,7 @@ impl Engine {
         // ReadyLease::release_with. The native Step swaps output's existing
         // visibility storage here; copying old.visible would remove its delay.
         std::mem::swap(&mut self.world.active_mask, &mut output.visible);
-        if empty_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
+        if unchanged_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
         Ok(())
     }
 
