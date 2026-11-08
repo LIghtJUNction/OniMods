@@ -4,6 +4,11 @@ use crate::events::EventQueues;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{PhysicsWorld, Region};
 
+thread_local! {
+    static LIQUID_PRESSURE: std::cell::RefCell<crate::fluid_pressure::PressureScratch> =
+        std::cell::RefCell::new(crate::fluid_pressure::PressureScratch::default());
+}
+
 fn old_phase(world: &PhysicsWorld, elements: &ElementTable, cell: usize) -> u8 {
     elements.elements[world.read.element[cell] as usize]
         .record
@@ -116,6 +121,23 @@ pub(crate) fn liquid_phase_with_flow(
     region: Region,
     flow_already_applied: bool,
 ) -> bool {
+    LIQUID_PRESSURE.with(|scratch| {
+        let mut scratch = scratch.borrow_mut();
+        let pressure_changed = scratch.run(world, elements, diseases, events, region);
+        liquid_phase_after_pressure(world, elements, diseases, events, region,
+            flow_already_applied || pressure_changed, &scratch.covered)
+    })
+}
+
+fn liquid_phase_after_pressure(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    diseases: &DiseaseTable,
+    events: &mut EventQueues,
+    region: Region,
+    flow_already_applied: bool,
+    pressure_faces: &[u8],
+) -> bool {
     let mut changed = flow_already_applied;
     if region.min_x == region.max_x {
         return false;
@@ -125,7 +147,7 @@ pub(crate) fn liquid_phase_with_flow(
             let cell = y as usize * world.stride + x as usize;
             if old_phase(world, elements, cell) == 2 && world.read.mass[cell] > 0.0 {
                 changed = true;
-                crate::fluid::update_liquid(world, elements, diseases, events, cell);
+                crate::fluid::update_liquid(world, elements, diseases, events, cell, pressure_faces[cell]);
             }
         }
     }

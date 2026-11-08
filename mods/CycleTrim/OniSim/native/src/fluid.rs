@@ -174,27 +174,30 @@ pub(crate) fn do_liquid_pressure_displacement(
             return amount;
         }
     }
-    let available = ((world.read.mass[a] - world.flow[a][0])
-        - (world.flow[a][1] + world.flow[a][2]))
-        - world.flow[a][3];
-    if !(available > world.read.mass[c] + world.read.mass[b]) {
+    // Flow is cleared once per ProcessFrame batch, not once per substep. It is
+    // a presentation accumulator, not an unspent-mass ledger. The write image
+    // contains the actual source inventory after all earlier transfers.
+    let available = world.write.mass[a];
+    if !available.is_finite() || !(available > world.read.mass[c] + world.read.mass[b]) {
         return 0.0;
     }
     if !displace_liquid_directional(world, tables, diseases, events, b, c, element_b) {
         return 0.0;
     }
     let amount = available * f32::from_bits(0x3e000000);
+    let temperature = world.write.temperature[a];
+    let disease = world.write.disease_idx[a];
+    let count = world.write.disease_count[a].max(0) / 8;
     world.write.mass[b] += amount;
-    world.write.temperature[b] = world.read.temperature[a];
+    world.write.temperature[b] = temperature;
     world.write.element[b] = element;
     notify(world, events, b);
     world.write.mass[a] = smax(world.write.mass[a] - amount, 0.0);
-    let count = cvtt(world.read.disease_count[a] as f32 * f32::from_bits(0x3e000000));
     add_disease(
         &mut world.write,
         diseases,
         b,
-        world.read.disease_idx[a],
+        disease,
         count,
     );
     world.write.disease_count[a] = world.write.disease_count[a].wrapping_sub(count);
@@ -264,6 +267,7 @@ pub(crate) fn update_liquid(
     diseases: &DiseaseTable,
     events: &mut EventQueues,
     cell: usize,
+    pressure_faces: u8,
 ) {
     let element = world.read.element[cell];
     let record = &tables.elements[element as usize].record;
@@ -272,7 +276,8 @@ pub(crate) fn update_liquid(
     let disease = world.read.disease_idx[cell];
     let down = cell - world.stride;
     let down_element = world.read.element[down];
-    if phase(tables, world.write.element[down]) != 3 && world.read.properties[down] & 2 == 0 {
+    if pressure_faces & (1 << 2) == 0
+        && phase(tables, world.write.element[down]) != 3 && world.read.properties[down] & 2 == 0 {
         if down_element == element {
             let below_mass = if phase(tables, down_element) == 2 {
                 world.read.mass[down]
@@ -325,7 +330,13 @@ pub(crate) fn update_liquid(
     if remaining <= 0.0 {
         return;
     }
+    // Both horizontal faces use the same donor state. Spending the left-face
+    // budget must not lower the pressure used to calculate the right face.
+    // Each face is capped at one quarter of this mass, so their combined
+    // request cannot exhaust the donor after the downward transfer.
+    let lateral_mass = remaining;
     for (side, direction) in [(cell - 1, 0), (cell + 1, 1)] {
+        if pressure_faces & (1 << direction) != 0 { continue; }
         let side_element = world.read.element[side];
         let side_record = &tables.elements[side_element as usize].record;
         let is_miscible = are_liquids_miscible(record, side_record);
@@ -336,12 +347,22 @@ pub(crate) fn update_liquid(
             continue;
         }
         let difference = if phase(tables, side_element) == 2 {
-            remaining - world.read.mass[side]
+            lateral_mass - world.read.mass[side]
         } else {
-            remaining
+            lateral_mass
         };
         let amount = smin(difference * 0.25, smin(record.viscosity, remaining));
-        if !(record.min_horizontal_flow <= amount && 0.0 < amount) {
+        // The material's minimum flow controls expansion of the free surface.
+        // Inside one continuous liquid, applying that absolute cutoff leaves
+        // a permanent pressure gradient which adds up across a wide pool.
+        let continuous_pure = side_element == element
+            && world.write.element[cell] == element
+            && world.write.element[side] == element
+            && world.mixture_mass[cell] <= 0.0 && world.mixture_mass[side] <= 0.0
+            && !world.extra_mixtures.contains_key(&cell)
+            && !world.extra_mixtures.contains_key(&side);
+        let minimum = if continuous_pure { 0.0 } else { record.min_horizontal_flow };
+        if !(minimum <= amount && 0.0 < amount) {
             continue;
         }
         let count = cvtt(germs as f32 * (amount / remaining));
@@ -365,7 +386,8 @@ pub(crate) fn update_liquid(
     }
     let up = cell + world.stride;
     let up_element = world.read.element[up];
-    if (up_element == element || tables.elements[up_element as usize].record.state & 2 == 0)
+    if pressure_faces & (1 << 3) == 0
+        && (up_element == element || tables.elements[up_element as usize].record.state & 2 == 0)
         && phase(tables, world.write.element[up]) != 3
         && world.read.properties[up] & 2 == 0
     {

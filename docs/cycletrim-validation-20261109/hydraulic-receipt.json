@@ -1,0 +1,114 @@
+{
+  "scope": "Synthetic production CPU liquid-phase regression and isolated pressure-step cost; not the missing user Magma fixture, rendered game FPS, GPU runtime success, or game deployment.",
+  "sourceBase": "84207e7b316020616ed5dca9e6226253920df55d",
+  "sourceSha256": {
+    "mods/CycleTrim/OniSim/native/src/fluid.rs": "935ecafb122c1b9b511d76e18f4daf607d8229dbdc1f33a511e76b2945d711dc",
+    "mods/CycleTrim/OniSim/native/src/fluid_pressure.rs": "5ad4b91b4eb5dbbc324f34d641a13193f75e2651b91517f42d84ca80c28bfa1f",
+    "mods/CycleTrim/OniSim/native/src/fluid_pressure_reference.rs": "da2521d86a4de15925dd68e858753affa6f4c39b722737586747259884103311",
+    "mods/CycleTrim/OniSim/native/src/hydraulic_regression_tests.rs": "4cb2e07b56dd177820dedf2ced7b7f77c378ca5262f4a2c91b4a7f1e52129576",
+    "mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs": "bc24d293d6ffcf715bd36ce667bf42182cc7406e27381ab2fa5c31d1cc4ccde6",
+    "mods/CycleTrim/OniSim/native/src/lib.rs": "4f357d76826f7a916a1326d63360f95ecec87bf7c17d1ecd4f15862976dc4c5c"
+  },
+  "nativeBuildSourceDigest": "21b4c57ba8427eadf9036564f265d722c25a184a5f24d4eb2098a5312ce4ee77",
+  "runner": {
+    "system": "Linux",
+    "release": "6.18.57",
+    "machine": "x86_64",
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "logicalCpusVisible": 9,
+    "allowedCpus": 9,
+    "cpu.max": null,
+    "memory.max": null
+  },
+  "syntheticMaterial": {
+    "capacityKg": 1840,
+    "perFaceFlowLimitKg": 100,
+    "minimumHorizontalFlowKg": 0.1,
+    "minimumVerticalFlowKg": 0.1,
+    "specificHeatCapacity": 1,
+    "initialTemperatureK": 1800,
+    "capturedRealMagmaRecord": false
+  },
+  "originalUserFixture": {
+    "available": false,
+    "lastReportedLeftKg": 4844.86,
+    "lastReportedRightKg": 6003.26,
+    "status": "failed; not rerun here"
+  },
+  "initialSyntheticNegative": {
+    "passed": 2,
+    "failed": 3,
+    "ignored": 0,
+    "widePoolColumnRangeKg": 449.660858,
+    "note": "Five initial synthetic scenes on the unmodified committed native code; original fixture path was not available."
+  },
+  "finalHydraulic": {
+    "command": "cargo test --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml hydraulic_tests -- --nocapture --test-threads=1",
+    "exitCode": 0,
+    "passed": 16,
+    "failed": 0,
+    "ignored": 0
+  },
+  "finalNativeGate": {
+    "command": "cargo test --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml",
+    "exitCode": 101,
+    "passed": 103,
+    "failed": 11,
+    "ignored": 4,
+    "failureDetails": "10 explicit no-hardware-Vulkan adapter errors; GPU pathfinder initialization returned -1 instead of 0. Existing assertions and ignores unchanged."
+  },
+  "isolatedCost": {
+    "command": "cargo test --release --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml hydraulic_tests_new_pressure_cost_samples_preserve_inventory -- --nocapture --test-threads=1",
+    "exitCode": 0,
+    "order": "reference,candidate,candidate,reference for each geometry",
+    "warmupPerRun": 1,
+    "samplesPerRun": 16,
+    "wetCellsMaximum": 4096,
+    "scannedCells": 9100,
+    "referenceScope": "First implicit coordinate solver under the same graph/residual/transport/notification driver; not original main or game FPS.",
+    "medianDefinition": "Mean of sorted samples 7 and 8 (zero-based).",
+    "p95Definition": "Nearest rank; sorted sample 15 (zero-based).",
+    "maxSweeps": 64,
+    "transientCapHitSamplesPerCandidateRun": 16,
+    "transientMaxCommittedResidualKg": 2.2773598999870046,
+    "nearDrySplitResidualKg": 12.420002642095952
+  },
+  "logs": {
+    "hydraulic-original-negative.log": {
+      "rawSha256": "4ccb3d882e4f88751b1d1e6eb55f95b5d8b772676a172102171d642c3c7c9a56",
+      "sha256": "4ccb3d882e4f88751b1d1e6eb55f95b5d8b772676a172102171d642c3c7c9a56",
+      "normalization": "none"
+    },
+    "hydraulic-throughflow-germs-negative.log": {
+      "rawSha256": "b23c5939383e19bd92349991fe6d1c68466acd795412455d123ed0426d1b92ec",
+      "sha256": "b23c5939383e19bd92349991fe6d1c68466acd795412455d123ed0426d1b92ec",
+      "normalization": "none"
+    },
+    "hydraulic-drain-germs-negative.log": {
+      "rawSha256": "5c73f308ae5f9e5e16e7883551a07592f802cad30c850c6f337cf30033de3cd7",
+      "sha256": "5c73f308ae5f9e5e16e7883551a07592f802cad30c850c6f337cf30033de3cd7",
+      "normalization": "none"
+    },
+    "hydraulic-mixed-flow-negative.log": {
+      "rawSha256": "0719f9a1ccbb262889a8b814ee22c6afdd058198342b5666d465cb7051f18174",
+      "sha256": "0719f9a1ccbb262889a8b814ee22c6afdd058198342b5666d465cb7051f18174",
+      "normalization": "none"
+    },
+    "hydraulic-regressions.log": {
+      "rawSha256": "e2a09a648e2e4c5bf7cebb7d2bf9e8a2c8a836a3679f00998793a40c0c8896a6",
+      "sha256": "8a04423578a31c70d250e82a842d8d656160159ad857d35c99282bb2ac460742",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; messages retained."
+    },
+    "hydraulic-native-gate.log": {
+      "rawSha256": "90c4ce35ab780999c7c4c928a0f676cef376ca36a8e065cf7a734fee243dc1e2",
+      "sha256": "90c4ce35ab780999c7c4c928a0f676cef376ca36a8e065cf7a734fee243dc1e2",
+      "normalization": "none"
+    },
+    "hydraulic-cost-abba.log": {
+      "rawSha256": "e111e37e26198b8b4f90e5c577b3ab866965d3c45787d4ca139155306add99d5",
+      "sha256": "b33c6284c79fa4debe97260f52a2365506bce268cedbefd6336120710eef51a7",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; messages retained."
+    }
+  },
+  "executionWrapper": "rtk proxy"
+}

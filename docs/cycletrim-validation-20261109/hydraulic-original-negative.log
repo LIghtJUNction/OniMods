@@ -1,0 +1,250 @@
+
+running 5 tests
+test hydraulic_tests::hydraulic_tests_new_symmetric_single_step_has_no_horizontal_bias ... FAILED
+test hydraulic_tests::hydraulic_tests_new_pressure_fills_sealed_vacuum ... ok
+test hydraulic_tests::hydraulic_tests_new_unequal_temperature_flow_conserves_heat ... ok
+test hydraulic_tests::hydraulic_tests_new_communicating_vessels_level_without_crossing_walls ... FAILED
+test hydraulic_tests::hydraulic_tests_new_32_wide_multilayer_pool_levels_and_conserves ... FAILED
+
+failures:
+
+failures:
+    hydraulic_tests::hydraulic_tests_new_32_wide_multilayer_pool_levels_and_conserves
+    hydraulic_tests::hydraulic_tests_new_communicating_vessels_level_without_crossing_walls
+    hydraulic_tests::hydraulic_tests_new_symmetric_single_step_has_no_horizontal_bias
+
+test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 102 filtered out; finished in 0.13s
+
+   Compiling oni-sim-core v0.1.0 (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/native)
+warning: function `update_cells` is never used
+   --> src/disease.rs:150:15
+    |
+150 | pub(crate) fn update_cells(
+    |               ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `post_process` is never used
+   --> src/disease.rs:366:15
+    |
+366 | pub(crate) fn post_process(
+    |               ^^^^^^^^^^^^
+
+warning: function `reachable_cells` is never used
+  --> src/disease_emitters.rs:96:15
+   |
+96 | pub(crate) fn reachable_cells(
+   |               ^^^^^^^^^^^^^^^
+
+warning: fields `element_a`, `element_b`, `min_mass`, `destroy_percent`, `required_multiplier`, and `creation_multiplier` are never read
+   --> src/gas.rs:430:16
+    |
+429 | pub(crate) struct GasObliteration {
+    |                   --------------- fields in this struct
+430 |     pub(crate) element_a: u16,
+    |                ^^^^^^^^^
+431 |     pub(crate) element_b: u16,
+    |                ^^^^^^^^^
+...
+434 |     pub(crate) min_mass: f32,
+    |                ^^^^^^^^
+435 |     pub(crate) destroy_percent: f32,
+    |                ^^^^^^^^^^^^^^^
+436 |     pub(crate) required_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+437 |     pub(crate) creation_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `GasObliteration` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: function `do_gas_interaction_pair` is never used
+   --> src/gas.rs:653:15
+    |
+653 | pub(crate) fn do_gas_interaction_pair(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `do_gas_interaction` is never used
+   --> src/gas.rs:705:15
+    |
+705 | pub(crate) fn do_gas_interaction(
+    |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `pathfinder` and `resident` are never read
+  --> src/gpu_sim.rs:70:16
+   |
+22 | pub(crate) struct GpuSimulation {
+   |                   ------------- fields in this struct
+...
+70 |     pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
+   |                ^^^^^^^^^^
+71 |     pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
+   |                ^^^^^^^^
+
+warning: method `disease_growth` is never used
+   --> src/grid.rs:164:19
+    |
+ 45 | impl Grid {
+    | --------- method in this implementation
+...
+164 |     pub(crate) fn disease_growth(&self, index: usize) -> f32 {
+    |                   ^^^^^^^^^^^^^^
+
+warning: method `len` is never used
+  --> src/mass_components.rs:46:19
+   |
+45 | impl PendingCommands {
+   | -------------------- method in this implementation
+46 |     pub(crate) fn len(&self) -> usize {
+   |                   ^^^
+
+warning: constant `FLAG_LEGACY_SINGLE_ELEMENT` is never used
+  --> src/multicomponent_publication.rs:21:18
+   |
+21 | pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `transfer` is never used
+  --> src/offgas.rs:10:15
+   |
+10 | pub(crate) fn transfer(
+   |               ^^^^^^^^
+
+warning: constant `MELT_MASS` is never used
+  --> src/partial_melt.rs:10:7
+   |
+10 | const MELT_MASS: f32 = 5.0;
+   |       ^^^^^^^^^
+
+warning: constant `TEMP_MARGIN` is never used
+  --> src/partial_melt.rs:11:7
+   |
+11 | const TEMP_MARGIN: f32 = 3.0;
+   |       ^^^^^^^^^^^
+
+warning: constant `MIN_SOURCE_HEADROOM` is never used
+  --> src/partial_melt.rs:12:7
+   |
+12 | const MIN_SOURCE_HEADROOM: f32 = 6.0;
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `rec` is never used
+  --> src/partial_melt.rs:14:4
+   |
+14 | fn rec(table: &ElementTable, id: u16) -> &ElementRecord {
+   |    ^^^
+
+warning: function `pair` is never used
+  --> src/partial_melt.rs:18:4
+   |
+18 | fn pair(
+   |    ^^^^
+
+warning: function `apply` is never used
+   --> src/partial_melt.rs:114:15
+    |
+114 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: method `overlaps_storage` is never used
+  --> src/presentation.rs:74:19
+   |
+26 | impl PresentationBuffers {
+   | ------------------------ method in this implementation
+...
+74 |     pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: function `update` is never used
+   --> src/radiation.rs:434:15
+    |
+434 | pub(crate) fn update(
+    |               ^^^^^^
+
+warning: function `apply` is never used
+   --> src/sublimation.rs:157:15
+    |
+157 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: associated function `is_message` is never used
+   --> src/thermal_components.rs:193:19
+    |
+184 | impl ThermalComponents {
+    | ---------------------- associated function in this implementation
+...
+193 |     pub(crate) fn is_message(id: i32) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: method `request_stop` is never used
+   --> src/worker.rs:284:19
+    |
+207 | impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
+    | ------------------------------------------------------------- method in this implementation
+...
+284 |     pub(crate) fn request_stop(&self) {
+    |                   ^^^^^^^^^^^^
+
+warning: method `public_index` is never used
+  --> src/worker_shape.rs:28:19
+   |
+13 | impl WorldShape {
+   | --------------- method in this implementation
+...
+28 |     pub(crate) fn public_index(&self, internal: usize) -> Option<usize> {
+   |                   ^^^^^^^^^^^^
+
+warning: field `sunlight` is never read
+  --> src/world.rs:18:16
+   |
+13 | pub(crate) struct Region {
+   |                   ------ field in this struct
+...
+18 |     pub(crate) sunlight: f32,
+   |                ^^^^^^^^
+   |
+   = note: `Region` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `gas_scan_direction` is never read
+  --> src/world.rs:42:16
+   |
+22 | pub(crate) struct PhysicsWorld {
+   |                   ------------ field in this struct
+...
+42 |     pub(crate) gas_scan_direction: i32,
+   |                ^^^^^^^^^^^^^^^^^^
+
+warning: method `sync_write_from_read` is never used
+   --> src/world.rs:231:19
+    |
+ 86 | impl PhysicsWorld {
+    | ----------------- method in this implementation
+...
+231 |     pub(crate) fn sync_write_from_read(&mut self) {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: method `copy_fluid_from` is never used
+  --> src/world_cells.rs:97:19
+   |
+63 | impl Cells {
+   | ---------- method in this implementation
+...
+97 |     pub(crate) fn copy_fluid_from(&mut self, other: &Self) {
+   |                   ^^^^^^^^^^^^^^^
+
+warning: `oni-sim-core` (lib test) generated 27 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.76s
+     Running unittests src/lib.rs (mods/CycleTrim/OniSim/native/target/debug/deps/oni_sim_core-1d760905a56a9498)
+new symmetric single-step: left=25 right=18.75
+
+thread 'hydraulic_tests::hydraulic_tests_new_symmetric_single_step_has_no_horizontal_bias' (296) panicked at src/hydraulic_tests.rs:167:5:
+left/right transfer bias
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+new communicating vessels: left=11742.636800130209 right=4590.1699625651045
+
+thread 'hydraulic_tests::hydraulic_tests_new_communicating_vessels_level_without_crossing_walls' (294) panicked at src/hydraulic_tests.rs:194:5:
+communicating vessels still uneven
+new synthetic 32-wide pool mirror=false: left=5745.264740 right=5295.603882 range=449.660858 kg total=176639.994700
+
+thread 'hydraulic_tests::hydraulic_tests_new_32_wide_multilayer_pool_levels_and_conserves' (293) panicked at src/hydraulic_tests.rs:150:9:
+32-column pool still uneven after 1000 updates: [5745.264739990234, 5743.160446166992, 5738.971862792969, 5732.738830566406, 5724.520690917969, 5714.395858764648, 5702.46142578125, 5688.9462966918945, 5674.003723144531, 5656.869918823242, 5638.598915100098, 5619.205821990967, 5598.362585067749, 5576.164758682251, 5552.234709262848, 5527.4468994140625, 5505.72314453125, 5484.1290283203125, 5462.783203125, 5441.819091796875, 5421.5419921875, 5402.075439453125, 5384.1475830078125, 5367.352783203125, 5352.130126953125, 5338.487548828125, 5326.5401611328125, 5316.4107666015625, 5308.1439208984375, 5301.9913330078125, 5297.7672119140625, 5295.6038818359375]
+error: test failed, to rerun pass `--lib`

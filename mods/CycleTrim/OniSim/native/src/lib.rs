@@ -35,6 +35,9 @@ mod float_env;
 mod fluid;
 mod fluid_displacement;
 mod fluid_helpers;
+mod fluid_pressure;
+#[cfg(test)]
+mod hydraulic_regression_tests;
 mod frames;
 mod frames_commands;
 mod frames_data;

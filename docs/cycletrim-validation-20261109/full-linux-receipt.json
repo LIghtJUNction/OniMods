@@ -1,0 +1,202 @@
+{
+  "schema": 1,
+  "verifiedAt": "2026-11-08T16:11:15.077749+00:00",
+  "scope": "Full Linux x64 native candidate packaged by onim with managed compile-only references; no game execution/deployment, runtime compatibility or FPS acceptance",
+  "build": {
+    "command": [
+      "./target/release/onim",
+      "build",
+      "-m",
+      "CycleTrim",
+      "--release"
+    ],
+    "startedAt": "2026-11-08T16:07:48.941262+00:00",
+    "finishedAt": "2026-11-08T16:08:49.318926+00:00",
+    "elapsedSeconds": 60.377664,
+    "exitCode": 0,
+    "sourceHashesStable": true,
+    "baseHead": "84207e7b316020616ed5dca9e6226253920df55d",
+    "headAfter": "84207e7b316020616ed5dca9e6226253920df55d",
+    "includeOniSim": true,
+    "oniSimNativeBundle": null,
+    "scope": "Linux x64 native candidate plus managed compile references; no game execution/deployment"
+  },
+  "warnings": {
+    "msbuild": 28,
+    "msbuildLocation": "Jlib C#",
+    "rust": 36,
+    "rustCrate": "oni-sim-core (lib)",
+    "totalDistinctCompilerDiagnostics": 64,
+    "errors": 0,
+    "managedWarningCodes": {
+      "CS8602": 4,
+      "CS0168": 3,
+      "CS1573": 16,
+      "CS1572": 3,
+      "CS0618": 2
+    },
+    "rustDiagnosticHeaders": [
+      "warning: function `update_cells` is never used",
+      "warning: function `post_process` is never used",
+      "warning: function `reachable_cells` is never used",
+      "warning: method `overlaps_storage` is never used",
+      "warning: multiple fields are never read",
+      "warning: function `do_gas_interaction_pair` is never used",
+      "warning: function `do_gas_interaction` is never used",
+      "warning: fields `pathfinder` and `resident` are never read",
+      "warning: method `disease_growth` is never used",
+      "warning: method `len` is never used",
+      "warning: method `process_pending` is never used",
+      "warning: function `region_gas_species_up_to_three` is never used",
+      "warning: function `can_project_without_losing_species` is never used",
+      "warning: function `step_region` is never used",
+      "warning: constant `FLAG_LEGACY_SINGLE_ELEMENT` is never used",
+      "warning: function `transfer` is never used",
+      "warning: constant `MELT_MASS` is never used",
+      "warning: constant `TEMP_MARGIN` is never used",
+      "warning: constant `MIN_SOURCE_HEADROOM` is never used",
+      "warning: function `rec` is never used",
+      "warning: function `pair` is never used",
+      "warning: function `apply` is never used",
+      "warning: method `overlaps_storage` is never used",
+      "warning: function `update` is never used",
+      "warning: function `gas_phase` is never used",
+      "warning: function `liquid_phase` is never used",
+      "warning: function `apply` is never used",
+      "warning: method `len` is never used",
+      "warning: associated items `is_message` and `process_pending` are never used",
+      "warning: method `request_stop` is never used",
+      "warning: methods `data` and `release` are never used",
+      "warning: method `public_index` is never used",
+      "warning: field `sunlight` is never read",
+      "warning: field `gas_scan_direction` is never read",
+      "warning: method `sync_write_from_read` is never used",
+      "warning: method `copy_fluid_from` is never used"
+    ]
+  },
+  "configuration": {
+    "includeOniSim": true,
+    "oniSimNativeBundle": null,
+    "onlyChange": "IncludeOniSim false -> true",
+    "before": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/Directory.Build.props.before",
+    "after": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/Directory.Build.props.after"
+  },
+  "sourceIdentity": {
+    "sourceSha256": "21b4c57ba8427eadf9036564f265d722c25a184a5f24d4eb2098a5312ce4ee77",
+    "nativeRustSourceCount": 95,
+    "beforeSnapshot": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/sources-before.json",
+    "afterSnapshot": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/sources-after.json",
+    "sourceHashesStable": true,
+    "baseCommit": "84207e7b316020616ed5dca9e6226253920df55d",
+    "nativeCandidateWasUncommitted": true,
+    "receiptCommitMeaning": "Base commit; sourceSha256 identifies the frozen native candidate, including uncommitted source files",
+    "gpuInputsAlsoHashedSeparately": true,
+    "animationSourceSha256": {
+      "mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs": "ca8f9b120a106732d163f98d3087ac9fffb429979d2dfbc040bb1eb0751046db",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationFixture.cs": "5ceda576a5dc64824ba6fa2cc8315907a1c6835e3d3a3ec4965dd522a77ccb05",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs": "a4343717d91c16212553b04f4b1e17fcec7383b086220ff002aa6c30bbeb0534"
+    }
+  },
+  "native": {
+    "receipt": {
+      "schema": 1,
+      "target": "linux-x64",
+      "triple": "x86_64-unknown-linux-gnu",
+      "sourceSha256": "21b4c57ba8427eadf9036564f265d722c25a184a5f24d4eb2098a5312ce4ee77",
+      "binarySha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+      "commit": "84207e7b316020616ed5dca9e6226253920df55d",
+      "gameRuntimeTested": false
+    },
+    "receiptCopiesIdentical": true,
+    "artifactCopies": {
+      "cargoArtifact": {
+        "path": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/native/target/platform-build/x86_64-unknown-linux-gnu/release/liboni_sim_core.so",
+        "sha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+        "bytes": 8253272
+      },
+      "bundle": {
+        "path": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/obj/Release/OniSimBundle/linux-x64/liboni_sim_core.so",
+        "sha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+        "bytes": 8253272
+      },
+      "modBuildOutput": {
+        "path": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/bin/Release/OniSim/linux-x64/liboni_sim_core.so",
+        "sha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+        "bytes": 8253272
+      },
+      "distribution": {
+        "path": "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so",
+        "sha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+        "bytes": 8253272
+      }
+    },
+    "zipMember": "OniSim/linux-x64/liboni_sim_core.so",
+    "zipBytesIdentical": true,
+    "elf": {
+      "class": "ELF64",
+      "endian": "little",
+      "type": "DYN",
+      "machine": "x86-64"
+    },
+    "neededLibraries": [
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ]
+  },
+  "managed": {
+    "targetFramework": "net48",
+    "implementationMembers": {
+      "CycleTrim.dll": {
+        "buildPath": "/workspace/scratch/6c1cf53f37e8/OniMods/sdk/Jlib.Bootstrap/bin/CycleTrim/Release/net48/CycleTrim.Bootstrap.dll",
+        "sha256": "7708e6b76e6b98362ec62789ac411fcb5ae688075dbfba4c917eaa897f7dc9c7",
+        "bytes": 15872
+      },
+      "implementation/CycleTrim.dll": {
+        "buildPath": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll",
+        "sha256": "67643663ec64005020ef3f66a3ee2981e358e93bca01a9ec3953105923168476",
+        "bytes": 190976
+      },
+      "implementation/OniSim.Compatibility.dll": {
+        "buildPath": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/managed/OniSim.Compatibility/bin/Release/netstandard2.0/OniSim.Compatibility.dll",
+        "sha256": "2367735995174cf668ae255fe7c340cca0d5a1100a76f261a801465d253c831c",
+        "bytes": 36864
+      }
+    },
+    "allBuildDistributionZipBytesIdentical": true,
+    "gameReferenceAssembliesRedistributed": false,
+    "referenceCount": 22,
+    "referenceRepository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
+    "referenceCommit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "referenceDeclaredOniBuild": 737790,
+    "officialOniBuild": 744825,
+    "referenceCompatibilityScope": "Compile-only 737790 mirror plus auxiliary modules; does not establish official 744825 binary runtime compatibility",
+    "jlibCompileCommit": "0519ec0fa7e99a878dba54dfc3bdb81a57f3559e",
+    "jlibRuntimeDistribution": "Separate Jlib mod; not embedded in CycleTrim ZIP"
+  },
+  "package": {
+    "producedPath": "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim.zip",
+    "retainedPath": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/CycleTrim-linux-candidate.zip",
+    "sha256": "34cca03bb279c47b9bc7631b0c42c8e845004c1f385be4edd3876b2cadb4df3e",
+    "bytes": 3427518,
+    "platforms": [
+      "linux-x64"
+    ]
+  },
+  "evidence": {
+    "onimLog": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/onim.log",
+    "exitCodeFile": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/onim.exitcode",
+    "nativeReceipt": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/native-build.json",
+    "elfHeader": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/native-elf-header.txt",
+    "elfDynamic": "/workspace/scratch/6c1cf53f37e8/toolchain/full-linux-candidate-20261108T160748Z/native-elf-dynamic.txt"
+  },
+  "gameRuntimeTested": false,
+  "deployed": false,
+  "repositoryLog": {
+    "path": "full-linux-build.log",
+    "rawSha256": "d923004ade33ef3157fe2bb5e2d0d81c37fa9cea1fc5c3c804a6e706c310b6cd",
+    "sha256": "cf8765a764b79ad7016c0d5868640b3eb39a716b4c8665280782196f51d3244c",
+    "normalization": "Trailing whitespace removed; messages retained."
+  }
+}

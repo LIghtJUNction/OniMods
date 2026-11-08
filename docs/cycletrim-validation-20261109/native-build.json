@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "target": "linux-x64",
+  "triple": "x86_64-unknown-linux-gnu",
+  "sourceSha256": "21b4c57ba8427eadf9036564f265d722c25a184a5f24d4eb2098a5312ce4ee77",
+  "binarySha256": "94b41200af71d2e34b1838f75a76ea251d13bf08384110acf7447fadb5cba795",
+  "commit": "84207e7b316020616ed5dca9e6226253920df55d",
+  "gameRuntimeTested": false
+}

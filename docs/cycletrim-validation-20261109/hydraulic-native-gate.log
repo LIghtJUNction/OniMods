@@ -1,0 +1,416 @@
+warning: function `update_cells` is never used
+   --> src/disease.rs:150:15
+    |
+150 | pub(crate) fn update_cells(
+    |               ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `post_process` is never used
+   --> src/disease.rs:366:15
+    |
+366 | pub(crate) fn post_process(
+    |               ^^^^^^^^^^^^
+
+warning: function `reachable_cells` is never used
+  --> src/disease_emitters.rs:96:15
+   |
+96 | pub(crate) fn reachable_cells(
+   |               ^^^^^^^^^^^^^^^
+
+warning: fields `element_a`, `element_b`, `min_mass`, `destroy_percent`, `required_multiplier`, and `creation_multiplier` are never read
+   --> src/gas.rs:430:16
+    |
+429 | pub(crate) struct GasObliteration {
+    |                   --------------- fields in this struct
+430 |     pub(crate) element_a: u16,
+    |                ^^^^^^^^^
+431 |     pub(crate) element_b: u16,
+    |                ^^^^^^^^^
+...
+434 |     pub(crate) min_mass: f32,
+    |                ^^^^^^^^
+435 |     pub(crate) destroy_percent: f32,
+    |                ^^^^^^^^^^^^^^^
+436 |     pub(crate) required_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+437 |     pub(crate) creation_multiplier: f32,
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `GasObliteration` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: function `do_gas_interaction_pair` is never used
+   --> src/gas.rs:653:15
+    |
+653 | pub(crate) fn do_gas_interaction_pair(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `do_gas_interaction` is never used
+   --> src/gas.rs:705:15
+    |
+705 | pub(crate) fn do_gas_interaction(
+    |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `pathfinder` and `resident` are never read
+  --> src/gpu_sim.rs:70:16
+   |
+22 | pub(crate) struct GpuSimulation {
+   |                   ------------- fields in this struct
+...
+70 |     pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
+   |                ^^^^^^^^^^
+71 |     pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
+   |                ^^^^^^^^
+
+warning: method `disease_growth` is never used
+   --> src/grid.rs:164:19
+    |
+ 45 | impl Grid {
+    | --------- method in this implementation
+...
+164 |     pub(crate) fn disease_growth(&self, index: usize) -> f32 {
+    |                   ^^^^^^^^^^^^^^
+
+warning: method `len` is never used
+  --> src/mass_components.rs:46:19
+   |
+45 | impl PendingCommands {
+   | -------------------- method in this implementation
+46 |     pub(crate) fn len(&self) -> usize {
+   |                   ^^^
+
+warning: constant `FLAG_LEGACY_SINGLE_ELEMENT` is never used
+  --> src/multicomponent_publication.rs:21:18
+   |
+21 | pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `transfer` is never used
+  --> src/offgas.rs:10:15
+   |
+10 | pub(crate) fn transfer(
+   |               ^^^^^^^^
+
+warning: constant `MELT_MASS` is never used
+  --> src/partial_melt.rs:10:7
+   |
+10 | const MELT_MASS: f32 = 5.0;
+   |       ^^^^^^^^^
+
+warning: constant `TEMP_MARGIN` is never used
+  --> src/partial_melt.rs:11:7
+   |
+11 | const TEMP_MARGIN: f32 = 3.0;
+   |       ^^^^^^^^^^^
+
+warning: constant `MIN_SOURCE_HEADROOM` is never used
+  --> src/partial_melt.rs:12:7
+   |
+12 | const MIN_SOURCE_HEADROOM: f32 = 6.0;
+   |       ^^^^^^^^^^^^^^^^^^^
+
+warning: function `rec` is never used
+  --> src/partial_melt.rs:14:4
+   |
+14 | fn rec(table: &ElementTable, id: u16) -> &ElementRecord {
+   |    ^^^
+
+warning: function `pair` is never used
+  --> src/partial_melt.rs:18:4
+   |
+18 | fn pair(
+   |    ^^^^
+
+warning: function `apply` is never used
+   --> src/partial_melt.rs:114:15
+    |
+114 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: method `overlaps_storage` is never used
+  --> src/presentation.rs:74:19
+   |
+26 | impl PresentationBuffers {
+   | ------------------------ method in this implementation
+...
+74 |     pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: function `update` is never used
+   --> src/radiation.rs:434:15
+    |
+434 | pub(crate) fn update(
+    |               ^^^^^^
+
+warning: function `apply` is never used
+   --> src/sublimation.rs:157:15
+    |
+157 | pub(crate) fn apply(
+    |               ^^^^^
+
+warning: associated function `is_message` is never used
+   --> src/thermal_components.rs:193:19
+    |
+184 | impl ThermalComponents {
+    | ---------------------- associated function in this implementation
+...
+193 |     pub(crate) fn is_message(id: i32) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: method `request_stop` is never used
+   --> src/worker.rs:284:19
+    |
+207 | impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
+    | ------------------------------------------------------------- method in this implementation
+...
+284 |     pub(crate) fn request_stop(&self) {
+    |                   ^^^^^^^^^^^^
+
+warning: method `public_index` is never used
+  --> src/worker_shape.rs:28:19
+   |
+13 | impl WorldShape {
+   | --------------- method in this implementation
+...
+28 |     pub(crate) fn public_index(&self, internal: usize) -> Option<usize> {
+   |                   ^^^^^^^^^^^^
+
+warning: field `sunlight` is never read
+  --> src/world.rs:18:16
+   |
+13 | pub(crate) struct Region {
+   |                   ------ field in this struct
+...
+18 |     pub(crate) sunlight: f32,
+   |                ^^^^^^^^
+   |
+   = note: `Region` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `gas_scan_direction` is never read
+  --> src/world.rs:42:16
+   |
+22 | pub(crate) struct PhysicsWorld {
+   |                   ------------ field in this struct
+...
+42 |     pub(crate) gas_scan_direction: i32,
+   |                ^^^^^^^^^^^^^^^^^^
+
+warning: method `sync_write_from_read` is never used
+   --> src/world.rs:231:19
+    |
+ 86 | impl PhysicsWorld {
+    | ----------------- method in this implementation
+...
+231 |     pub(crate) fn sync_write_from_read(&mut self) {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: method `copy_fluid_from` is never used
+  --> src/world_cells.rs:97:19
+   |
+63 | impl Cells {
+   | ---------- method in this implementation
+...
+97 |     pub(crate) fn copy_fluid_from(&mut self, other: &Self) {
+   |                   ^^^^^^^^^^^^^^^
+
+warning: `oni-sim-core` (lib test) generated 27 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running unittests src/lib.rs (mods/CycleTrim/OniSim/native/target/debug/deps/oni_sim_core-1d760905a56a9498)
+
+running 118 tests
+test conduit_ffi::tests::fatal_temperature_boundary_preserves_other_native_bit_patterns ... ok
+test diagnostics::tests::report_matches_official_pack4_callback_layout ... ok
+test events::change_tracking_tests::tracker_is_bounded_and_private_storage_participates_in_alias_checks ... ok
+test gas::bubble_tests::bubble_rises_through_water_and_emerges_without_losing_mass ... ok
+test gas::bubble_tests::bubble_stays_under_a_solid_ceiling ... ok
+test gas::bubble_tests::liquid_droplet_falls_through_gas_into_matching_liquid ... ok
+test gas::bubble_tests::exchange_keeps_mixture_with_its_cell_material ... ok
+test gas::bubble_tests::gpu_owned_gas_edges_are_not_diffused_twice_on_cpu ... ok
+test gas::bubble_tests::droplet_stays_when_destination_is_full_or_solid ... ok
+test float_env::tests::tasks_inherit_submitter_rounding_and_restore_pool_environment ... ok
+test gas::bubble_tests::mixed_gas_diffuses_even_when_both_cells_have_the_same_primary ... ok
+test gas::bubble_tests::sparse_bubbles_cross_span_boundaries_without_skipping_last_column ... ok
+test gpu_sim::material_range_tests::covers_changed_blocks_and_table_replacement ... ok
+test gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy ... FAILED
+test gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass ... FAILED
+test gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes ... FAILED
+test gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi ... FAILED
+test gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components ... FAILED
+test events::tracker_capacity_regression::growing_dimensions_never_exceed_tracker_word_budget ... ok
+test gpu_sim::material_range_tests::profile_game_sized_gas_chain ... ignored, manual GPU timing on the game-sized gas region
+test gpu_sim::material_range_tests::many_disjoint_changes_use_one_full_range ... ok
+test gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy ... FAILED
+test gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes ... FAILED
+test gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order ... FAILED
+test gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass ... FAILED
+test gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region ... FAILED
+test gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces ... FAILED
+test hydraulic_regression_tests::hydraulic_tests_new_displacement_carries_current_heat_and_germs ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_displacement_uses_inventory_not_batch_flow ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_fully_drained_cell_becomes_vacuum ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_implicit_faces_do_not_cross_material_or_property_boundaries ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_mixed_cell_keeps_legacy_minimum_flow ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_equal_temperature_through_flow_conserves_germs ... ok
+test disease::tests::parallel_growth_rejects_bad_bounds_before_writing ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_pressure_fills_sealed_vacuum ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_pressure_scratch_reuse_matches_fresh_across_worlds_and_regions ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_symmetric_single_step_has_no_horizontal_bias ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_nearly_dry_channel_conserves_and_converges ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_production_liquid_phase_preserves_gas_and_immiscible_inventory ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_unequal_temperature_flow_conserves_heat ... ok
+test id_validation::tests::every_u8_word_and_count ... ok
+test mass_components::emitter::tests::emitter_publication_keeps_cleared_and_retired_slots_in_manager_storage ... ok
+test id_validation::tests::vector_boundaries_tails_and_unaligned_slices ... ok
+test mass_components::flood::tests::fifo_keeps_boundaries_early_exit_and_retained_queue_storage ... ok
+test mass_components::flood::tests::fifo_matches_previous_order_for_every_three_by_three_obstacle_layout ... ok
+test messages_tests::batch_load_commits_in_order_and_rejects_invalid_later_images_atomically ... ok
+test messages_tests::benchmark_empty_publication_reuse ... ignored, manual full-grid empty-publication benchmark
+test messages_tests::compact_legacy_load_preserves_omitted_fields_and_clears_unknown_radiation ... ok
+test messages_tests::compact_load_plan_maps_offset_rows_without_touching_other_cells ... ok
+test messages_tests::component_batch_registers_distinct_handles_in_callback_order ... ok
+test messages_tests::dispatched_cell_commands_wait_for_their_frame_and_preserve_order ... ok
+test messages_tests::empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change ... ok
+test messages_tests::frame_batches_publish_every_submitted_frame ... ok
+test messages_tests::full_modify_cell_dispatch_emits_the_requested_callback_and_updates_material ... ok
+test messages_tests::initialize_accepts_managed_zero_capacity_tail_but_rejects_nonzero_tail ... ok
+test messages_tests::interaction_registration_owns_records_and_rejects_invalid_replacement ... ok
+test messages_tests::invalid_later_cell_record_keeps_the_existing_queue_unchanged ... ok
+test messages_tests::invalid_radiation_batch_never_applies_an_earlier_delta ... ok
+test messages_tests::prepared_next_step_revalidates_mutated_state ... ok
+test messages_tests::prepared_step_accepts_nullable_disease_and_backwall_ids ... ok
+test messages_tests::prepared_step_rejects_invalid_elapsed_without_mutation ... ok
+test messages_tests::prepared_step_rejects_invalid_ids_without_activity_flags ... ok
+test messages_tests::prepared_step_validates_once_before_one_advance ... ok
+test messages_tests::zone_changes_are_queued_and_saved_options_work_after_worker_ownership ... ok
+test multicomponent_flux::tests::cpu_step_conserves_two_channel_mass ... ok
+test multicomponent_flux::tests::density_gradients_use_all_populated_neighbours ... ok
+test multicomponent_flux::tests::stencil_mask_matches_full_neighbour_union ... ok
+test multicomponent_flux::tests::three_species_output_is_not_projected_into_two_slots ... ok
+test multicomponent_flux::tests::three_species_stencil_isolates_only_at_risk_cells ... ok
+test multicomponent_publication::tests::invalid_phase_replaces_old_cell_and_discards_partial_records ... ok
+test multicomponent_publication::tests::multicomponent_buffers_publish_valid_borrowed_update ... ok
+test multicomponent_publication::tests::padded_mixture_publication_matches_compact_grid_across_rows ... ok
+test multicomponent_publication::tests::publishes_checked_sparse_coexistence_projection ... ok
+test multicomponent_publication::tests::rejects_invalid_late_cell_without_modifying_output ... ok
+test multicomponent_publication::tests::rejects_missing_element_and_phase_zero_with_positive_mass ... ok
+test multicomponent_publication::tests::rejects_non_finite_and_negative_mass ... ok
+test multicomponent_publication::tests::rejects_wrong_output_size ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_communicating_vessels_level_without_crossing_walls ... ok
+test id_validation::tests::every_u16_word_and_boundary_count ... ok
+test postprocess_pressure::tests::dirty_water_is_denser_than_clean_water_and_sinks ... ok
+test numeric::tests::instruction_results_match_scalar_bits ... ok
+test presentation::flow::tests::matches_original_arbitrary_float_words ... ok
+test presentation::flow::tests::matches_original_padded_layout_and_transitions ... ok
+test presentation::flow::tests::matches_original_with_worker_flush_to_zero ... ok
+test presentation::sun::tests::benchmark_sun_indexing ... ignored, explicit single-core microbenchmark, not part of correctness tests
+test presentation::sun::tests::matches_original_ieee_words_and_fp_environment ... ok
+test numeric::tests::instruction_results_match_scalar_bits_with_simulation_ftz ... ok
+test pressure_sweep::tests::borrowed_notifications_keep_padding_order_dirty_bits_and_dedup ... ok
+test pressure_sweep::tests::shortened_pressure_storage_is_rejected_before_writes ... ok
+test save::tests::load_plan_cell_storage_stays_within_32_bytes ... ok
+test tests::exclusive_initialize_and_official_reset_have_distinct_semantics ... ok
+test mass_components::flood::tests::fifo_mass_removal_preserves_current_helpers_and_event_order ... ok
+test thermal::cache_tests::clearing_sticky_flags_or_changing_rounding_invalidates_entry ... ok
+test thermal::cache_tests::conductivity_min_keeps_official_operand_order_for_nan_and_zero ... ok
+test thermal::cache_tests::every_unmasked_exception_disables_reuse_without_executing_fp ... ok
+test thermal_components::tests::building_replay_preserves_nonfinite_signed_zero_and_subnormal_wire_words ... ok
+test presentation::flow::tests::simd_preserves_edge_words_and_mxcsr_effects ... ok
+test thermal_components::tests::thermal_batch_replay_keeps_type_order_clamps_and_backwall_boundary ... ok
+test thermal_components::tests::every_thermal_payload_is_owned_and_wrong_sizes_leave_the_queue_unchanged ... ok
+test worker::tests::abandoned_lease_and_capture_panic_make_failure_observable ... ok
+test worker::tests::full_queue_does_not_capture_or_drop_commands ... ok
+test thermal_components::tests::thermal_energy_batch_limit_rejects_all_records_before_mutation ... ok
+test worker::tests::readiness_observation_preserves_the_publication_barrier ... ok
+test worker::tests::runner_failure_keeps_previous_publication_alive ... ok
+test worker::tests::shutdown_does_not_require_releasing_an_outstanding_publication ... ok
+test worker::tests::worker_failure_wakes_waiters_and_rejects_later_submissions ... ok
+test world::publication_tests::benchmark_publication ... ignored, targeted production publication benchmark; run after correctness tests
+test worker::tests::repeated_batches_keep_owned_frames_ordered_across_shutdowns ... ok
+test world::publication_tests::publication_preserves_explicit_ieee_payloads_and_padded_boundaries ... ok
+test world_cells::tests::region_copy_matches_full_copy_when_only_region_changed ... ok
+test disease::tests::parallel_growth_matches_serial_bits_with_partial_rows_and_repeated_updates ... ok
+test presentation::sun::tests::matches_original_offsets_overlaps_and_degenerate_rectangles ... ok
+test world::publication_tests::publication_preserves_all_fields_and_reserved_bytes ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_32_wide_multilayer_pool_levels_and_conserves ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_32_wide_pool_across_two_regions_levels_and_conserves ... ok
+test thermal::cache_tests::cached_contact_preserves_words_flags_errno_in_32_environments ... ok
+test events::change_tracking_tests::early_dedup_preserves_cell_membership_with_resets_merges_and_invalid_ids ... ok
+test hydraulic_regression_tests::hydraulic_tests_new_pressure_cost_samples_preserve_inventory ... ok
+
+failures:
+
+---- gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy stdout ----
+
+thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (40) panicked at src/gpu_sim.rs:1415:57:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass stdout ----
+
+thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (42) panicked at src/gpu_sim.rs:1523:77:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes stdout ----
+
+thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (39) panicked at src/gpu_sim.rs:1446:48:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi stdout ----
+
+thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (37) panicked at src/gpu_pathfinder_ffi.rs:76:9:
+assertion `left == right` failed
+  left: -1
+ right: 0
+
+---- gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components stdout ----
+
+thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (41) panicked at src/gpu_sim.rs:1311:77:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy stdout ----
+
+thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (45) panicked at src/gpu_sim.rs:1084:74:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes stdout ----
+
+thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (44) panicked at src/gpu_sim.rs:1004:55:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order stdout ----
+
+thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (43) panicked at src/gpu_sim.rs:1043:83:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass stdout ----
+
+thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (50) panicked at src/gpu_sim.rs:1244:74:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region stdout ----
+
+thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (49) panicked at src/gpu_sim.rs:1201:83:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+---- gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces stdout ----
+
+thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (51) panicked at src/gpu_sim.rs:1376:77:
+called `Result::unwrap()` on an `Err` value: "no hardware Vulkan adapter available"
+
+
+failures:
+    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+    gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
+    gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
+    gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
+    gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order
+    gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes
+    gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy
+    gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region
+    gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass
+    gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces
+
+test result: FAILED. 103 passed; 11 failed; 4 ignored; 0 measured; 0 filtered out; finished in 6.97s
+
+error: test failed, to rerun pass `--lib`

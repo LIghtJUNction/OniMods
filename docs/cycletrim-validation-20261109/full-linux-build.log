@@ -1,0 +1,459 @@
+📦 构建 Mod: CycleTrim (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim)
+   模式: Release
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OniSim.Compatibility -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/managed/OniSim.Compatibility/bin/Release/netstandard2.0/OniSim.Compatibility.dll
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(55,81): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(117,70): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(153,66): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(156,58): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibBuildings/PBuildingManager.cs(178,23): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PUIUtils.cs(679,25): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibCore/PLibCorePatches.cs(77,24): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PTextField.cs(196,4): warning CS0618: 'TMP_Text.enableWordWrapping' is obsolete: 'The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.' [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PTextArea.cs(132,4): warning CS0618: 'TMP_Text.enableWordWrapping' is obsolete: 'The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.' [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/Layouts/RelativeLayoutUtil.cs(274,20): warning CS1572: XML comment has a param tag for 'offset', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/Layouts/CardLayoutGroup.cs(34,20): warning CS1572: XML comment has a param tag for 'args', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PRelativePanel.cs(253,20): warning CS1572: XML comment has a param tag for 'toLeft', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PRelativePanel.cs(256,18): warning CS1573: Parameter 'toRight' has no matching param tag in the XML comment for 'PRelativePanel.SetLeftEdge(IUIComponent, float, IUIComponent)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibDatabase/PCodexManager.cs(221,66): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'PCodexManager.YamlParseErrorCB(YamlIO.Error, bool)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/CategoryExpandHandler.cs(55,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'CategoryExpandHandler.OnExpandContract(GameObject, bool)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/ColorBaseOptionsEntry.cs(208,42): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'ColorBaseOptionsEntry.OnRGBChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/FloatOptionsEntry.cs(83,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'FloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/FloatOptionsEntry.cs(96,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'FloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/IntOptionsEntry.cs(78,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'IntOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/IntOptionsEntry.cs(91,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'IntOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/LogFloatOptionsEntry.cs(91,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'LogFloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/LogFloatOptionsEntry.cs(100,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'LogFloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableFloatOptionsEntry.cs(92,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableFloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableFloatOptionsEntry.cs(105,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableFloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableIntOptionsEntry.cs(92,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableIntOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableIntOptionsEntry.cs(105,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableIntOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/SelectOneOptionsEntry.cs(175,39): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'SelectOneOptionsEntry.UpdateValue(GameObject, SelectOneOptionsEntry.EnumOption)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/StringOptionsEntry.cs(90,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'StringOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+  Jlib -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/bin/Release/net48/Jlib.dll
+  Zipping directory "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/artifacts/mod/Jlib" to "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/artifacts/Jlib.zip".
+  CycleTrim -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+
+  Time Elapsed 00:00:02.00
+     Compiling proc-macro2 v1.0.107
+     Compiling quote v1.0.47
+     Compiling unicode-ident v1.0.27
+     Compiling cfg_aliases v0.2.2
+     Compiling foldhash v0.2.0
+     Compiling cfg-if v1.0.5
+     Compiling equivalent v1.0.3
+     Compiling autocfg v1.5.1
+     Compiling libm v0.2.16
+     Compiling thiserror v2.0.21
+     Compiling zerocopy v0.8.63
+     Compiling log v0.4.35
+     Compiling libc v0.2.191
+     Compiling hashbrown v0.17.1
+     Compiling bitflags v2.13.2
+     Compiling rustc-hash v1.1.0
+     Compiling naga v30.0.1
+     Compiling num-traits v0.2.19
+     Compiling parking_lot_core v0.9.12
+     Compiling bit-vec v0.9.1
+     Compiling ash v0.38.0+1.3.281
+     Compiling unicode-width v0.2.3
+     Compiling spirv v0.4.0+sdk-1.4.341.0
+     Compiling libloading v0.8.9
+     Compiling bit-set v0.10.0
+     Compiling codespan-reporting v0.13.1
+     Compiling arrayvec v0.7.8
+     Compiling raw-window-handle v0.6.2
+     Compiling smallvec v1.16.4
+     Compiling once_cell v1.21.4
+     Compiling allocator-api2 v0.2.21
+     Compiling syn v3.0.9
+     Compiling syn v2.0.119
+     Compiling indexmap v2.14.2
+     Compiling static_assertions v1.1.0
+     Compiling scopeguard v1.2.0
+     Compiling lock_api v0.4.14
+     Compiling hashbrown v0.16.1
+     Compiling wgpu-hal v30.0.1
+     Compiling presser v0.3.1
+     Compiling crossbeam-utils v0.8.23
+     Compiling ordered-float v5.5.1
+     Compiling parking_lot v0.12.5
+     Compiling profiling v1.0.18
+     Compiling crossbeam-epoch v0.9.21
+     Compiling serde_core v1.0.229
+     Compiling renderdoc-sys v1.1.0
+     Compiling wgpu-core v30.0.1
+     Compiling litrs v1.0.1
+     Compiling crossbeam-deque v0.8.8
+     Compiling zmij v1.0.23
+     Compiling document-features v0.2.12
+     Compiling wgpu v30.0.1
+     Compiling rayon-core v1.13.0
+     Compiling serde v1.0.229
+     Compiling serde_json v1.0.154
+     Compiling memchr v2.8.3
+     Compiling itoa v1.0.18
+     Compiling either v1.19.0
+     Compiling pollster v1.0.1
+     Compiling thiserror-impl v2.0.21
+     Compiling bytemuck_derive v1.12.1
+     Compiling serde_derive v1.0.229
+     Compiling rayon v1.12.0
+     Compiling zerocopy-derive v0.8.63
+     Compiling bytemuck v1.25.2
+     Compiling naga-types v30.0.1
+     Compiling wgpu-types v30.0.1
+     Compiling half v2.7.1
+     Compiling gpu-allocator v0.28.0
+     Compiling wgpu-naga-bridge v30.0.1
+     Compiling wgpu-core-deps-windows-linux-android v30.0.1
+     Compiling onisim-gpu v0.1.0 (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/gpu)
+     Compiling oni-sim-core v0.1.0 (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/native)
+  warning: function `update_cells` is never used
+     --> src/disease.rs:150:15
+      |
+  150 | pub(crate) fn update_cells(
+      |               ^^^^^^^^^^^^
+      |
+      = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+  warning: function `post_process` is never used
+     --> src/disease.rs:366:15
+      |
+  366 | pub(crate) fn post_process(
+      |               ^^^^^^^^^^^^
+
+  warning: function `reachable_cells` is never used
+    --> src/disease_emitters.rs:96:15
+     |
+  96 | pub(crate) fn reachable_cells(
+     |               ^^^^^^^^^^^^^^^
+
+  warning: method `overlaps_storage` is never used
+    --> src/events.rs:42:27
+     |
+  17 |           impl EventQueues {
+     |           ---------------- method in this implementation
+  ...
+  42 |               pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+     |                             ^^^^^^^^^^^^^^^^
+  ...
+  67 | / queues! {
+  68 | |     solid_info: SolidInfo,
+  69 | |     liquid_change_info: LiquidChangeInfo,
+  70 | |     solid_substance_change_info: SolidSubstanceChangeInfo,
+  ...  |
+  96 | |     radiation_consumed_callbacks: ConsumedRadiationCallback,
+  97 | | }
+     | |_- in this macro invocation
+     |
+     = note: this warning originates in the macro `queues` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+  warning: multiple fields are never read
+     --> src/gas.rs:430:16
+      |
+  429 | pub(crate) struct GasObliteration {
+      |                   --------------- fields in this struct
+  430 |     pub(crate) element_a: u16,
+      |                ^^^^^^^^^
+  431 |     pub(crate) element_b: u16,
+      |                ^^^^^^^^^
+  432 |     pub(crate) product: u16,
+      |                ^^^^^^^
+  433 |     pub(crate) probability: f32,
+      |                ^^^^^^^^^^^
+  434 |     pub(crate) min_mass: f32,
+      |                ^^^^^^^^
+  435 |     pub(crate) destroy_percent: f32,
+      |                ^^^^^^^^^^^^^^^
+  436 |     pub(crate) required_multiplier: f32,
+      |                ^^^^^^^^^^^^^^^^^^^
+  437 |     pub(crate) creation_multiplier: f32,
+      |                ^^^^^^^^^^^^^^^^^^^
+      |
+      = note: `GasObliteration` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+  warning: function `do_gas_interaction_pair` is never used
+     --> src/gas.rs:653:15
+      |
+  653 | pub(crate) fn do_gas_interaction_pair(
+      |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+  warning: function `do_gas_interaction` is never used
+     --> src/gas.rs:705:15
+      |
+  705 | pub(crate) fn do_gas_interaction(
+      |               ^^^^^^^^^^^^^^^^^^
+
+  warning: fields `pathfinder` and `resident` are never read
+    --> src/gpu_sim.rs:70:16
+     |
+  22 | pub(crate) struct GpuSimulation {
+     |                   ------------- fields in this struct
+  ...
+  70 |     pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
+     |                ^^^^^^^^^^
+  71 |     pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
+     |                ^^^^^^^^
+
+  warning: method `disease_growth` is never used
+     --> src/grid.rs:164:19
+      |
+   45 | impl Grid {
+      | --------- method in this implementation
+  ...
+  164 |     pub(crate) fn disease_growth(&self, index: usize) -> f32 {
+      |                   ^^^^^^^^^^^^^^
+
+  warning: method `len` is never used
+    --> src/mass_components.rs:46:19
+     |
+  45 | impl PendingCommands {
+     | -------------------- method in this implementation
+  46 |     pub(crate) fn len(&self) -> usize {
+     |                   ^^^
+
+  warning: method `process_pending` is never used
+     --> src/mass_components.rs:167:19
+      |
+   85 | impl MassComponents {
+      | ------------------- method in this implementation
+  ...
+  167 |     pub(crate) fn process_pending(
+      |                   ^^^^^^^^^^^^^^^
+
+  warning: function `region_gas_species_up_to_three` is never used
+    --> src/multicomponent_flux.rs:90:15
+     |
+  90 | pub(crate) fn region_gas_species_up_to_three(world: &PhysicsWorld, elements: &ElementTable, region: Region) -> usize {
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  warning: function `can_project_without_losing_species` is never used
+     --> src/multicomponent_flux.rs:490:4
+      |
+  490 | fn can_project_without_losing_species(mass: &[f32], channels: usize) -> bool {
+      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  warning: function `step_region` is never used
+     --> src/multicomponent_flux.rs:557:15
+      |
+  557 | pub(crate) fn step_region(
+      |               ^^^^^^^^^^^
+
+  warning: constant `FLAG_LEGACY_SINGLE_ELEMENT` is never used
+    --> src/multicomponent_publication.rs:21:18
+     |
+  21 | pub(crate) const FLAG_LEGACY_SINGLE_ELEMENT: u32 = 1;
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  warning: function `transfer` is never used
+    --> src/offgas.rs:10:15
+     |
+  10 | pub(crate) fn transfer(
+     |               ^^^^^^^^
+
+  warning: constant `MELT_MASS` is never used
+    --> src/partial_melt.rs:10:7
+     |
+  10 | const MELT_MASS: f32 = 5.0;
+     |       ^^^^^^^^^
+
+  warning: constant `TEMP_MARGIN` is never used
+    --> src/partial_melt.rs:11:7
+     |
+  11 | const TEMP_MARGIN: f32 = 3.0;
+     |       ^^^^^^^^^^^
+
+  warning: constant `MIN_SOURCE_HEADROOM` is never used
+    --> src/partial_melt.rs:12:7
+     |
+  12 | const MIN_SOURCE_HEADROOM: f32 = 6.0;
+     |       ^^^^^^^^^^^^^^^^^^^
+
+  warning: function `rec` is never used
+    --> src/partial_melt.rs:14:4
+     |
+  14 | fn rec(table: &ElementTable, id: u16) -> &ElementRecord {
+     |    ^^^
+
+  warning: function `pair` is never used
+    --> src/partial_melt.rs:18:4
+     |
+  18 | fn pair(
+     |    ^^^^
+
+  warning: function `apply` is never used
+     --> src/partial_melt.rs:114:15
+      |
+  114 | pub(crate) fn apply(
+      |               ^^^^^
+
+  warning: method `overlaps_storage` is never used
+    --> src/presentation.rs:74:19
+     |
+  26 | impl PresentationBuffers {
+     | ------------------------ method in this implementation
+  ...
+  74 |     pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+     |                   ^^^^^^^^^^^^^^^^
+
+  warning: function `update` is never used
+     --> src/radiation.rs:434:15
+      |
+  434 | pub(crate) fn update(
+      |               ^^^^^^
+
+  warning: function `gas_phase` is never used
+    --> src/simulation_step_fluid.rs:25:15
+     |
+  25 | pub(crate) fn gas_phase(
+     |               ^^^^^^^^^
+
+  warning: function `liquid_phase` is never used
+     --> src/simulation_step_fluid.rs:106:15
+      |
+  106 | pub(crate) fn liquid_phase(
+      |               ^^^^^^^^^^^^
+
+  warning: function `apply` is never used
+     --> src/sublimation.rs:157:15
+      |
+  157 | pub(crate) fn apply(
+      |               ^^^^^
+
+  warning: method `len` is never used
+    --> src/thermal_components.rs:89:19
+     |
+  88 | impl PendingCommands {
+     | -------------------- method in this implementation
+  89 |     pub(crate) fn len(&self) -> usize {
+     |                   ^^^
+
+  warning: associated items `is_message` and `process_pending` are never used
+     --> src/thermal_components.rs:193:19
+      |
+  184 | impl ThermalComponents {
+      | ---------------------- associated items in this implementation
+  ...
+  193 |     pub(crate) fn is_message(id: i32) -> bool {
+      |                   ^^^^^^^^^^
+  ...
+  257 |     pub(crate) fn process_pending(
+      |                   ^^^^^^^^^^^^^^^
+
+  warning: method `request_stop` is never used
+     --> src/worker.rs:284:19
+      |
+  207 | impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
+      | ------------------------------------------------------------- method in this implementation
+  ...
+  284 |     pub(crate) fn request_stop(&self) {
+      |                   ^^^^^^^^^^^^
+
+  warning: methods `data` and `release` are never used
+     --> src/worker.rs:301:19
+      |
+  300 | impl<F: Send + 'static, D: Send + 'static> ReadyLease<F, D> {
+      | ----------------------------------------------------------- methods in this implementation
+  301 |     pub(crate) fn data(&self) -> &D {
+      |                   ^^^^
+  ...
+  313 |     pub(crate) fn release(self) -> Result<()> {
+      |                   ^^^^^^^
+
+  warning: method `public_index` is never used
+    --> src/worker_shape.rs:28:19
+     |
+  13 | impl WorldShape {
+     | --------------- method in this implementation
+  ...
+  28 |     pub(crate) fn public_index(&self, internal: usize) -> Option<usize> {
+     |                   ^^^^^^^^^^^^
+
+  warning: field `sunlight` is never read
+    --> src/world.rs:18:16
+     |
+  13 | pub(crate) struct Region {
+     |                   ------ field in this struct
+  ...
+  18 |     pub(crate) sunlight: f32,
+     |                ^^^^^^^^
+     |
+     = note: `Region` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+  warning: field `gas_scan_direction` is never read
+    --> src/world.rs:42:16
+     |
+  22 | pub(crate) struct PhysicsWorld {
+     |                   ------------ field in this struct
+  ...
+  42 |     pub(crate) gas_scan_direction: i32,
+     |                ^^^^^^^^^^^^^^^^^^
+
+  warning: method `sync_write_from_read` is never used
+     --> src/world.rs:231:19
+      |
+   86 | impl PhysicsWorld {
+      | ----------------- method in this implementation
+  ...
+  231 |     pub(crate) fn sync_write_from_read(&mut self) {
+      |                   ^^^^^^^^^^^^^^^^^^^^
+
+  warning: method `copy_fluid_from` is never used
+    --> src/world_cells.rs:97:19
+     |
+  63 | impl Cells {
+     | ---------- method in this implementation
+  ...
+  97 |     pub(crate) fn copy_fluid_from(&mut self, other: &Self) {
+     |                   ^^^^^^^^^^^^^^^
+
+  warning: `oni-sim-core` (lib) generated 36 warnings
+      Finished `release` profile [optimized] target(s) in 49.28s
+  /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/obj/Release/OniSimBundle/linux-x64/liboni_sim_core.so
+  Zipping directory "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim/" to "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim.zip".
+  Packaged mod -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/../../dist/CycleTrim.zip
+  Packaged source -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/../../dist/CycleTrim-src.tar.gz
+
+Build succeeded.
+
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(55,81): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(117,70): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(153,66): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Runtime/JlibContract.cs(156,58): warning CS8602: Dereference of a possibly null reference. [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibBuildings/PBuildingManager.cs(178,23): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PUIUtils.cs(679,25): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibCore/PLibCorePatches.cs(77,24): warning CS0168: The variable 'e' is declared but never used [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PTextField.cs(196,4): warning CS0618: 'TMP_Text.enableWordWrapping' is obsolete: 'The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.' [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PTextArea.cs(132,4): warning CS0618: 'TMP_Text.enableWordWrapping' is obsolete: 'The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.' [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/Layouts/RelativeLayoutUtil.cs(274,20): warning CS1572: XML comment has a param tag for 'offset', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/Layouts/CardLayoutGroup.cs(34,20): warning CS1572: XML comment has a param tag for 'args', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PRelativePanel.cs(253,20): warning CS1572: XML comment has a param tag for 'toLeft', but there is no parameter by that name [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibUI/PRelativePanel.cs(256,18): warning CS1573: Parameter 'toRight' has no matching param tag in the XML comment for 'PRelativePanel.SetLeftEdge(IUIComponent, float, IUIComponent)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibDatabase/PCodexManager.cs(221,66): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'PCodexManager.YamlParseErrorCB(YamlIO.Error, bool)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/CategoryExpandHandler.cs(55,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'CategoryExpandHandler.OnExpandContract(GameObject, bool)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/ColorBaseOptionsEntry.cs(208,42): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'ColorBaseOptionsEntry.OnRGBChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/FloatOptionsEntry.cs(83,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'FloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/FloatOptionsEntry.cs(96,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'FloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/IntOptionsEntry.cs(78,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'IntOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/IntOptionsEntry.cs(91,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'IntOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/LogFloatOptionsEntry.cs(91,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'LogFloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/LogFloatOptionsEntry.cs(100,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'LogFloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableFloatOptionsEntry.cs(92,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableFloatOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableFloatOptionsEntry.cs(105,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableFloatOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableIntOptionsEntry.cs(92,43): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableIntOptionsEntry.OnSliderChanged(GameObject, float)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/NullableIntOptionsEntry.cs(105,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'NullableIntOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/SelectOneOptionsEntry.cs(175,39): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'SelectOneOptionsEntry.UpdateValue(GameObject, SelectOneOptionsEntry.EnumOption)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/PLibOptions/StringOptionsEntry.cs(90,41): warning CS1573: Parameter '_' has no matching param tag in the XML comment for 'StringOptionsEntry.OnTextChanged(GameObject, string)' (but other parameters do) [/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/Jlib.csproj::TargetFramework=net48]
+    28 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:59.92
+✅ 构建成功！
+   📁 /workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim.zip
+   📁 /workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim-src.tar.gz
