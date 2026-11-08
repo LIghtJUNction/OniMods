@@ -650,9 +650,7 @@ namespace OniOnline.Network
                     {
                         if (receivedChat.Count >= SessionOptions.MaxChatHistoryLimit) throw new InvalidDataException();
                         receivedChat.Add(packet.Sequence, packet);
-                        Packet next;
-                        while (receivedChat.TryGetValue(sequence + 1, out next))
-                        { receivedChat.Remove(++sequence); AddChat(next); }
+                        DrainReceivedChat();
                     }
                 }
                 else if (packet.Kind == PacketKind.HistoryReset)
@@ -662,7 +660,9 @@ namespace OniOnline.Network
                     {
                         sequence = packet.Sequence;
                         foreach (long number in receivedChat.Keys.Where(n => n <= sequence).ToArray()) receivedChat.Remove(number);
-                        LastError = "chat_history_expired"; Notify();
+                        LastError = "chat_history_expired";
+                        DrainReceivedChat();
+                        Notify();
                     }
                 }
                 else if (packet.Kind == PacketKind.ChatAck)
@@ -831,6 +831,15 @@ namespace OniOnline.Network
             if (chat.Count >= options.ChatHistoryLimit) chat.RemoveAt(0);
             chat.Add(new ChatLine { Sequence = packet.Sequence, PlayerId = packet.PlayerId, Name = packet.Name, Text = packet.Text, MessageId = packet.MessageId });
             Notify();
+        }
+
+        private void DrainReceivedChat()
+        {
+            // Either a chat or an expired-history reset can close the gap. Replayed
+            // duplicates must not be needed to release an already buffered sequence.
+            Packet next;
+            while (receivedChat.TryGetValue(sequence + 1, out next))
+            { receivedChat.Remove(++sequence); AddChat(next); }
         }
 
         public bool SendApplication(byte[] payload)

@@ -17,6 +17,7 @@ internal static class NetworkResilienceTests
         FourPlayerLongBlackhole();
         LostWelcomeAndAcknowledgement();
         FullOfflineQueueAndLostLastChat();
+        ExpiredHistoryReleasesBufferedChat();
         InvalidResumeSecretsCannotClaimSeats();
         DuplicateAndLostFrames();
         ReconnectWindowAndQueueBounds();
@@ -129,6 +130,44 @@ internal static class NetworkResilienceTests
                 "replayed messages are displayed in authoritative sequence order");
             check(network.Dropped > 0 && network.Duplicated > 0 && network.Reordered > 0,
                 "raw-frame test actually injected all configured faults");
+        }
+    }
+
+    private static void ExpiredHistoryReleasesBufferedChat()
+    {
+        var hostOptions = Options();
+        hostOptions.ChatHistoryLimit = 2;
+        using (var network = new DeterministicRoomNetwork(Seed + 8))
+        using (var host = new RoomSession(network.Host, Profile("Host"), "", "Expired chat history", options: hostOptions))
+        using (var client = new RoomSession(network.Connect(), Profile("Client"), "", options: Options()))
+        {
+            Until(network, host, client, () => client.Joined, 2, "expired history fixture joins");
+            string identity = client.LocalPlayerId;
+            bool holdHistory = true;
+            network.Settings.DropBeforeDelivery = (isHost, data) =>
+            {
+                var packet = Protocol.Decode(data);
+                return isHost && packet.Kind == PacketKind.Chat && packet.Sequence == 1 ||
+                    !isHost && packet.Kind == PacketKind.HistoryRequest && holdHistory;
+            };
+            for (int i = 1; i <= 3; i++)
+            {
+                check(host.SendChat("history-" + i), "host publishes chat before history expires");
+                Step(network, host, client);
+            }
+            check(client.Chat.Length == 0 && host.Chat.Select(c => c.Sequence).SequenceEqual(new long[] { 2, 3 }),
+                "missing first chat blocks later frames while the host evicts it");
+            holdHistory = false;
+            Until(network, host, client, () => client.Chat.Length == 2, 5,
+                "history reset releases already buffered chats without another new message");
+            check(client.Chat.Select(c => c.Sequence).SequenceEqual(new long[] { 2, 3 }) &&
+                client.Joined && client.LocalPlayerId == identity && client.LastError == "chat_history_expired",
+                "expired history recovers in order without duplicate replay or reconnect");
+            check(host.SendChat("after-history-reset"), "host can publish after history reset");
+            Until(network, host, client, () => client.Chat.Length == 3, 2,
+                "chat continues after the expired gap is skipped");
+            check(client.Chat.Select(c => c.Sequence).SequenceEqual(new long[] { 2, 3, 4 }),
+                "replayed and new chat each appear exactly once");
         }
     }
 
