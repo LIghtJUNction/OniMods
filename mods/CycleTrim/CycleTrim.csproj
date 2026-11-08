@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="0Harmony">
+    <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net48'">
       <HintPath>$(OniManagedPath)/0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
@@ -55,6 +55,13 @@
       <HintPath>$(OniManagedPath)/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <!-- The game's Harmony DLL targets Mono/.NET Framework and exposes Emit
+         types from mscorlib. Use its compile-only reference package for the
+         portable contract check so those types retain .NET Standard identity. -->
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>

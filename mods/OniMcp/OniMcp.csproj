@@ -34,7 +34,7 @@
     Private=false 确保这些 DLL 不会被复制到输出目录
   -->
   <ItemGroup>
-    <Reference Include="0Harmony">
+    <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net48'">
       <HintPath>$(OniManagedPath)/0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
@@ -87,6 +87,13 @@
       <HintPath>$(OniManagedPath)/Newtonsoft.Json.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <!-- The runtime Harmony assembly is a Mono/.NET Framework binary. Its
+         compile-only reference package preserves the equivalent portable API
+         without mixing mscorlib Emit types into the .NET Standard compile. -->
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <!-- 项目根目录的预览图自动复制到输出 -->
