@@ -12,6 +12,8 @@ struct DeferredExpansion {
     dirty_workgroups:wgpu::Buffer, pending_workgroups:u32,
     previous_region:Vec<u32>, previous_flags:Vec<u32>,
     previous_mixture:Vec<u8>, previous_mass:Vec<u8>, previous_properties:Vec<u8>, pending:bool,
+    mixture_present:Vec<u32>,
+    previous_mixture_mass_input:Vec<u8>,
     valid:Cell<bool>, elements_revision:Option<u64>,
 }
 
@@ -236,7 +238,7 @@ impl ThermalDiffusionGpu {
             let storage=wgpu::BufferUsages::STORAGE|wgpu::BufferUsages::COPY_DST;
             let make=|label,size,usage|self.device.create_buffer(&wgpu::BufferDescriptor {label:Some(label),size,usage,mapped_at_creation:false});
             let mixture=make("thermal mixture elements",(self.cells.div_ceil(2)*4) as u64,storage);
-            let mass=make("thermal mixture mass",(self.cells*4) as u64,storage);
+            let mass=make("thermal mixture presence bits",(self.cells.div_ceil(32)*4) as u64,storage);
             let properties=make("thermal cell properties",(self.cells.div_ceil(4)*4) as u64,storage);
             let region=make("thermal cell region",(self.cells*4) as u64,storage);
             let flags=make("thermal gas eligibility",65536*4,storage);
@@ -245,12 +247,26 @@ impl ThermalDiffusionGpu {
             let buffers=[&elements,&mixture,&mass,&properties,&region,&flags,&self.deferred_group,&params,&dirty_workgroups];
             let entries:Vec<_>=buffers.iter().enumerate().map(|(i,b)|wgpu::BindGroupEntry {binding:i as u32,resource:b.as_entire_binding()}).collect();
             let group=self.device.create_bind_group(&wgpu::BindGroupDescriptor {label:Some("thermal deferred bindings"),layout:&pipeline.get_bind_group_layout(0),entries:&entries});
-            self.deferred_expansion=Some(DeferredExpansion {pipeline,group,mixture,mass,properties,region,flags,params,dirty_workgroups,pending_workgroups:0,previous_region:Vec::new(),previous_flags:Vec::new(),previous_mixture:Vec::new(),previous_mass:Vec::new(),previous_properties:Vec::new(),pending:false,valid:Cell::new(false),elements_revision:None});
+            self.deferred_expansion=Some(DeferredExpansion {pipeline,group,mixture,mass,properties,region,flags,params,dirty_workgroups,pending_workgroups:0,previous_region:Vec::new(),previous_flags:Vec::new(),previous_mixture:Vec::new(),previous_mass:Vec::new(),previous_properties:Vec::new(),mixture_present:vec![0;self.cells.div_ceil(32)],previous_mixture_mass_input:Vec::new(),pending:false,valid:Cell::new(false),elements_revision:None});
         }
         let data=self.deferred_expansion.as_mut().ok_or("missing deferred pipeline")?;
         let mut dirty=vec![false;self.cells.div_ceil(4096)];
         let mut changed=upload_changed_bytes(&self.queue,&data.mixture,bytemuck::cast_slice(mixture),&mut data.previous_mixture,8192,&mut dirty)>0;
-        changed|=upload_changed_bytes(&self.queue,&data.mass,bytemuck::cast_slice(mass),&mut data.previous_mass,16384,&mut dirty)>0;
+        // The shader only tests !(mass <= 0), including the unordered NaN
+        // case. Send one bit per cell and ignore changes in positive magnitude.
+        let mass_bytes: &[u8]=bytemuck::cast_slice(mass);
+        let first=data.previous_mixture_mass_input.len()!=mass_bytes.len();
+        if first {data.previous_mixture_mass_input.resize(mass_bytes.len(),0);}
+        for start in (0..self.cells).step_by(4096) {
+            let end=(start+4096).min(self.cells);
+            let bytes=start*4..end*4;
+            if !first && data.previous_mixture_mass_input[bytes.clone()]==mass_bytes[bytes.clone()] {continue;}
+            for (word,values) in data.mixture_present[start/32..end.div_ceil(32)].iter_mut().zip(mass[start..end].chunks(32)) {
+                *word=values.iter().enumerate().fold(0u32,|bits,(i,value)|bits | (u32::from(!(*value <= 0.0)) << i));
+            }
+            data.previous_mixture_mass_input[bytes.clone()].copy_from_slice(&mass_bytes[bytes]);
+        }
+        changed|=upload_changed_bytes(&self.queue,&data.mass,bytemuck::cast_slice(&data.mixture_present),&mut data.previous_mass,512,&mut dirty)>0;
         changed|=upload_changed_bytes(&self.queue,&data.properties,properties,&mut data.previous_properties,4096,&mut dirty)>0;
         let mut full=!data.valid.get();
         if data.previous_region!=region {self.queue.write_buffer(&data.region,0,bytemuck::cast_slice(region));data.previous_region.clear();data.previous_region.extend_from_slice(region);changed=true;full=true;}
@@ -714,6 +730,8 @@ mod tests {
         let temp=[300.0,350.0,400.0,330.0,500.0,290.0,310.0,320.0,450.0];
         let mass=[1.0f32;9]; let table=[[1.0f32.to_bits(),2.0f32.to_bits()];3];
         for iteration in 0..3 {
+            // Magnitude changes do not alter the eligibility mask.
+            if iteration==1 {mixmass[1]=0.75;}
             if iteration==2 {mixture[8]=0;mixmass[8]=0.25;properties[3]=0;}
             let groups:Vec<u32>=(0..9).map(|i| {
                 let id=ids[i] as usize; let mix=mixture[i] as usize;
@@ -763,6 +781,32 @@ mod tests {
             let mut actual=vec![0.0;count];let mut expected=vec![0.0;count];
             gpu.step(0.2,0.25,&mut actual).unwrap();reference.step(0.2,0.25,&mut expected).unwrap();
             assert_eq!(actual,expected);
+        }
+    }
+
+    #[test]
+    #[ignore = "manual GPU upload benchmark; run on an idle device"]
+    fn benchmark_deferred_presence_upload() {
+        let (width,height)=(738,306); let count=width*height;
+        let mut gpu=pollster::block_on(ThermalDiffusionGpu::new(width,height)).unwrap();
+        let ids=vec![0u16;count]; let mut mixmass=vec![1.0f32;count];
+        let properties=vec![0u8;count]; let region=vec![1u32;count]; let flags=[3u32];
+        let materials=[[1.0f32.to_bits(),2.0f32.to_bits()]];
+        gpu.prepare_materials_by_element(&ids,&materials).unwrap();
+        gpu.prepare_deferred_groups_on_gpu(&ids,&mixmass,&properties,&region,&flags).unwrap();
+        let mut output=vec![0.0;count];
+        gpu.upload_state(&vec![300.0;count],&vec![1.0;count]).unwrap();
+        gpu.step(0.2,0.25,&mut output).unwrap();
+        for change_magnitude in [false,true] {
+            let mut samples=Vec::new();
+            for iteration in 0..30 {
+                if change_magnitude {mixmass.fill(if iteration%2==0 {2.0} else {1.0});}
+                let start=std::time::Instant::now();
+                gpu.prepare_deferred_groups_on_gpu(&ids,&mixmass,&properties,&region,&flags).unwrap();
+                if iteration>=5 {samples.push(start.elapsed().as_secs_f64()*1000.0);}
+            }
+            samples.sort_by(f64::total_cmp);
+            eprintln!("deferred unchanged-presence magnitude_changes={change_magnitude}: median {:.3} ms, p95 {:.3} ms",samples[12],samples[23]);
         }
     }
 
