@@ -82,37 +82,48 @@ pub(crate) fn diffuse_region(world: &mut PhysicsWorld, tables: &ElementTable, ev
 /// Move a gas secondary phase upward by one cell per simulation step.
 /// If the destination cannot represent it, leave the bubble in place.
 pub(crate) fn rise_bubbles(world: &mut PhysicsWorld, tables: &ElementTable, events: &mut EventQueues) {
-    for y in (1..=world.height).rev() {
-        for x in 1..=world.width {
-            let src = y * world.stride + x;
-            let dst = src + world.stride;
-            let mass = world.mixture_mass[src];
-            let element = world.mixture_element[src];
-            if y == world.height || mass <= 0.0 || phase(tables, world.write.element[src]) != 2
-                || phase(tables, element) != 1 || world.write.properties[dst] & 1 != 0 {
+    // Empty spans are common even on large maps. Skip them without visiting
+    // the remaining cell fields, while preserving top-to-bottom and left-to-
+    // right ordering for every span that can contain a bubble. NaNs must not
+    // be classified as empty: the original `mass <= 0` test doesn't do so.
+    for y in (1..world.height).rev() {
+        for start in (1..=world.width).step_by(64) {
+            let end = (start + 64).min(world.width + 1);
+            let row = y * world.stride;
+            if world.mixture_mass[row + start..row + end].iter().all(|&mass| mass <= 0.0) {
                 continue;
             }
-            let target = world.write.element[dst];
-            let target_phase = phase(tables, target);
-            if target == world.vacuum_element {
-                world.write.element[dst] = element;
-                world.write.mass[dst] = mass;
-                world.write.temperature[dst] = world.write.temperature[src];
-            } else if target == element && target_phase == 1 {
-                let old = world.write.mass[dst];
-                world.write.temperature[dst] = (world.write.temperature[dst] * old + world.write.temperature[src] * mass) / (old + mass);
-                world.write.mass[dst] += mass;
-            } else if (target_phase == 1 || target_phase == 2)
-                && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element) {
-                world.mixture_element[dst] = element;
-                world.mixture_mass[dst] += mass;
-            } else {
-                continue;
+            for x in start..end {
+                let src = y * world.stride + x;
+                let dst = src + world.stride;
+                let mass = world.mixture_mass[src];
+                let element = world.mixture_element[src];
+                if mass <= 0.0 || phase(tables, world.write.element[src]) != 2
+                    || phase(tables, element) != 1 || world.write.properties[dst] & 1 != 0 {
+                    continue;
+                }
+                let target = world.write.element[dst];
+                let target_phase = phase(tables, target);
+                if target == world.vacuum_element {
+                    world.write.element[dst] = element;
+                    world.write.mass[dst] = mass;
+                    world.write.temperature[dst] = world.write.temperature[src];
+                } else if target == element && target_phase == 1 {
+                    let old = world.write.mass[dst];
+                    world.write.temperature[dst] = (world.write.temperature[dst] * old + world.write.temperature[src] * mass) / (old + mass);
+                    world.write.mass[dst] += mass;
+                } else if (target_phase == 1 || target_phase == 2)
+                    && (world.mixture_mass[dst] <= 0.0 || world.mixture_element[dst] == element) {
+                    world.mixture_element[dst] = element;
+                    world.mixture_mass[dst] += mass;
+                } else {
+                    continue;
+                }
+                world.mixture_element[src] = world.vacuum_element;
+                world.mixture_mass[src] = 0.0;
+                notify(world, events, src);
+                notify(world, events, dst);
             }
-            world.mixture_element[src] = world.vacuum_element;
-            world.mixture_mass[src] = 0.0;
-            notify(world, events, src);
-            notify(world, events, dst);
         }
     }
 }
@@ -177,6 +188,28 @@ mod bubble_tests {
         world.mixture_mass[cell] = 2.5;
         rise_bubbles(&mut world, &table, &mut EventQueues::default());
         assert_eq!(world.mixture_mass[cell], 2.5);
+    }
+
+    #[test]
+    fn sparse_bubbles_cross_span_boundaries_without_skipping_last_column() {
+        let (_, table) = fixture();
+        let mut world = PhysicsWorld::new(130, 3, 0, &table).unwrap();
+        world.write.element.fill(world.vacuum_element);
+        for x in [1, 64, 65, 130] {
+            let cell = world.stride + x;
+            world.write.element[cell] = 3;
+            world.write.mass[cell] = 1000.0;
+            world.mixture_element[cell] = 4;
+            world.mixture_mass[cell] = x as f32;
+        }
+        rise_bubbles(&mut world, &table, &mut EventQueues::default());
+        for x in [1, 64, 65, 130] {
+            let source = world.stride + x;
+            let destination = source + world.stride;
+            assert_eq!(world.mixture_mass[source], 0.0);
+            assert_eq!(world.write.element[destination], 4);
+            assert_eq!(world.write.mass[destination], x as f32);
+        }
     }
 
     #[test]
