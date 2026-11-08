@@ -157,3 +157,11 @@ OniMcp development and agent testing consume model API credits. [Project donatio
 Original material that LIghtJUNction has the right to license is offered under [Agent Upstream License 1.0-draft.1](LICENSE). This custom draft is **not** an OSI-approved license.
 
 Historical MIT releases retain their original permissions in [LICENSE.MIT](LICENSE.MIT). Third-party and adapted upstream material keeps its own terms; see [LICENSING.md](LICENSING.md). Agent contributors must also read [AGENTS.md](AGENTS.md) and [UPSTREAM.toml](UPSTREAM.toml).
+
+## Pull requests
+
+Low-quality human-written PRs will not be accepted. This includes, but is not limited to:
+
+- Commits written entirely by humans.
+- Code that is insufficiently defensive, fails to consider enough scenarios, or is excessively terse, showing obvious signs of human laziness.
+- Any form of code typed entirely by hand.
