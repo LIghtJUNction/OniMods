@@ -2,14 +2,14 @@
 
 日期：2026-11-08（Asia/Taipei）
 
-本轮完成了差事成本、动画时间补偿、诊断开关、无效设置和 Release 仿真 ID 校验五项修正，并修复了构建与测试中发现的阻塞。托管与原生构建通过，相关宿主回归通过；原生全量测试仍有 11 项 GPU 初始化相关失败，当前环境未找到硬件 Vulkan 适配器。本轮没有进行 ONI 游戏内存档测试或 FPS 测量。
+本轮完成了差事成本、动画时间补偿、诊断开关、无效设置和 Release 仿真 ID 校验五项修正，并修复了构建与测试中发现的阻塞。托管与原生构建通过，相关宿主回归通过；Linux 原生全量测试仍有 11 项 GPU 初始化相关失败，当前环境未找到硬件 Vulkan 适配器。本轮没有进行 ONI 游戏内存档测试或 FPS 测量。
 
 ## 审查范围与版本
 
 - 仓库：[LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)。审查从 `9f7ebd59f871bfbdfbe82141cbddc6c70cd91e5b` 开始，随后接入主分支已有的新提交。
 - 范围：CycleTrim 的托管补丁、Fetch 候选路径、缓存、远景动画、诊断，以及新加入的 GPU 差事接口与构建链。
 - 工作使用独立 checkout；另一工作目录的未提交文件未参与本轮修改。Jlib 与 OniHarness 使用主仓库固定的子模块提交，未修改子仓库。
-- 已分批提交：[参考程序集修复 `dd97815`](https://github.com/LIghtJUNction/OniMods/commit/dd97815ea5a7ddb710cdf3c3daf9d42bef66a660)、[核心修复与宿主测试 `8cb3ada`](https://github.com/LIghtJUNction/OniMods/commit/8cb3ada7b2a12903107c208cc5c84360dd374047)、[原生提交接口与验证修复 `3c745da`](https://github.com/LIghtJUNction/OniMods/commit/3c745da8067724f1cde46dc151fe4136f95cefa6)。Release ID 校验与本记录更新随随后一次提交保存，完整提交以本文件历史为准。
+- 已分批提交：[参考程序集修复 `dd97815`](https://github.com/LIghtJUNction/OniMods/commit/dd97815ea5a7ddb710cdf3c3daf9d42bef66a660)、[核心修复与宿主测试 `8cb3ada`](https://github.com/LIghtJUNction/OniMods/commit/8cb3ada7b2a12903107c208cc5c84360dd374047)、[原生提交接口与验证修复 `3c745da`](https://github.com/LIghtJUNction/OniMods/commit/3c745da8067724f1cde46dc151fe4136f95cefa6)、[Release ID 校验 `f07d9bc`](https://github.com/LIghtJUNction/OniMods/commit/f07d9bc887b6b698d7d7623aae0cdfabba6fad9f)。随后补齐 Harmony 目标 API 基线，完整提交以本文件历史为准。
 
 ## 已修复的问题
 
@@ -69,6 +69,8 @@ CPU 指令、状态加载与 GPU 回读均有直接写入这些数组的路径�
 
 **原生跨模块访问修复。** CI 实际报出 Rust `E0616`：`gpu_sim.rs` 直接访问另一 crate 中私有的 `GpuContext.queue`。修复让现有 `GpuContext::submit` 返回提交编号，热计算通过该公开方法提交并等待对应结果，队列字段保持原有封装。[公开提交接口](../mods/CycleTrim/OniSim/gpu/src/gpu_context.rs)
 
+**Harmony API 基线补全。** CI 提取的目标集合包含 20 类，已提交基线漏记流体可视化补丁使用的 `FlowOffsetRenderer` 与 `LiquidShaderProperties`。从 [CI signatures-only artifact](https://github.com/LIghtJUNction/OniMods/actions/runs/42486324951/artifacts/13619479023) 恢复两份实际签名，并按其 SHA-256 加入索引；原有 18 类签名及程序集 identity 均未变化。没有放宽比较器或修改程序集 pin。原检查器在旧基线上报告新增两类，在补齐后通过。
+
 **测试随当前实现更新。** PerformanceProbe 宿主项目链接当前 Jlib 的真实 HoverCard 实现，补充游戏边界夹具，并验证卡片元素名称、质量、回退、同帧去重和绘制坐标恢复。过期的性能报告源码契约改为检查当前同步发布流程：必须先记录 scheduler 所有权、回调传入该 scheduler，并禁止修改正在遍历的调度队列；原有 generation 和旧回调隔离检查保留。丢失所有权与重新入队两种临时 mutation 均被正确拒绝。
 
 ## 验证结果与重现命令
@@ -81,13 +83,14 @@ CPU 指令、状态加载与 GPU 回读均有直接写入这些数组的路径�
 | CycleTrim `net48` Release | 通过，0 errors | 实际生产 C# 项目；Jlib 既有允许警告仍保留 |
 | OniSim 原生 Release | 通过，0 errors | `--locked`，包含 GPU crate 的真实 Rust 编译；既有 dead-code 等警告仍保留 |
 | PreparedStep Release 回归 | 5 passed、0 failed、97 filtered out | 包括旧实现失败的下一步状态重验和新增 ID 边界用例 |
-| 原生全量 Release 测试 | 87 passed、11 failed、4 ignored、0 filtered out | 剩余 10 项明确报告无硬件 Vulkan 适配器，另 1 项为同一 GPU 初始化路径的 FFI 返回 `-1`；完整套件尚未通过 |
+| Linux 原生全量 Release 测试 | 87 passed、11 failed、4 ignored、0 filtered out | 剩余 10 项明确报告无硬件 Vulkan 适配器，另 1 项为同一 GPU 初始化路径的 FFI 返回 `-1`；完整套件尚未通过 |
 | CycleTrim Optimizations | 10 个回归族通过 | 链接生产代码，含新动画和诊断场景 |
 | Fetch | 5,899 条断言、1,462 个三路径差分用例通过；兼容性用例通过 | 真实 Harmony 与合成游戏接口 |
 | PerformanceProbe | 非计时回归通过 | 包含 options 88、fetch layout 42、多组分 44 条断言及计数/并发/生命周期检查 |
 | NavGridProbe | 通过 | 导航工作量探针宿主回归 |
 | 源码与 Python 检查 | 65 项均已验证通过 | 初次批量通过 64 项；唯一失败项修复后定向复测，并通过两项 mutation 反例；其余结果复用 |
 | Release 二进制检查 | 16 项通过 | 对实际生成 DLL 检查，包括已删除的两个 GPU 托管类型 |
+| Harmony API 基线 | 补齐后通过 | 使用 CI 实际产出的 20 类 snapshot；旧基线确实报出两类漏记，原有签名与程序集 identity 均一致 |
 | 差异空白检查 | 通过 | `git diff --check` |
 
 主要命令：
@@ -120,7 +123,8 @@ git diff --check
 
 ## 后续验证边界
 
-- GitHub 在 `3c745da` 上的 [Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325133) 已通过。该提交的原生全量任务暴露了随后修复的 Release ID 校验问题，以及 GPU 适配器环境问题：[transport](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325022)、[diamond](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325085)。后续提交的 CI 应按对应提交重新查看；本记录不将前一提交的结果描述为后一提交的 CI 通过。
+- GitHub 在 `3c745da` 上的 [Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325133) 已通过。`f07d9bc` 的 [Linux transport 回归](https://github.com/LIghtJUNction/OniMods/actions/runs/42486999857) 确认 Release ID 修复后为 87 passed、11 failed、4 ignored；历史组件回归与 Lean proof 通过。`f07d9bc` 的 [ONI reference compatibility](https://github.com/LIghtJUNction/OniMods/actions/runs/42486999876) 在构建与宿主回归完成后，仅失败于前述 Harmony 基线漏记；本轮随后补齐并使用同一真实 snapshot 复核。后续提交的 CI 应按对应提交重新查看；本记录不将前一提交的结果描述为后一提交的 CI 通过。
+- `f07d9bc` 的 [跨平台原生 CI](https://github.com/LIghtJUNction/OniMods/actions/runs/42486999855) 尚未全绿。Linux 为 87 passed、11 failed、4 ignored；Windows 为 83 passed、11 failed、4 ignored；两者各有 10 项明确缺少硬件 Vulkan adapter，另 1 项为 pathfinder FFI 初始化返回 `-1`，日志未打印详细 native error。macOS 为 80 passed、14 failed、4 ignored；14 项均被 `wgpu::Instance::new` 的“未启用当前平台可用后端”错误阻断，其中包括 3 项普通消息回归。macOS 属于后端构建配置/平台支持问题，不能归结为缺少硬件适配器。
 - GPU 数值回归需提供当前代码接受的硬件 Vulkan 适配器。已保持全部测试与硬件选择要求，未更改 ignore 标记。
 - 游戏内验收尚待实际 ONI 环境：同一存档中的任务选择、动画切换、不同模组组合、存档读写与实际帧率。
 - 保留的原生 jump-flood API 仍是独立实验。审查还发现其起始步长对部分 `2^k+1` 尺寸的覆盖问题，以及超过 2,048 个候选时的静默截断；它们不再通过已删除的自动托管路径影响差事排序。后续应为该实验定义明确接口与独立 GPU 一致性测试。

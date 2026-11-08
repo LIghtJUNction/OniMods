@@ -54,6 +54,13 @@
     },
     {
       "assembly": "Assembly-CSharp.dll",
+      "requested_type": "FlowOffsetRenderer",
+      "resolved_type": "FlowOffsetRenderer",
+      "signature_file": "Assembly-CSharp__FlowOffsetRenderer.signatures.txt",
+      "signature_sha256": "86b90db5b5e853e88470c3a2dde4f878b14eb351b55e7f2439c9f001c38d0c4b"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
       "requested_type": "Game",
       "resolved_type": "Game",
       "signature_file": "Assembly-CSharp__Game.signatures.txt",
@@ -83,6 +90,13 @@
       "resolved_type": "KBatchedAnimController",
       "signature_file": "Assembly-CSharp__KBatchedAnimController.signatures.txt",
       "signature_sha256": "2d93634ef17aaa343329ac572da97a93e0ad6a913d0d56f66d0f38d6bccbd1de"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "LiquidShaderProperties",
+      "resolved_type": "LiquidShaderProperties",
+      "signature_file": "Assembly-CSharp__LiquidShaderProperties.signatures.txt",
+      "signature_sha256": "0f48f90824e0cb8deba82a94fc2fd99fd28155e23e68c6a9bfd9038110c699dc"
     },
     {
       "assembly": "Assembly-CSharp.dll",

@@ -1,0 +1,23 @@
+type public class FlowOffsetRenderer : KMonoBehaviour
+member private Material FlowMaterial
+member private TextureLerper FlowLerper
+member private bool forceUpdate
+member private float CurrentTime
+member private float GasPhase0
+member private float GasPhase1
+member private int OffsetIdx
+member private void DoUpdate ( float dt )
+member private void LateUpdate ( )
+member private void OnResize ( )
+member protected override void OnSpawn ( )
+member public FlowOffsetRenderer ( )
+member public RenderTexture [ ] OffsetTextures
+member public Vector2 LiquidGasMask
+member public Vector2 MinFlow0
+member public Vector2 MinFlow1
+member public float NoiseInfluence
+member public float NoiseScale
+member public float OffsetSpeed
+member public float PhaseMultiplier
+member public string OffsetTextureName
+member public string ParametersName

@@ -1,0 +1,8 @@
+type public class LiquidShaderProperties : ScriptableObject
+member private Entry [ ] TextureScrollSpeed
+member private float [ ] cachedScrollSpeeds
+member private static readonly int SubstanceTextureCount
+member public LiquidShaderProperties ( )
+member public void ApplyToMaterial ( Material material )
+member static LiquidShaderProperties ( )
+nested public struct Entry
