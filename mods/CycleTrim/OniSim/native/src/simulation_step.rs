@@ -196,6 +196,7 @@ impl<'a> PreparedStep<'a> {
         } = self;
         world.scan_direction = -world.scan_direction;
         crate::gas::rise_bubbles(world, elements, events);
+        crate::gas::settle_liquid_droplets(world, elements, events);
         world.sync_read_from_write();
         crate::multicomponent_flux::refresh_active_gas_channels(world, elements);
 
@@ -217,7 +218,9 @@ impl<'a> PreparedStep<'a> {
         for index in 0..world.regions.len() {
             let region = world.regions[index];
             static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-            let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+            static SAMPLE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+            let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+                && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed) % 61 == 0;
             let mut mark = profiling.then(std::time::Instant::now);
             let mut lap = || match mark.as_mut() {
                 Some(start) => { let now = std::time::Instant::now(); let elapsed = now.duration_since(*start).as_secs_f64() * 1000.0; *start = now; elapsed },

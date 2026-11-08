@@ -889,7 +889,9 @@ impl MulticomponentGpu {
         if self.uploaded_sparse.len()!=input_bytes.len() {self.uploaded_sparse=input_bytes.to_vec();}
         else {for &(start,end) in &ranges {self.uploaded_sparse[start*host_size..end*host_size].copy_from_slice(&input_bytes[start*host_size..end*host_size]);}}
         static PROFILE:std::sync::OnceLock<bool>=std::sync::OnceLock::new();
-        if *PROFILE.get_or_init(||std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some()) {
+        static SAMPLE:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+        if *PROFILE.get_or_init(||std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+            && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed)%127==0 {
             eprintln!("[CycleTrim OniSim] sparse profile {}x{}x{} bytes={uploaded_bytes}",self.width,self.height,self.channels);
         }
         {let mut pass=encoder.begin_compute_pass(&Default::default()); pass.set_pipeline(&prep.pipeline);pass.set_bind_group(0,selected,&[]);
@@ -977,7 +979,9 @@ impl MulticomponentGpu {
             }
         }
         static PROFILE:std::sync::OnceLock<bool>=std::sync::OnceLock::new();
-        if *PROFILE.get_or_init(||std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some()) {
+        static SAMPLE:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);
+        if *PROFILE.get_or_init(||std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+            && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed)%127==0 {
             eprintln!("[CycleTrim OniSim] solid profile {}x{}x{} uploaded={} bytes={bytes}",self.width,self.height,self.channels,!ranges.is_empty());
         }
     }

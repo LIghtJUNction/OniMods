@@ -173,7 +173,9 @@ impl GpuSimulation {
         sparse:Option<&[onisim_gpu::multicomponent::PackedSparseCell]>,
     ) -> Result<bool,String> {
         static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+        static SAMPLE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+            && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed) % 61 == 0;
         let started = std::time::Instant::now();
         if let Some(index) = self.gas.iter().position(|p| p.transport.dimensions() == (width, height, channels)) {
             let pipeline = self.gas.remove(index).ok_or("GPU gas cache entry disappeared")?;
@@ -273,7 +275,9 @@ impl GpuSimulation {
         dt: f32,
     ) -> Result<(), String> {
         static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+        static SAMPLE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
+            && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed) % 8 == 0;
         let started = std::time::Instant::now();
         let count = world.read.temperature.len();
         if self.region_map.len() != count {
