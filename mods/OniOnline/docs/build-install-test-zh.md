@@ -1,4 +1,4 @@
-# 构建、安装与测试 OniOnline 0.5.0
+# 构建、安装与测试 OniOnline
 
 这是源码开发预览的安装与测试流程，不是 Steam 发版公告。OniOnline 的默认玩法是大厅和聊天。星球登记只在玩法模组声明 `onionline.worlds.v1` 后启动。当前不搬迁完整殖民地，不提供火箭互访或离线代算。
 
@@ -6,7 +6,7 @@
 
 ## 准备环境
 
-通过 Steam 安装并正常启动一次《缺氧》。后续游戏启动也使用 Steam。CycleTrim、Spaced Out! 和单独的 PLib 模组均不是固定前置；OniOnline 已内置 PLib。普通联机不需要 OniMcp 或 OniHarness。
+通过 Steam 安装并正常启动一次《缺氧》。后续游戏启动也使用 Steam。游戏中需要安装并启用独立的 [Jlib](../../Jlib/README.md) 前置，将其排在 OniOnline 之前；PLib 兼容 API 由 Jlib 提供。CycleTrim、Spaced Out!、OniMcp 和 OniHarness 按需使用。
 
 当前原生适配器登记游戏构建 **744825**：本体提供星球身份和观察采样适配，Spaced Out! 另提供原生星图。未知构建的原生功能关闭，不能把基础协议连接成功理解成任意游戏版本兼容。最低构建要求和细节见 [兼容边界](FRAMEWORK-COMPATIBILITY.md)。
 
@@ -15,13 +15,14 @@
 ```sh
 git clone https://github.com/LIghtJUNction/OniMods.git
 cd OniMods
+git submodule update --init mods/Jlib
 cargo install --path . --locked
 onim --version
 ```
 
 测试双方先核对源码提交或候选包身份。新版本首次验收建议使用同一候选，减少未验证组合；协议 10 及更早客户端不能加入协议 11。后续是否可连接由协议、玩法合同、功能能力和模组清单决定，不要求游戏构建号或 DLC 标签简单相等。
 
-构建 OniOnline 无需初始化可选的 `oni-skills` 或 OniHarness 子模块。保留已有未提交修改，不通过重置仓库来切换测试版本。
+构建 OniOnline 需要 `mods/Jlib` 子模块，`oni-skills` 和 OniHarness 仍为可选项。保留已有未提交修改，不通过重置仓库来切换测试版本。
 
 ## 配置本机游戏路径
 
@@ -44,6 +45,12 @@ onim doctor
 
 ## 先运行局部测试
 
+按上一节配置游戏路径后，先生成宿主测试使用的 Jlib 包；测试项目会从 `mods/Jlib/artifacts/nuget` 恢复它。此步骤使用游戏 Managed 程序集作为编译引用：
+
+```sh
+dotnet pack mods/Jlib/Jlib/Jlib.csproj -c Release -p:TargetFrameworks=netstandard2.1
+```
+
 以下命令不启动游戏，根据改动选择相关模块，不必每次全部执行：
 
 ```sh
@@ -65,20 +72,21 @@ dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildPro
 onim -m OniOnline build --release
 ```
 
-Release 包位于 `dist/OniOnline.zip`，模组项目内也有 `mods/OniOnline/dist/OniOnline.zip`。包中应同时包含 `OniOnline.dll`、`OniOnline.Framework.dll`、元数据和说明，不含游戏 DLL。
+Release 包位于 `dist/OniOnline.zip`，模组项目内也有 `mods/OniOnline/dist/OniOnline.zip`。包中包含根目录的 `OniOnline.dll` 引导器、`implementation/OniOnline.dll` 实现、`OniOnline.Framework.dll`、元数据和说明。Jlib 单独安装，OniOnline 包不嵌入 `Jlib.dll`、`PLib*.dll` 或游戏 DLL。
 
 安装前正常保存并退出游戏。选择一条安装路线：
 
 ```sh
-# Release 测试：重新构建并安装到 Local/OniOnline
+# Release 测试：先安装独立前置，再安装 OniOnline
+onim -m Jlib install
 onim -m OniOnline install
 ```
 
 反复修改源码时可改用 `onim -m OniOnline dev`，它重新构建 Debug 并启用 `Dev/OniOnline`，不是 Release。不要连续安装两份并同时启用。
 
-从 Steam 启动游戏，在原生模组列表中启用本轮 OniOnline，按游戏提示重启。同一 `LIghtJUNction.OniOnline` 只启用一份 Local、Dev 或 Workshop 来源，保留其他模组和存档。Linux 用户模组目录通常为 `~/.config/unity3d/Klei/Oxygen Not Included/mods`；Windows 位于实际“文档”目录下的 `Klei/OxygenNotIncluded/mods`，以安装输出为准。
+从 Steam 启动游戏，在原生模组列表中启用 Jlib 和本轮 OniOnline，确认 Jlib 排在 OniOnline 前面，按游戏提示重启。同一 `LIghtJUNction.OniOnline` 只启用一份 Local、Dev 或 Workshop 来源，保留其他模组和存档。Linux 用户模组目录通常为 `~/.config/unity3d/Klei/Oxygen Not Included/mods`；Windows 位于实际“文档”目录下的 `Klei/OxygenNotIncluded/mods`，以安装输出为准。
 
-检查 `Player.log` 中实际加载程序集的路径、版本与 SHA256，并与候选比对。构建 ZIP 成功、文件已经复制或游戏已经启动，都不等于候选已经加载。
+检查 `Player.log` 中 Jlib 与 OniOnline 实际加载程序集的路径、版本与 SHA256，并与候选比对。构建 ZIP 成功、文件已经复制或游戏已经启动，都不等于候选已经加载。
 
 ## 验收入场和模组对齐
 
