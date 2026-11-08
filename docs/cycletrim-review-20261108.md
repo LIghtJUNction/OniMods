@@ -2,20 +2,21 @@
 
 日期：2026-11-08（Asia/Taipei）
 
-本轮完成了差事成本、动画时间补偿、诊断开关和无效设置四项修正，并修复了构建与测试中发现的阻塞。托管代码、原生代码和宿主回归均已实际验证；本轮没有进行 ONI 游戏内存档测试或 FPS 测量。
+本轮完成了差事成本、动画时间补偿、诊断开关、无效设置和 Release 仿真 ID 校验五项修正，并修复了构建与测试中发现的阻塞。托管与原生构建通过，相关宿主回归通过；原生全量测试仍有 11 项 GPU 初始化相关失败，当前环境未找到硬件 Vulkan 适配器。本轮没有进行 ONI 游戏内存档测试或 FPS 测量。
 
 ## 审查范围与版本
 
 - 仓库：[LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)。审查从 `9f7ebd59f871bfbdfbe82141cbddc6c70cd91e5b` 开始，随后接入主分支已有的新提交。
 - 范围：CycleTrim 的托管补丁、Fetch 候选路径、缓存、远景动画、诊断，以及新加入的 GPU 差事接口与构建链。
 - 工作使用独立 checkout；另一工作目录的未提交文件未参与本轮修改。Jlib 与 OniHarness 使用主仓库固定的子模块提交，未修改子仓库。
-- 已分批提交：[参考程序集修复 `dd97815`](https://github.com/LIghtJUNction/OniMods/commit/dd97815ea5a7ddb710cdf3c3daf9d42bef66a660)、[核心修复与宿主测试 `8cb3ada`](https://github.com/LIghtJUNction/OniMods/commit/8cb3ada7b2a12903107c208cc5c84360dd374047)。原生构建修复和本记录随随后一次收尾提交保存，完整提交以本文件历史为准。
+- 已分批提交：[参考程序集修复 `dd97815`](https://github.com/LIghtJUNction/OniMods/commit/dd97815ea5a7ddb710cdf3c3daf9d42bef66a660)、[核心修复与宿主测试 `8cb3ada`](https://github.com/LIghtJUNction/OniMods/commit/8cb3ada7b2a12903107c208cc5c84360dd374047)、[原生提交接口与验证修复 `3c745da`](https://github.com/LIghtJUNction/OniMods/commit/3c745da8067724f1cde46dc151fe4136f95cefa6)。Release ID 校验与本记录更新随随后一次提交保存，完整提交以本文件历史为准。
 
 ## 已修复的问题
 
 | 优先级 | 问题与影响 | 修正结果 | 主要证据 |
 |---|---|---|---|
 | P1 | GPU 差事补丁把已经求得的导航成本覆盖为几何距离，可能改变任务排序；计算还增加整图传播与同步回读 | 删除自动覆写补丁及其唯一托管桥接，保留游戏已经求得的成本；独立原生 API 标注为几何距离实验 | 基线调用链、两组最小网格反例、Release DLL 类型缺席检查 |
+| P1 | 元素、病菌和背墙 ID 检查仅在 debug 模式执行，Release 接受无效状态 | 恢复现有批量校验，保持每个 step 一次预检 | 原失败用例在 Release 复现；修复后 PreparedStep 5 项通过，含无活动标记的非法写入及合法空值 |
 | P2 | 远景动画使用“本帧 dt × stride”，在不等长帧、首次调用或缩放变化时增加或丢失时间 | 用控制器弱键累计真实 dt，执行时消费一次；转近景或开始移动时消费待处理时间，静止对象被剔除时清空 | 同一真实 Harmony 宿主测试在旧实现失败，修复后 7 组场景通过 |
 | P2 | 关闭性能诊断后仍执行逐帧计时、GC 采样和周期日志 | 纯计时补丁按现有开关安装，Stopwatch 按需创建；混合职责补丁仅对诊断部分加门控 | 真实 Harmony 测试覆盖关闭、开启及其他 Prefix 跳过原方法 |
 | P2 | `TargetFrameRate` 设置被保存后无人读取，实际始终设置 `-1` | 删除该无效设置和无用配置入口；保留已有不限帧行为 | 设置调用链检查与帧策略回归 |
@@ -54,6 +55,14 @@
 
 代码：[FrameRateUnlockPatch](../mods/CycleTrim/Patches/FrameRateUnlockPatch.cs)；测试：[FrameRateDiagnosticsRegression](../tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs)。
 
+### 4. Release 仿真步骤验证 ID
+
+GitHub 的完整原生回归发现 `prepared_next_step_revalidates_mutated_state` 失败：下一步接受了被改成 `u16::MAX` 的元素 ID。根因是 `cfg!(debug_assertions)` 在 Release 跳过了元素、病菌和背墙元素检查。
+
+CPU 指令、状态加载与 GPU 回读均有直接写入这些数组的路径，现有 activity/dirty 标记不完整追踪 ID 写入。本轮恢复现有 SSE2/标量批量校验，每步仍只有一次 preflight；没有引入额外重复验证阶段。新增测试覆盖读/写元素、读/写病菌、背墙元素五类非法写入，并确认合法的空值哨兵继续被接受、拒绝无效状态时不推进随机状态或 tick。
+
+代码：[simulation_step.rs](../mods/CycleTrim/OniSim/native/src/simulation_step.rs)；测试：[messages_tests.rs](../mods/CycleTrim/OniSim/native/src/messages_tests.rs)。
+
 ## 构建与验证维护
 
 **参考程序集补齐。** 原主分支的 Jlib pack 缺少 `UnityEngine.AssetBundleModule`、`UnityEngine.AudioModule` 和 `UnityEngine.UnityWebRequestAudioModule`。三项均从清单原有、固定版本与 SHA-256 的 Unity 包提取，并新增各文件的大小与散列验证；未更换原包或放宽来源校验。[清单](../ci/oni-reference-assemblies.json)
@@ -71,6 +80,8 @@
 | Jlib `netstandard2.1` pack | 通过 | 固定参考程序集下的共享库构建 |
 | CycleTrim `net48` Release | 通过，0 errors | 实际生产 C# 项目；Jlib 既有允许警告仍保留 |
 | OniSim 原生 Release | 通过，0 errors | `--locked`，包含 GPU crate 的真实 Rust 编译；既有 dead-code 等警告仍保留 |
+| PreparedStep Release 回归 | 5 passed、0 failed、97 filtered out | 包括旧实现失败的下一步状态重验和新增 ID 边界用例 |
+| 原生全量 Release 测试 | 87 passed、11 failed、4 ignored、0 filtered out | 剩余 10 项明确报告无硬件 Vulkan 适配器，另 1 项为同一 GPU 初始化路径的 FFI 返回 `-1`；完整套件尚未通过 |
 | CycleTrim Optimizations | 10 个回归族通过 | 链接生产代码，含新动画和诊断场景 |
 | Fetch | 5,899 条断言、1,462 个三路径差分用例通过；兼容性用例通过 | 真实 Harmony 与合成游戏接口 |
 | PerformanceProbe | 非计时回归通过 | 包含 options 88、fetch layout 42、多组分 44 条断言及计数/并发/生命周期检查 |
@@ -93,6 +104,8 @@ dotnet build mods/CycleTrim/CycleTrim.csproj -c Release \
 
 cargo +1.99.1 build --release --locked \
   --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml
+cargo +1.99.1 test --release --locked \
+  --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml prepared_
 
 dotnet run --project tests/CycleTrim.Optimizations.Tests -c Release
 dotnet run --project tests/CycleTrim.Fetch.Tests -c Release
@@ -107,6 +120,8 @@ git diff --check
 
 ## 后续验证边界
 
+- GitHub 在 `3c745da` 上的 [Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325133) 已通过。该提交的原生全量任务暴露了随后修复的 Release ID 校验问题，以及 GPU 适配器环境问题：[transport](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325022)、[diamond](https://github.com/LIghtJUNction/OniMods/actions/runs/42486325085)。后续提交的 CI 应按对应提交重新查看；本记录不将前一提交的结果描述为后一提交的 CI 通过。
+- GPU 数值回归需提供当前代码接受的硬件 Vulkan 适配器。已保持全部测试与硬件选择要求，未更改 ignore 标记。
 - 游戏内验收尚待实际 ONI 环境：同一存档中的任务选择、动画切换、不同模组组合、存档读写与实际帧率。
 - 保留的原生 jump-flood API 仍是独立实验。审查还发现其起始步长对部分 `2^k+1` 尺寸的覆盖问题，以及超过 2,048 个候选时的静默截断；它们不再通过已删除的自动托管路径影响差事排序。后续应为该实验定义明确接口与独立 GPU 一致性测试。
 - 没有报告 FPS 提升比例。代码删除了额外的差事 GPU 计算，诊断关闭时也去除了对应计时与日志开销；游戏中的收益需要同场景测量。

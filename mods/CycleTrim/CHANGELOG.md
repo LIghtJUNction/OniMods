@@ -7,6 +7,7 @@
 - Add host regressions for animation timing and diagnostic patch behavior, and refresh the multicomponent hover fixtures against the pinned Jlib implementation. Release binary checks reject the removed automatic GPU recosting types.
 - Repair the pinned-reference build by supplying Jlib's asset/audio modules from the existing verified Unity package, and return the GPU submission index through the public context API instead of accessing its private queue across crates.
 - Update the performance-probe source contract for synchronous reporting while retaining scheduler-ownership and generation checks.
+- Restore element, disease and backwall ID validation in release simulation steps. Reuse the existing batched validators and cover invalid writes without activity flags, plus the supported empty-value sentinels.
 
 ## Unreleased — GPU simulation data flow (2026-11-08)
 

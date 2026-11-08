@@ -620,6 +620,64 @@ fn prepared_next_step_revalidates_mutated_state() {
 }
 
 #[test]
+fn prepared_step_rejects_invalid_ids_without_activity_flags() {
+    let mutations: [(&str, fn(&mut crate::world::PhysicsWorld)); 5] = [
+        ("read element", |world| world.read.element[0] = u16::MAX),
+        ("write element", |world| world.write.element[0] = u16::MAX),
+        ("read disease", |world| world.read.disease_idx[0] = 0),
+        ("write disease", |world| world.write.disease_idx[0] = 0),
+        ("backwall element", |world| world.backwall_element[0] = 3),
+    ];
+    for (label, mutate) in mutations {
+        let mut state = fixture();
+        let elements = Arc::clone(state.elements.as_ref().unwrap());
+        let diseases = Arc::clone(state.diseases.as_ref().unwrap());
+        let world = state.world.as_mut().unwrap();
+        let before = (world.tick_seed, world.rng);
+        ok(crate::simulation_step::PreparedStep::new(
+            world,
+            &elements,
+            &diseases,
+            crate::simulation_step::FIXED_DT,
+        ));
+        world.dirty.fill(false);
+        world.dirty_flags.fill(0);
+        mutate(world);
+        match crate::simulation_step::PreparedStep::new(
+            world,
+            &elements,
+            &diseases,
+            crate::simulation_step::FIXED_DT,
+        ) {
+            Ok(_) => panic!("PreparedStep accepted an invalid {label}"),
+            Err(error) => assert_eq!(
+                error.status as i32,
+                crate::status::Status::InvalidState as i32,
+                "{label}"
+            ),
+        }
+        assert_eq!((world.tick_seed, world.rng), before, "{label}");
+    }
+}
+
+#[test]
+fn prepared_step_accepts_nullable_disease_and_backwall_ids() {
+    let mut state = fixture();
+    let elements = Arc::clone(state.elements.as_ref().unwrap());
+    let diseases = Arc::clone(state.diseases.as_ref().unwrap());
+    let world = state.world.as_mut().unwrap();
+    world.read.disease_idx.fill(u8::MAX);
+    world.write.disease_idx.fill(u8::MAX);
+    world.backwall_element.fill(u16::MAX);
+    ok(crate::simulation_step::PreparedStep::new(
+        world,
+        &elements,
+        &diseases,
+        crate::simulation_step::FIXED_DT,
+    ));
+}
+
+#[test]
 fn prepared_step_rejects_invalid_elapsed_without_mutation() {
     let mut state = fixture();
     let elements = Arc::clone(state.elements.as_ref().unwrap());
