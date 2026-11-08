@@ -94,7 +94,7 @@ flowchart TD
   ```
 
 ### 范例 2：底层动态库 Hook (Native / SimDLL)
-- ❌ **错误做法**：在 CycleTrim 或其他 Mod 里私自用反射甚至非标准 Mono API 篡改原生指针。
+- ❌ **错误做法**：在 CycleTrim 或其他 Mod 里私自用反射甚至非标准 Mono API 绕过受支持的原生库映射接口。
 - ✅ **正确做法**：将通用 MonoDllMap 统一沉淀入 `Jlib.Runtime.GameComponentReplacement`，在下游 Mod 中一行调用：
   ```csharp
   JlibApi.ReplaceSimDll(gameAssembly, customSimDllPath);
