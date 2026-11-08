@@ -12,6 +12,38 @@ pub(crate) fn filled<T: Clone>(length: usize, value: T) -> Result<Vec<T>> {
     Ok(values)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::Cells;
+
+    #[test]
+    fn region_copy_matches_full_copy_when_only_region_changed() {
+        let stride = 13;
+        for (x0, x1, y0, y1) in [(1, 12, 1, 8), (1, 2, 1, 2), (5, 9, 2, 6), (4, 4, 2, 6)] {
+            let mut write = Cells::new(stride * 9).unwrap();
+            let mut partial = write.clone();
+            for y in y0..y1 { for x in x0..x1 {
+                let i = y * stride + x;
+                write.element[i] = i as u16;
+                write.temperature[i] = i as f32 + 0.5;
+                write.mass[i] = i as f32;
+                write.properties[i] = 1;
+                write.insulation[i] = 2;
+                write.strength[i] = 3;
+                write.disease_idx[i] = 4;
+                write.disease_count[i] = i as i32;
+                write.disease_infestation[i] = 5;
+                write.disease_growth[i] = 6.0;
+                write.radiation[i] = 7.0;
+            }}
+            partial.copy_region_from(&write, stride, x0, x1, y0, y1);
+            macro_rules! check { ($($field:ident),+) => { $(assert_eq!(partial.$field, write.$field);)+ }; }
+            check!(element, temperature, mass, properties, insulation, strength,
+                disease_idx, disease_count, disease_infestation, disease_growth, radiation);
+        }
+    }
+}
+
 // These eleven arrays follow CellSOA's field order, not its C++ vector layout.
 #[derive(Clone)]
 pub(crate) struct Cells {
@@ -59,5 +91,27 @@ impl Cells {
             .copy_from_slice(&other.disease_infestation);
         self.disease_growth.copy_from_slice(&other.disease_growth);
         self.radiation.copy_from_slice(&other.radiation);
+    }
+
+    /// Copy a rectangular portion of the padded grid after a region-local pass.
+    pub(crate) fn copy_region_from(&mut self, other: &Self, stride: usize,
+        min_x: usize, max_x: usize, min_y: usize, max_y: usize) {
+        for y in min_y..max_y {
+            let range = y * stride + min_x..y * stride + max_x;
+            macro_rules! copy_field {
+                ($field:ident) => { self.$field[range.clone()].copy_from_slice(&other.$field[range.clone()]); };
+            }
+            copy_field!(element);
+            copy_field!(temperature);
+            copy_field!(mass);
+            copy_field!(properties);
+            copy_field!(insulation);
+            copy_field!(strength);
+            copy_field!(disease_idx);
+            copy_field!(disease_count);
+            copy_field!(disease_infestation);
+            copy_field!(disease_growth);
+            copy_field!(radiation);
+        }
     }
 }

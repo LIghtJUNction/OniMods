@@ -1,8 +1,8 @@
 //! Serial form of SimBase::UpdateData (official ELF 0x69730).
 //!
-//! Every copy below is the complete active CellSOA -> old CellSOA copy in the
-//! original. Post-fluid copies are omitted only when the phase reached no
-//! CellSOA-mutating path and read/write still contain the same words.
+//! Copies preserve the original active CellSOA -> old CellSOA snapshots.
+//! Post-fluid copies are omitted when no mutating path ran, and the
+//! multicomponent diffusion snapshot copies only its modified region.
 //! In particular there is no copy between disease diffusion,
 //! components, and postprocessing, nor at the end of a region.
 
@@ -255,7 +255,12 @@ impl<'a> PreparedStep<'a> {
             crate::gas::diffuse_region(world, elements, events, region,
                 if gpu_diffusion && gpu_transport_ran { Some(&diffusion_solid) } else { None },
                 if liquid_gpu_ran { Some(&liquid_solid) } else { None });
-            world.sync_read_from_write();
+            // Both GPU projections and diffuse_region write only inside this
+            // rectangle. The snapshots were equal immediately before them.
+            // Avoid copying all eleven full-world arrays for every region.
+            world.read.copy_region_from(&world.write, world.stride,
+                region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
+                region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             let diffusion_ms = lap();
             // Gas events are already in the main queue. Temperature task events
             // join after them, at ConsolidateEvents, rather than at task execution.
