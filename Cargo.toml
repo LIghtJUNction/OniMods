@@ -1,6 +1,6 @@
 [package]
 name = "onim"
-version = "0.1.12"
+version = "0.1.13"
 default-run = "onim"
 edition = "2024"
 license-file = "LICENSE"

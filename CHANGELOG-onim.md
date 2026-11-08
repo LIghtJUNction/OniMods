@@ -1,5 +1,9 @@
 # onim Changelog
 
+## 0.1.13 - 2026-11-08
+
+- Support animated GIF previews for Legacy Workshop page updates.
+
 ## 0.1.12 - 2026-11-07
 
 - Add native `--update-preview` support to `onim publish`, enabling seamless preview updates during Legacy ZIP publication without external scripts.
