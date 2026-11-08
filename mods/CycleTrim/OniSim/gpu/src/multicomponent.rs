@@ -601,6 +601,15 @@ impl MulticomponentGpu {
         (self.width, self.height, self.channels)
     }
 
+    /// Encode concentration diffusion into a caller-owned command buffer.
+    ///
+    /// The operation consumes the pipeline's current device-local mass and
+    /// enthalpy tensors and leaves the updated tensors resident on the GPU.
+    /// It neither submits commands nor maps buffers.
+    pub fn encode_resident_diffusion(&mut self, encoder: &mut wgpu::CommandEncoder) -> Result<(), String> {
+        self.encode_diffusion(encoder)
+    }
+
     /// Diffuse concentration on device without reading back species tensors.
     pub fn diffuse_resident(&mut self) -> Result<(), String> {
         let mut encoder=self.device.create_command_encoder(&Default::default());
