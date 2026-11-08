@@ -86,19 +86,12 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", result.stdout)
 
-    def test_compatibility_compiles_isolate_project_reference_outputs(self) -> None:
+    def test_compatibility_compiles_keep_per_project_sdk_paths(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github/workflows/oni-reference-compat.yml").read_text(
                         encoding="utf-8")
-        self.assertEqual(
-            4,
-            workflow.count(
-                'BaseIntermediateOutputPath="$compat_root/obj/\\$(MSBuildProjectName)/"'),
-        )
-        self.assertEqual(
-            2,
-            workflow.count('OutputPath="$compat_root/bin/\\$(MSBuildProjectName)/"'),
-        )
+        self.assertNotIn("BaseIntermediateOutputPath", workflow)
+        self.assertNotIn('compat_root="$RUNNER_TEMP/', workflow)
 
 
 if __name__ == "__main__":
