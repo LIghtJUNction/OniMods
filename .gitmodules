@@ -4,4 +4,4 @@
 [submodule "mods/Jlib"]
 	path = mods/Jlib
 	url = https://github.com/LIghtJUNction/Jlib.git
-	branch = release/jlib-0.1.0
+	branch = main
