@@ -105,6 +105,20 @@ impl MulticomponentBuffers {
         mixture_element: Option<&[u16]>,
         mixture_mass: Option<&[f32]>,
     ) {
+        self.update_from_grid_with_mixture_at(grid, elements, |cell| {
+            (
+                mixture_element.and_then(|m| m.get(cell).copied()).unwrap_or(0),
+                mixture_mass.and_then(|m| m.get(cell).copied()).unwrap_or(0.0),
+            )
+        });
+    }
+
+    pub(crate) fn update_from_grid_with_mixture_at(
+        &mut self,
+        grid: &Grid,
+        elements: &ElementTable,
+        mixture_at: impl Fn(usize) -> (u16, f32),
+    ) {
         self.species_len = 0;
         self.flags = FLAG_MULTICOMPONENT_COEXISTENCE;
         self.validation_error = None;
@@ -120,6 +134,12 @@ impl MulticomponentBuffers {
 
         let mut next_species = 0usize;
         for cell in 0..grid.len() {
+            // Always replace the previous publication, even when a boundary
+            // element has no publishable phase in this batch.
+            self.cells[cell] = OniSimMulticomponentCellHeader {
+                species_offset: next_species as u32,
+                ..Default::default()
+            };
             let mass = grid.mass[cell];
             let temperature = grid.temperature[cell];
             if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
@@ -130,10 +150,7 @@ impl MulticomponentBuffers {
                 return;
             }
 
-            let mix_mass = mixture_mass.and_then(|m| m.get(cell).copied()).unwrap_or(0.0);
-            let mix_element = mixture_element
-                .and_then(|m| m.get(cell).copied())
-                .unwrap_or(0);
+            let (mix_element, mix_mass) = mixture_at(cell);
             if !mix_mass.is_finite() || mix_mass < 0.0 {
                 self.validation_error = Some(Error::new(
                     Status::InvalidState,
@@ -143,15 +160,6 @@ impl MulticomponentBuffers {
             }
 
             if mass == 0.0 && mix_mass == 0.0 {
-                self.cells[cell] = OniSimMulticomponentCellHeader {
-                    species_offset: next_species as u32,
-                    species_count: 0,
-                    reserved: 0,
-                    total_mass: 0.0,
-                    gas_pressure_kpa: 0.0,
-                    liquid_pressure_kpa: 0.0,
-                    liquid_volume_fraction: 0.0,
-                };
                 continue;
             }
 
@@ -170,11 +178,8 @@ impl MulticomponentBuffers {
                 };
                 let phase = element.record.state & 3;
                 if phase == 0 || phase > 3 {
-                    self.validation_error = Some(Error::new(
-                        Status::InvalidState,
-                        format!("cell {cell} has positive mass but invalid phase {phase}"),
-                    ));
-                    return;
+                    next_species = species_offset;
+                    continue;
                 }
                 if next_species >= self.species.len() {
                     self.validation_error = Some(Error::new(
@@ -208,11 +213,8 @@ impl MulticomponentBuffers {
                 };
                 let phase = element.record.state & 3;
                 if phase == 0 || phase > 3 {
-                    self.validation_error = Some(Error::new(
-                        Status::InvalidState,
-                        format!("cell {cell} mixture has invalid phase {phase}"),
-                    ));
-                    return;
+                    next_species = species_offset;
+                    continue;
                 }
                 if next_species >= self.species.len() {
                     self.validation_error = Some(Error::new(
@@ -471,6 +473,50 @@ mod tests {
         grid.mass[1] = 250.0;
         grid.temperature[1] = 450.0;
         grid
+    }
+
+    #[test]
+    fn padded_mixture_publication_matches_compact_grid_across_rows() {
+        let elements = elements();
+        let mut grid = Grid::new(2, 2, 0, 0).unwrap();
+        grid.element.copy_from_slice(&[1, 2, 1, 2]);
+        grid.mass.copy_from_slice(&[1.0, 2.0, 0.0, 4.0]);
+        grid.temperature.fill(300.0);
+        let mix_elements = [2, 1, 2, 1];
+        let mix_masses = [0.5, 0.0, 3.0, 0.25];
+        let padded_elements = [0, 0, 0, 0, 0, 2, 1, 0, 0, 2, 1, 0, 0, 0, 0, 0];
+        let padded_masses = [0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 3.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let mut compact = MulticomponentBuffers::new(grid.len()).unwrap();
+        let mut padded = MulticomponentBuffers::new(grid.len()).unwrap();
+        compact.update_from_grid_with_mixture(&grid, &elements, Some(&mix_elements), Some(&mix_masses));
+        padded.update_from_grid_with_mixture_at(&grid, &elements, |cell| {
+            let index = (cell / 2 + 1) * 4 + cell % 2 + 1;
+            (padded_elements[index], padded_masses[index])
+        });
+        assert!(padded.descriptor(1).is_ok());
+        assert_eq!(padded.cells, compact.cells);
+        assert_eq!(padded.species_len, compact.species_len);
+        assert_eq!(&padded.species[..padded.species_len], &compact.species[..compact.species_len]);
+    }
+
+    #[test]
+    fn invalid_phase_replaces_old_cell_and_discards_partial_records() {
+        let mut grid = grid();
+        let elements = elements();
+        let mut buffers = MulticomponentBuffers::new(grid.len()).unwrap();
+        buffers.update_from_grid(&grid, &elements);
+        grid.element[0] = 0;
+        buffers.update_from_grid(&grid, &elements);
+        assert_eq!(buffers.cells[0].species_count, 0);
+        assert_eq!(buffers.cells[0].total_mass, 0.0);
+        assert_eq!(buffers.cells[1].species_offset, 0);
+        assert_eq!(buffers.species_len, 1);
+
+        grid.element[0] = 1;
+        buffers.update_from_grid_with_mixture(&grid, &elements, Some(&[0, 0]), Some(&[1.0, 0.0]));
+        assert_eq!(buffers.cells[0].species_count, 0);
+        assert_eq!(buffers.cells[1].species_offset, 0);
+        assert_eq!(buffers.species_len, 1);
     }
 
     #[test]

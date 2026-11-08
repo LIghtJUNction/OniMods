@@ -187,7 +187,9 @@ namespace CycleTrim.Patches
 
         private static bool Prepare()
         {
-            return Target != null && Target.IsGenericMethodDefinition && Target.ReturnType == typeof(void)
+            // Harmony cannot create a detour for an open generic method. Leave
+            // the original overlay path active instead of aborting mod startup.
+            return Target != null && !Target.ContainsGenericParameters && Target.ReturnType == typeof(void)
                 && Lookup != null && Lookup.IsGenericMethodDefinition;
         }
 

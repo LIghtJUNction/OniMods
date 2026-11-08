@@ -10,6 +10,10 @@ pub struct ProjectionOutput{
  pub pressure:Vec<f32>,pub u_faces:Vec<f32>,pub v_faces:Vec<f32>,
  pub iterations:usize,pub adapter:wgpu::AdapterInfo,
 }
+struct SharedBindings {
+ buffers: [wgpu::Buffer; 4],
+ groups: [wgpu::BindGroup; 9],
+}
 pub struct PressureProjectionGpu{
  device:Arc<wgpu::Device>,queue:Arc<wgpu::Queue>,
  density_from_mass:wgpu::ComputePipeline,reconstruct_velocity:wgpu::ComputePipeline,
@@ -17,6 +21,7 @@ pub struct PressureProjectionGpu{
  divergence:wgpu::ComputePipeline,rbgs:wgpu::ComputePipeline,
  project_u:wgpu::ComputePipeline,project_v:wgpu::ComputePipeline,
  groups:[wgpu::BindGroup;8],
+ shared_bindings:Vec<SharedBindings>,
  density:wgpu::Buffer,velocity_x:wgpu::Buffer,velocity_y:wgpu::Buffer,solid:wgpu::Buffer,
  u_faces:wgpu::Buffer,v_faces:wgpu::Buffer,beta_u:wgpu::Buffer,beta_v:wgpu::Buffer,rhs:wgpu::Buffer,pressure:wgpu::Buffer,params_red:wgpu::Buffer,params_black:wgpu::Buffer,
  readback:wgpu::Buffer,width:usize,height:usize,cells:usize,u_count:usize,v_count:usize,
@@ -89,7 +94,7 @@ impl PressureProjectionGpu{
    bind(&reconstruct_velocity,&[1,2,3,4,5,10],&params_red),
   ];
   if let Some(error)=scope.pop().await{return Err(error.to_string());}
-  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),density_from_mass,reconstruct_velocity,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,
+  Ok(Self{device:context.device.clone(),queue:context.queue.clone(),density_from_mass,reconstruct_velocity,prepare_u,prepare_v,divergence,rbgs,project_u,project_v,groups,shared_bindings:Vec::new(),
    density,velocity_x,velocity_y,solid,u_faces,v_faces,beta_u,beta_v,rhs,pressure,
    params_red,params_black,readback,width,height,cells,u_count,v_count,adapter:info})
  }
@@ -173,6 +178,20 @@ impl PressureProjectionGpu{
   iterations:usize,
   omega:f32,
  )->Result<(),String>{
+  let mut encoder=self.device.create_command_encoder(&Default::default());
+  self.encode_with_shared_state(&mut encoder,mass,velocity_x,velocity_y,solid,channels,cell_volume,
+   mass_scale_kg_per_game_unit,gauge_cell,dt,dx,dy,iterations,omega)?;
+  self.queue.submit([encoder.finish()]);
+  Ok(())
+ }
+
+ /// Encode projection into a caller-owned command buffer, allowing dependent GPU stages to share a submission.
+ pub fn encode_with_shared_state(
+  &mut self, encoder:&mut wgpu::CommandEncoder, mass:&wgpu::Buffer, velocity_x:&wgpu::Buffer,
+  velocity_y:&wgpu::Buffer, solid:&wgpu::Buffer, channels:usize, cell_volume:f32,
+  mass_scale_kg_per_game_unit:f32, gauge_cell:usize, dt:f32, dx:f32, dy:f32,
+  iterations:usize, omega:f32,
+ )->Result<(),String>{
   if channels==0||channels>u32::MAX as usize||!cell_volume.is_finite()||cell_volume<=0.0||!mass_scale_kg_per_game_unit.is_finite()||mass_scale_kg_per_game_unit<=0.0{
    return Err("shared state requires positive channel count and cell volume".into());
   }
@@ -186,6 +205,10 @@ impl PressureProjectionGpu{
   let mut black=params;black[6]=1;
   self.queue.write_buffer(&self.params_black,0,bytemuck::cast_slice(&black));
 
+  let cached = self.shared_bindings.iter().position(|entry|
+   entry.buffers[0] == *mass && entry.buffers[1] == *velocity_x &&
+   entry.buffers[2] == *velocity_y && entry.buffers[3] == *solid);
+  let index = if let Some(index)=cached { index } else {
   let bind_shared=|pipeline:&wgpu::ComputePipeline,bindings:&[u32],params_buffer:&wgpu::Buffer|{
    let entries:Vec<_>=bindings.iter().map(|&binding|{
     let resource=match binding{
@@ -221,23 +244,26 @@ impl PressureProjectionGpu{
    bind_shared(&self.project_v,&[5,7,9,10],&self.params_red),
    bind_shared(&self.reconstruct_velocity,&[1,2,3,4,5,10],&self.params_red),
   ];
-  let mut encoder=self.device.create_command_encoder(&Default::default());
+  if self.shared_bindings.len() == 2 { self.shared_bindings.remove(0); }
+  self.shared_bindings.push(SharedBindings { buffers:[mass.clone(),velocity_x.clone(),velocity_y.clone(),solid.clone()], groups });
+  self.shared_bindings.len()-1
+  };
+  let groups=&self.shared_bindings[index].groups;
   let dispatch=|encoder:&mut wgpu::CommandEncoder,pipeline:&wgpu::ComputePipeline,group:&wgpu::BindGroup,x:u32,y:u32|{
    let mut pass=encoder.begin_compute_pass(&Default::default());
    pass.set_pipeline(pipeline);pass.set_bind_group(0,group,&[]);pass.dispatch_workgroups(x,y,1);
   };
-  dispatch(&mut encoder,&self.density_from_mass,&groups[0],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
-  dispatch(&mut encoder,&self.prepare_u,&groups[1],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
-  dispatch(&mut encoder,&self.prepare_v,&groups[2],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
-  dispatch(&mut encoder,&self.divergence,&groups[3],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(encoder,&self.density_from_mass,&groups[0],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(encoder,&self.prepare_u,&groups[1],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(encoder,&self.prepare_v,&groups[2],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
+  dispatch(encoder,&self.divergence,&groups[3],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
   for _ in 0..iterations{
-   dispatch(&mut encoder,&self.rbgs,&groups[4],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
-   dispatch(&mut encoder,&self.rbgs,&groups[5],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+   dispatch(encoder,&self.rbgs,&groups[4],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
+   dispatch(encoder,&self.rbgs,&groups[5],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
   }
-  dispatch(&mut encoder,&self.project_u,&groups[6],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
-  dispatch(&mut encoder,&self.project_v,&groups[7],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
-  dispatch(&mut encoder,&self.reconstruct_velocity,&groups[8],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
-  self.queue.submit([encoder.finish()]);
+  dispatch(encoder,&self.project_u,&groups[6],(self.width as u32+1).div_ceil(8),(self.height as u32).div_ceil(8));
+  dispatch(encoder,&self.project_v,&groups[7],(self.width as u32).div_ceil(8),(self.height as u32+1).div_ceil(8));
+  dispatch(encoder,&self.reconstruct_velocity,&groups[8],(self.width as u32).div_ceil(8),(self.height as u32).div_ceil(8));
   Ok(())
  }
 

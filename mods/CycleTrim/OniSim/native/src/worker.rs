@@ -39,6 +39,9 @@ struct Mailbox<F, D> {
     latest_regions: Option<Vec<Region>>,
     ready: Option<D>,
     returned: Option<Returned<D>>,
+    // Keep the last published buffer alive if the runner faults. Readers can
+    // still hold its pointers until the session is shut down.
+    fault_retained: Option<D>,
     leased: bool,
     stopping: bool,
     fault: Option<Fault>,
@@ -141,6 +144,7 @@ impl<F: Send + 'static, D: Send + 'static> Worker<F, D> {
                 latest_regions: None,
                 ready: None,
                 returned: None,
+                fault_retained: None,
                 leased: false,
                 stopping: false,
                 fault: None,
@@ -370,6 +374,27 @@ mod tests {
 
     fn ok<T>(result: Result<T>) -> T {
         result.unwrap_or_else(|error| panic!("{}", error.message))
+    }
+
+    #[test]
+    fn runner_failure_keeps_previous_publication_alive() {
+        struct Buffer(Arc<AtomicUsize>);
+        impl Drop for Buffer {
+            fn drop(&mut self) { self.0.fetch_add(1, Ordering::SeqCst); }
+        }
+        let old_drops = Arc::new(AtomicUsize::new(0));
+        let output_drops = Arc::new(AtomicUsize::new(0));
+        let mut worker = ok(Worker::<(), Buffer>::spawn(
+            Buffer(output_drops), Buffer(Arc::clone(&old_drops)), Vec::new(),
+            |_, _, _, _| Err(Error::new(Status::InternalFailure, "test failure")),
+        ));
+        let handle = worker.handle();
+        assert!(handle.wait_ready().is_err());
+        assert_eq!(old_drops.load(Ordering::SeqCst), 0);
+        assert!(worker.shutdown().is_err());
+        drop(handle);
+        drop(worker);
+        assert_eq!(old_drops.load(Ordering::SeqCst), 1);
     }
 
     #[test]

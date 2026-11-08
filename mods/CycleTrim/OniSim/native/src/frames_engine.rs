@@ -25,6 +25,10 @@ pub(crate) struct Engine {
     pub(crate) mass: MassComponents,
     pub(crate) radiation: RadiationEmitters,
     pub(crate) residual_time: f32,
+    pub(crate) gpu: Option<crate::gpu_sim::GpuSimulation>,
+    // Both GameData buffers must have seen the same unchanged world before
+    // their derived presentation can be reused on alternating empty batches.
+    empty_publication_streak: u8,
 }
 
 impl Engine {
@@ -36,6 +40,17 @@ impl Engine {
         mass: MassComponents,
         radiation: RadiationEmitters,
     ) -> Self {
+        let gpu = if std::env::var("CYCLETRIM_ONISIM_GPU").map(|v| v != "0").unwrap_or(true) {
+            match crate::gpu_sim::GpuSimulation::new(world.stride, world.padded_height) {
+                Ok(gpu) => Some(gpu),
+                Err(error) => {
+                    eprintln!("[CycleTrim OniSim] GPU initialization failed: {error}");
+                    None
+                }
+            }
+        } else {
+            None
+        };
         Self {
             world,
             elements,
@@ -44,7 +59,13 @@ impl Engine {
             mass,
             radiation,
             residual_time: 0.0,
+            gpu,
+            empty_publication_streak: 0,
         }
+    }
+
+    pub(crate) fn invalidate_empty_publications(&mut self) {
+        self.empty_publication_streak = 0;
     }
 
     /// One official Step/CopySimDataToGame batch. The worker calls this with
@@ -56,6 +77,13 @@ impl Engine {
         output: &mut GameData,
         old: &GameData,
     ) -> Result<()> {
+        let empty_batch = frames.is_empty();
+        let reuse_derived = empty_batch && self.empty_publication_streak >= 2;
+        if reuse_derived {
+            static LOG_REUSE: std::sync::Once = std::sync::Once::new();
+            LOG_REUSE.call_once(|| eprintln!("[CycleTrim OniSim] Reusing derived data for consecutive empty batches"));
+        }
+        if !empty_batch { self.invalidate_empty_publications(); }
         if !output.retired_slots.is_empty() {
             return Err(Error::new(
                 Status::InternalFailure,
@@ -111,6 +139,7 @@ impl Engine {
                     mass: &mut self.mass,
                     thermal: &mut self.thermal,
                     radiation: &mut self.radiation,
+                    gpu: self.gpu.as_mut(),
                 };
                 // The first preparation replaces both the frame preflight and
                 // its identical first-substep check. Its borrow prevents any
@@ -159,21 +188,17 @@ impl Engine {
         {
             self.world.accumulated_flow.fill(0.0);
         }
-        output.presentation.update(&self.world, &self.elements)?;
-        let public_cells = output.grid.len();
-        let mut mix_element = vec![0u16; public_cells];
-        let mut mix_mass = vec![0.0f32; public_cells];
-        for public in 0..public_cells {
-            let internal = self.world.internal_index(public);
-            mix_element[public] = self.world.mixture_element[internal];
-            mix_mass[public] = self.world.mixture_mass[internal];
+        if !reuse_derived {
+            output.presentation.update(&self.world, &self.elements)?;
+            output.multicomponent.update_from_grid_with_mixture_at(
+                &output.grid,
+                &self.elements,
+                |public| {
+                    let internal = self.world.internal_index(public);
+                    (self.world.mixture_element[internal], self.world.mixture_mass[internal])
+                },
+            );
         }
-        output.multicomponent.update_from_grid_with_mixture(
-            &output.grid,
-            &self.elements,
-            Some(&mix_element),
-            Some(&mix_mass),
-        );
         output.grid.set_num_frames(frame_count);
         output.events.publish_to(&mut output.grid)?;
         for (index, pointer) in output.presentation.pointers().into_iter().enumerate() {
@@ -183,6 +208,7 @@ impl Engine {
         // ReadyLease::release_with. The native Step swaps output's existing
         // visibility storage here; copying old.visible would remove its delay.
         std::mem::swap(&mut self.world.active_mask, &mut output.visible);
+        if empty_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
         Ok(())
     }
 

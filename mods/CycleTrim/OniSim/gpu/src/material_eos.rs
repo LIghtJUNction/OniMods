@@ -79,10 +79,10 @@ pub fn infer_effective_cell_volume(
     units.validate()?;
     if !positive_finite(gas.molar_mass)
         || !positive_finite(gas.default_mass)
-        || !positive_finite(gas.default_temperature)
+        || !gas.default_temperature.is_finite()
         || !positive_finite(gas.default_pressure)
     {
-        return Err("gas defaults must all be finite and positive".into());
+        return Err("gas mass, molar mass and pressure must be finite and positive, and temperature finite".into());
     }
     let mass_kg = gas.default_mass * units.mass_kg_per_game_unit;
     let molar_mass = gas.molar_mass * units.molar_mass_kg_per_mol_per_game_unit;
@@ -168,10 +168,12 @@ pub fn ideal_gas_mixture_state(
     if !total_mass.is_finite() || !total_moles.is_finite() {
         return Err("mixture totals overflowed".into());
     }
-    Ok(GasState {
-        density_kg_m3: total_mass / cell_volume_m3,
-        pressure_pa: total_moles * GAS_CONSTANT * temperature / cell_volume_m3,
-    })
+    let density_kg_m3 = total_mass / cell_volume_m3;
+    let pressure_pa = total_moles * GAS_CONSTANT * temperature / cell_volume_m3;
+    if !density_kg_m3.is_finite() || !pressure_pa.is_finite() {
+        return Err("mixture density or pressure overflowed".into());
+    }
+    Ok(GasState { density_kg_m3, pressure_pa })
 }
 
 #[cfg(test)]
@@ -245,5 +247,23 @@ mod tests {
         units.pressure_pa_per_game_unit = 0.0;
         assert!(infer_effective_cell_volume(gas(32.0, 0.032), units).is_err());
         assert!(ideal_gas_mixture_state(&[-0.1], &[32.0], 300.0, 1.0, si_units()).is_err());
+    }
+
+    #[test]
+    fn accepts_negative_temperature_when_converted_above_absolute_zero() {
+        let mut units = si_units();
+        units.temperature_offset_kelvin = 273.15;
+        let mut cold = gas(32.0, 0.032);
+        cold.default_temperature = -10.0;
+        cold.default_pressure = GAS_CONSTANT * 263.15;
+        assert!((infer_effective_cell_volume(cold, units).unwrap() - 1.0).abs() < 1e-12);
+        cold.default_temperature = -273.15;
+        assert!(infer_effective_cell_volume(cold, units).is_err());
+    }
+
+    #[test]
+    fn rejects_overflow_in_final_pressure_and_density() {
+        assert!(ideal_gas_mixture_state(&[1.0], &[32.0], 300.0, f64::MIN_POSITIVE, si_units()).is_err());
+        assert!(ideal_gas_mixture_state(&[1e300], &[32.0], 1e100, 1.0, si_units()).is_err());
     }
 }

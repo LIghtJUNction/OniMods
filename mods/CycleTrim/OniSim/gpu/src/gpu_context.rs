@@ -8,6 +8,14 @@ pub struct GpuContext {
 }
 
 impl GpuContext {
+    pub fn command_encoder(&self) -> wgpu::CommandEncoder {
+        self.device.create_command_encoder(&Default::default())
+    }
+
+    pub fn submit(&self, encoder: wgpu::CommandEncoder) {
+        self.queue.submit([encoder.finish()]);
+    }
+
     pub async fn new() -> Result<Self, String> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::VULKAN,

@@ -4,6 +4,9 @@ pub mod gpu_context;
 pub mod material_eos;
 pub mod multicomponent;
 pub mod pressure_projection;
+pub mod thermal_diffusion;
+pub mod thermal_enthalpy;
+pub use pollster;
 #[path = "../../native/src/presentation_flow.rs"]
 pub mod cpu;
 

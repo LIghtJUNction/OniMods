@@ -18,7 +18,15 @@ namespace CycleTrim
             FrameRateUnlockPatch.Apply("ModInfo.OnLoad");
             ConfigureOniSim();
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
-            base.OnLoad(harmony);
+            try
+            {
+                base.OnLoad(harmony);
+            }
+            catch (System.Exception error)
+            {
+                System.Console.WriteLine("[CycleTrim] Patch installation failed: " + error);
+                throw;
+            }
             InstallMulticomponentShims(harmony);
             RegisterOniSimOptions();
             FetchLayoutExperiment.StartIfRequested();

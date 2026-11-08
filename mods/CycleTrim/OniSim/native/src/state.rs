@@ -211,6 +211,7 @@ impl State {
                     "simulation Engine mutex is poisoned",
                 )
             })?;
+            engine.invalidate_empty_publications();
             apply(&mut engine.world)
         } else {
             apply(self.world.as_mut().ok_or_else(|| {

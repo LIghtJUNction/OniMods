@@ -22,6 +22,7 @@ pub(crate) struct StepSystems<'a> {
     pub(crate) mass: &'a mut MassComponents,
     pub(crate) thermal: &'a mut ThermalComponents,
     pub(crate) radiation: &'a mut RadiationEmitters,
+    pub(crate) gpu: Option<&'a mut crate::gpu_sim::GpuSimulation>,
 }
 
 fn invalid(message: &'static str) -> Error {
@@ -194,22 +195,68 @@ impl<'a> PreparedStep<'a> {
             diseases,
         } = self;
         world.scan_direction = -world.scan_direction;
+        crate::gas::rise_bubbles(world, elements, events);
         world.sync_read_from_write();
+        crate::multicomponent_flux::refresh_active_gas_channels(world, elements);
+
+        let gpu_thermal_active = if let Some(ref mut gpu) = systems.gpu {
+            gpu.step_thermal(world, elements, FIXED_DT).map_err(|error| {
+                Error::new(Status::InternalFailure, format!("GPU thermal diffusion failed: {error}"))
+            })?;
+            true
+        } else {
+            false
+        };
+        if gpu_thermal_active {
+            // The snapshots were synchronized immediately before the thermal
+            // dispatch. step_thermal writes only temperature, so copying every
+            // CellSOA field again would move an entire world unnecessarily.
+            world.read.temperature.copy_from_slice(&world.write.temperature);
+        }
+
         for index in 0..world.regions.len() {
             let region = world.regions[index];
+            static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+            let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+            let mut mark = profiling.then(std::time::Instant::now);
+            let mut lap = || match mark.as_mut() {
+                Some(start) => { let now = std::time::Instant::now(); let elapsed = now.duration_since(*start).as_secs_f64() * 1000.0; *start = now; elapsed },
+                None => 0.0,
+            };
             let mut temperature_events = EventQueues::default();
-            temperature_phase(world, elements, &mut temperature_events, region);
+            if gpu_thermal_active {
+                temperature_transitions_only(world, elements, &mut temperature_events, region);
+            } else {
+                temperature_phase(world, elements, &mut temperature_events, region);
+            }
             world.sync_read_from_write();
+            let temperature_ms = lap();
             if gas_phase(world, elements, diseases, events, region) {
                 world.sync_read_from_write();
             }
-            // 禁用 multicomponent_flux：避免因通道发散或阈值截断导致气体大片湮灭成真空。
-            // 严格采用单相质量守恒网格流转，保证气液界面清晰锐利。
-            /*
-            if crate::multicomponent_flux::step_region(world, elements, events, region) {
-                world.sync_read_from_write();
-            }
-            */
+            let gas_phase_ms = lap();
+            let gpu_diffusion = gpu_thermal_active && world.gas_channel_count > 0;
+            // Liquid cells are impermeable to the gas pass. Submit their sparse
+            // diffusion now and collect it after gas transport has completed.
+            let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
+                crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
+            } else { None };
+            let mut diffusion_solid = Vec::new();
+            let gpu_transport_ran = crate::multicomponent_flux::step_region_with_mask(
+                world, elements, events, region, systems.gpu.as_deref_mut(), gpu_diffusion, Some(&mut diffusion_solid),
+            )?;
+            let transport_ms = lap();
+            let mut liquid_solid = Vec::new();
+            // The gas pass treats liquid and liquid-containing cells as walls,
+            // so it cannot create an eligible liquid region after preparation.
+            let liquid_gpu_ran = if let Some(work) = pending_liquid {
+                crate::multicomponent_flux::finish_sparse_liquid_region(work, world, events, &mut liquid_solid)?
+            } else { false };
+            crate::gas::diffuse_region(world, elements, events, region,
+                if gpu_diffusion && gpu_transport_ran { Some(&diffusion_solid) } else { None },
+                if liquid_gpu_ran { Some(&liquid_solid) } else { None });
+            world.sync_read_from_write();
+            let diffusion_ms = lap();
             // Gas events are already in the main queue. Temperature task events
             // join after them, at ConsolidateEvents, rather than at task execution.
             consolidate_events(events, &mut temperature_events);
@@ -240,6 +287,10 @@ impl<'a> PreparedStep<'a> {
             crate::disease::post_process_bounds(
                 world, diseases, bounds.0, bounds.1, bounds.2, bounds.3,
             )?;
+            let remaining_ms = lap();
+            if profiling {
+                eprintln!("[CycleTrim OniSim] region profile index={index} temperature+sync={temperature_ms:.3}ms gas+sync={gas_phase_ms:.3}ms transport={transport_ms:.3}ms diffusion+sync={diffusion_ms:.3}ms remaining={remaining_ms:.3}ms");
+            }
         }
         world.tick_seed = world.tick_seed.wrapping_add(1);
         Ok(())
@@ -360,6 +411,32 @@ fn temperature_phase(
             }
             if y < region.max_y - 1 {
                 temperature_pair(world, elements, &mut cache, cell, cell + world.stride);
+            }
+        }
+    }
+    for y in region.min_y..region.max_y {
+        for x in region.min_x..region.max_x {
+            crate::transition::do_state_transition(
+                world,
+                elements,
+                events,
+                y as usize * world.stride + x as usize,
+            );
+        }
+    }
+}
+
+fn temperature_transitions_only(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    events: &mut EventQueues,
+    region: Region,
+) {
+    for y in region.min_y..region.max_y {
+        for x in region.min_x..region.max_x {
+            let cell = y as usize * world.stride + x as usize;
+            if world.read.mass[cell] > 0.0 && world.backwall_mass[cell] > 0.0 {
+                crate::thermal::update_backwall_temperature(world, elements, events, cell);
             }
         }
     }

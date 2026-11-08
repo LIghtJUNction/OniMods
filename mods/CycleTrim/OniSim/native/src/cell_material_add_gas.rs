@@ -49,14 +49,25 @@ pub(crate) fn add_gas(
             return;
         }
     } else if state == 2 {
-        // 气体进入未满格液体的空隙容积
-        let prev_max = elements.elements[previous as usize].record.max_mass.max(1.0);
-        let liq_vol = world.write.mass[cell] / prev_max;
-        if liq_vol < 0.95 && (world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element) {
+        // 激进真实物理：气体进入液体中（微气泡、气相分压），绝不湮灭！
+        if world.mixture_mass[cell] <= 0.0 || world.mixture_element[cell] == element {
             world.mixture_element[cell] = element;
             world.mixture_mass[cell] += mass;
             notify(world, events, cell);
             return;
+        } else {
+            // 格内已有其他共存相时，向上浮动冒泡，寻找水面或相邻气体格
+            let mut curr = cell;
+            for _ in 0..128 {
+                let above = curr + world.stride;
+                if above >= world.write.mass.len() { break; }
+                if phase(elements, world.write.element[above]) != 2 {
+                    // 到达水面或气体格！将气体释放到水面上方
+                    add_gas(world, elements, diseases, events, above, element, mass, temperature, disease, count);
+                    return;
+                }
+                curr = above;
+            }
         }
     }
     let displaced = match state {

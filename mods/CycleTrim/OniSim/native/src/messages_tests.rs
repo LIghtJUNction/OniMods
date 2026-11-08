@@ -47,6 +47,93 @@ fn fixture() -> State {
 }
 
 #[test]
+fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() {
+    use crate::frames_data::GameData;
+    use crate::frames_engine::Engine;
+    use crate::multicomponent_publication::{OniSimMulticomponentCellHeader, OniSimMulticomponentSpeciesRecord};
+
+    fn snapshot(data: &GameData) -> (Vec<Vec<u8>>, Vec<OniSimMulticomponentCellHeader>, Vec<OniSimMulticomponentSpeciesRecord>) {
+        let sizes = [8, 4, 4, 4, 1];
+        let textures = data.presentation.pointers().into_iter().zip(sizes).map(|(ptr, size)| {
+            // The production publication owns these fixed-length live buffers.
+            unsafe { std::slice::from_raw_parts(ptr as *const u8, data.grid.len() * size) }.to_vec()
+        }).collect();
+        let view = data.multicomponent.descriptor(0).unwrap();
+        let cells = unsafe { std::slice::from_raw_parts(view.cells, view.cell_count as usize) }.to_vec();
+        let species = unsafe { std::slice::from_raw_parts(view.species, view.total_species_records as usize) }.to_vec();
+        (textures, cells, species)
+    }
+
+    let mut state = fixture();
+    let mut world = state.world.take().unwrap();
+    world.world_offsets = vec![[0, 0, 4, 4]];
+    let cell = world.internal_index(5);
+    world.write.element[cell] = 2;
+    world.write.mass[cell] = 10.0;
+    world.write.temperature[cell] = 300.0;
+    world.sync_read_from_write();
+    let grid = state.grid.as_ref().unwrap();
+    let mut buffers = [ok(GameData::new(grid)), ok(GameData::new(grid))];
+    let mut engine = Engine::new(world, state.elements.take().unwrap(), state.diseases.take(),
+        std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass), std::mem::take(&mut state.radiation_emitters));
+    engine.gpu = None;
+    for iteration in 0..20 {
+        if iteration == 10 {
+            engine.world.write.mass[cell] = 25.0;
+            engine.world.write.temperature[cell] = 350.0;
+            engine.world.sync_read_from_write();
+            engine.invalidate_empty_publications();
+        }
+        let [first, second] = &mut buffers;
+        let (output, old) = if iteration % 2 == 0 { (first, &*second) } else { (second, &*first) };
+        ok(engine.run_batch(Vec::new(), &[], output, old));
+        let cached = snapshot(output);
+        ok(output.presentation.update(&engine.world, &engine.elements));
+        output.multicomponent.update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {
+            let internal = engine.world.internal_index(public);
+            (engine.world.mixture_element[internal], engine.world.mixture_mass[internal])
+        });
+        assert_eq!(cached, snapshot(output), "empty batch {iteration}");
+    }
+}
+
+#[test]
+#[ignore = "manual full-grid empty-publication benchmark"]
+fn benchmark_empty_publication_reuse() {
+    use crate::frames_data::GameData;
+    use crate::frames_engine::Engine;
+    use crate::grid::Grid;
+    use crate::world::PhysicsWorld;
+    use std::time::Instant;
+
+    let mut state = fixture();
+    let elements = state.elements.take().unwrap();
+    let mut world = ok(PhysicsWorld::new(736, 304, 0, &elements));
+    world.write.element.fill(2);
+    world.write.mass.fill(1.0);
+    world.write.temperature.fill(300.0);
+    world.world_offsets = vec![[0, 0, 736, 304]];
+    world.sync_read_from_write();
+    let grid = ok(Grid::new(736, 304, 0, 0));
+    let mut buffers = [ok(GameData::new(&grid)), ok(GameData::new(&grid))];
+    let mut engine = Engine::new(world, elements, state.diseases.take(),
+        std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass), std::mem::take(&mut state.radiation_emitters));
+    engine.gpu = None;
+    let mut step = 0usize;
+    for reuse in [false, true, true, false] {
+        let start = Instant::now();
+        for _ in 0..30 {
+            if !reuse { engine.invalidate_empty_publications(); }
+            let [first, second] = &mut buffers;
+            let (output, old) = if step % 2 == 0 { (first, &*second) } else { (second, &*first) };
+            ok(engine.run_batch(Vec::new(), &[], output, old));
+            step += 1;
+        }
+        eprintln!("empty publication reuse={reuse}: {:.3} ms/batch", start.elapsed().as_secs_f64() * 1000.0 / 30.0);
+    }
+}
+
+#[test]
 fn compact_load_plan_maps_offset_rows_without_touching_other_cells() {
     let mut state = fixture();
     let elements = Arc::clone(state.elements.as_ref().unwrap());
@@ -452,6 +539,7 @@ fn prepared_step_validates_once_before_one_advance() {
         mass: &mut state.mass,
         thermal: &mut state.thermal,
         radiation: &mut state.radiation_emitters,
+        gpu: None,
     };
     crate::simulation_step::take_preflight_calls();
     ok(ok(crate::simulation_step::PreparedStep::new(
@@ -477,6 +565,7 @@ fn prepared_next_step_revalidates_mutated_state() {
         mass: &mut state.mass,
         thermal: &mut state.thermal,
         radiation: &mut state.radiation_emitters,
+        gpu: None,
     };
     crate::simulation_step::take_preflight_calls();
     ok(ok(crate::simulation_step::PreparedStep::new(

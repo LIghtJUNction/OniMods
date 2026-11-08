@@ -243,9 +243,13 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            scheduler.ScheduleNextFrame(ReportName, reportCallback, scheduler);
             reportScheduler.Target = scheduler;
             reportScheduled = true;
+            // The probe can be reached while UIScheduler is executing a callback.
+            // Avoid changing its HOT queue while that update is in progress.
+            // This method is called by main-thread finalizers after timing has ended,
+            // so publish synchronously without mutating the scheduler.
+            reportCallback(scheduler);
         }
 
         private static void ReportDeferred(object scheduledOn)

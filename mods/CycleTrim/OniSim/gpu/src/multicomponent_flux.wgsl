@@ -24,8 +24,9 @@ fn face_flux(a: f32, b: f32, speed: f32, open_face: bool) -> f32 {
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    if gid.x >= params.width || gid.y >= params.height { return; }
-    let x = gid.x;
+    if gid.x >= params.width * params.channels || gid.y >= params.height { return; }
+    let x = gid.x / params.channels;
+    let c = gid.x % params.channels;
     let y = gid.y;
     let w = params.width;
     let h = params.height;
@@ -42,7 +43,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let has_up = y > 0u && solid[up_cell] == 0u && !is_solid;
     let has_down = y + 1u < h && solid[down_cell] == 0u && !is_solid;
 
-    for (var c = 0u; c < params.channels; c += 1u) {
         let slot = cell * params.channels + c;
         let m = mass[slot];
         let ml = mass[left_cell * params.channels + c];
@@ -75,5 +75,4 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
         next_mass[slot] = select(mass_next, 0.0, is_solid);
         next_enthalpy[slot] = select(enthalpy_next, 0.0, is_solid);
-    }
 }

@@ -11,7 +11,7 @@ namespace CycleTrim.Patches
     public static class FrameRateUnlockPatch
     {
         private static int targetFrameRate = 500;
-        private static int nextForceFrame;
+        private static bool loggedFrameRepair;
 
         internal static void Configure(int value)
         {
@@ -32,7 +32,6 @@ namespace CycleTrim.Patches
             public static void Postfix()
             {
                 Apply("Game.OnSpawn");
-                nextForceFrame = 0;
             }
         }
 
@@ -55,8 +54,12 @@ namespace CycleTrim.Patches
                 if (QualitySettings.vSyncCount == 0 && Application.targetFrameRate == targetFrameRate)
                     return;
                 int now = Time.frameCount;
-                if (now < nextForceFrame) return;
-                nextForceFrame = now + 60;
+                if (!loggedFrameRepair)
+                {
+                    loggedFrameRepair = true;
+                    Debug.Log("[CycleTrim] Restoring frame settings from target=" + Application.targetFrameRate +
+                        ", vSync=" + QualitySettings.vSyncCount + " at frame " + now);
+                }
                 QualitySettings.vSyncCount = 0;
                 Application.targetFrameRate = targetFrameRate;
             }

@@ -41,6 +41,7 @@ mod frames_data;
 mod frames_engine;
 mod frames_plan;
 mod gas;
+pub(crate) mod gpu_sim;
 mod grid;
 mod interactions;
 mod mass_components;
@@ -478,6 +479,7 @@ pub unsafe extern "C" fn SIM_BeginSave(size: *mut i32, x: i32, y: i32) -> *const
                         "simulation Engine mutex is poisoned",
                     )
                 })?;
+                engine.invalidate_empty_publications();
                 save::serialize(&mut engine.world, &elements, diseases.as_deref(), x, y)?
             };
             let length = i32::try_from(image.len()).map_err(|_| {

@@ -25,6 +25,11 @@ namespace CycleTrim
                 Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
             options = options ?? new OniSimOptions();
+            // Steam forwards launch arguments to an existing client, but not
+            // the launching shell's environment, so expose the native probe as
+            // an explicit diagnostic-only launch argument as well.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cycletrim-gpu-profile") >= 0)
+                Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
             FrameRateUnlockPatch.Configure(options.TargetFrameRate);
             FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator
@@ -88,6 +93,8 @@ namespace CycleTrim
             try
             {
                 Jlib.Multicomponent.MulticomponentPatches.ApplyAll(harmony);
+                Jlib.Runtime.TextureLerperOptimization.Apply(harmony);
+                Jlib.Runtime.TimelapseCameraOptimization.Apply(harmony);
             }
             catch (Exception error)
             {

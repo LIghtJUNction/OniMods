@@ -59,7 +59,18 @@ fn run<F, D, R>(
 
         // The closure exclusively owns active simulation state. Submissions
         // accepted now remain in the mailbox for the next BeginFrameProcessing.
-        if let Err(error) = runner(frames, &regions, &mut output, &old) {
+        let result = catch_unwind(AssertUnwindSafe(|| runner(frames, &regions, &mut output, &old)));
+        let failure = match result {
+            Ok(Ok(())) => None,
+            Ok(Err(error)) => Some(error),
+            Err(_) => Some(Error::new(Status::InternalFailure, "simulation worker panicked")),
+        };
+        if let Some(error) = failure {
+            eprintln!("[CycleTrim OniSim] simulation worker failed: {}", error.message);
+            {
+                let mut mailbox = shared.lock();
+                mailbox.fault_retained = Some(old);
+            }
             shared.fail(error);
             return;
         }
