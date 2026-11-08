@@ -338,6 +338,7 @@ public static class GameTags
 public sealed class Substance
 {
     public UnityEngine.Color32 colour;
+    public UnityEngine.Color uiColour;
 }
 
 public sealed class Element
@@ -387,6 +388,7 @@ public static class Grid
 
 public sealed class GasBreatherFromWorldProvider { }
 public sealed class PropertyTextures { }
+public sealed class SimDebugView { }
 
 public sealed class TextureRegion
 {
@@ -470,6 +472,39 @@ public sealed class HoverTextHelper { }
 
 namespace UnityEngine
 {
+    public struct Color
+    {
+        public float r;
+        public float g;
+        public float b;
+        public float a;
+
+        public Color(float r, float g, float b, float a = 1f)
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
+        }
+
+        public static Color black { get { return new Color(0f, 0f, 0f, 1f); } }
+        public static Color Lerp(Color from, Color to, float value)
+        {
+            return new Color(from.r + (to.r - from.r) * value,
+                from.g + (to.g - from.g) * value,
+                from.b + (to.b - from.b) * value,
+                from.a + (to.a - from.a) * value);
+        }
+    }
+
+    public static class Mathf
+    {
+        public static float Clamp01(float value)
+        {
+            return value < 0f ? 0f : value > 1f ? 1f : value;
+        }
+    }
+
     public struct Color32
     {
         public byte r;
