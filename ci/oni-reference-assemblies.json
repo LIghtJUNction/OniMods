@@ -213,6 +213,16 @@
     "sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
     "extract": [
       {
+        "name": "UnityEngine.AssetBundleModule.dll",
+        "size": 20480,
+        "sha256": "5df492899c74df34ea016a93d926f71c729c11f89486ad7738d02a64ba52b5e8"
+      },
+      {
+        "name": "UnityEngine.AudioModule.dll",
+        "size": 48128,
+        "sha256": "95ccdaaf0138591de7c1b62d59c25fd4e8e0208969a1fca0ca6bd459bc2ae048"
+      },
+      {
         "name": "UnityEngine.ImageConversionModule.dll",
         "size": 13312,
         "sha256": "ad185932c8bb8ed22319c064080e669ca6c13b66f0baab2dfb11d3adf2db7481"
@@ -231,9 +241,14 @@
         "name": "UnityEngine.TextCoreFontEngineModule.dll",
         "size": 50688,
         "sha256": "ce2936bb553118faacd6be2e12d664fde83318729d135b464007b55915e6db9d"
+      },
+      {
+        "name": "UnityEngine.UnityWebRequestAudioModule.dll",
+        "size": 11776,
+        "sha256": "c4ad1b8966e52ec2269d114f02f8059d021f279e8d7e34b99cbb92869f8d998d"
       }
     ],
-    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence. UnityEngine.ImageConversionModule.dll is taken from this pinned Unity 2021.3.33 compile-only module package rather than the older game-reference mirror copy, which targets a newer netstandard facade and cannot be mixed into the net48 reference compile."
+    "note": "Compile-only fallback for Unity modules absent from or incompatible with the pinned ONI reference set. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims. UnityEngine.TextCoreFontEngineModule.dll is extracted from the same pinned UnityEngine.Modules 2021.3.33 package and SHA-256 verified; compile-only, not ONI 744825 runtime evidence. UnityEngine.ImageConversionModule.dll is taken from this pinned Unity 2021.3.33 compile-only module package rather than the older game-reference mirror copy, which targets a newer netstandard facade and cannot be mixed into the net48 reference compile. UnityEngine.AssetBundleModule.dll, UnityEngine.AudioModule.dll and UnityEngine.UnityWebRequestAudioModule.dll supply Jlib asset/audio compile references from the same pinned package, with separate size and SHA-256 checks."
   },
   "auxiliary_packages": [
     {
