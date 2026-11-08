@@ -27,6 +27,8 @@
 
 ## See it working
 
+> **Test attribution: The screenshots below are from a video of someone else's OniMcp test, not a test by the project author.**
+
 [![GPT operating an Oxygen Not Included colony through OniMcp](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
 
 The linked gameplay demo shows an MCP client reading colony state and issuing bounded operations for construction and farming. It is a real integration run, including the failures encountered along the way—not a scripted product animation.
