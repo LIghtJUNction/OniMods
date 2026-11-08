@@ -32,6 +32,8 @@ pub(crate) struct Engine {
     idle_frames_previous: bool,
     publication_profile: [u32; 4],
     zero_frame_command_mask: u8,
+    zero_command_batches: [u32; 6],
+    zero_early_mask: u8,
 }
 
 impl Engine {
@@ -67,6 +69,8 @@ impl Engine {
             idle_frames_previous: false,
             publication_profile: [0; 4],
             zero_frame_command_mask: 0,
+            zero_command_batches: [0; 6],
+            zero_early_mask: 0,
         }
     }
 
@@ -85,7 +89,7 @@ impl Engine {
     ) -> Result<()> {
         let empty_batch = frames.is_empty();
         let idle_frames = !empty_batch && frames.iter().all(|frame| {
-            frame.elapsed == 0.0 && frame.early.len() == 0 && frame.material.is_empty()
+            frame.elapsed == 0.0 && frame.early.only_debug() && frame.material.is_empty()
                 && frame.world.is_empty() && frame.thermal.is_empty() && frame.mass.is_empty()
                 && frame.radiation.is_empty()
         });
@@ -101,20 +105,30 @@ impl Engine {
             let category = if empty_batch { 0 } else if idle_frames { 1 } else if zero_with_commands { 2 } else { 3 };
             self.publication_profile[category] += 1;
             if zero_with_commands {
+                let mut batch_mask = 0u8;
                 for frame in &frames {
-                    self.zero_frame_command_mask |= u8::from(frame.early.len() != 0)
+                    self.zero_early_mask |= frame.early.profile_mask();
+                    batch_mask |= u8::from(frame.early.len() != 0)
                         | (u8::from(!frame.material.is_empty()) << 1)
                         | (u8::from(!frame.world.is_empty()) << 2)
                         | (u8::from(!frame.thermal.is_empty()) << 3)
                         | (u8::from(!frame.mass.is_empty()) << 4)
                         | (u8::from(!frame.radiation.is_empty()) << 5);
                 }
+                self.zero_frame_command_mask |= batch_mask;
+                for bit in 0..6 { self.zero_command_batches[bit] += u32::from(batch_mask & (1 << bit) != 0); }
             }
             if self.publication_profile.iter().sum::<u32>() >= 256 {
                 eprintln!("[CycleTrim OniSim] publication profile batches: empty={} idle_zero={} zero_with_commands={} advancing={} zero_command_mask={:#04x} (bits: early=1 material=2 world=4 thermal=8 mass=16 radiation=32)",
                     self.publication_profile[0], self.publication_profile[1], self.publication_profile[2], self.publication_profile[3], self.zero_frame_command_mask);
+                eprintln!("[CycleTrim OniSim] zero-time command batches: early={} material={} world={} thermal={} mass={} radiation={}",
+                    self.zero_command_batches[0], self.zero_command_batches[1], self.zero_command_batches[2],
+                    self.zero_command_batches[3], self.zero_command_batches[4], self.zero_command_batches[5]);
+                eprintln!("[CycleTrim OniSim] zero-time early mask={:#04x} (bits: insulation=1 strength=2 energy=4 properties=8 consume_disease=16 modify_disease=32 backwall=64 debug=128)", self.zero_early_mask);
                 self.publication_profile = [0; 4];
                 self.zero_frame_command_mask = 0;
+                self.zero_command_batches = [0; 6];
+                self.zero_early_mask = 0;
             }
         }
         if reuse_derived {

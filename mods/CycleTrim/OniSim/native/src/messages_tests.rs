@@ -89,13 +89,24 @@ fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() 
         // Prepare normally recycles each returned frame slot before reuse.
         output.retired_slots.clear();
         let frames = if (iteration / 4) % 2 == 0 { Vec::new() } else {
+            let mut early=crate::frames_commands::EarlyCommands::default();
+            let mut debug=[0u8;12];
+            debug[..4].copy_from_slice(&(iteration as f32).to_le_bytes());
+            debug[4..8].copy_from_slice(&0.001f32.to_le_bytes());
+            debug[8]=(iteration % 2) as u8;
+            let shape=crate::worker_shape::WorldShape::from_world(&engine.world);
+            assert!(ok(early.queue(crate::frames_commands::SET_DEBUG,&debug,&shape,&engine.elements,engine.diseases.as_deref())));
             vec![crate::frames::QueuedFrame {
-                elapsed: 0.0, early: Default::default(), material: Default::default(),
+                elapsed: 0.0, early, material: Default::default(),
                 world: Default::default(), thermal: Default::default(), mass: Default::default(),
                 radiation: Default::default(),
             }]
         };
         ok(engine.run_batch(frames, &[], output, old));
+        if (iteration / 4) % 2 != 0 {
+            assert_eq!(engine.world.building_heat_transfer_scale, iteration as f32);
+            assert_eq!(engine.world.simulate_all_active, iteration % 2 != 0);
+        }
         let cached = snapshot(output);
         ok(output.presentation.update(&engine.world, &engine.elements));
         output.multicomponent.update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {

@@ -98,6 +98,21 @@ pub(crate) struct EarlyCommands {
 }
 
 impl EarlyCommands {
+    // Debug settings are applied by process_tail even on zero-time frames;
+    // they do not mutate cells or any derived presentation buffers.
+    pub(crate) fn only_debug(&self) -> bool {
+        self.insulation.is_empty() && self.strength.is_empty() && self.energy.is_empty()
+            && self.properties.is_empty() && self.consume_disease.is_empty()
+            && self.modify_disease.is_empty() && self.backwall.is_empty()
+    }
+
+    pub(crate) fn profile_mask(&self) -> u8 {
+        u8::from(!self.insulation.is_empty()) | (u8::from(!self.strength.is_empty()) << 1)
+            | (u8::from(!self.energy.is_empty()) << 2) | (u8::from(!self.properties.is_empty()) << 3)
+            | (u8::from(!self.consume_disease.is_empty()) << 4) | (u8::from(!self.modify_disease.is_empty()) << 5)
+            | (u8::from(!self.backwall.is_empty()) << 6) | (u8::from(self.debug_pending) << 7)
+    }
+
     pub(crate) fn append(&mut self, mut staged: Self) -> Result<()> {
         if self.len().saturating_add(staged.len()) > crate::frames::MAX_PENDING_COMMANDS {
             return Err(Error::new(
