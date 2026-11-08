@@ -150,6 +150,11 @@ namespace PeterHan.PLib.Options
     }
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class RestartRequiredAttribute : Attribute { }
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class LimitAttribute : Attribute
+    {
+        public LimitAttribute(double minimum, double maximum) { }
+    }
 
     public sealed class POptions
     {
