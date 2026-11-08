@@ -15,7 +15,7 @@ internal static class ModSynchronizationTests
     internal static void Run(Action<bool, string> check)
     {
         ManifestPlanning(check); ManifestBoundary(check); StateOrdering(check); StateRecovery(check); StateFailures(check);
-        SessionDelivery(check); SessionFaults(check); SessionBounds(check); SessionConcurrency(check); SessionRequestOrdering(check); SessionSlowProgress(check); SessionGlobalBudget(check); SessionLifetime(check);
+        SessionDelivery(check); SessionAvailability(check); SessionFaults(check); SessionBounds(check); SessionConcurrency(check); SessionRequestOrdering(check); SessionSlowProgress(check); SessionGlobalBudget(check); SessionLifetime(check);
         SessionAdmissionEpoch(check); SessionRelayAdmissionEpoch(check); SessionObserverAdmissionEpoch(check); SessionRelayLifetime(check);
     }
     private static bool Throws<T>(Action action) where T : Exception
@@ -240,6 +240,29 @@ internal static class ModSynchronizationTests
             {
                 room.Until(() => local.Status == ModStateSubscriptionStatus.Active && remote.Status == ModStateSubscriptionStatus.Active, "host loopback and remote");
                 check(local.Replica.Current[0] == 30 && remote.Replica.Current[0] == 30, "host local observation uses the same authority and permission validation as remote observation");
+            }
+        }
+    }
+    private static void SessionAvailability(Action<bool, string> check)
+    {
+        using (var room = new TestRoom())
+        {
+            var owner = room.Peers[1]; var observer = room.Peers[2]; var binding = NativeBinding(owner);
+            var publisher = new ModStatePublisher(binding, new Reducer());
+            using (owner.State.RegisterPublisher(publisher, _ => true))
+            using (var subscription = Observe(observer, binding))
+            {
+                room.Until(() => subscription.Status == ModStateSubscriptionStatus.Unavailable, "publisher awaiting its first snapshot");
+                check(subscription.Replica.Connected && subscription.Replica.Current == null,
+                    "temporary publisher unavailability keeps the observer subscription open");
+                publisher.PublishSnapshot(new byte[] { 20 });
+                room.Advance(3);
+                check(subscription.Status == ModStateSubscriptionStatus.Active && subscription.Replica.Current[0] == 20,
+                    "guest relay retries recover when the registered publisher produces its first snapshot");
+                publisher.PublishDelta(new byte[] { 2 });
+                room.Until(() => subscription.Replica.Revision == 2, "delta after temporary unavailability");
+                check(subscription.Replica.Current[0] == 22,
+                    "recovered guest subscription continues receiving deltas without resubscribing");
             }
         }
     }

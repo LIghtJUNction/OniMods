@@ -420,10 +420,24 @@ internal static class FrameworkPrimitiveTests
                 "snapshot with invalid active tech token is rejected without mutating existing state");
         }
 
+        var incompleteResearch = new ResearchProgression();
+        incompleteResearch.TrySelectTech(string.Empty, 2, "peer_2");
+        incompleteResearch.TryEnqueueTech("PowerRegulation");
+        incompleteResearch.TryAddPoints("AdvancedResearch", "basic", 20.5f, out totalPoints);
+        check(!replicaResearch.TryImportState(incompleteResearch.ExportState()) && replicaResearch.ActiveTechId == "AdvancedResearch",
+            "same-revision snapshot cannot clear active research before completing the tech");
+
         check(research.TryUnlock("AdvancedResearch") && research.IsUnlocked("AdvancedResearch") &&
             research.ActiveTechId == string.Empty && !research.TryEnqueueTech("AdvancedResearch") &&
             !research.TrySelectTech("AdvancedResearch", 3, "peer_2"),
             "unlocking a tech marks it completed, clears from active/queue, and prevents re-selecting");
+        check(replicaResearch.TryImportState(research.ExportState()) && replicaResearch.IsUnlocked("AdvancedResearch") &&
+            replicaResearch.ActiveTechId == string.Empty && replicaResearch.CurrentRevision == 2 &&
+            replicaResearch.GetPoints("AdvancedResearch", "basic") == 20.5f,
+            "research completion synchronizes without inventing a new selection revision");
+        check(!replicaResearch.TryImportState(exportedState) && replicaResearch.IsUnlocked("AdvancedResearch") &&
+            replicaResearch.ActiveTechId == string.Empty,
+            "delayed pre-completion snapshot cannot reactivate or relock completed research");
 
         // --- SessionCompatibility Helpers ---
         var capsWithNew = new[] { SessionCapabilities.CellBatchV1, SessionCapabilities.ResearchSyncV1 };

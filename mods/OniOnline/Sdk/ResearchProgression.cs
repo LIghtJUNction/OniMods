@@ -208,15 +208,6 @@ namespace OniOnline.Sdk
                     if (actor.Length > 0 && !IsValidToken(actor))
                         return false;
 
-                    if (CurrentRevision > 0 && revision == CurrentRevision)
-                    {
-                        if (!string.Equals(active, ActiveTechId, StringComparison.Ordinal) ||
-                            !string.Equals(actor, LastActorId, StringComparison.Ordinal))
-                        {
-                            return false;
-                        }
-                    }
-
                     int queueCount = reader.ReadUInt16();
                     if (queueCount > MaximumQueuedTechs) return false;
                     var newQueue = new List<string>(queueCount);
@@ -271,6 +262,14 @@ namespace OniOnline.Sdk
                     }
 
                     if (ms.Position != ms.Length) return false;
+
+                    // Completing the active tech clears it without a new selection.
+                    // Every other selection change still needs a newer revision.
+                    if (CurrentRevision > 0 && revision == CurrentRevision &&
+                        (!string.Equals(actor, LastActorId, StringComparison.Ordinal) ||
+                        !string.Equals(active, ActiveTechId, StringComparison.Ordinal) &&
+                        !(active.Length == 0 && newUnlocked.Contains(ActiveTechId))))
+                        return false;
 
                     // Monotonic progression guard: unlocked techs and accumulated points cannot regress
                     foreach (string existingUnlocked in unlocked)

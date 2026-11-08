@@ -400,7 +400,10 @@ namespace OniOnline.Sdk
                 return true;
             }
             if (route.Cancelled || route.Request != message.Request || !message.Binding.SameScope(route.Binding)) return false;
-            if (message.Kind == ModStateSessionKind.Status && message.Status != ModStateSessionStatus.Available)
+            // Unavailable can precede the first snapshot; the observer keeps retrying
+            // that request. Only terminal subscription failures retire its route.
+            if (message.Kind == ModStateSessionKind.Status &&
+                (message.Status == ModStateSessionStatus.Denied || message.Status == ModStateSessionStatus.SchemaMismatch))
                 route.Cancelled = true;
             return true;
         }
