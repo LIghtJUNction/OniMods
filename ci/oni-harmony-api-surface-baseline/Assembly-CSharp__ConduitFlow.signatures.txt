@@ -1,0 +1,80 @@
+type public class ConduitFlow : IConduitFlow
+member private FlowDirections GetDirection ( Conduit conduit , Conduit target_conduit )
+member private GridNode [ ] grid
+member private HashSet < int > replacements
+member private IUtilityNetworkMgr networkMgr
+member private List < ConduitUpdater > conduitUpdaters
+member private List < Network > networks
+member private WorkItemCollection < BuildNetworkTask , ConduitFlow > build_network_job
+member private WorkItemCollection < ConnectTask , ConnectContext > connect_job
+member private WorkItemCollection < UpdateNetworkTask , ConduitFlow > update_networks_job
+member private bool UpdateConduit ( Conduit conduit )
+member private bool dirtyConduitUpdaters
+member private const float PERCENT_MAX_MASS_FOR_STATE_CHANGE_DAMAGE = 0.1f
+member private const int FLOW_DIRECTION_COUNT = 4
+member private float ComputeMovableMass ( GridNode grid_node )
+member private float MaxMass
+member private float elapsedTime
+member private float lastUpdateTime
+member private static FlowDirections ComputeNextFlowDirection ( FlowDirections current )
+member private void DumpPipeContents ( int cell , ConduitContents contents )
+member private void OnDeserialized ( )
+member private void OnSerialized ( )
+member private void OnSerializing ( )
+member private void OnUtilityNetworksRebuilt ( IList < UtilityNetwork > networks , ICollection < int > root_nodes )
+member private void RebuildConnections ( IEnumerable < int > root_nodes )
+member private void Validate ( ConduitContents contents )
+member public Conduit GetConduit ( int cell )
+member public ConduitContents GetContents ( int cell )
+member public ConduitContents RemoveElement ( Conduit conduit , float delta )
+member public ConduitContents RemoveElement ( int cell , float delta )
+member public ConduitContents [ ] serializedContents
+member public ConduitFlow ( ConduitType conduit_type , int num_cells , IUtilityNetworkMgr network_mgr , float max_conduit_mass , float initial_elapsed_time )
+member public ConduitType conduitType
+member public FlowDirections GetPermittedFlow ( int cell )
+member public SOAInfo soaInfo
+member public SerializedContents [ ] versionedSerializedContents
+member public UtilityNetwork GetNetwork ( Conduit conduit )
+member public bool CanMergeContents ( ConduitContents from , ConduitContents to , float massToMove )
+member public bool HasConduit ( int cell )
+member public bool IsConduitEmpty ( int cell_idx )
+member public bool IsConduitFull ( int cell_idx )
+member public const float MAX_GAS_MASS = 1f
+member public const float MAX_LIQUID_MASS = 10f
+member public const float TickRate = 1f
+member public const float WaitTime = 1f
+member public event System . Action onConduitsRebuilt
+member public float AddElement ( int cell_idx , SimHashes element , float mass , float temperature , byte disease_idx , int disease_count )
+member public float GetAmountAllowedForMerging ( ConduitContents from , ConduitContents to , float massDesiredtoBeMoved )
+member public int ComputeUpdateOrder ( int cell )
+member public int [ ] serializedIdx
+member public static FlowDirections Invert ( FlowDirections directions )
+member public static FlowDirections Opposite ( FlowDirections directions )
+member public static int GetCellFromDirection ( int cell , FlowDirections direction )
+member public void AddConduitUpdater ( Action < float > callback , ConduitFlowPriority priority = ConduitFlowPriority . Default )
+member public void DeactivateCell ( int cell )
+member public void EmptyConduit ( int cell )
+member public void ForceRebuildNetworks ( )
+member public void FreezeConduitContents ( int conduit_idx )
+member public void Initialize ( int num_cells )
+member public void MarkForReplacement ( int cell )
+member public void MeltConduitContents ( int conduit_idx )
+member public void RemoveConduitUpdater ( Action < float > callback )
+member public void SetContents ( int cell , ConduitContents contents )
+member public void Sim200ms ( float dt )
+nested private struct BuildNetworkTask : IWorkItem < ConduitFlow >
+nested private struct ConnectContext
+nested private struct ConnectTask : IWorkItem < ConnectContext >
+nested private struct Network
+nested private struct UpdateNetworkTask : IWorkItem < ConduitFlow >
+nested public class SOAInfo
+nested public enum FlowDirections : byte
+nested public struct Conduit : IEquatable < Conduit >
+nested public struct ConduitConnections
+nested public struct ConduitContents
+nested public struct ConduitFlowInfo
+nested public struct ConduitUpdater
+nested public struct GridNode
+nested public struct SerializedContents
+property public float ContinuousLerpPercent { get ; }
+property public float DiscreteLerpPercent { get ; }

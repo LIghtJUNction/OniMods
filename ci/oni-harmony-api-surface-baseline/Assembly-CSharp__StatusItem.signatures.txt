@@ -1,0 +1,45 @@
+type public class StatusItem : Resource
+member private StatusItem ( string id , string composed_prefix )
+member private bool showShowWorldIcon
+member private static Dictionary < HashedString , StatusItemOverlays > overlayBitfieldMap
+member private string ResolveString ( string str , object data )
+member private string ResolveTooltip ( string str , object data )
+member private string composedPrefix
+member private void SetIcon ( string icon , IconType icon_type , NotificationType notification_type , bool allow_multiples , HashedString render_overlay , bool show_world_icon = true , int status_overlays = 129022 , Func < string , object , string > resolve_string_callback = null )
+member public Action < object > statusItemClickCallback
+member public Func < HashedString , object , bool > conditionalOverlayCallback
+member public Func < string , object , string > resolveStringCallback
+member public Func < string , object , string > resolveTooltipCallback
+member public HashedString render_overlay
+member public IconType iconType
+member public Notification . ClickCallback notificationClickCallback
+member public NotificationType notificationType
+member public StatusItem ( string id , string name , string tooltip , string icon , IconType icon_type , NotificationType notification_type , bool allow_multiples , HashedString render_overlay , int status_overlays = 129022 , bool showWorldIcon = true , Func < string , object , string > resolve_string_callback = null )
+member public StatusItem ( string id , string prefix , string icon , IconType icon_type , NotificationType notification_type , bool allow_multiples , HashedString render_overlay , bool showWorldIcon = true , int status_overlays = 129022 , Func < string , object , string > resolve_string_callback = null )
+member public StatusItem SetResolveStringCallback ( Func < string , object , string > cb )
+member public TintedSprite sprite
+member public bool ShouldShowIcon ( )
+member public bool UseConditionalCallback ( HashedString overlay , Transform transform )
+member public bool allowMultiples
+member public bool resolveStringCallback_shouldStillCallIfDataIsNull
+member public bool resolveTooltipCallback_shouldStillCallIfDataIsNull
+member public bool shouldNotify
+member public bool showInHoverCardOnly
+member public bool unique
+member public const int ALL_OVERLAYS = 129022
+member public int status_overlays
+member public static StatusItemOverlays GetStatusItemOverlayBySimViewMode ( HashedString mode )
+member public string iconName
+member public string notificationText
+member public string notificationTooltipText
+member public string soundPath
+member public string tooltipText
+member public virtual string GetName ( object data )
+member public virtual string GetTooltip ( object data )
+member public virtual void ShowToolTip ( ToolTip tooltip_widget , object data , TextStyleSetting property_style )
+member public void AddNotification ( string sound_path = null , string notification_text = null , string notification_tooltip = null )
+member public void OnClick ( object data )
+member public void SetIcon ( Image image , object data )
+member static StatusItem ( )
+nested public enum IconType
+nested public enum StatusItemOverlays

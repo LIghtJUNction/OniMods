@@ -1,0 +1,63 @@
+type public class PropertyTextures : KMonoBehaviour , ISim200ms
+member private List < TextureProperties > allTextureProperties
+member private Texture2D [ ] externallyUpdatedTextures
+member private TexturePagePool texturePagePool
+member private TextureProperties [ ] textureProperties
+member private Vector2 PressureRange
+member private Vector2 coldRange
+member private Vector2 hotRange
+member private WorkItemCollection < WorkItem , object > workItems
+member private float MinPressureVisibility
+member private float TemperatureStateChangeRange
+member private int CameraZoomID
+member private int ClusterWorldSizeID
+member private int FogOfWarScaleID
+member private int NextPropertyIdx
+member private int PropTexCsToWsID
+member private int PropTexWsToCsID
+member private int TopBorderHeightID
+member private int WorldSizeID
+member private static void GetTemperatureAlpha ( float t , Vector2 cold_range , Vector2 hot_range , out byte cold_alpha , out byte hot_alpha )
+member private static void UpdateDanger ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateFallingSolidChange ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateFogOfWar ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateGasColour ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateLiquid ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdatePressure ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateRadiation ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateSolidDigAmount ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateSolidLiquidGasMass ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateSolidLiquidGasMass ( TextureRegion region , int x0 , int y0 , int x1 , int y1 , bool diferenciateImpermeable )
+member private static void UpdateSolidLiquidGasMassForLight ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateStateChange ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateTemperature ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private static void UpdateWorldLight ( TextureRegion region , int x0 , int y0 , int x1 , int y1 )
+member private string GetShaderPropertyName ( Property property )
+member private void GetVisibleCellRange ( out int x0 , out int y0 , out int x1 , out int y1 )
+member private void LateUpdate ( )
+member private void OnShadersReloaded ( )
+member private void UpdateProperty ( ref TextureProperties p , int x0 , int y0 , int x1 , int y1 )
+member private void UpdateTextureThreaded ( TextureRegion texture_region , int x0 , int y0 , int x1 , int y1 , WorkItem . Callback update_texture_cb )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member public PropertyTextures ( )
+member public Texture GetTexture ( Property property )
+member public TextureBuffer [ ] textureBuffers
+member public TextureLerper [ ] lerpers
+member public bool ForceLightEverywhere
+member public static IntPtr externalExposedToSunlight
+member public static IntPtr externalFlowTex
+member public static IntPtr externalLiquidDataTex
+member public static IntPtr externalLiquidTex
+member public static IntPtr externalMaterialDataTex
+member public static IntPtr externalSolidDigAmountTex
+member public static PropertyTextures instance
+member public static Vector4 CalculateClusterWorldSize ( )
+member public static float FogOfWarScale
+member public static void DestroyInstance ( )
+member public void OnReset ( object data = null )
+member public void Sim200ms ( float dt )
+nested private struct TextureProperties
+nested private struct WorkItem : IWorkItem < object >
+nested public enum Property
+property public static bool IsFogOfWarEnabled { get ; }

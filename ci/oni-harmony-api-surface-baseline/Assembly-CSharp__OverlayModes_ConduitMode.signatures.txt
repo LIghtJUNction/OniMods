@@ -1,0 +1,18 @@
+type public abstract class ConduitMode : Mode
+member private HashSet < SaveLoadRoot > layerTargets
+member private HashSet < UtilityNetwork > connectedNetworks
+member private ICollection < Tag > targetIDs
+member private List < int > visited
+member private UniformGrid < SaveLoadRoot > partition
+member private int cameraLayerMask
+member private int conduitTargetLayer
+member private int objectTargetLayer
+member private int selectionMask
+member private void FindConnectedNetworks ( int cell , IUtilityNetworkMgr mgr , ICollection < UtilityNetwork > networks , List < int > visited )
+member private void TriggerResorting ( KBatchedAnimController kbac )
+member protected override void OnSaveLoadRootRegistered ( SaveLoadRoot item )
+member protected override void OnSaveLoadRootUnregistered ( SaveLoadRoot item )
+member public ConduitMode ( ICollection < Tag > ids )
+member public override void Disable ( )
+member public override void Enable ( )
+member public override void Update ( )

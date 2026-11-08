@@ -1,0 +1,22 @@
+type public class SandboxBrushTool : BrushTool
+member private Dictionary < int , Color > recentAffectedCellColor
+member private EventInstance audioEvent
+member private void OnElementChanged ( object new_element )
+member private void StopSound ( )
+member protected HashSet < int > recentlyAffectedCells
+member protected override string GetDragSound ( )
+member protected override void OnActivateTool ( )
+member protected override void OnDeactivateTool ( InterfaceTool new_tool )
+member protected override void OnPaintCell ( int cell , int distFromOrigin )
+member protected override void OnPrefabInit ( )
+member protected override void PlaySound ( )
+member public SandboxBrushTool ( )
+member public override void GetOverlayColorData ( out HashSet < ToolMenu . CellColorData > colors )
+member public override void OnKeyDown ( KButtonEvent e )
+member public override void OnLeftClickDown ( Vector3 cursor_pos )
+member public override void OnLeftClickUp ( Vector3 cursor_pos )
+member public override void SetBrushSize ( int radius )
+member public static SandboxBrushTool instance
+member public static void DestroyInstance ( )
+member public void Activate ( )
+property private SandboxSettings settings { get ; }

@@ -40,6 +40,13 @@
     },
     {
       "assembly": "Assembly-CSharp.dll",
+      "requested_type": "ConduitFlow",
+      "resolved_type": "ConduitFlow",
+      "signature_file": "Assembly-CSharp__ConduitFlow.signatures.txt",
+      "signature_sha256": "16e28a8f4d9791ed1ba89a65563bcc6f99b5d9a25ea733c5ff72b2d574aec1fb"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
       "requested_type": "Db",
       "resolved_type": "Db",
       "signature_file": "Assembly-CSharp__Db.signatures.txt",
@@ -72,6 +79,20 @@
     },
     {
       "assembly": "Assembly-CSharp.dll",
+      "requested_type": "KBatchedAnimController",
+      "resolved_type": "KBatchedAnimController",
+      "signature_file": "Assembly-CSharp__KBatchedAnimController.signatures.txt",
+      "signature_sha256": "2d93634ef17aaa343329ac572da97a93e0ad6a913d0d56f66d0f38d6bccbd1de"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "MainMenu",
+      "resolved_type": "MainMenu",
+      "signature_file": "Assembly-CSharp__MainMenu.signatures.txt",
+      "signature_sha256": "fb5e3cf24a060247bfbb60a293c2332e16b88885d3b4d253003f773e60b0d04a"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
       "requested_type": "Navigator",
       "resolved_type": "Navigator",
       "signature_file": "Assembly-CSharp__Navigator.signatures.txt",
@@ -90,6 +111,41 @@
       "resolved_type": "NotificationScreen",
       "signature_file": "Assembly-CSharp__NotificationScreen.signatures.txt",
       "signature_sha256": "7574457a85ee9fefa85556e29a9c385aed7f933d2a8217d870b2feb3c95e7096"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "OverlayModes.ConduitMode",
+      "resolved_type": "OverlayModes.ConduitMode",
+      "signature_file": "Assembly-CSharp__OverlayModes_ConduitMode.signatures.txt",
+      "signature_sha256": "589a5a7efa5d8751b661e246c09e24dab0842595eaae1362984c56abc9e1ae56"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "OverlayModes.TileMode",
+      "resolved_type": "OverlayModes.TileMode",
+      "signature_file": "Assembly-CSharp__OverlayModes_TileMode.signatures.txt",
+      "signature_sha256": "50ad5b3bc621b93b365cdcc8032bb2756b03f3d658293d70fe94f3a9d98f54ec"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "PropertyTextures",
+      "resolved_type": "PropertyTextures",
+      "signature_file": "Assembly-CSharp__PropertyTextures.signatures.txt",
+      "signature_sha256": "b6d8f546db4af9e055f7bc692ba027f5f6348525be6be1d7bb52aab9b73f649b"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "SandboxBrushTool",
+      "resolved_type": "SandboxBrushTool",
+      "signature_file": "Assembly-CSharp__SandboxBrushTool.signatures.txt",
+      "signature_sha256": "172c924b1053d7ed8aa57ac0a603a0446007f49d3a44b8c2a43723ace6c1d0ca"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "StatusItem",
+      "resolved_type": "StatusItem",
+      "signature_file": "Assembly-CSharp__StatusItem.signatures.txt",
+      "signature_sha256": "bfc4a6aeb4be42c76923193ccf425a262632586653399664436e23275b0f8ab7"
     }
   ]
 }
