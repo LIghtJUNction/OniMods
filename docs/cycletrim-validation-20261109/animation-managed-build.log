@@ -1,0 +1,26 @@
+📦 构建 Mod: CycleTrim (/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim)
+   模式: Release
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OniSim.Compatibility -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/OniSim/managed/OniSim.Compatibility/bin/Release/netstandard2.0/OniSim.Compatibility.dll
+  Jlib -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/Jlib/bin/Release/net48/Jlib.dll
+  Zipping directory "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/artifacts/mod/Jlib" to "/workspace/scratch/6c1cf53f37e8/OniMods/mods/Jlib/artifacts/Jlib.zip".
+  CycleTrim -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+
+  Time Elapsed 00:00:02.40
+  Zipping directory "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim/" to "/workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim.zip".
+  Packaged mod -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/../../dist/CycleTrim.zip
+  Packaged source -> /workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/../../dist/CycleTrim-src.tar.gz
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:08.28
+✅ 构建成功！
+   📁 /workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim.zip
+   📁 /workspace/scratch/6c1cf53f37e8/OniMods/dist/CycleTrim-src.tar.gz

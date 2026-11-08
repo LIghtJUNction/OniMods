@@ -1,0 +1,93 @@
+{
+  "scope": "Managed reference build and synthetic host regressions; no ONI deployment, rendered FPS, or original hydraulic fixture acceptance.",
+  "sourceBase": "bbd7ce210628f159b3c00a210aa99f9be9940227",
+  "negativeControl": {
+    "production": "fc3ec83658c524c9f7064e565585084efc87b3ee",
+    "exitCode": 1,
+    "scenariosFailed": 12,
+    "note": "The earlier receiver set ForceRebuild during its external restart. That extra assignment was removed before final full-host validation; the cross-animation time failure and production change do not depend on it."
+  },
+  "host": {
+    "scope": "Complete synthetic CycleTrim optimization host regression; not production/native build or game/FPS validation",
+    "command": "dotnet run --project tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj --configuration Release --no-launch-profile",
+    "entryArguments": [],
+    "isolatedFamilies": 10,
+    "zoomScenarios": 13,
+    "exitCode": 0,
+    "sourceSha256": {
+      "mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs": "ca8f9b120a106732d163f98d3087ac9fffb429979d2dfbc040bb1eb0751046db",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationFixture.cs": "5ceda576a5dc64824ba6fa2cc8315907a1c6835e3d3a3ec4965dd522a77ccb05",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs": "a4343717d91c16212553b04f4b1e17fcec7383b086220ff002aa6c30bbeb0534"
+    },
+    "sourcesStableAcrossRun": true,
+    "includeOniSimStillFalse": true,
+    "log": "/workspace/scratch/6c1cf53f37e8/toolchain/animation-unthrottled-host-20261108T160036Z.log",
+    "passLines": [
+      "PASS Conveyor path lookup: 2377 assertions; 2059 original/patched path-order, identity, mutation and callback comparisons",
+      "PASS Conveyor fresh-process compatibility: 30 assertions; actual late-predicate/endpoint callbacks, mutation and provider rejection",
+      "PASS power cache storage: 32859 assertions; dense/overflow identity, exact bits, capacity, nesting, rollover and lifetime",
+      "PASS Power overlay: 316 assertions; real Harmony over original synthetic fixtures",
+      "PASS Power overlay provider: 7 assertions; isolated real assembly-load invalidation",
+      "PASS save metadata: 492 assertions; real Harmony, byte comparison, weak lifetime and concurrency",
+      "PASS animation symbols: 4894 assertions; real Harmony, exact payload bits, partial failures and upload protocol",
+      "PASS state-machine ordinary: 12463 assertions",
+      "PASS state-machine off: 4 assertions",
+      "PASS state-machine prefix: 9 assertions",
+      "PASS state-machine postfix: 9 assertions",
+      "PASS state-machine finalizer: 10 assertions",
+      "PASS state-machine transpiler: 9 assertions",
+      "PASS state-machine existing-prefix: 4 assertions",
+      "PASS state-machine existing-transpiler: 4 assertions",
+      "PASS state-machine unsupported-body: 5 assertions",
+      "PASS state-machine lookups: all isolated host regression cases",
+      "PASS conduit visual refresh gate: 74 assertions; cadence, age, failed rebuilds, clock/frame resets and zero allocation",
+      "PASS conduit visuals: 412 assertions; real Harmony, every-frame draws/audio, invalidation and lifecycle failures",
+      "PASS zoom animation original-call regressions (13 scenarios)",
+      "PASS frame diagnostics preserve simulation time and measure complete callback intervals",
+      "PASS CycleTrim optimization host regressions (synthetic game fixtures)"
+    ]
+  },
+  "managedBuild": {
+    "scope": "Final animation managed reference-only build via onim; IncludeOniSim=false; no native build, deployment or game/FPS validation",
+    "command": "BuildInParallel=false RestoreBuildInParallel=false ./target/release/onim build -m CycleTrim --release",
+    "exitCode": 0,
+    "elapsedSeconds": 8.28,
+    "warnings": 0,
+    "errors": 0,
+    "sourceSha256": {
+      "mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs": "ca8f9b120a106732d163f98d3087ac9fffb429979d2dfbc040bb1eb0751046db",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationFixture.cs": "5ceda576a5dc64824ba6fa2cc8315907a1c6835e3d3a3ec4965dd522a77ccb05",
+      "tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs": "a4343717d91c16212553b04f4b1e17fcec7383b086220ff002aa6c30bbeb0534"
+    },
+    "sourceHashesStableAcrossBuild": true,
+    "implementationDll": "/workspace/scratch/6c1cf53f37e8/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll",
+    "implementationSha256": "c8bbeae9ccf2fdb0acdec5678f210da9845e093aa8d791418d71def1bc72d807",
+    "managedOnlyZip": "/workspace/scratch/6c1cf53f37e8/toolchain/animation-unthrottled-managed-20261108T160224Z.managed-only.zip",
+    "zipSha256": "3fa39f63cec228431ea2c502fef09b558ff2d401cb9746c9eb5641fb8ff957a4",
+    "packagedImplementationMatches": true,
+    "nativeLibrariesInZip": [],
+    "managedMembers": [
+      "CycleTrim.dll",
+      "implementation/CycleTrim.dll",
+      "implementation/OniSim.Compatibility.dll"
+    ],
+    "hostVerificationReceipt": "/workspace/scratch/6c1cf53f37e8/toolchain/animation-unthrottled-host-20261108T160036Z.verification.json",
+    "hostFamilies": 10,
+    "hostZoomScenarios": 13,
+    "buildLog": "/workspace/scratch/6c1cf53f37e8/toolchain/animation-unthrottled-managed-20261108T160224Z.log",
+    "sourceArchiveExcludedFromVerificationAndDelivery": true
+  },
+  "logs": {
+    "animation-before.log": {
+      "sha256": "772abf3644fcb337fd832bbf90da84cd1f903760f1d2346fa7a0081cd49bc3d0"
+    },
+    "animation-host.log": {
+      "sha256": "91bfdf2e8d27e5381efcf80fa4df965a1e30b18fd1f60ad827a94b19827f3d5d"
+    },
+    "animation-managed-build.log": {
+      "rawSha256": "a0ad66e0739e9df78801832c97c68ffc942f13290389be997fe62c94a97896ce",
+      "sha256": "98ce6a905b9de5a031c810e85fc32326d023361b890f6790a70f373ce77418dd",
+      "normalization": "Trailing spaces, tabs and CR removed from each log line for repository whitespace validation; messages unchanged."
+    }
+  }
+}

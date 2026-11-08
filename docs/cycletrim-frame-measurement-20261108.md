@@ -1,6 +1,6 @@
 # CycleTrim 整帧采样与液体验收记录
 
-日期：2026-11-08（Asia/Taipei）
+日期：2026-11-08—2026-11-09（Asia/Taipei）
 
 ## 当前验收状态
 
@@ -57,6 +57,18 @@ python3 scripts/profile_cycletrim_process.py --pid "$oni_game_pid" \
 
 最终三文件候选已通过完整 Release 宿主入口的 10 个回归族，以及 `onim build -m CycleTrim --release` 的托管参考构建（0 errors，28 个既有 Jlib 警告，`IncludeOniSim=false`）。本次候选实现 DLL 的 SHA-256 为 `889a97e6ebbe549923fa3e4a7f9e6db05e773478bf89f196cb7df325d182f0c8`，与包内实现 DLL 一致；三份源码在构建与回归前后保持相同指纹。这次修复没有实机视觉或 FPS 收益证据，也没有新增原生库部署。实现与回归见 [ZoomRenderAccelerationPatch.cs](../mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs)、[ZoomAnimationRegression.cs](../tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs)。
 
+### 进一步修正：撤除整个动画方法的降频
+
+以上隐藏路径修复提交为 [fc3ec836](https://github.com/LIghtJUNction/OniMods/commit/fc3ec83658c524c9f7064e565585084efc87b3ee)。继续沿调用链复核后，发现剩余的可见静止分支仍不能安全跳过整个 `UpdateAnim`：
+
+- [Global.cs](https://github.com/Kupie/ONI_Decomp/blob/8d4ace10c2b6a84cee394653a91b990a5122e636/Assembly-CSharp/Global.cs) 分别在 Update 和 LateUpdate 中调用动画事件管理器与动画更新器。
+- [AnimEventManager.cs](https://github.com/Kupie/ONI_Decomp/blob/8d4ace10c2b6a84cee394653a91b990a5122e636/Assembly-CSharp/AnimEventManager.cs) 可以独立完成当前动画并触发下一段；[KAnimControllerBase.cs](https://github.com/Kupie/ONI_Decomp/blob/8d4ace10c2b6a84cee394653a91b990a5122e636/Assembly-CSharp/KAnimControllerBase.cs) 随后重置新动画时间。按控制器累计的旧 dt 没有随动画更换而清除，下一次调度会补到新段。
+- 原版还负责当次 transform 更新、强制重建、同步及 stopped／paused 控制器的退订。跳过整个方法会连这些操作一起延后；原版已通过 `SuspendUpdates` 和更新列表退订减少停止动画的调度。
+
+宿主反例在旧前缀下得到新动画时间 0.560 秒，而按原调用顺序应为 0.550 秒；另有可见重建、transform 和退订延迟的独立反例。当前修复删除该动画 Hook、stride 门及累计时间弱表，让每次调用保留自己的 dt。两个 overlay 调度类保持原行为。回归通过生产嵌套 patch 类的发现／应用后实际调用 receiver，覆盖 13 个场景，不仅检查某个 Hook 是否被删除。最终 fixture 删除一项不属于原版的强制重建模拟后，重新运行完整 Release 宿主入口：全部 10 个回归族及这 13 个动画场景通过，三份源码前后哈希一致。随后 onim 托管参考构建退出 0，0 警告／0 错误，实现 DLL 与包内副本的 SHA-256 均为 `c8bbeae9ccf2fdb0acdec5678f210da9845e093aa8d791418d71def1bc72d807`；该包不含原生库。改前反例、最终宿主日志、构建日志及源码指纹已保存在[动画验证收据](cycletrim-validation-20261109/animation-receipt.json)。
+
+这一发现还限定了性能计时的解释：Global 的动画与事件回调不属于 Game.Update／Game.LateUpdate，仍计入 `Unattributed`。因此该桶明确包含主线程工作，不能直接解释成 GPU 时间。普通动画更新列表只在 `Time.deltaTime > 0` 时运行；Always 列表使用 unscaled time，不能把暂停状态下所有动画都当作逐帧零 dt 调用。
+
 ## 源码与测试范围
 
 本轮首先读取了 AGENTS.md、RTK.md、UPSTREAM.toml 和 docs/autonomous-iteration.md，并检查当前差异。可访问的云端检出不含交接中的未提交液体改动、原始 hydraulic_tests、测试存档、perf.data 或游戏运行日志。原 Steam／RTX 4060 主机没有接入此执行环境。
@@ -73,7 +85,7 @@ cargo test --release --locked --offline \
 
 结果为 `0 passed; 0 failed; 100 filtered out`。这表示没有选中交接用例，不能记为液体回归通过。不得用早先的完整测试数量替代当前缺失的失败场景。
 
-## 本轮完成的修正
+## 前一轮：e24b534b 帧计时修正
 
 **帧率补丁保留原始仿真时间。** 删除 Game.simDt 的反射写入和 ref dt 截断；SimEveryTick 补丁只承担诊断，关闭诊断时不安装。宿主回归同时检查诊断开、关两种模式下传入的 0.25 秒与 0.25 秒积压保持不变。取消截断后，低帧率时需要执行的仿真工作可能增加，实际帧率与仿真进度须重新成对测量。
 
@@ -85,7 +97,7 @@ cargo test --release --locked --offline \
 
 实现：[FrameRateUnlockPatch](../mods/CycleTrim/Patches/FrameRateUnlockPatch.cs)、[FrameTimingWindow](../mods/CycleTrim/Core/FrameTimingWindow.cs)。回归：[FrameRateDiagnosticsRegression](../tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs)。
 
-## 本轮验证结果
+## e24b534b 验证记录
 
 | 验证 | 实际结果 | 证据范围 |
 | --- | --- | --- |
@@ -119,7 +131,7 @@ BuildInParallel=false RestoreBuildInParallel=false \
 
 本地构建配置为 `IncludeOniSim=false`、`TreatWarningsAsErrors=true`，引用仓库清单验证的 22 个 DLL。清单声明 ONI 737790，辅助 Unity 模块为 2021.3.33。这是托管参考构建，不是当前游戏版本的运行验收；本次包未包含原生库。
 
-编译得到的 `CycleTrim.dll` 为 191488 字节，SHA-256 为 `f4d060b7b21845a677ab42f95b782458b2344d6b7247bfc26f2e74f33b725abf`，与包内 `implementation/CycleTrim.dll` 相同；本次编译采用的帧计时代码与 e24b534b 一致。该云端参考构建未部署到 Steam 游戏目录；用户新回传的原主机构建属于另一次构建，没有提供其哈希字符串，不能默认它等于上述指纹。
+该轮参考编译得到的 `CycleTrim.dll` 为 191488 字节，SHA-256 为 `f4d060b7b21845a677ab42f95b782458b2344d6b7247bfc26f2e74f33b725abf`，与包内 `implementation/CycleTrim.dll` 相同；本次编译采用的帧计时代码与 e24b534b 一致。该云端参考构建未部署到 Steam 游戏目录；用户新回传的原主机构建属于另一次构建，没有提供其哈希字符串，不能默认它等于上述指纹。
 
 ## 已确认的帧计时问题
 
@@ -166,4 +178,4 @@ BuildInParallel=false RestoreBuildInParallel=false \
 | 表述是否清楚 | 用户交接数据、本轮宿主结果、源码推断分别标注 |
 | 实验是否支持性能提升 | 尚无本轮实机 FPS 数据，不报告性能提升 |
 | 验收是否完整 | 原液体 fixture、实机副本、图形性能分解均待完成 |
-| 修复是否满足语义约束 | 宿主回归已确认原始仿真时间输入保持；液体断言与原生实现未修改，实机行为待验证 |
+| 修复是否满足语义约束 | 宿主回归已确认原始仿真时间输入保持；后续动画修复恢复逐次原版调用，实机行为仍待验证 |

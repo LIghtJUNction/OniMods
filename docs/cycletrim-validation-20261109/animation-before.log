@@ -1,0 +1,16 @@
+FAIL zoom animation cross-animation restart: old-animation time cannot be added to the new animation: expected 0.55, got 0.56
+FAIL zoom animation visible forced rebuild: visible forceRebuild must complete on the current call
+FAIL zoom animation visible transform change: visible transform change must reach the original on the current call
+FAIL zoom animation stopped and paused suspension: stopped/paused visible controller must request suspension immediately
+FAIL zoom animation uneven frames: each uneven frame reaches the original immediately: expected 0.06, got 0
+FAIL zoom animation zoom transitions: zoom cannot defer the first original call: expected 0.01, got 0
+FAIL zoom animation movement transitions: stationary controller also updates immediately: expected 0.01, got 0
+FAIL zoom animation visibility transitions: hidden controllers still process the original transform/dirty path
+FAIL zoom animation independent controllers: first controller advances independently on every call: expected 0.06, got 0
+FAIL zoom animation paused frames: a paused rebuild cannot advance animation time: expected 0.01, got 0
+FAIL zoom animation hidden offscreen updates: visible far-zoom time reaches its own original call: expected 0.01, got 0
+FAIL zoom animation hidden forced rebuild: a completed forced rebuild is not replayed on the next hidden call
+System.InvalidOperationException: zoom animation original-call regressions: 12 scenario(s) failed
+   at CycleTrim.Optimizations.Tests.ZoomAnimationRegression.Run() in /workspace/scratch/6c1cf53f37e8/OniMods/tests/CycleTrim.Optimizations.Tests/ZoomAnimationRegression.cs:line 54
+   at CycleTrim.Optimizations.Tests.Program.RunFamily(String family) in /workspace/scratch/6c1cf53f37e8/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 94
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /workspace/scratch/6c1cf53f37e8/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 56
