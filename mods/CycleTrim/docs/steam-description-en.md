@@ -19,16 +19,17 @@ The stock grid's common interfaces primarily expose one element and one mass per
 This changes more than fluid equations: breathing, building consumption, sensors, visuals and saves must understand the individual components. These integrations are being developed and cannot be assumed to work automatically.
 
 [h2]How can this run on the GPU?[/h2]
-The CPU handles game events, buildings and complex control flow well; GPUs can perform the same calculation across many cells in parallel. The experimental design arranges material data into regular arrays so GPU kernels can calculate flow, pressure and heat transfer. Shared-face exchange is computed before each cell collects its changes, reducing concurrent writes. Mass, energy and gameplay behavior still need to be checked.
+The CPU handles game events, buildings and complex control flow; GPU kernels run regular calculations across many cells in parallel. Development builds arrange part of the grid into arrays for thermal diffusion and eligible regional gas and liquid calculations. Cells calculate exchanges with their neighbours without concurrent writes to the same cell. Results still need to be synchronized back to game logic.
 
 [h2]How do we reduce transfers?[/h2]
-Sending the entire map to the GPU and immediately reading it back after every operation can erase the benefit of acceleration. The goal is to keep mass, velocity and temperature in GPU memory so flow, pressure and heat kernels can pass buffers directly to one another; upload changed inputs and read back results when game logic or rendering needs them. Device residency does not make GPU memory directly accessible to all game code, and the synchronization boundaries are still being developed.
+Uploading and reading back the whole map for every operator can erase the benefit of acceleration. In development builds, regional gas pressure projection, transport and heat calculations share GPU buffers; some inputs use compact formats and changed-block uploads, and readback is reduced where possible. Each timestep still involves CPU uploads, GPU waits and readback: the complete simulation is not yet GPU-resident.
 
 [h2]Current progress[/h2]
 [list]
 [*]Development builds have shown two gases and two liquids sharing cells. Three or more components and complete save/load are not yet integrated end to end.
-[*]GPU thermal diffusion, multicomponent transport and pressure operators have standalone tests. Experimental tests chain GPU buffers between operators and run consecutive heat steps without an intermediate readback.
-[*]In the current working tree, only GPU thermal diffusion is connected to the experimental production timestep, and it still uploads state and synchronously reads temperature each step. GPU transport and pressure are not yet connected to that production chain.
+[*]The development timestep uses GPU thermal diffusion over the grid. Eligible gas regions use GPU concentration diffusion, density-gradient velocity, pressure projection, transport and heat; eligible liquid regions use GPU multicomponent diffusion. Some conditions still use CPU processing or exclude a region.
+[*]Operator mass/energy tests and a short test-save run have been exercised on an RTX 4060. Gas operators can share GPU buffers, but uploads, synchronization and readback remain; the whole game simulation is not on the GPU.
+[*]Phase changes, bubbles, some liquid flow, disease, radiation, building interactions and publication still rely on the CPU. Multiple gas channels across a region do not mean every cell can already hold three or more substances.
 [*]Published pressure, partial pressure and liquid volume fractions are unfinished; breathing, plants, pipes and other interactions still need end-to-end validation.
 [/list]
 Standalone tests, development builds and the Workshop release are different stages. An in-game frame-rate improvement has not yet been fully verified.
