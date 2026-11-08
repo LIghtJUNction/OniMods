@@ -958,7 +958,7 @@ impl GpuSimulation {
         let mut encoder = self.context.command_encoder();
         self.thermal.encode_resident(&mut encoder, dt, 0.25)?;
         self.thermal.encode_readback(&mut encoder);
-        let submission = self.context.queue.submit([encoder.finish()]);
+        let submission = self.context.submit(encoder);
         self.thermal.finish_readback_after_submission(
             &mut world.write.temperature,
             submission,

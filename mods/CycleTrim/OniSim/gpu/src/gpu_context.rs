@@ -12,8 +12,8 @@ impl GpuContext {
         self.device.create_command_encoder(&Default::default())
     }
 
-    pub fn submit(&self, encoder: wgpu::CommandEncoder) {
-        self.queue.submit([encoder.finish()]);
+    pub fn submit(&self, encoder: wgpu::CommandEncoder) -> wgpu::SubmissionIndex {
+        self.queue.submit([encoder.finish()])
     }
 
     pub async fn new() -> Result<Self, String> {

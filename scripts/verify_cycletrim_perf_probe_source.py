@@ -109,13 +109,22 @@ def main() -> int:
     require(patch, "GC.GetTotalMemory(false)", "heap snapshot telemetry missing", failures)
     require(patch, "Harmony.GetPatchInfo(target)", "Harmony ownership inspection missing", failures)
     require(patch, "FastTrackNamespacePrefix", "FastTrack attribution missing", failures)
-    require(patch, "UIScheduler.Instance", "deferred reporting must use the unscaled UI scheduler", failures)
+    require(patch, "UIScheduler.Instance", "report publication must use the unscaled UI scheduler identity", failures)
+    report_path = patch.split("private static void TryScheduleReport()", 1)[1].split(
+        "private static void ReportDeferred(", 1
+    )[0]
+    # Reporting is synchronous after the measured target: it must preserve owner
+    # identity without adding callbacks to a UIScheduler queue being traversed.
     require(
-        patch,
-        "scheduler.ScheduleNextFrame(ReportName, reportCallback, scheduler)",
-        "deferred report does not retain scheduler ownership for stale-callback isolation",
+        report_path,
+        "reportCallback(scheduler);",
+        "synchronous report does not retain scheduler ownership for stale-callback isolation",
         failures,
     )
+    if not 0 <= report_path.find("reportScheduler.Target = scheduler;") < report_path.find("reportCallback(scheduler);"):
+        failures.append("report publication must establish scheduler ownership before invoking the callback")
+    if "scheduler.Schedule" in report_path:
+        failures.append("report publication must not mutate the active UIScheduler callback queue")
     require(
         patch,
         "!ReferenceEquals(reportScheduler.Target, scheduler)",
@@ -193,7 +202,7 @@ def main() -> int:
     if "GC.Collect(" in patch:
         failures.append("performance probe must never trigger GC")
     if patch.count("UnityEngine.Debug.Log") != 3:
-        failures.append("logging must remain limited to target resolution and deferred reporting")
+        failures.append("logging must remain limited to target resolution and report publication")
 
     for needle, message in (
         ("PerformanceProbeCounter(bool consistentSnapshots = false)", "counter snapshot-coordination mode is missing"),
