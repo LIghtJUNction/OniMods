@@ -1,6 +1,6 @@
-[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-warning.png[/img]
-[h1]WARNING[/h1]
-[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-congratulations.png[/img]
+[h1]恭喜！[/h1]
+[b]这个 Mod 完全由 AI 生成！[/b]
 
 [h1]⚠ 高风险实验模组：仅供实验和尝鲜 ⚠[/h1]
 [b]不适合长期稳定游玩！请勿用于珍贵的正式存档。[/b]

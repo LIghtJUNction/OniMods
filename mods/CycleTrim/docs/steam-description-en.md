@@ -1,5 +1,5 @@
-[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-warning.png[/img]
-[h1]WARNING[/h1]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-congratulations.png[/img]
+[h1]CONGRATULATIONS![/h1]
 [b]THIS MOD IS ENTIRELY AI-GENERATED[/b]
 
 [h1]⚠ HIGH-RISK EXPERIMENTAL MOD ⚠[/h1]

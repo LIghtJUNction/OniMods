@@ -49,7 +49,7 @@ def render_description_en(data: Dict[str, Any]) -> str:
     parts = []
     if data.get("ai_warning_banner_url"):
         parts.append(f"[img]{data['ai_warning_banner_url']}[/img]")
-    parts.append("[h1]WARNING[/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
+    parts.append("[h1]CONGRATULATIONS![/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
 
     # 1. Header Banner
     if data.get("banner_url"):
@@ -140,7 +140,7 @@ def render_description_zh(data: Dict[str, Any]) -> str:
     parts = []
     if data.get("ai_warning_banner_url"):
         parts.append(f"[img]{data['ai_warning_banner_url']}[/img]")
-    parts.append("[h1]WARNING[/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
+    parts.append("[h1]CONGRATULATIONS![/h1]\n[b]THIS MOD IS ENTIRELY AI-GENERATED[/b]\n")
 
     # 1. Header Banner
     if data.get("banner_url"):
