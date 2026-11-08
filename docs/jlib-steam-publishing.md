@@ -1,3 +1,12 @@
+# Jlib Steam 发布
+
+Jlib 当前条目为 `3835083839`。更新现有 Legacy ZIP 使用
+`scripts/publish_jlib_steam.sh`；先在已提交的源码上运行 `--dry-run`，
+再运行脚本上传。脚本验证目标 ID、所有者和 Steam 上的条目，禁止
+SteamCMD 目录上传。保留其他工作区改动，确保发布包来自正确源码。
+
+以下首次发布记录仅供追溯，不能用于已发布条目。
+
 # Jlib 的 Steam 首次发布
 
 `scripts/publish_jlib_steam.sh` 使用本仓库的单文件 Legacy ZIP 发布器。

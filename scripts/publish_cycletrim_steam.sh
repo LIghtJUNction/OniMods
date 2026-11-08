@@ -17,7 +17,11 @@ OniMcp)
   EXPECTED_ID="3807166922"
   TITLE_CONTAINS="OniMcp"
   ;;
-OniOnline | Jlib)
+Jlib)
+  EXPECTED_ID="3835083839"
+  TITLE_CONTAINS="Jlib"
+  ;;
+OniOnline)
   EXPECTED_ID="0"
   TITLE_CONTAINS="$MOD_KEY"
   ;;
@@ -44,9 +48,9 @@ Usage: scripts/publish_cycletrim_steam.sh [options]
   --preflight-only  Query both Steam App contexts without uploading
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
-  --prepare-first-item  OniOnline/Jlib: prepare an offline, immutable first-item plan
-  --create-first-item   OniOnline/Jlib: create the reviewed Private Legacy item once
-  --publish-first-item  OniOnline/Jlib: publish the verified Private Legacy item
+  --prepare-first-item  OniOnline: prepare an offline, immutable first-item plan
+  --create-first-item   OniOnline: create the reviewed Private Legacy item once
+  --publish-first-item  OniOnline: publish the verified Private Legacy item
   --plan <path>         First-item plan path (required for all first-item stages)
   --expected-plan-sha256 <hash>  Reviewed plan SHA (required for create/publish)
   -h, --help     Show this help
@@ -93,9 +97,9 @@ if [[ "$DRY_RUN" == true && "$PREFLIGHT_ONLY" == true ]]; then
   echo "--dry-run and --preflight-only cannot be combined" >&2
   exit 2
 fi
-if [[ ( "$MOD_KEY" == "OniOnline" || "$MOD_KEY" == "Jlib" ) && -z "$FIRST_MODE" ]] \
-  || [[ "$MOD_KEY" != "OniOnline" && "$MOD_KEY" != "Jlib" && -n "$FIRST_MODE" ]]; then
-  echo "OniOnline/Jlib require an explicit first-item stage; existing-item targets cannot use it" >&2
+if [[ "$MOD_KEY" == "OniOnline" && -z "$FIRST_MODE" ]] \
+  || [[ "$MOD_KEY" != "OniOnline" && -n "$FIRST_MODE" ]]; then
+  echo "OniOnline requires an explicit first-item stage; existing-item targets cannot use it" >&2
   exit 2
 fi
 if [[ -n "$FIRST_MODE" && ( "$DRY_RUN" == true || "$PREFLIGHT_ONLY" == true || -z "$FIRST_PLAN" ) ]]; then
@@ -149,6 +153,8 @@ run_tests() {
       --config "$ROOT/onim.toml" --mod CycleTrim build --release)
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
     (cd "$ROOT" && dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true)
+  elif [[ "$MOD_KEY" == "Jlib" ]]; then
+    (cd "$ROOT" && dotnet run --project mods/Jlib/Jlib.Tests/Jlib.Tests.csproj -c Release)
   else
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Release -warnaserror)
