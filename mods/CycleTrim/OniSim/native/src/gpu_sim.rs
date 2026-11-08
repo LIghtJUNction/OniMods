@@ -952,7 +952,17 @@ impl GpuSimulation {
         }));
         self.thermal.prepare_deferred_groups_on_gpu(&world.mixture_element,&world.mixture_mass,&world.read.properties,&self.region_map,&self.thermal_flags)?;
         let prepared = started.elapsed();
-        self.thermal.step(dt, 0.25, &mut world.write.temperature)?;
+        // Keep thermal dispatch and the CPU-required result copy in one
+        // caller-owned submission. This is also the insertion point for other
+        // GPU-resident operators that depend on the updated temperature.
+        let mut encoder = self.context.command_encoder();
+        self.thermal.encode_resident(&mut encoder, dt, 0.25)?;
+        self.thermal.encode_readback(&mut encoder);
+        let submission = self.context.queue.submit([encoder.finish()]);
+        self.thermal.finish_readback_after_submission(
+            &mut world.write.temperature,
+            submission,
+        )?;
         if profiling {
             eprintln!("[CycleTrim OniSim] GPU thermal profile cells={count} deferred_groups=gpu mass_upload_bytes={} temperature_upload_bytes={} preparation={:.3}ms submit+wait+readback={:.3}ms", self.thermal.last_mass_upload_bytes(),self.thermal.last_temperature_upload_bytes(),prepared.as_secs_f64()*1000.0, (started.elapsed()-prepared).as_secs_f64()*1000.0);
         }

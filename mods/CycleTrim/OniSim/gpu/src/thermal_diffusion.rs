@@ -545,6 +545,32 @@ impl ThermalDiffusionGpu {
         Ok(())
     }
 
+    /// Append the current temperature copy to a caller-owned command encoder.
+    ///
+    /// This does not submit work or wait for the device. The caller can place
+    /// dependent compute passes before this copy and submit the whole step once.
+    pub fn encode_readback(&self, encoder: &mut wgpu::CommandEncoder) {
+        encoder.copy_buffer_to_buffer(
+            self.current_temperature_buffer(),
+            0,
+            &self.readback,
+            0,
+            (self.cells * 4) as u64,
+        );
+    }
+
+    /// Complete a readback copy encoded by the caller into a shared submission.
+    pub fn finish_readback_after_submission(
+        &mut self,
+        output_temp: &mut [f32],
+        submission: wgpu::SubmissionIndex,
+    ) -> Result<(), String> {
+        if output_temp.len() != self.cells {
+            return Err("output slice mismatch".into());
+        }
+        self.finish_readback(output_temp, submission)
+    }
+
     /// Read the most recently submitted result after any queued GPU consumers.
     pub fn readback_current(&mut self, output_temp: &mut [f32]) -> Result<(), String> {
         if output_temp.len() != self.cells {
