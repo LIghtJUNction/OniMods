@@ -1,3 +1,11 @@
+## Unreleased — source review fixes (2026-11-08)
+
+- Preserve the game's evaluated chore costs by removing the automatic GPU recosting patch and its unused managed bridge. The standalone jump-flood API is documented as a geometric-distance experiment; its estimates can cross walls and must not replace navigation costs.
+- Accumulate the actual elapsed time of deferred far-zoom animation updates per controller. Consume it once when an update runs, including zoom and movement transitions; clear it when a stationary animation is culled.
+- Make frame timing, GC sampling and periodic FPS reports obey the existing performance-diagnostics option. Timing-only patches and stopwatches are absent when diagnostics are off; the existing frame and simulation policies remain active.
+- Remove the ignored target-frame-rate option. Rendering retains the existing uncapped policy instead of presenting a setting with no effect.
+- Add host regressions for animation timing and diagnostic patch behavior, and refresh the multicomponent hover fixtures against the pinned Jlib implementation. Release binary checks reject the removed automatic GPU recosting types.
+
 ## Unreleased — GPU simulation data flow (2026-11-08)
 
 Committed on `main`:

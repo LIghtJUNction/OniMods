@@ -1,26 +1,29 @@
 using System.Reflection;
+using CycleTrim.Core;
 using HarmonyLib;
 using UnityEngine;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace CycleTrim.Patches
 {
     /// <summary>
-    /// ONI defaults to vSyncCount=1 which locks frame rate to 50/60 Hz.
-    /// Allow rendering to reach 500 FPS and disable VSync across all screens.
+    /// Disable VSync and Unity's frame limiter across all screens.
+    /// The rendered frame rate remains dependent on the current workload.
     /// </summary>
     public static class FrameRateUnlockPatch
     {
-        private static int targetFrameRate = 500;
         private static bool loggedFrameRepair;
         private static int frameCounter;
         private static float accumulatedTime;
         private static int reportInterval = 3;
         private static int reportsLogged;
-        private static System.Diagnostics.Stopwatch updateWatch = new System.Diagnostics.Stopwatch();
-        private static System.Diagnostics.Stopwatch lateUpdateWatch = new System.Diagnostics.Stopwatch();
-        private static System.Diagnostics.Stopwatch engineWatch = new System.Diagnostics.Stopwatch();
-        private static System.Diagnostics.Stopwatch stepTheSimWatch = new System.Diagnostics.Stopwatch();
-        private static System.Diagnostics.Stopwatch simEveryTickWatch = new System.Diagnostics.Stopwatch();
+        // Frame policy is always active; timers are allocated only when the
+        // existing performance-diagnostics option enables their measurements.
+        private static Stopwatch updateWatch;
+        private static Stopwatch lateUpdateWatch;
+        private static Stopwatch engineWatch;
+        private static Stopwatch stepTheSimWatch;
+        private static Stopwatch simEveryTickWatch;
         private static double accumulatedUpdateMs;
         private static double accumulatedLateUpdateMs;
         private static double accumulatedEngineMs;
@@ -29,11 +32,6 @@ namespace CycleTrim.Patches
         private static int timedFrames;
         private static int stepTheSimCalls;
         private static int simEveryTickCalls;
-
-        internal static void Configure(int value)
-        {
-            targetFrameRate = System.Math.Max(30, System.Math.Min(1000, value));
-        }
 
         public static void Apply(string reason)
         {
@@ -68,14 +66,18 @@ namespace CycleTrim.Patches
         [HarmonyPatch(typeof(Game), "Update")]
         public static class ProfileUpdate
         {
+            private static bool Prepare() { return CycleTrimPatchOptions.EnablePerformanceDiagnostics; }
+
             [HarmonyPrefix]
             public static void Prefix()
             {
-                if (engineWatch.IsRunning)
+                if (engineWatch != null && engineWatch.IsRunning)
                 {
                     engineWatch.Stop();
                     accumulatedEngineMs += engineWatch.Elapsed.TotalMilliseconds;
                 }
+                if (updateWatch == null)
+                    updateWatch = new Stopwatch();
                 updateWatch.Restart();
             }
 
@@ -94,9 +96,15 @@ namespace CycleTrim.Patches
         public static class ProfileSimEveryTick
         {
             [HarmonyPrefix]
-            public static void Prefix(Game __instance, ref float dt)
+            public static void Prefix(Game __instance, ref float dt, out bool __state)
             {
-                simEveryTickWatch.Restart();
+                __state = CycleTrimPatchOptions.EnablePerformanceDiagnostics;
+                if (__state)
+                {
+                    if (simEveryTickWatch == null)
+                        simEveryTickWatch = new Stopwatch();
+                    simEveryTickWatch.Restart();
+                }
                 // 彻底斩断死亡螺旋（Spiral of Death）：
                 // 限制单帧累积的仿真时间步最多执行 2 个 sub-tick (1/30s)，
                 // 避免低帧率下单帧连续爆发 12~15 次 StateMachine 与 UnsafeSim200ms 造成主线程死锁卡顿。
@@ -115,8 +123,12 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPostfix]
-            public static void Postfix()
+            public static void Postfix(bool __state)
             {
+                // A preceding skip-original prefix can also skip our ref-dt
+                // prefix. Its default state must not consume an absent timer.
+                if (!__state)
+                    return;
                 simEveryTickWatch.Stop();
                 accumulatedSimEveryTickMs += simEveryTickWatch.Elapsed.TotalMilliseconds;
                 simEveryTickCalls++;
@@ -126,9 +138,13 @@ namespace CycleTrim.Patches
         [HarmonyPatch(typeof(Game), "StepTheSim")]
         public static class ProfileStepTheSim
         {
+            private static bool Prepare() { return CycleTrimPatchOptions.EnablePerformanceDiagnostics; }
+
             [HarmonyPrefix]
             public static void Prefix()
             {
+                if (stepTheSimWatch == null)
+                    stepTheSimWatch = new Stopwatch();
                 stepTheSimWatch.Restart();
             }
 
@@ -147,15 +163,23 @@ namespace CycleTrim.Patches
             [HarmonyPrefix]
             public static void Prefix()
             {
+                if (!CycleTrimPatchOptions.EnablePerformanceDiagnostics)
+                    return;
+                if (lateUpdateWatch == null)
+                    lateUpdateWatch = new Stopwatch();
                 lateUpdateWatch.Restart();
             }
 
             [HarmonyPostfix]
             public static void Postfix()
             {
-                lateUpdateWatch.Stop();
-                accumulatedLateUpdateMs += lateUpdateWatch.Elapsed.TotalMilliseconds;
-                timedFrames++;
+                bool diagnostics = CycleTrimPatchOptions.EnablePerformanceDiagnostics;
+                if (diagnostics)
+                {
+                    lateUpdateWatch.Stop();
+                    accumulatedLateUpdateMs += lateUpdateWatch.Elapsed.TotalMilliseconds;
+                    timedFrames++;
+                }
 
                 if (QualitySettings.vSyncCount != 0 || Application.targetFrameRate != -1)
                 {
@@ -169,6 +193,9 @@ namespace CycleTrim.Patches
                     QualitySettings.vSyncCount = 0;
                     Application.targetFrameRate = -1;
                 }
+
+                if (!diagnostics)
+                    return;
 
                 frameCounter++;
                 accumulatedTime += Time.unscaledDeltaTime;
@@ -199,6 +226,8 @@ namespace CycleTrim.Patches
                     }
                 }
 
+                if (engineWatch == null)
+                    engineWatch = new Stopwatch();
                 engineWatch.Restart();
             }
         }

@@ -1,3 +1,6 @@
+// Experimental geometric-distance estimates, not ONI navigation costs.
+// Jump flooding can carry a seed across walls; the final cost is Manhattan
+// distance. These outputs must not replace the game's evaluated chore costs.
 struct Params {
     width: u32,
     height: u32,

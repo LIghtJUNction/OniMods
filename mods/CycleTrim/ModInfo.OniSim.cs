@@ -32,7 +32,6 @@ namespace CycleTrim
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
             else
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", null);
-            FrameRateUnlockPatch.Configure(options.TargetFrameRate);
             FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator
             // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).

@@ -96,6 +96,12 @@ def main() -> int:
         "SmartReservoir Harmony interception is absent": (
             "CycleTrim.Patches.SmartReservoirSignalPatch" not in classes
         ),
+        "automatic GPU chore recosting Harmony patch is absent": (
+            "CycleTrim.Patches.GpuChoreSchedulerPatch" not in classes
+        ),
+        "unused managed GPU chore recosting bridge is absent": (
+            "CycleTrim.Core.GpuPathfinderBridge" not in classes
+        ),
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
         ),

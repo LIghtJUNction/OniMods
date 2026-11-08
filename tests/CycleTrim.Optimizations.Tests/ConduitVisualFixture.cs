@@ -351,6 +351,7 @@ namespace UnityEngine
         public static int frameCount;
         public static double unscaledTimeAsDouble;
         public static float deltaTime = 1f / 60f;
+        public static float unscaledDeltaTime = 1f / 60f;
         public static float time;
     }
 

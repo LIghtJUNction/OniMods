@@ -66,7 +66,7 @@ namespace CycleTrim.Optimizations.Tests
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit", "zoom-animation", "frame-rate" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -91,6 +91,8 @@ namespace CycleTrim.Optimizations.Tests
                 case "power-provider": PowerOverlayRegression.RunProviderRegression(); break;
                 case "save": SaveMetadataRegression.Run(); break;
                 case "animation": AnimationSymbolRegression.Run(); break;
+                case "zoom-animation": ZoomAnimationRegression.Run(); break;
+                case "frame-rate": FrameRateDiagnosticsRegression.Run(); break;
                 case "conduit":
                     ConduitVisualRefreshGateRegression.Run();
                     ConduitVisualRegression.Run();

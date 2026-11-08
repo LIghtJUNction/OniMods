@@ -1,4 +1,8 @@
-//! GPU-accelerated parallel Jump-Flood reachability & chore candidate evaluator.
+//! Experimental jump-flood geometric-distance estimates for standalone GPU work.
+//!
+//! This does not implement ONI navigation or obstacle-aware shortest paths: seeds
+//! can jump across blocked cells. Keep these estimates out of game chore ranking,
+//! which already has evaluated navigation costs.
 use std::sync::Arc;
 use crate::gpu_context::GpuContext;
 
@@ -148,6 +152,11 @@ impl GpuPathfinder {
         Ok(())
     }
 
+    /// Writes Manhattan-distance estimates into the candidate cost fields.
+    ///
+    /// The grid masks target cells, but propagation does not follow traversable
+    /// routes. A negative cost means no estimate was produced, not that an ONI
+    /// navigator cannot reach the target.
     pub fn evaluate_chores(
         &mut self,
         origin_cell: u32,
@@ -182,7 +191,7 @@ impl GpuPathfinder {
         }
         self.context.queue.submit([encoder.finish()]);
 
-        // 2. Parallel Jump-Flood Wavefront propagation
+        // 2. Propagate geometric-distance seeds with jump flooding.
         let mut step = (s.width.max(s.height) / 2).next_power_of_two();
         while step >= 1 {
             let p_step = Params {

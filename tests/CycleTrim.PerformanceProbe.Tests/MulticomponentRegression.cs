@@ -275,10 +275,49 @@ namespace CycleTrim.PerformanceProbe.Tests
                 ConduitType.Gas, 2.0f, isSolidOrClosed: false),
                 "flooded cell (96% liquid volume) blocks gas vent");
 
-            // 6. Hover text suffix patch.
+            // 6. The current Jlib summary reports mass, fraction, partial pressure, and total mass.
             string hoverSuffix = MulticomponentHoverPatches.FormatCompositionSuffix(twoGasBlend);
-            Check(hoverSuffix == " [Oxygen 75%, Carbon Dioxide 25%]",
-                "MulticomponentHoverPatches formats species breakdown percentages");
+            Check(hoverSuffix == "|  1.5 kg (75%) [" + 150f.ToString("0.0")
+                + " kPa]   |   0.5 kg (25%) [" + 50f.ToString("0.0") + " kPa]  |  (总计: 2 kg)",
+                "MulticomponentHoverPatches preserves each mass, percentage, pressure, and total");
+            VerifyHoverCards(twoGasBlend);
+        }
+
+        private static void VerifyHoverCards(MulticomponentCellSnapshot snapshot)
+        {
+            var style = new TextStyleSetting();
+            var fallback = new HoverTextDrawer();
+            Check(!MulticomponentHoverCardPatch.DrawCardsOrTitle(fallback, "OXYGEN", style),
+                "hover card falls back without a provider");
+            Check(fallback.Text.Count == 1 && fallback.Text[0] == "OXYGEN",
+                "hover fallback retains the original title");
+
+            int originalFrame = Time.frameCount;
+            var provider = new StubProvider { Ready = true, Snapshot = snapshot };
+            Check(MulticomponentCellAccess.RegisterProvider(provider), "registers hover card provider");
+            try
+            {
+                Time.frameCount++;
+                var drawer = new HoverTextDrawer();
+                Check(MulticomponentHoverCardPatch.DrawCardsOrTitle(drawer, "OXYGEN", style),
+                    "linked Jlib patch draws cards for a mixed cell");
+                Check(drawer.Text.Count == 2, "draws one card for each positive-mass species");
+                Check(drawer.Text[0].Contains("Oxygen  " + 75f.ToString("0.0") + "%\n")
+                    && drawer.Text[0].Contains("1.5 kg  (总质量: 2 kg)"),
+                    "oxygen card retains its identity, fraction, mass, and total");
+                Check(drawer.Text[1].Contains("Carbon Dioxide  " + 25f.ToString("0.0") + "%\n")
+                    && drawer.Text[1].Contains("0.5 kg  (总质量: 2 kg)"),
+                    "carbon dioxide card retains its identity, fraction, mass, and total");
+                Check(drawer.Root.x == 10f && drawer.Root.y == 20f && drawer.Current.y < 20f,
+                    "hover cards restore the drawing origin and advance the cursor");
+                Check(MulticomponentHoverCardPatch.DrawCardsOrTitle(drawer, "OXYGEN", style)
+                    && drawer.Text.Count == 2, "same-frame redraw does not duplicate species cards");
+            }
+            finally
+            {
+                Time.frameCount = originalFrame;
+                Check(MulticomponentCellAccess.UnregisterProvider(provider), "unregisters hover card provider");
+            }
         }
 
         private static Element CreateElement(
@@ -349,6 +388,9 @@ public sealed class Element
     public bool IsLiquid;
     public bool breathable;
     public Substance substance;
+    public float maxMass;
+    public string nameUpperCase { get { return name?.ToUpperInvariant(); } }
+    public string Description() { return string.Empty; }
 
     public bool HasTag(Tag tag)
     {
@@ -374,6 +416,7 @@ public static class Grid
     public static bool[] Solid = Array.Empty<bool>();
 
     public static int XYToCell(int x, int y) { return y * 64 + x; }
+    public static int PosToCell(UnityEngine.Vector3 position) { return XYToCell((int)position.x, (int)position.y); }
     public static void CellToXY(int cell, out int x, out int y) { x = cell % 64; y = cell / 64; }
     public static int ClampX(int x) { return x < 0 ? 0 : x; }
     public static int ClampY(int y) { return y < 0 ? 0 : y; }
@@ -538,9 +581,16 @@ namespace HarmonyLib
 
     public static class AccessTools
     {
-        public static MethodInfo Method(Type type, string name)
+        public static MethodInfo Method(Type type, string name, Type[] parameters = null)
         {
-            return type?.GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+            return parameters == null ? type?.GetMethod(name, flags)
+                : type?.GetMethod(name, flags, null, parameters, null);
+        }
+
+        public static MethodInfo PropertyGetter(Type type, string name)
+        {
+            return type?.GetProperty(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)?.GetGetMethod(true);
         }
 
         public static FieldInfo Field(Type type, string name)

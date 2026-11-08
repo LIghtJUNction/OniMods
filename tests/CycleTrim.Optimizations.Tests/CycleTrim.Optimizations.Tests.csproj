@@ -26,5 +26,7 @@
     <Compile Include="../../mods/CycleTrim/Patches/StateMachineLookup*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Core/ConduitVisual*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Patches/ConduitVisual*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs" Link="ZoomRenderAccelerationPatch.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/FrameRateUnlockPatch.cs" Link="FrameRateUnlockPatch.cs" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
 
@@ -37,6 +36,15 @@ namespace CycleTrim.Patches
         [HarmonyPatch(typeof(KBatchedAnimController), nameof(KBatchedAnimController.UpdateAnim))]
         public static class BatchedAnimControllerUpdateAnimPatch
         {
+            private sealed class PendingAnimationTime
+            {
+                public float Elapsed;
+            }
+
+            // Weak keys do not keep destroyed animation controllers alive.
+            private static readonly ConditionalWeakTable<KBatchedAnimController, PendingAnimationTime>
+                pendingTimes = new ConditionalWeakTable<KBatchedAnimController, PendingAnimationTime>();
+
             [HarmonyPrefix]
             public static bool Prefix(KBatchedAnimController __instance, ref float dt)
             {
@@ -45,25 +53,51 @@ namespace CycleTrim.Patches
 
                 // 复制人与移动生物：绝对禁止抽帧跳步！保证 100% 流畅运动与动画，彻底消除“一卡一卡”
                 if (__instance.isMovable || __instance.IsMoving)
+                {
+                    ConsumePendingTime(__instance, ref dt);
                     return true;
+                }
 
                 // 视野剔除：不在屏幕内的静止物体直接跳过
                 if (!__instance.IsVisible())
+                {
+                    // A culled animation starts fresh when it becomes visible;
+                    // do not accumulate a catch-up jump while it is hidden.
+                    PendingAnimationTime hidden;
+                    if (pendingTimes.TryGetValue(__instance, out hidden))
+                        hidden.Elapsed = 0f;
                     return false;
+                }
 
                 float zoom = GetCurrentZoom();
                 // 正常视距（<= 35）下静止建筑完全正常渲染，远景下拉大步长
                 if (zoom <= 35f)
+                {
+                    ConsumePendingTime(__instance, ref dt);
                     return true;
+                }
 
+                var pending = pendingTimes.GetOrCreateValue(__instance);
+                pending.Elapsed += dt;
                 int stride = zoom > 100f ? 20 : (zoom > 60f ? 10 : 4);
                 if (stride > 1 && (((__instance.GetInstanceID() & 0x7FFFFFFF) + Time.frameCount) % stride) != 0)
                 {
                     return false;
                 }
 
-                dt *= stride;
+                dt = pending.Elapsed;
+                pending.Elapsed = 0f;
                 return true;
+            }
+
+            private static void ConsumePendingTime(KBatchedAnimController controller, ref float dt)
+            {
+                PendingAnimationTime pending;
+                if (pendingTimes.TryGetValue(controller, out pending))
+                {
+                    dt += pending.Elapsed;
+                    pending.Elapsed = 0f;
+                }
             }
         }
 

@@ -164,7 +164,7 @@ public sealed class CircuitManager
     }
 }
 
-public static class OverlayModes
+public static partial class OverlayModes
 {
     public sealed class Power
     {
