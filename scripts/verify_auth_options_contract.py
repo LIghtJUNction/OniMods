@@ -29,6 +29,7 @@ def method_body(source: str, marker: str) -> str:
 def main() -> int:
     options = (ROOT / "mods/OniMcp/Config/OniMcpOptions.cs").read_text(encoding="utf-8")
     masked_token = (ROOT / "mods/OniMcp/Config/MaskedTokenOptionsEntry.cs").read_text(encoding="utf-8")
+    masked_string = (ROOT / "mods/Jlib/PLibOptions/MaskedStringOptionsEntry.cs").read_text(encoding="utf-8")
     transport = (ROOT / "mods/OniMcp/Server/McpHttpServerPostTransport.cs").read_text(encoding="utf-8")
     settings = (ROOT / "mods/OniMcp/Server/McpHttpServerSettingsPage.cs").read_text(encoding="utf-8")
     server = (ROOT / "mods/OniMcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
@@ -76,10 +77,11 @@ def main() -> int:
         r'\[DynamicOption\(typeof\(MaskedTokenOptionsEntry\)\)\]\s*public string AuthToken\b',
         options,
     ), "AuthToken must use the masked option handler"
-    assert "class MaskedTokenOptionsEntry : StringOptionsEntry" in masked_token
-    assert "input.contentType = TMP_InputField.ContentType.Password" in masked_token
-    assert "input.ForceLabelUpdate()" in masked_token
-    assert "input == null" in masked_token
+    assert "class MaskedTokenOptionsEntry : MaskedStringOptionsEntry" in masked_token
+    assert "class MaskedStringOptionsEntry : StringOptionsEntry" in masked_string
+    assert "input.contentType = TMP_InputField.ContentType.Password" in masked_string
+    assert "input.ForceLabelUpdate()" in masked_string
+    assert "input == null" in masked_string
     create_options = method_body(options, "public IEnumerable<IOptionsEntry> CreateOptions")
     for entry in ("OniMcpStatus", "OpenBrowser", "RestartMcpServer", "OpenConfigFolder", "OpenProjectSupport"):
         assert entry in create_options
