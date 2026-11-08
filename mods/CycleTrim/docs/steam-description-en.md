@@ -28,7 +28,7 @@ Uploading and reading back the whole map for every operator can erase the benefi
 [list]
 [*]Development builds have shown two gases and two liquids sharing cells. Three or more components and complete save/load are not yet integrated end to end.
 [*]The development timestep uses GPU thermal diffusion over the grid. Eligible gas regions use GPU concentration diffusion, density-gradient velocity, pressure projection, transport and heat; eligible liquid regions use GPU multicomponent diffusion. Some conditions still use CPU processing or exclude a region.
-[*]Operator mass/energy tests and a short test-save run have been exercised on an RTX 4060. Gas operators can share GPU buffers, but uploads, synchronization and readback remain; the whole game simulation is not on the GPU.
+[*]Operator mass/energy tests and a short test-save run have been performed. Gas operators can share GPU buffers, but uploads, synchronization and readback remain; the whole game simulation is not on the GPU.
 [*]Phase changes, bubbles, some liquid flow, disease, radiation, building interactions and publication still rely on the CPU. Multiple gas channels across a region do not mean every cell can already hold three or more substances.
 [*]Published pressure, partial pressure and liquid volume fractions are unfinished; breathing, plants, pipes and other interactions still need end-to-end validation.
 [/list]
