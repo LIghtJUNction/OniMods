@@ -17,7 +17,7 @@ Steam 客户端须登录条目所有者账号。核对 `onim.toml`、当前条�
 onim workshop page set <ID> --description-file <en-file> --chinese-description-file <zh-file> --change-note <note>
 ```
 
-中英文描述为 UTF-8、每种 1–8000 字符；标题 1–128 字符。`--tags` 替换整组标签，visibility 可为 public/friends/private/unlisted。预览图须为 1 字节至 10 MiB 的 PNG/JPEG。只改中文一侧时保留当前中文另一字段；只改英文标题、标签或可见性时不要重交被截断的英文正文。页面更新只改元数据，不上传内容；预览图走 Legacy 预览 API。
+中英文描述为 UTF-8、每种 1–8000 字符；标题 1–128 字符。`--tags` 替换整组标签，visibility 可为 public/friends/private/unlisted。预览图须为 1 字节至 10 MiB 的 PNG/JPEG/GIF。只改中文一侧时保留当前中文另一字段；只改英文标题、标签或可见性时不要重交被截断的英文正文。页面更新只改元数据，不上传内容；预览图走 Legacy 预览 API。
 
 提交后最多等待 60 秒并回读：字段一致、Legacy 文件句柄仍在且 ZIP 字节数不变，否则报告失败，绝不改用目录上传。截图画廊、讨论区、依赖关系和删除不由此命令处理。
 

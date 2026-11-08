@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README_EN.md"><img alt="OniMcp — MCP-native colony operations" src="mods/OniMcp/preview.png" width="47%"></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust SimDLL with GPU passes and experimental multicomponent cells" src="mods/CycleTrim/preview.png" width="47%"></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust SimDLL with GPU passes and experimental multicomponent cells" src="mods/CycleTrim/preview.gif" width="47%"></a>
 </p>
 
 <p align="center">

@@ -85,8 +85,8 @@ internal static class SteamWorkshopPage
         var before = Read(id, "english");
         RequireLegacy(before, "before the preview edit");
         var extension = Path.GetExtension(preview).ToLowerInvariant();
-        if (extension is not (".png" or ".jpg" or ".jpeg"))
-            throw new ArgumentException("Preview must be PNG or JPEG");
+        if (extension is not (".png" or ".jpg" or ".jpeg" or ".gif"))
+            throw new ArgumentException("Preview must be PNG, JPEG, or GIF");
         var bytes = File.ReadAllBytes(preview);
         if (bytes.Length is 0 or > 10 * 1024 * 1024)
             throw new ArgumentException("Preview must be between 1 byte and 10 MiB");

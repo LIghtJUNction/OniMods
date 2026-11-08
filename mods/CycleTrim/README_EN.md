@@ -1,5 +1,7 @@
 # CycleTrim
 
+![CycleTrim](preview.gif)
+
 **Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) first, then restart the game. Consumer packages no longer embed Jlib.
 
 A disruptive, high-risk experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. **Use it only with disposable test saves.**

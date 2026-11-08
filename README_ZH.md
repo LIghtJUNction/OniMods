@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="mods/OniMcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/OniMcp/preview.png" width="47%" /></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust 仿真内核 + GPU 算子 + 一格多物实验" src="mods/CycleTrim/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — Rust 仿真内核 + GPU 算子 + 一格多物实验" src="mods/CycleTrim/preview.gif" width="47%" /></a>
 </p>
 
 <p align="center">

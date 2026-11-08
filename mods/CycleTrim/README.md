@@ -1,5 +1,7 @@
 # CycleTrim
 
+![CycleTrim](preview.gif)
+
 **前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。消费者包不再内嵌一份 Jlib。
 
 极具颠覆性的高风险实验性性能优化 Mod，仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。**只在可丢弃的测试存档上使用。**
