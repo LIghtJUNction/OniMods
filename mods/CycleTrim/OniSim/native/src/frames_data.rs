@@ -11,6 +11,7 @@ pub(crate) struct GameData {
     pub(crate) events: EventQueues,
     pub(crate) visible: Vec<u8>,
     pub(crate) presentation: PresentationBuffers,
+    pub(crate) presentation_revision: u64,
     pub(crate) multicomponent: MulticomponentBuffers,
     pub(crate) retired_slots: Vec<EarlyCommands>,
 }
@@ -29,6 +30,7 @@ impl GameData {
             events: EventQueues::default(),
             visible: filled(previous.len(), 0)?,
             presentation: PresentationBuffers::new(previous.len())?,
+            presentation_revision: 0,
             multicomponent: MulticomponentBuffers::new(previous.len())?,
             retired_slots: Vec::new(),
         })

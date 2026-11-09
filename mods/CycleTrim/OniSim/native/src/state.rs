@@ -49,6 +49,7 @@ pub(crate) struct State {
     pub(crate) queued_component_commands: usize,
     pub(crate) borrowed_ranges: Vec<(usize, usize)>,
     pub(crate) multicomponent_update: Option<Result<OniSimMulticomponentUpdate>>,
+    pub(crate) presentation_update: Option<crate::presentation_revision::PresentationUpdate>,
     pub(crate) save_image: Option<Vec<u8>>,
     pub(crate) fault: Option<String>,
 }
@@ -353,6 +354,9 @@ impl State {
         self.multicomponent_update = Some(data.multicomponent.descriptor(self.generation));
         let grid = self.grid.as_mut().unwrap();
         grid.copy_from(&data.grid);
+        self.presentation_update = Some(crate::presentation_revision::PresentationUpdate::new(
+            self.generation, data.presentation_revision, grid.len(), data.presentation.pointers(),
+        ));
         self.scheduler.free_slots.append(&mut data.retired_slots);
         Ok(grid.descriptor() as *mut c_void)
     }
@@ -401,6 +405,7 @@ impl State {
         self.queued_component_commands = 0;
         self.borrowed_ranges.clear();
         self.multicomponent_update = None;
+        self.presentation_update = None;
         self.save_image = None;
         self.fault = None;
         if changed {

@@ -64,6 +64,11 @@ mod partial_transition;
 mod postprocess;
 mod postprocess_pressure;
 mod presentation;
+mod presentation_revision;
+#[cfg(test)]
+mod presentation_revision_tests;
+#[cfg(test)]
+mod native_chain_tests;
 mod radiation;
 mod radiation_rays;
 mod radiation_region;
@@ -135,6 +140,40 @@ pub extern "C" fn ONISIM_GetLastError() -> *const c_char {
 #[unsafe(no_mangle)]
 pub extern "C" fn ONISIM_GetGeneration() -> u64 {
     boundary(0, || Ok(state::lock()?.generation))
+}
+
+#[unsafe(no_mangle)]
+/// Copies metadata for the currently published texture images under one lock.
+/// Returns one only after a completed publication with a reusable revision.
+/// The pointers identify that publication; this call does not extend its life.
+///
+/// # Safety
+/// `destination` must designate `capacity` writable bytes exclusively for this
+/// call, and must not overlap native storage. The current v1 record is 64 bytes.
+pub unsafe extern "C" fn ONISIM_GetPresentationUpdate(
+    destination: *mut presentation_revision::PresentationUpdate,
+    capacity: u32,
+) -> i32 {
+    boundary(0, || {
+        let size = std::mem::size_of::<presentation_revision::PresentationUpdate>();
+        if destination.is_null() || capacity as usize != size {
+            return Err(bytes::invalid("presentation metadata requires a 64-byte destination"));
+        }
+        // An existing species lease already owns State on this thread. Decline
+        // instead of attempting to reacquire its non-reentrant mutex.
+        if MULTICOMPONENT_READ_LEASE.with(|lease| lease.borrow().is_some()) {
+            return Err(Error::new(Status::InvalidState, "release the species lease before querying presentation"));
+        }
+        let state = state::lock()?;
+        if (destination as usize).checked_add(size).is_none()
+            || state.overlaps_native_storage(destination as usize, size)
+        {
+            return Err(bytes::invalid("presentation metadata destination overlaps native storage"));
+        }
+        let update = state.presentation_update.unwrap_or_default();
+        unsafe { destination.write_unaligned(update); }
+        Ok(i32::from(state.active && update.generation != 0 && update.revision != 0))
+    })
 }
 
 #[unsafe(no_mangle)]

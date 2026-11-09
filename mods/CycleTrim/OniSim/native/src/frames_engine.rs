@@ -29,7 +29,10 @@ pub(crate) struct Engine {
     // Both GameData buffers must have seen the same unchanged world before
     // their derived presentation can be reused on alternating idle batches.
     empty_publication_streak: u8,
-    idle_frames_previous: bool,
+    // An idle zero-time batch synchronizes read/write without changing cells.
+    // Empty batches after that synchronization do not make read stale again.
+    idle_read_synchronized: bool,
+    presentation_revision: crate::presentation_revision::PresentationRevision,
     publication_profile: [u32; 4],
     zero_frame_command_mask: u8,
     zero_command_batches: [u32; 6],
@@ -66,7 +69,8 @@ impl Engine {
             residual_time: 0.0,
             gpu,
             empty_publication_streak: 0,
-            idle_frames_previous: false,
+            idle_read_synchronized: false,
+            presentation_revision: Default::default(),
             publication_profile: [0; 4],
             zero_frame_command_mask: 0,
             zero_command_batches: [0; 6],
@@ -76,6 +80,7 @@ impl Engine {
 
     pub(crate) fn invalidate_empty_publications(&mut self) {
         self.empty_publication_streak = 0;
+        self.idle_read_synchronized = false;
     }
 
     /// One official Step/CopySimDataToGame batch. The worker calls this with
@@ -93,10 +98,11 @@ impl Engine {
                 && frame.world.is_empty() && frame.thermal.is_empty() && frame.mass.is_empty()
                 && frame.radiation.is_empty()
         });
-        // Empty batches do not synchronize world.read, whereas zero-time
-        // frames do. Fill both publication buffers again when switching modes.
-        if idle_frames != self.idle_frames_previous { self.empty_publication_streak = 0; }
-        self.idle_frames_previous = idle_frames;
+        // The first idle zero-time batch may change world.read, which flow and
+        // liquid presentation also read. Refill both buffers then. Once that
+        // synchronization is established, empty/zero alternation is unchanged
+        // work: the worker may select either kind after a real Prepare handoff.
+        if idle_frames && !self.idle_read_synchronized { self.empty_publication_streak = 0; }
         let unchanged_batch = empty_batch || idle_frames;
         let reuse_derived = unchanged_batch && self.empty_publication_streak >= 2;
         static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -266,7 +272,11 @@ impl Engine {
         let grid_ms = lap();
         if !reuse_derived {
             output.presentation.update(&self.world, &self.elements)?;
+            self.presentation_revision.generated();
         }
+        // The existing reuse gate proves both alternating buffers contain the
+        // unchanged derived images. Their different addresses share one identity.
+        output.presentation_revision = self.presentation_revision.current();
         let textures_ms = lap();
         if !reuse_derived {
             output.multicomponent.update_from_world(
@@ -285,6 +295,7 @@ impl Engine {
         // ReadyLease::release_with. The native Step swaps output's existing
         // visibility storage here; copying old.visible would remove its delay.
         std::mem::swap(&mut self.world.active_mask, &mut output.visible);
+        if idle_frames { self.idle_read_synchronized = true; }
         if unchanged_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
         if profile_batch {
             let finalize_ms = lap();

@@ -15,6 +15,46 @@ namespace CycleTrim.Optimizations.Tests
         private const int Iterations = 4;
         private const int WarmupPerSample = 4;
 
+        // The regression entry runs the complete fixed matrix without reading
+        // a clock. Count/content failures must be resolved before performance.
+        internal static void Preflight(string path)
+        {
+            foreach (var shape in new[] { new[] { 96, 96 }, new[] { 256, 384 }, new[] { 736, 304 } })
+                foreach (string scenario in new[] { "render_repeat", "zero_prepare", "command_two_prepares" })
+                    using (var fixture = new PresentationUploadNativeFixture(path, shape[0], shape[1]))
+                    {
+                        var textures = new PropertyTextures(shape[0], shape[1]);
+                        PresentationUploadGate.SetReader(fixture.Reader);
+                        for (int i = 0; i < 8; i++) { fixture.Step(); textures.LateUpdate(); }
+                        string expectedHash = null;
+                        foreach (bool original in new[] { true, false })
+                        {
+                            for (int i = 0; i < WarmupPerSample; i++)
+                                Advance(fixture, textures, scenario, original, i);
+                            int loads = textures.Textures.Sum(texture => texture.LoadCalls);
+                            int applies = textures.Textures.Sum(texture => texture.ApplyCalls);
+                            for (int i = 0; i < Iterations; i++)
+                                Advance(fixture, textures, scenario, original, i);
+                            loads = textures.Textures.Sum(texture => texture.LoadCalls) - loads;
+                            applies = textures.Textures.Sum(texture => texture.ApplyCalls) - applies;
+                            int expected = original || scenario == "command_two_prepares" ? Iterations * 5 : 0;
+                            PresentationUploadRegression.Check(loads == expected && applies == expected,
+                                "preflight " + shape[0] + "x" + shape[1] + " " + scenario
+                                + " original=" + original + " expected=" + expected
+                                + " loads=" + loads + " applies=" + applies);
+                            fixture.EqualPixels(textures);
+                            string hash = Hash(textures);
+                            if (expectedHash == null) expectedHash = hash;
+                            PresentationUploadRegression.Check(hash == expectedHash,
+                                "preflight original/candidate five-image SHA256 matches");
+                            Console.WriteLine("preflight=" + shape[0] + "x" + shape[1] + ";scenario=" + scenario
+                                + ";variant=" + (original ? "original" : "revision_gate")
+                                + ";loads=" + loads + ";applies=" + applies + ";sha256=" + hash);
+                        }
+                    }
+            Console.WriteLine("PASS nine-scene presentation count/content preflight; no performance timing");
+        }
+
         internal static void Run(string path)
         {
             var harmony = PresentationUploadRegression.Install();
@@ -24,7 +64,9 @@ namespace CycleTrim.Optimizations.Tests
                 Console.WriteLine("runtime=" + Environment.Version + ";native=" + path + ";blocks=" + Blocks
                     + ";iterations=" + Iterations + ";warmup_per_sample=" + WarmupPerSample
                     + ";order=alternating ABBA/BAAB;gpu=" + Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_GPU")
-                    + ";workers=" + Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS"));
+                    + ";workers=" + Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS")
+                    + ";stopwatch_frequency=" + Stopwatch.Frequency
+                    + ";tiered_compilation=" + Environment.GetEnvironmentVariable("DOTNET_TieredCompilation"));
                 Console.WriteLine("sample,shape,scenario,variant,block,position,ticks,iterations,loads,applies,loaded_bytes,managed_allocated_bytes,revision,sha256");
                 foreach (var shape in new[] { new[] { 96, 96 }, new[] { 256, 384 }, new[] { 736, 304 } })
                     foreach (string scenario in new[] { "render_repeat", "zero_prepare", "command_two_prepares" })

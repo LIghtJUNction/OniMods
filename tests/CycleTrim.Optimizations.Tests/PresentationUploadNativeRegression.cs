@@ -107,6 +107,7 @@ namespace CycleTrim.Optimizations.Tests
                     fixture.EqualPixels(textures);
                 }
                 Console.WriteLine("PASS real native worker -> Prepare descriptor -> managed revision gate -> instrumented Unity uploads; graphics hardware not exercised");
+                PresentationUploadNativeBenchmark.Preflight(path);
             }
             finally
             {
