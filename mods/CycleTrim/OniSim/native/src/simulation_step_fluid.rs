@@ -4,10 +4,6 @@ use crate::events::EventQueues;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{PhysicsWorld, Region};
 
-#[cfg(test)]
-#[path = "simulation_step_fluid_tests.rs"]
-mod tests;
-
 thread_local! {
     static LIQUID_PRESSURE: std::cell::RefCell<crate::fluid_pressure::PressureScratch> =
         std::cell::RefCell::new(crate::fluid_pressure::PressureScratch::default());
@@ -128,36 +124,9 @@ pub(crate) fn liquid_phase_with_flow(
     LIQUID_PRESSURE.with(|scratch| {
         let mut scratch = scratch.borrow_mut();
         let pressure_changed = scratch.run(world, elements, diseases, events, region);
-        if region.min_x == region.max_x {
-            return false;
-        }
-        // Pressure preparation already inspected every primary phase in this
-        // region, including liquids ineligible for its implicit solve. The
-        // native displacement bounds can also visit rows below min_y; check
-        // only that extra strip before omitting the two empty explicit scans.
-        if !scratch.has_primary_liquid && !extra_displacement_rows_have_liquid(world, elements, region) {
-            return flow_already_applied || pressure_changed;
-        }
         liquid_phase_after_pressure(world, elements, diseases, events, region,
             flow_already_applied || pressure_changed, &scratch.covered)
     })
-}
-
-fn extra_displacement_rows_have_liquid(
-    world: &PhysicsWorld,
-    elements: &ElementTable,
-    region: Region,
-) -> bool {
-    let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
-    for y in min_y..max_y.min(region.min_y) {
-        for x in min_x..max_x {
-            let cell = y as usize * world.stride + x as usize;
-            if old_phase(world, elements, cell) == 2 {
-                return true;
-            }
-        }
-    }
-    false
 }
 
 fn liquid_phase_after_pressure(

@@ -53,9 +53,6 @@ pub(crate) struct PressureScratch {
     nodes: Vec<Node>,
     faces: Vec<Face>,
     pub(crate) covered: Vec<u8>,
-    // Includes liquid cells excluded from the pressure solve. The following
-    // explicit liquid pass uses the same read snapshot and may still visit them.
-    pub(crate) has_primary_liquid: bool,
     #[cfg(test)]
     pub(crate) last_sweeps: usize,
     #[cfg(test)]
@@ -110,7 +107,6 @@ impl PressureScratch {
         }
         self.nodes.clear();
         self.faces.clear();
-        self.has_primary_liquid = false;
         #[cfg(test)]
         {
             self.last_sweeps = 0;
@@ -128,18 +124,14 @@ impl PressureScratch {
         let max_x = (region.max_x as usize).min(world.width + 1);
         let min_y = region.min_y.max(1) as usize;
         let max_y = (region.max_y as usize).min(world.height + 1);
-        let mut has_primary_liquid = false;
         for y in min_y..max_y {
             for x in min_x..max_x {
                 let cell = y * world.stride + x;
                 let element = world.read.element[cell];
                 let record = &elements.elements[element as usize].record;
                 let mass = world.read.mass[cell];
-                if record.state & 3 != 2 {
-                    continue;
-                }
-                has_primary_liquid = true;
-                if !(mass > 0.0)
+                if record.state & 3 != 2
+                    || !(mass > 0.0)
                     || !mass.is_finite()
                     || world.write.element[cell] != element
                     || world.write.mass[cell] != mass
@@ -177,7 +169,6 @@ impl PressureScratch {
                 });
             }
         }
-        self.has_primary_liquid = has_primary_liquid;
         for a in 0..self.nodes.len() {
             let cell = self.nodes[a].cell;
             for (other, direction, opposite) in [(cell + 1, 1, 0), (cell + world.stride, 3, 2)] {
