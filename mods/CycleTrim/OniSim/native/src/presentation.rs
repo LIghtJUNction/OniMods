@@ -13,6 +13,10 @@ mod sun;
 #[path = "presentation_validation_tests.rs"]
 mod validation_tests;
 
+#[cfg(test)]
+#[path = "presentation_history_tests.rs"]
+mod history_tests;
+
 use crate::bytes::overlaps;
 use crate::status::{Error, Result, Status};
 use crate::tables::ElementTable;
@@ -66,8 +70,23 @@ impl PresentationBuffers {
         Ok(())
     }
 
-    /// Content identity includes retained pixels outside current world offsets.
-    /// Float equality is insufficient: +0/-0 and NaN payloads are image bytes.
+    /// Compare the only image history retained by a complete update.
+    ///
+    /// This implies full image equality ONLY after Engine has updated both
+    /// fixed-shape buffers from the same unchanged world/read snapshot and
+    /// immutable element table, on its worker with unchanged FP controls. Flow
+    /// is fully overwritten; the three liquid images are functions of those
+    /// inputs and exposed, except for their constructor-zero final row. Their
+    /// gradient scratch is reset on every update. Borrowed images are read-only.
+    /// Arbitrary buffers, changed inputs, or different lifecycles do not satisfy
+    /// this precondition: equal exposed bytes alone are not content identity.
+    pub(crate) fn same_exposed_history(&self, other: &Self) -> bool {
+        self.exposed == other.exposed
+    }
+
+    /// Independent full-content oracle, including retained pixels. Float
+    /// equality is insufficient: +0/-0 and NaN payloads are image bytes.
+    #[cfg(test)]
     pub(crate) fn same_image_bytes(&self, other: &Self) -> bool {
         let flow_equal = self.flow.len() == other.flow.len() && unsafe {
             // Every element is an initialized, padding-free [f32; 2]. These

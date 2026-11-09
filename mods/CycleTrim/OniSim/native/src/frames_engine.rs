@@ -32,8 +32,9 @@ pub(crate) struct Engine {
     // An idle zero-time batch synchronizes read/write without changing cells.
     // Empty batches after that synchronization do not make read stale again.
     idle_read_synchronized: bool,
-    // None until the first reuse in this epoch compares all five image bytes.
-    // Warmup alone does not prove equality of sunlight's retained pixels.
+    // None until the first reuse compares sunlight's retained pixels. Within
+    // this warmed, unchanged epoch, the other four images are fully derived
+    // from the same inputs; warmup alone does not erase sunlight history.
     presentation_images_equal: Option<bool>,
     presentation_revision: crate::presentation_revision::PresentationRevision,
     publication_profile: [u32; 4],
@@ -291,7 +292,7 @@ impl Engine {
             // nonzero per-buffer IDs that would otherwise survive a reuse.
             output.presentation_revision = 0;
         } else if *self.presentation_images_equal.get_or_insert_with(|| {
-            output.presentation.same_image_bytes(&old.presentation)
+            output.presentation.same_exposed_history(&old.presentation)
         }) {
             // Both buffers contain exactly the same five images. A different
             // retained sunlight history instead keeps this buffer's own ID.
