@@ -48,9 +48,12 @@ fn fixture() -> State {
 
 #[test]
 fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() {
+    use crate::frames::QueuedFrame;
     use crate::frames_data::GameData;
     use crate::frames_engine::Engine;
+    use crate::grid::{Grid, DESCRIPTOR_SIZE};
     use crate::multicomponent_publication::{OniSimMulticomponentCellHeader, OniSimMulticomponentSpeciesRecord};
+    use std::sync::Mutex;
 
     fn snapshot(data: &GameData) -> (Vec<Vec<u8>>, Vec<OniSimMulticomponentCellHeader>, Vec<OniSimMulticomponentSpeciesRecord>) {
         let sizes = [8, 4, 4, 4, 1];
@@ -64,57 +67,204 @@ fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() 
         (textures, cells, species)
     }
 
+    fn image(grid: &Grid) -> Vec<u8> {
+        let mut bytes = vec![0; grid.image_len()];
+        grid.write_image(&mut bytes);
+        bytes
+    }
+
+    fn descriptor(grid: &Grid) -> Vec<u8> {
+        // Owned, initialized descriptor storage remains live throughout this read.
+        unsafe { std::slice::from_raw_parts(grid.descriptor(), DESCRIPTOR_SIZE).to_vec() }
+    }
+
+    fn bits(values: &[f32]) -> Vec<u32> {
+        values.iter().map(|value| value.to_bits()).collect()
+    }
+
+    fn empty_frame(early: crate::frames_commands::EarlyCommands) -> QueuedFrame {
+        QueuedFrame {
+            elapsed: 0.0, early, material: Default::default(), world: Default::default(),
+            thermal: Default::default(), mass: Default::default(), radiation: Default::default(),
+        }
+    }
+
     let mut state = fixture();
     let mut world = state.world.take().unwrap();
     world.world_offsets = vec![[0, 0, 4, 4]];
     let cell = world.internal_index(5);
-    world.write.element[cell] = 2;
-    world.write.mass[cell] = 10.0;
-    world.write.temperature[cell] = 300.0;
+    for public in 0..16 {
+        let internal = world.internal_index(public);
+        world.write.element[internal] = 2;
+        world.write.mass[internal] = 10.0 + public as f32;
+        world.write.temperature[internal] = 300.0 + public as f32;
+        world.write.properties[internal] = (public % 8) as u8;
+        world.write.insulation[internal] = public as u8;
+        world.write.strength[internal] = 100 + public as u8;
+        world.write.radiation[internal] = f32::from_bits(0x8000_0000 | public as u32);
+        world.write.disease_count[internal] = public as i32;
+        world.write.disease_infestation[internal] = 200 + public as u8;
+        world.write.disease_growth[internal] = f32::from_bits(0x7fc0_0000 | public as u32);
+        world.backwall_element[internal] = 2;
+        world.backwall_mass[internal] = 20.0 + public as f32;
+        world.backwall_temperature[internal] = 350.0 + public as f32;
+    }
     world.sync_read_from_write();
     let grid = state.grid.as_ref().unwrap();
     let mut buffers = [ok(GameData::new(grid)), ok(GameData::new(grid))];
-    let mut engine = Engine::new(world, state.elements.take().unwrap(), state.diseases.take(),
-        std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass), std::mem::take(&mut state.radiation_emitters));
-    engine.gpu = None;
-    for iteration in 0..20 {
-        if iteration == 10 {
-            engine.world.write.mass[cell] = 25.0;
-            engine.world.write.temperature[cell] = 350.0;
-            engine.world.sync_read_from_write();
-            engine.invalidate_empty_publications();
+    for (slot, data) in buffers.iter_mut().enumerate() {
+        // Distinct initial cells catch one-slot warmup; distinct reserved bytes
+        // must survive every publication, including cache invalidation.
+        data.grid.load_image(&vec![0xa0 + slot as u8; data.grid.image_len()]);
+        data.grid.radiation.fill(-999.0 - slot as f32);
+        data.grid.accumulated_flow.fill(-888.0 - slot as f32);
+    }
+    let engine = Arc::new(Mutex::new(Engine::new(world,
+        Arc::clone(state.elements.as_ref().unwrap()), state.diseases.clone(),
+        std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass),
+        std::mem::take(&mut state.radiation_emitters))));
+    engine.lock().unwrap().gpu = None;
+    state.engine = Some(Arc::clone(&engine));
+    let mut observed_flow_resets = [false; 2];
+
+    // Each mode lasts long enough to warm both slots and cross the global
+    // fifteen-publication reset twice. Do not assume Initialize resets its phase.
+    for iteration in 0..256 {
+        let zero_frame = (iteration / 64) % 2 != 0;
+        if iteration % 64 == 0 {
+            ok(state.with_world_mut(|world| {
+                world.accumulated_flow.fill(3.5 + iteration as f32);
+                if iteration == 192 {
+                    world.backwall_element[cell] = u16::MAX;
+                    world.backwall_mass[cell] = 123.0;
+                    world.backwall_temperature[cell] = 456.0;
+                }
+                Ok(())
+            }));
         }
+        if iteration == 32 {
+            ok(state.with_world_mut(|world| {
+                world.write.mass[cell] = 25.0;
+                world.write.temperature[cell] = 375.0;
+                world.write.radiation[cell] = f32::from_bits(0x7fc0_1234);
+                world.write.disease_growth[cell] = -0.0;
+                Ok(())
+            }));
+        }
+        if iteration == 96 {
+            send(&mut state, crate::frames_commands::SET_STRENGTH, &float_command(5, 77.0));
+            send(&mut state, crate::frames_commands::SET_INSULATION, &float_command(5, 0.5));
+            let mut backwall = [0u8; 16];
+            backwall[..4].copy_from_slice(&5_i32.to_le_bytes());
+            backwall[4..6].copy_from_slice(&1_u16.to_le_bytes());
+            backwall[8..12].copy_from_slice(&42_f32.to_le_bytes());
+            backwall[12..].copy_from_slice(&280_f32.to_le_bytes());
+            send(&mut state, crate::frames_commands::MODIFY_BACKWALL, &backwall);
+            let mut disease = [0u8; 12];
+            disease[..4].copy_from_slice(&5_i32.to_le_bytes());
+            disease[4] = u8::MAX;
+            disease[8..].copy_from_slice(&19_i32.to_le_bytes());
+            send(&mut state, crate::frames_commands::MODIFY_DISEASE, &disease);
+            let mut radiation = [0u8; 12];
+            radiation[..4].copy_from_slice(&6_i32.to_le_bytes());
+            radiation[4..8].copy_from_slice(&12_f32.to_le_bytes());
+            radiation[8..].copy_from_slice(&43_i32.to_le_bytes());
+            send(&mut state, -1_914_877_797, &radiation);
+        }
+        if iteration == 160 {
+            // Real synchronous message routing invalidates an Engine-owned world.
+            send(&mut state, crate::world_messages::CLEAR, &[]);
+        }
+        if iteration == 224 {
+            let elements = Arc::clone(state.elements.as_ref().unwrap());
+            let diseases = state.diseases.clone();
+            // Exercise save's backwall normalization through the mutation guard.
+            // This is not a call to the process-global SIM_BeginSave FFI entry.
+            ok(state.with_world_mut(|world| {
+                crate::save::serialize(world, &elements, diseases.as_deref(), 0, 0).map(|_| ())
+            }));
+        }
+        let frames = if zero_frame {
+            let mut debug = [0u8; 12];
+            debug[..4].copy_from_slice(&(iteration as f32).to_le_bytes());
+            debug[4..8].copy_from_slice(&0.001_f32.to_le_bytes());
+            debug[8] = (iteration % 2) as u8;
+            send(&mut state, crate::frames_commands::SET_DEBUG, &debug);
+            let extra_early = state.early.clone();
+            let mut frame = empty_frame(std::mem::take(&mut state.early));
+            frame.radiation = state.radiation_emitters.take_pending();
+            let mut frames = vec![frame];
+            if iteration % 17 == 0 { frames.push(empty_frame(extra_early)); }
+            frames
+        } else { Vec::new() };
+        let frame_count = frames.len();
         let [first, second] = &mut buffers;
         let (output, old) = if iteration % 2 == 0 { (first, &*second) } else { (second, &*first) };
-        // Prepare normally recycles each returned frame slot before reuse.
         output.retired_slots.clear();
-        let frames = if (iteration / 4) % 2 == 0 { Vec::new() } else {
-            let mut early=crate::frames_commands::EarlyCommands::default();
-            let mut debug=[0u8;12];
-            debug[..4].copy_from_slice(&(iteration as f32).to_le_bytes());
-            debug[4..8].copy_from_slice(&0.001f32.to_le_bytes());
-            debug[8]=(iteration % 2) as u8;
-            let shape=crate::worker_shape::WorldShape::from_world(&engine.world);
-            assert!(ok(early.queue(crate::frames_commands::SET_DEBUG,&debug,&shape,&engine.elements,engine.diseases.as_deref())));
-            vec![crate::frames::QueuedFrame {
-                elapsed: 0.0, early, material: Default::default(),
-                world: Default::default(), thermal: Default::default(), mass: Default::default(),
-                radiation: Default::default(),
-            }]
-        };
+        // ReadyLease normally places incoming visibility into this next output slot.
+        output.visible.fill((iteration % 251) as u8);
+        let before_descriptor = descriptor(&output.grid);
+        let texture_pointers = output.presentation.pointers();
+        let mut expected = ok(Grid::new(4, 4, 0, 0));
+        expected.copy_from(&output.grid);
+        let mut engine = engine.lock().unwrap();
+        let incoming_visibility = output.visible.clone();
+        let previous_visibility = engine.world.active_mask.clone();
+        let flow_before: Vec<_> = (0..16)
+            .map(|public| engine.world.accumulated_flow[engine.world.internal_index(public)])
+            .collect();
         ok(engine.run_batch(frames, &[], output, old));
-        if (iteration / 4) % 2 != 0 {
+        if flow_before.iter().any(|value| value.to_bits() != 0)
+            && engine.world.accumulated_flow.iter().all(|value| value.to_bits() == 0)
+        { observed_flow_resets[usize::from(zero_frame)] = true; }
+
+        // Rebuild only the public snapshot, not a second Engine. The flow image
+        // belongs to the pre-reset publication even when the world is now zero.
+        engine.world.publish_to(&mut expected);
+        expected.accumulated_flow.copy_from_slice(&flow_before);
+        assert_eq!(image(&output.grid), image(&expected), "grid image at batch {iteration}");
+        assert_eq!(bits(&output.grid.radiation), bits(&expected.radiation), "radiation at {iteration}");
+        assert_eq!(bits(&output.grid.accumulated_flow), bits(&flow_before), "flow at {iteration}");
+        expected.set_num_frames(frame_count as i32);
+        ok(output.events.publish_to(&mut expected));
+        let after_descriptor = descriptor(&output.grid);
+        let expected_descriptor = descriptor(&expected);
+        assert_eq!(&after_descriptor[..4], &expected_descriptor[..4]);
+        assert_eq!(&after_descriptor[4..100], &before_descriptor[4..100]);
+        assert_eq!(&after_descriptor[100..448], &expected_descriptor[100..448]);
+        assert_eq!(&after_descriptor[448..456], &before_descriptor[448..456]);
+        assert_eq!(texture_pointers, output.presentation.pointers());
+        for (index, pointer) in texture_pointers.into_iter().enumerate() {
+            let at = 456 + index * 8;
+            assert_eq!(u64::from_le_bytes(after_descriptor[at..at + 8].try_into().unwrap()), pointer as u64);
+        }
+        assert_eq!(output.retired_slots.len(), frame_count);
+        assert_eq!(engine.world.active_mask, incoming_visibility);
+        assert_eq!(output.visible, previous_visibility);
+        if zero_frame {
             assert_eq!(engine.world.building_heat_transfer_scale, iteration as f32);
             assert_eq!(engine.world.simulate_all_active, iteration % 2 != 0);
         }
+        if iteration == 96 {
+            assert_eq!(output.grid.strength[5], 77);
+            assert_eq!(output.grid.insulation[5], 127);
+            assert_eq!(output.grid.backwall_mass[5], 42.0);
+            assert_eq!(output.grid.disease_count[5], 24);
+            assert_eq!(output.events.radiation_consumed_callbacks.len(), 1);
+        }
+        if iteration == 224 { assert_eq!(output.grid.backwall_mass[5], 0.0); }
         let cached = snapshot(output);
         ok(output.presentation.update(&engine.world, &engine.elements));
         output.multicomponent.update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {
             let internal = engine.world.internal_index(public);
             (engine.world.mixture_element[internal], engine.world.mixture_mass[internal])
         });
-        assert_eq!(cached, snapshot(output), "empty batch {iteration}");
+        assert_eq!(cached, snapshot(output), "derived snapshot at batch {iteration}");
     }
+    // Other Engine tests share the global reset phase. Verify both idle modes,
+    // without requiring each individual segment to own a reset publication.
+    assert!(observed_flow_resets.into_iter().all(|observed| observed),
+        "both idle modes must cross a real flow reset");
 }
 
 #[test]
@@ -156,6 +306,74 @@ fn benchmark_empty_publication_reuse() {
             step += 1;
         }
         eprintln!("idle publication zero_frame={zero_frame} reuse={reuse}: {:.3} ms/batch", start.elapsed().as_secs_f64() * 1000.0 / 30.0);
+    }
+}
+
+#[test]
+#[ignore = "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"]
+fn benchmark_warmed_idle_publication() {
+    use crate::frames::QueuedFrame;
+    use crate::frames_data::GameData;
+    use crate::frames_engine::Engine;
+    use crate::grid::Grid;
+    use crate::world::PhysicsWorld;
+    use std::{hint::black_box, time::Instant};
+
+    const WARMUP_BATCHES: usize = 8;
+    const SAMPLES: usize = 21;
+    println!("IDLE_BATCH_HEADER,mode,width,height,warmup_batches,samples,batches_per_sample,median_us,p95_us,min_us,max_us,samples_us");
+    for (width, height) in [(96, 96), (256, 384), (736, 304)] {
+        for zero_frame in [false, true] {
+            let mut state = fixture();
+            let elements = state.elements.take().unwrap();
+            let mut world = ok(PhysicsWorld::new(width, height, 0, &elements));
+            world.write.element.fill(2);
+            world.write.mass.fill(1.0);
+            world.write.temperature.fill(300.0);
+            world.world_offsets = vec![[0, 0, width as i32, height as i32]];
+            world.sync_read_from_write();
+            let grid = ok(Grid::new(width as i32, height as i32, 0, 0));
+            let mut buffers = [ok(GameData::new(&grid)), ok(GameData::new(&grid))];
+            let mut engine = Engine::new(world, elements, state.diseases.take(),
+                std::mem::take(&mut state.thermal), std::mem::take(&mut state.mass),
+                std::mem::take(&mut state.radiation_emitters));
+            engine.gpu = None;
+            let repeats = (8_000_000 / (width * height)).clamp(16, 400);
+            let mut step = 0usize;
+            let mut run = || {
+                let [first, second] = &mut buffers;
+                let (output, old) = if step % 2 == 0 { (first, &*second) } else { (second, &*first) };
+                output.retired_slots.clear();
+                let frames = if zero_frame { vec![QueuedFrame {
+                    elapsed: 0.0, early: Default::default(), material: Default::default(),
+                    world: Default::default(), thermal: Default::default(), mass: Default::default(),
+                    radiation: Default::default(),
+                }] } else { Vec::new() };
+                ok(black_box(&mut engine).run_batch(frames, &[], output, old));
+                black_box(&output.grid);
+                step += 1;
+            };
+            // Keep the existing reuse policy enabled in both executables. This
+            // compares the incremental Grid change, not the older derived cache.
+            for _ in 0..WARMUP_BATCHES { run(); }
+            let mut samples = Vec::with_capacity(SAMPLES);
+            for _ in 0..SAMPLES {
+                let start = Instant::now();
+                for _ in 0..repeats { run(); }
+                samples.push(start.elapsed().as_secs_f64() * 1e6 / repeats as f64);
+            }
+            drop(run);
+            for data in &buffers {
+                assert!(data.grid.mass.iter().all(|value| *value == 1.0));
+                assert!(data.grid.accumulated_flow.iter().all(|value| value.to_bits() == 0));
+            }
+            let mut ordered = samples.clone();
+            ordered.sort_by(f64::total_cmp);
+            let series = samples.iter().map(|value| format!("{value:.6}")).collect::<Vec<_>>().join(";");
+            let mode = if zero_frame { "zero" } else { "empty" };
+            println!("IDLE_BATCH,{mode},{width},{height},{WARMUP_BATCHES},{SAMPLES},{repeats},{:.6},{:.6},{:.6},{:.6},{series}",
+                ordered[SAMPLES / 2], ordered[(SAMPLES - 1) * 95 / 100], ordered[0], ordered[SAMPLES - 1]);
+        }
     }
 }
 
@@ -519,6 +737,14 @@ fn initialize_accepts_managed_zero_capacity_tail_but_rejects_nonzero_tail() {
 fn frame_batches_publish_every_submitted_frame() {
     let mut state = fixture();
     ok(state.start_worker(None));
+    let worker = state.worker.as_ref().unwrap().handle();
+    // Startup publishes an empty batch. Hold its barrier while submitting so
+    // neither OS scheduling nor a faster idle path can split this next batch.
+    let initial = ok(worker.wait_ready());
+    assert_eq!(
+        unsafe { std::ptr::read_unaligned(initial.data().grid.descriptor().cast::<i32>()) },
+        0
+    );
     let mut frame = vec![0_u8; 28];
     frame[12..16].copy_from_slice(&4_i32.to_le_bytes());
     frame[16..20].copy_from_slice(&4_i32.to_le_bytes());
@@ -538,17 +764,12 @@ fn frame_batches_publish_every_submitted_frame() {
         &batch,
     ));
     assert_eq!(state.scheduler.completed_frames, 2);
-    let worker = state.worker.as_ref().unwrap().handle();
-    let mut published = 0;
-    while published < 2 {
-        let ready = ok(worker.wait_ready());
-        let count =
-            unsafe { std::ptr::read_unaligned(ready.data().grid.descriptor().cast::<i32>()) };
-        assert!(count > 0);
-        published += count;
-        ok(ready.release());
-    }
-    assert_eq!(published, 2);
+    ok(initial.release());
+    let ready = ok(worker.wait_ready());
+    let count =
+        unsafe { std::ptr::read_unaligned(ready.data().grid.descriptor().cast::<i32>()) };
+    assert_eq!(count, 2);
+    ok(ready.release());
     ok(state.worker.as_mut().unwrap().shutdown());
 }
 

@@ -479,7 +479,7 @@ impl PhysicsWorld {
         copy_rows!(insulation, self.write.insulation);
         copy_rows!(strength, self.write.strength);
         copy_rows!(radiation, self.write.radiation);
-        copy_rows!(accumulated_flow, self.accumulated_flow);
+        self.publish_accumulated_flow_to(grid);
         copy_rows!(disease_idx, self.write.disease_idx);
         copy_rows!(disease_count, self.write.disease_count);
         copy_rows!(backwall_element, self.backwall_element);
@@ -498,6 +498,22 @@ impl PhysicsWorld {
                     self.write.disease_growth[source + x],
                 );
             }
+        }
+    }
+
+    pub(crate) fn publish_accumulated_flow_to(&self, grid: &mut Grid) {
+        assert_eq!(
+            (grid.width as usize, grid.height as usize),
+            (self.width, self.height)
+        );
+        assert_eq!(grid.accumulated_flow.len(), self.width * self.height);
+        assert_eq!(self.accumulated_flow.len(), self.stride * self.padded_height);
+        for (destination, source) in grid
+            .accumulated_flow
+            .chunks_exact_mut(self.width)
+            .zip(self.accumulated_flow.chunks_exact(self.stride).skip(1))
+        {
+            destination.copy_from_slice(&source[1..1 + self.width]);
         }
     }
 }

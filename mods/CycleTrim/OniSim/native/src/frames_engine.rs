@@ -231,7 +231,13 @@ impl Engine {
         output
             .events
             .resolve_grid_changes(&old.grid, &self.world, &self.elements)?;
-        self.world.publish_to(&mut output.grid);
+        if reuse_derived {
+            // Both alternating buffers already contain the unchanged world.
+            // Accumulated flow still follows the publication-count reset below.
+            self.world.publish_accumulated_flow_to(&mut output.grid);
+        } else {
+            self.world.publish_to(&mut output.grid);
+        }
         // +0x58 is copied to GameData before its global periodic reset. Empty
         // and zero-elapsed batches advance this counter exactly like Step.
         if ACCUMULATED_FLOW_PUBLICATIONS
