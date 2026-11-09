@@ -1,0 +1,892 @@
+{
+  "captured_at_utc": "2026-11-09T01:47:43.995332+00:00",
+  "code_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+  "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+  "native_commit": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+  "runs": {
+    "final_code": [
+      {
+        "id": 42546534059,
+        "name": "ONI reference compatibility",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42546534059",
+        "head_sha": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+        "event": "push",
+        "updated_at": "2026-11-09T01:37:27Z"
+      },
+      {
+        "id": 42546534074,
+        "name": "Mod quality",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42546534074",
+        "head_sha": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+        "event": "push",
+        "updated_at": "2026-11-09T01:42:13Z"
+      }
+    ],
+    "native_change": [
+      {
+        "id": 42544791387,
+        "name": "OniSim transport proof and regression",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791387",
+        "head_sha": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+        "event": "push",
+        "updated_at": "2026-11-09T01:18:57Z"
+      },
+      {
+        "id": 42544791356,
+        "name": "OniSim diamond proof and regression",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791356",
+        "head_sha": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+        "event": "push",
+        "updated_at": "2026-11-09T01:18:53Z"
+      },
+      {
+        "id": 42544791353,
+        "name": "ONI reference compatibility",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791353",
+        "head_sha": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+        "event": "push",
+        "updated_at": "2026-11-09T01:25:35Z"
+      },
+      {
+        "id": 42544791350,
+        "name": "OniSim native platforms",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791350",
+        "head_sha": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+        "event": "push",
+        "updated_at": "2026-11-09T01:22:46Z"
+      },
+      {
+        "id": 42544791372,
+        "name": "Mod quality",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791372",
+        "head_sha": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+        "event": "push",
+        "updated_at": "2026-11-09T01:22:45Z"
+      }
+    ],
+    "jlib": [
+      {
+        "id": 42546476433,
+        "name": "Jlib host regression tests",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LIghtJUNction/Jlib/actions/runs/42546476433",
+        "head_sha": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+        "event": "push",
+        "updated_at": "2026-11-09T01:38:09Z"
+      }
+    ]
+  },
+  "native_failed_jobs": [
+    {
+      "jobs": [
+        {
+          "id": 128927317866,
+          "name": "lean-proof",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42544791387,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install pinned Lean release",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Compile 27 theorems and inspect logical dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            }
+          ]
+        },
+        {
+          "id": 128927318008,
+          "name": "historical-component-regression",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42544791387,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Check complete changed-line whitespace",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Install pinned Rust and formatter",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Check historical candidate formatting without rewriting either snapshot",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Verify historical source and baseline hashes",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6
+            },
+            {
+              "name": "Build historical component regression only",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7
+            },
+            {
+              "name": "Compare ordered output and float bits with FTZ off and on",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Validate recorded timing matrix without claiming new CI performance",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            }
+          ]
+        },
+        {
+          "id": 128927318033,
+          "name": "current-native-regression",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791387,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install current native toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Test current native code including the FIFO differential",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 4
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "id": 128927316494,
+          "name": "lean-proof",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42544791356,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install Lean 4.19.0 through elan",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Check all Lean proofs and logical dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            }
+          ]
+        },
+        {
+          "id": 128927316694,
+          "name": "memory-probe-protocol",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42544791356,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Build memory request protocol tests without game files",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Check UTC and non-UTC memory request boundaries",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11
+            }
+          ]
+        },
+        {
+          "id": 128927316699,
+          "name": "pressure-projection-reference",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 42544791356,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Validate isolated variable-density Poisson reference",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7
+            }
+          ]
+        },
+        {
+          "id": 128927316769,
+          "name": "gpu-operator",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791356,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Validate WGSL and run CPU transport invariants",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 4
+            },
+            {
+              "name": "Compile Vulkan benchmark executables",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5
+            },
+            {
+              "name": "Smoke-test the EOS calibration CLI with synthetic records",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13
+            }
+          ]
+        },
+        {
+          "id": 128927316780,
+          "name": "component-regression",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791356,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Build original and optimized Rust components",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Test the complete native Rust kernel without game files",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 5
+            },
+            {
+              "name": "Run differential correctness cases",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "id": 128927316225,
+          "name": "native (macos-15-intel, macos-x64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791350,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            }
+          ]
+        },
+        {
+          "id": 128927316513,
+          "name": "native (ubuntu-22.04, linux-x64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791350,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            }
+          ]
+        },
+        {
+          "id": 128927316542,
+          "name": "native (windows-2022, windows-x64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_id": 42544791350,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19
+            }
+          ]
+        },
+        {
+          "id": 128928754355,
+          "name": "bundle",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 42544791350,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    }
+  ],
+  "native_failure_log_excerpts": [
+    {
+      "job_id": 128927316769,
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791356/job/128927316769",
+      "lines": [
+        "2026-11-09T01:18:26.1752111Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1754985Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1758203Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1760185Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1761715Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1763789Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1765886Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1767561Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1770559Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1773400Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1776211Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1779065Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1781696Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1784271Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1787290Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1790725Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1793562Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1796138Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1799262Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1802032Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1804674Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1807535Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1810154Z GPU creation failed: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1813105Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1816160Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:26.1830481Z test result: FAILED. 20 passed; 25 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.12s"
+      ]
+    },
+    {
+      "job_id": 128927316513,
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791350/job/128927316513",
+      "lines": [
+        "2026-11-09T01:19:03.5630747Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5633257Z   left: -1",
+        "2026-11-09T01:19:03.5633436Z  right: 0",
+        "2026-11-09T01:19:03.5635735Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5638435Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5641833Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5645887Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5649802Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5653970Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5657416Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5659778Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5662038Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:19:03.5670191Z test result: FAILED. 109 passed; 11 failed; 7 ignored; 0 measured; 0 filtered out; finished in 1.27s"
+      ]
+    },
+    {
+      "job_id": 128927318033,
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791387/job/128927318033",
+      "lines": [
+        "2026-11-09T01:18:53.3616291Z   left: -1",
+        "2026-11-09T01:18:53.3616640Z  right: 0",
+        "2026-11-09T01:18:53.3620042Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3623717Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3626660Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3630220Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3632537Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3634787Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3636916Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3639191Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3641664Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3643888Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+        "2026-11-09T01:18:53.3652120Z test result: FAILED. 109 passed; 11 failed; 7 ignored; 0 measured; 0 filtered out; finished in 1.16s"
+      ]
+    },
+    {
+      "job_id": 128927316225,
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791350/job/128927316225",
+      "lines": [
+        "2026-11-09T01:20:39.5579820Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.00s",
+        "2026-11-09T01:22:42.0266890Z   left: -1",
+        "2026-11-09T01:22:42.0267360Z  right: 0",
+        "2026-11-09T01:22:42.0368760Z test result: FAILED. 105 passed; 11 failed; 7 ignored; 0 measured; 0 filtered out; finished in 1.21s"
+      ]
+    },
+    {
+      "job_id": 128927316542,
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42544791350/job/128927316542",
+      "lines": [
+        "2026-11-09T01:19:40.5136854Z   left: -1\r",
+        "2026-11-09T01:19:40.5136977Z  right: 0\r",
+        "2026-11-09T01:19:40.5138561Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5139722Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5140878Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5142198Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5143667Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5144736Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5145846Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5146937Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5148094Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5149270Z called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"\r",
+        "2026-11-09T01:19:40.5154236Z test result: FAILED. 105 passed; 11 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.70s\r"
+      ]
+    }
+  ]
+}

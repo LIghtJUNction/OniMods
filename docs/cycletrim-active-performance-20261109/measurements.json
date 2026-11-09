@@ -1,0 +1,3850 @@
+{
+  "code_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+  "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+  "cpu": {
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "logical_cpus": 9,
+    "available_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "benchmark_affinity": [
+      0
+    ]
+  },
+  "managed": {
+    "scope": "frozen production Prefix vs candidate production Prefix, real native reader and mutex, host game doubles; not game FPS",
+    "data_policy": "Every input sample is retained. No deletion, trimming, outlier filtering, winsorization, or favorable-run selection is implemented.",
+    "statistical_methods": {
+      "unit": "milliseconds per render; each logged timing sample averages three complete renders",
+      "median": "middle value or arithmetic mean of the two middle values",
+      "p95": "nearest rank: sorted sample means at ceil(0.95 * n) - 1; not individual-render p95 latency",
+      "quartiles": "linear interpolation at (n - 1) * p (Hyndman-Fan type 7)",
+      "iqr": "Q3 minus Q1 of all sample means"
+    },
+    "fixed_gate_policy": {
+      "dense_max_median_ratio": 0.9,
+      "controls_max_median_ratio": 1.03,
+      "allocation": "candidate maximum per render and total warm allocations must not exceed baseline",
+      "checksum": "all old/new checksums within each scenario equal"
+    },
+    "environment_from_log": {
+      "multicomponent_visual_scope": "frozen_Jlib_2769c7efa7285949d85366ae31d1a9739cef71bf_Prefix_vs_current_production_Prefix",
+      "runtime": ".NET 10.0.12",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "arch": "X64",
+      "stopwatch_frequency": "1000000000",
+      "native_path": "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so",
+      "native_sha256": "052e6794292c2a9103c1fd34bea25d2eeed1e5cb4942a8ebd49cd81c1b1dba89",
+      "protocol": "alternating_ABBA_BAAB",
+      "blocks": "17",
+      "samples_per_variant": "34",
+      "iterations_per_sample": "3",
+      "warmup_renders_per_variant": "8",
+      "tiered_compilation": "0",
+      "gpu": "0"
+    },
+    "source_provenance": {
+      "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final-sources.json",
+      "sha256": "9935034a0727f923b624a84cb371661cc64278a365634832f1f5b2181a818c83",
+      "data": {
+        "environment": {
+          "system": "Linux",
+          "node": "cf3637fa3cf5",
+          "release": "6.18.57",
+          "version": "#1 SMP Tue Oct 20 21:56:04 UTC 2026",
+          "machine": "x86_64",
+          "processor": ""
+        },
+        "cpu_affinity": [
+          0
+        ],
+        "native_sha256": "052e6794292c2a9103c1fd34bea25d2eeed1e5cb4942a8ebd49cd81c1b1dba89",
+        "sources": {
+          "mods/CycleTrim/Core/OniSimMulticomponentProvider.cs": "ef510e7e7dd6fd8c9e4a0ab887365522da6fb370b6f86e6112314bc5bbc87fe4",
+          "mods/Jlib/Jlib/Multicomponent/MulticomponentTypes.cs": "6759d74b2aa11d4a6bb6dcb499ee16869f57e08442a1b389c5de1e249e6bf52d",
+          "mods/Jlib/Jlib/Multicomponent/MulticomponentCellAccess.cs": "69b2bb473458c2008336ad2749b1b3e5bac06178c5f932a65a02c7c9d91f0240",
+          "mods/Jlib/Jlib/Multicomponent/MulticomponentPatches.cs": "e5ecc1465269e2ccff03705e2d60abe2feedc907b92a45ffdf4338f8a1a8ab28",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentVisualBenchmark.cs": "dbc5589ccb32e31be61d8a8e2db267a92b574e09cfc56cc8477901bdde2ec034",
+          "tests/CycleTrim.PerformanceProbe.Tests/ModLoadRegression.cs": "04b07241ca6f36e26ee9a896a68a0a739bcbcbb5e5b2059c2778998a23dc5573",
+          "tests/CycleTrim.PerformanceProbe.Tests/OptionsRegression.cs": "7aaf7ba9fe7179f3c7848f2cc9d575941cc668be4a65825a50168efa0558e48a",
+          "tests/CycleTrim.PerformanceProbe.Tests/SkippedPrefixStateRegression.cs": "78421d96f01994e47b1bc5aff07225896da4ccf12ebd34221ac40a0969e908bc",
+          "tests/CycleTrim.PerformanceProbe.Tests/GenerationCounterRegression.cs": "87d2387dbdc5977a45f145cc8a3f38380400d8d3b8d30850d3bbc89225531011",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentBatchFixture.cs": "6c2c0645e3c5845dee2557289617ada3710fa3e35f144ca7dbc7b6710349c782",
+          "tests/CycleTrim.PerformanceProbe.Tests/NativeMulticomponentFixture.cs": "a9338be620ff62cb17401d7138c10d1ecfb24864bb28e57b84e174dd704c5a1a",
+          "tests/CycleTrim.PerformanceProbe.Tests/FetchLayoutControlRegression.cs": "95c8f56931f85e3d0a657f83214cdae24d776c1f741e3c57857712691bb0f2a5",
+          "tests/CycleTrim.PerformanceProbe.Tests/Program.cs": "c9d8f59dedc59ce5574810f2b5e962942b2962c05cefc9428d32b820fd42cfb2",
+          "tests/CycleTrim.PerformanceProbe.Tests/BusyRefreshGateRegression.cs": "809966acbf38cb5d257fbe3341691d5cd684c7bf19a3874d68f1d7147c38463f",
+          "tests/CycleTrim.PerformanceProbe.Tests/FrozenMulticomponentVisualPrefix.cs": "8e3415e8871ac1f96eed795224980422d869dd17b47161a7b493446543e65b0b",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentBatchRegression.cs": "a90b9c1bf3f299698461970bbbe08d7f7f507e7bcbd4b14454bf850dcc405978",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentHoverFixture.cs": "47b926dcb24322f807d94c9c49b68e1d49cfc0bbd281e17a9d017bfae748c5a4",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentRegression.cs": "6fa53ec6c2a6adb92d903e546af498226aa389039cbb615fbe7347861dc6bdcd"
+        },
+        "gates": {
+          "dense_max_median_ratio": 0.9,
+          "controls_max_median_ratio": 1.03,
+          "warm_allocations": "not increased",
+          "checksums": "all equal"
+        },
+        "baseline_jlib": "2769c7efa7285949d85366ae31d1a9739cef71bf",
+        "change_since_initial": "batch only contiguous eligible runs; isolated cells use original single-cell path"
+      }
+    },
+    "run_metadata": {
+      "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final-run.json",
+      "sha256": "249dbbe3ac1648eef8c88cca9f0b32493dfa61e0c50fa13482fc627ec97ac79c",
+      "data": {
+        "command": [
+          "taskset",
+          "-c",
+          "0",
+          "dotnet",
+          "tests/CycleTrim.PerformanceProbe.Tests/bin/Release/net10.0/CycleTrim.PerformanceProbe.Tests.dll",
+          "--benchmark-multicomponent-visual",
+          "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so"
+        ],
+        "returncode": 0,
+        "elapsed_seconds": 81.01963706000242,
+        "log": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final.log"
+      }
+    },
+    "sample_count": 748,
+    "scenarios": [
+      {
+        "scenario": "96x96_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed0",
+          "cells": "9216",
+          "mixed_cells": "0",
+          "species_records": "9216",
+          "generation": "2",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 5.100356833333333,
+            "p95_sample_mean_ms": 10.254449333333334,
+            "q1_sample_mean_ms": 4.779070083333333,
+            "q3_sample_mean_ms": 5.6289815,
+            "iqr_sample_mean_ms": 0.849911416666667,
+            "min_sample_mean_ms": 4.418181333333333,
+            "max_sample_mean_ms": 10.745165666666667,
+            "mean_sample_mean_ms": 5.614241303921569
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.7915589999999999,
+            "p95_sample_mean_ms": 1.4137496666666667,
+            "q1_sample_mean_ms": 0.7091020833333332,
+            "q3_sample_mean_ms": 0.92283875,
+            "iqr_sample_mean_ms": 0.2137366666666668,
+            "min_sample_mean_ms": 0.631738,
+            "max_sample_mean_ms": 1.61485,
+            "mean_sample_mean_ms": 0.8858180980392157
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.15519678835542913,
+        "median_reduction_percent": 84.48032116445708,
+        "checksum": {
+          "unique_values": [
+            "15656768038063115045"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "96x96_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed10",
+          "cells": "9216",
+          "mixed_cells": "930",
+          "species_records": "10146",
+          "generation": "5",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "930",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138,
+          139,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 5.932490333333333,
+            "p95_sample_mean_ms": 10.327375666666667,
+            "q1_sample_mean_ms": 5.047056166666666,
+            "q3_sample_mean_ms": 8.2849115,
+            "iqr_sample_mean_ms": 3.237855333333334,
+            "min_sample_mean_ms": 4.675764,
+            "max_sample_mean_ms": 11.105420333333333,
+            "mean_sample_mean_ms": 6.6236763039215685
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.8772076666666666,
+            "p95_sample_mean_ms": 1.9851653333333334,
+            "q1_sample_mean_ms": 0.7942273333333333,
+            "q3_sample_mean_ms": 1.3051608333333333,
+            "iqr_sample_mean_ms": 0.5109335,
+            "min_sample_mean_ms": 0.6920123333333333,
+            "max_sample_mean_ms": 4.572047333333333,
+            "mean_sample_mean_ms": 1.1367128921568628
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.14786499722348193,
+        "median_reduction_percent": 85.2135002776518,
+        "checksum": {
+          "unique_values": [
+            "12728391234266211025"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "96x96_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed100",
+          "cells": "9216",
+          "mixed_cells": "9216",
+          "species_records": "18432",
+          "generation": "8",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "9216",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          149,
+          150,
+          151,
+          152,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          180,
+          181,
+          182,
+          183,
+          184,
+          185,
+          186,
+          187,
+          188,
+          189,
+          190,
+          191,
+          192,
+          193,
+          194,
+          195,
+          196,
+          197,
+          198,
+          199,
+          200,
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          212,
+          213,
+          214,
+          215,
+          216
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 6.098329333333334,
+            "p95_sample_mean_ms": 8.343786333333332,
+            "q1_sample_mean_ms": 5.439419583333334,
+            "q3_sample_mean_ms": 6.959458916666667,
+            "iqr_sample_mean_ms": 1.520039333333333,
+            "min_sample_mean_ms": 5.089909333333334,
+            "max_sample_mean_ms": 9.094416666666666,
+            "mean_sample_mean_ms": 6.2957184999999996
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 1.1748383333333332,
+            "p95_sample_mean_ms": 1.7813353333333335,
+            "q1_sample_mean_ms": 1.05233625,
+            "q3_sample_mean_ms": 1.26714475,
+            "iqr_sample_mean_ms": 0.21480849999999996,
+            "min_sample_mean_ms": 0.9501873333333334,
+            "max_sample_mean_ms": 1.847135,
+            "mean_sample_mean_ms": 1.2103778137254901
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1926492108111795,
+        "median_reduction_percent": 80.73507891888205,
+        "checksum": {
+          "unique_values": [
+            "7801356302373643045"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed0",
+          "cells": "98304",
+          "mixed_cells": "0",
+          "species_records": "98304",
+          "generation": "11",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          228,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          240,
+          241,
+          242,
+          243,
+          244,
+          245,
+          246,
+          247,
+          248,
+          249,
+          250,
+          251,
+          252,
+          253,
+          254,
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          266,
+          267,
+          268,
+          269,
+          270,
+          271,
+          272,
+          273,
+          274,
+          275,
+          276,
+          277,
+          278,
+          279,
+          280,
+          281,
+          282,
+          283,
+          284,
+          285,
+          286,
+          287
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 60.910052333333326,
+            "p95_sample_mean_ms": 90.98910666666666,
+            "q1_sample_mean_ms": 53.78906333333333,
+            "q3_sample_mean_ms": 69.89639133333333,
+            "iqr_sample_mean_ms": 16.107327999999995,
+            "min_sample_mean_ms": 52.19062866666667,
+            "max_sample_mean_ms": 91.32066900000001,
+            "mean_sample_mean_ms": 63.533422450980396
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 8.596011166666667,
+            "p95_sample_mean_ms": 14.52859,
+            "q1_sample_mean_ms": 7.753250333333334,
+            "q3_sample_mean_ms": 10.016643583333334,
+            "iqr_sample_mean_ms": 2.26339325,
+            "min_sample_mean_ms": 7.347789333333334,
+            "max_sample_mean_ms": 37.04070766666667,
+            "mean_sample_mean_ms": 9.956010480392157
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1411263139231036,
+        "median_reduction_percent": 85.88736860768964,
+        "checksum": {
+          "unique_values": [
+            "15573508058083566373"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed10",
+          "cells": "98304",
+          "mixed_cells": "9834",
+          "species_records": "108138",
+          "generation": "14",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "9834",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          291,
+          292,
+          293,
+          294,
+          295,
+          296,
+          297,
+          298,
+          299,
+          300,
+          301,
+          302,
+          303,
+          304,
+          305,
+          306,
+          307,
+          308,
+          309,
+          310,
+          311,
+          312,
+          313,
+          314,
+          315,
+          316,
+          317,
+          318,
+          319,
+          320,
+          321,
+          322,
+          323,
+          324,
+          325,
+          326,
+          327,
+          328,
+          329,
+          330,
+          331,
+          332,
+          333,
+          334,
+          335,
+          336,
+          337,
+          338,
+          339,
+          340,
+          341,
+          342,
+          343,
+          344,
+          345,
+          346,
+          347,
+          348,
+          349,
+          350,
+          351,
+          352,
+          353,
+          354,
+          355,
+          356,
+          357,
+          358
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 54.98639966666667,
+            "p95_sample_mean_ms": 88.67436966666666,
+            "q1_sample_mean_ms": 53.588802666666666,
+            "q3_sample_mean_ms": 58.930925333333334,
+            "iqr_sample_mean_ms": 5.342122666666668,
+            "min_sample_mean_ms": 52.896875,
+            "max_sample_mean_ms": 91.67667266666666,
+            "mean_sample_mean_ms": 59.443561401960785
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 8.775554833333334,
+            "p95_sample_mean_ms": 14.210779,
+            "q1_sample_mean_ms": 8.32557125,
+            "q3_sample_mean_ms": 10.231367166666667,
+            "iqr_sample_mean_ms": 1.9057959166666674,
+            "min_sample_mean_ms": 7.556969,
+            "max_sample_mean_ms": 16.164155666666666,
+            "mean_sample_mean_ms": 9.426553892156862
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.15959500688409622,
+        "median_reduction_percent": 84.04049931159038,
+        "checksum": {
+          "unique_values": [
+            "2395103307110009057"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed100",
+          "cells": "98304",
+          "mixed_cells": "98304",
+          "species_records": "196608",
+          "generation": "17",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "98304",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          362,
+          363,
+          364,
+          365,
+          366,
+          367,
+          368,
+          369,
+          370,
+          371,
+          372,
+          373,
+          374,
+          375,
+          376,
+          377,
+          378,
+          379,
+          380,
+          381,
+          382,
+          383,
+          384,
+          385,
+          386,
+          387,
+          388,
+          389,
+          390,
+          391,
+          392,
+          393,
+          394,
+          395,
+          396,
+          397,
+          398,
+          399,
+          400,
+          401,
+          402,
+          403,
+          404,
+          405,
+          406,
+          407,
+          408,
+          409,
+          410,
+          411,
+          412,
+          413,
+          414,
+          415,
+          416,
+          417,
+          418,
+          419,
+          420,
+          421,
+          422,
+          423,
+          424,
+          425,
+          426,
+          427,
+          428,
+          429
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 59.395261500000004,
+            "p95_sample_mean_ms": 71.89688566666666,
+            "q1_sample_mean_ms": 58.903355250000004,
+            "q3_sample_mean_ms": 60.59339075,
+            "iqr_sample_mean_ms": 1.6900354999999934,
+            "min_sample_mean_ms": 57.420839666666666,
+            "max_sample_mean_ms": 98.90569133333334,
+            "mean_sample_mean_ms": 61.46476293137255
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 11.526842666666667,
+            "p95_sample_mean_ms": 12.868084000000001,
+            "q1_sample_mean_ms": 11.258809333333332,
+            "q3_sample_mean_ms": 12.004742416666666,
+            "iqr_sample_mean_ms": 0.745933083333334,
+            "min_sample_mean_ms": 10.536332666666667,
+            "max_sample_mean_ms": 12.992396999999999,
+            "mean_sample_mean_ms": 11.62390187254902
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.19407007184683692,
+        "median_reduction_percent": 80.59299281531631,
+        "checksum": {
+          "unique_values": [
+            "6058367967630598949"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed0",
+          "cells": "223744",
+          "mixed_cells": "0",
+          "species_records": "223744",
+          "generation": "20",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          433,
+          434,
+          435,
+          436,
+          437,
+          438,
+          439,
+          440,
+          441,
+          442,
+          443,
+          444,
+          445,
+          446,
+          447,
+          448,
+          449,
+          450,
+          451,
+          452,
+          453,
+          454,
+          455,
+          456,
+          457,
+          458,
+          459,
+          460,
+          461,
+          462,
+          463,
+          464,
+          465,
+          466,
+          467,
+          468,
+          469,
+          470,
+          471,
+          472,
+          473,
+          474,
+          475,
+          476,
+          477,
+          478,
+          479,
+          480,
+          481,
+          482,
+          483,
+          484,
+          485,
+          486,
+          487,
+          488,
+          489,
+          490,
+          491,
+          492,
+          493,
+          494,
+          495,
+          496,
+          497,
+          498,
+          499,
+          500
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 121.59395699999999,
+            "p95_sample_mean_ms": 131.59540533333333,
+            "q1_sample_mean_ms": 120.57964175,
+            "q3_sample_mean_ms": 123.52825991666667,
+            "iqr_sample_mean_ms": 2.9486181666666766,
+            "min_sample_mean_ms": 119.48359699999999,
+            "max_sample_mean_ms": 135.45342200000002,
+            "mean_sample_mean_ms": 122.9411860490196
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 18.154117333333332,
+            "p95_sample_mean_ms": 20.501761666666667,
+            "q1_sample_mean_ms": 17.834008416666666,
+            "q3_sample_mean_ms": 18.65962775,
+            "iqr_sample_mean_ms": 0.8256193333333322,
+            "min_sample_mean_ms": 16.761828333333334,
+            "max_sample_mean_ms": 27.961346333333335,
+            "mean_sample_mean_ms": 18.53749712745098
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.14930114769875721,
+        "median_reduction_percent": 85.06988523012427,
+        "checksum": {
+          "unique_values": [
+            "1820632662275786533"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed10",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "23",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "22380",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          504,
+          505,
+          506,
+          507,
+          508,
+          509,
+          510,
+          511,
+          512,
+          513,
+          514,
+          515,
+          516,
+          517,
+          518,
+          519,
+          520,
+          521,
+          522,
+          523,
+          524,
+          525,
+          526,
+          527,
+          528,
+          529,
+          530,
+          531,
+          532,
+          533,
+          534,
+          535,
+          536,
+          537,
+          538,
+          539,
+          540,
+          541,
+          542,
+          543,
+          544,
+          545,
+          546,
+          547,
+          548,
+          549,
+          550,
+          551,
+          552,
+          553,
+          554,
+          555,
+          556,
+          557,
+          558,
+          559,
+          560,
+          561,
+          562,
+          563,
+          564,
+          565,
+          566,
+          567,
+          568,
+          569,
+          570,
+          571
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 123.52610216666667,
+            "p95_sample_mean_ms": 160.776927,
+            "q1_sample_mean_ms": 121.31130116666667,
+            "q3_sample_mean_ms": 128.72913791666667,
+            "iqr_sample_mean_ms": 7.417836750000006,
+            "min_sample_mean_ms": 118.81027999999999,
+            "max_sample_mean_ms": 232.44754933333334,
+            "mean_sample_mean_ms": 129.33206912745098
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 19.470241166666668,
+            "p95_sample_mean_ms": 23.474024333333332,
+            "q1_sample_mean_ms": 18.812639916666665,
+            "q3_sample_mean_ms": 19.977380583333336,
+            "iqr_sample_mean_ms": 1.1647406666666704,
+            "min_sample_mean_ms": 17.582471,
+            "max_sample_mean_ms": 33.112930999999996,
+            "mean_sample_mean_ms": 19.896038578431373
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1576204609807617,
+        "median_reduction_percent": 84.23795390192383,
+        "checksum": {
+          "unique_values": [
+            "8639063770173828685"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed100",
+          "cells": "223744",
+          "mixed_cells": "223744",
+          "species_records": "447488",
+          "generation": "26",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "223744",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          575,
+          576,
+          577,
+          578,
+          579,
+          580,
+          581,
+          582,
+          583,
+          584,
+          585,
+          586,
+          587,
+          588,
+          589,
+          590,
+          591,
+          592,
+          593,
+          594,
+          595,
+          596,
+          597,
+          598,
+          599,
+          600,
+          601,
+          602,
+          603,
+          604,
+          605,
+          606,
+          607,
+          608,
+          609,
+          610,
+          611,
+          612,
+          613,
+          614,
+          615,
+          616,
+          617,
+          618,
+          619,
+          620,
+          621,
+          622,
+          623,
+          624,
+          625,
+          626,
+          627,
+          628,
+          629,
+          630,
+          631,
+          632,
+          633,
+          634,
+          635,
+          636,
+          637,
+          638,
+          639,
+          640,
+          641,
+          642
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 135.79175816666668,
+            "p95_sample_mean_ms": 147.51924833333334,
+            "q1_sample_mean_ms": 133.89243091666665,
+            "q3_sample_mean_ms": 138.89749641666668,
+            "iqr_sample_mean_ms": 5.005065500000029,
+            "min_sample_mean_ms": 132.218792,
+            "max_sample_mean_ms": 147.87383833333334,
+            "mean_sample_mean_ms": 137.1766680490196
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 27.431768333333334,
+            "p95_sample_mean_ms": 36.296047,
+            "q1_sample_mean_ms": 26.206933666666668,
+            "q3_sample_mean_ms": 28.217432583333334,
+            "iqr_sample_mean_ms": 2.0104989166666662,
+            "min_sample_mean_ms": 24.853847000000002,
+            "max_sample_mean_ms": 39.599852,
+            "mean_sample_mean_ms": 28.050397980392155
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.20201349996267384,
+        "median_reduction_percent": 79.79865000373262,
+        "checksum": {
+          "unique_values": [
+            "1270049974456206117"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10_one_gas_per_row_chunk",
+        "kind": "control",
+        "grid_pattern": "one_gas_per_row_chunk",
+        "fixture": {
+          "fixture": "736x304_mixed10_one_gas_per_row_chunk",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "29",
+          "grid_pattern": "one_gas_per_row_chunk",
+          "eligible_cells": "1824",
+          "eligible_mixed_cells": "219",
+          "expected_old_leases": "1825",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "1.03"
+        },
+        "sample_line_numbers": [
+          646,
+          647,
+          648,
+          649,
+          650,
+          651,
+          652,
+          653,
+          654,
+          655,
+          656,
+          657,
+          658,
+          659,
+          660,
+          661,
+          662,
+          663,
+          664,
+          665,
+          666,
+          667,
+          668,
+          669,
+          670,
+          671,
+          672,
+          673,
+          674,
+          675,
+          676,
+          677,
+          678,
+          679,
+          680,
+          681,
+          682,
+          683,
+          684,
+          685,
+          686,
+          687,
+          688,
+          689,
+          690,
+          691,
+          692,
+          693,
+          694,
+          695,
+          696,
+          697,
+          698,
+          699,
+          700,
+          701,
+          702,
+          703,
+          704,
+          705,
+          706,
+          707,
+          708,
+          709,
+          710,
+          711,
+          712,
+          713
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 2.2193725,
+            "p95_sample_mean_ms": 7.6166426666666665,
+            "q1_sample_mean_ms": 2.08362825,
+            "q3_sample_mean_ms": 2.47111175,
+            "iqr_sample_mean_ms": 0.3874835000000001,
+            "min_sample_mean_ms": 1.918545,
+            "max_sample_mean_ms": 14.139056666666667,
+            "mean_sample_mean_ms": 2.8808137156862745
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 2.1149363333333335,
+            "p95_sample_mean_ms": 2.7797793333333334,
+            "q1_sample_mean_ms": 1.98753575,
+            "q3_sample_mean_ms": 2.22884425,
+            "iqr_sample_mean_ms": 0.24130849999999993,
+            "min_sample_mean_ms": 1.8785726666666667,
+            "max_sample_mean_ms": 2.9510536666666667,
+            "mean_sample_mean_ms": 2.1504251274509802
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.9529433807679124,
+        "median_reduction_percent": 4.705661923208759,
+        "checksum": {
+          "unique_values": [
+            "16807856681829695867"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 1.03
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10_all_inactive",
+        "kind": "control",
+        "grid_pattern": "all_inactive",
+        "fixture": {
+          "fixture": "736x304_mixed10_all_inactive",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "32",
+          "grid_pattern": "all_inactive",
+          "eligible_cells": "0",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "1",
+          "expected_batch_leases": "1",
+          "gate_max_median_ratio": "1.03"
+        },
+        "sample_line_numbers": [
+          717,
+          718,
+          719,
+          720,
+          721,
+          722,
+          723,
+          724,
+          725,
+          726,
+          727,
+          728,
+          729,
+          730,
+          731,
+          732,
+          733,
+          734,
+          735,
+          736,
+          737,
+          738,
+          739,
+          740,
+          741,
+          742,
+          743,
+          744,
+          745,
+          746,
+          747,
+          748,
+          749,
+          750,
+          751,
+          752,
+          753,
+          754,
+          755,
+          756,
+          757,
+          758,
+          759,
+          760,
+          761,
+          762,
+          763,
+          764,
+          765,
+          766,
+          767,
+          768,
+          769,
+          770,
+          771,
+          772,
+          773,
+          774,
+          775,
+          776,
+          777,
+          778,
+          779,
+          780,
+          781,
+          782,
+          783,
+          784
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.7837135,
+            "p95_sample_mean_ms": 1.115957,
+            "q1_sample_mean_ms": 0.74123275,
+            "q3_sample_mean_ms": 0.8527306666666666,
+            "iqr_sample_mean_ms": 0.11149791666666664,
+            "min_sample_mean_ms": 0.687417,
+            "max_sample_mean_ms": 1.1605459999999999,
+            "mean_sample_mean_ms": 0.8260958039215686
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.8024981666666666,
+            "p95_sample_mean_ms": 1.0267306666666667,
+            "q1_sample_mean_ms": 0.7460988333333334,
+            "q3_sample_mean_ms": 0.8484528333333333,
+            "iqr_sample_mean_ms": 0.10235399999999995,
+            "min_sample_mean_ms": 0.666068,
+            "max_sample_mean_ms": 1.2777823333333334,
+            "mean_sample_mean_ms": 0.8131348529411765
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 1.0239687930176866,
+        "median_reduction_percent": -2.396879301768662,
+        "checksum": {
+          "unique_values": [
+            "13137388737127203621"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 1.03
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      }
+    ],
+    "integrity": {
+      "pass": true,
+      "errors": [],
+      "warnings": []
+    },
+    "overall": {
+      "pass": true,
+      "status": "PASS",
+      "failed_scenarios": []
+    }
+  },
+  "managed_initial": {
+    "overall": {
+      "pass": false,
+      "status": "FAIL",
+      "failed_scenarios": [
+        "736x304_mixed10_one_gas_per_row_chunk"
+      ]
+    },
+    "sample_count": 748,
+    "scenarios": [
+      {
+        "scenario": "96x96_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed0",
+          "cells": "9216",
+          "mixed_cells": "0",
+          "species_records": "9216",
+          "generation": "2",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 5.551289000000001,
+            "p95_sample_mean_ms": 7.516767333333333,
+            "q1_sample_mean_ms": 4.947662916666666,
+            "q3_sample_mean_ms": 6.757065166666667,
+            "iqr_sample_mean_ms": 1.8094022500000007,
+            "min_sample_mean_ms": 4.574686333333333,
+            "max_sample_mean_ms": 48.30908633333333,
+            "mean_sample_mean_ms": 7.0164934117647055
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.7838350000000001,
+            "p95_sample_mean_ms": 2.383541333333333,
+            "q1_sample_mean_ms": 0.7042186666666668,
+            "q3_sample_mean_ms": 0.9799994166666667,
+            "iqr_sample_mean_ms": 0.2757807499999999,
+            "min_sample_mean_ms": 0.639582,
+            "max_sample_mean_ms": 2.741566,
+            "mean_sample_mean_ms": 0.9534839509803922
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.14119873780666076,
+        "median_reduction_percent": 85.88012621933392,
+        "checksum": {
+          "unique_values": [
+            "15656768038063115045"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "96x96_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed10",
+          "cells": "9216",
+          "mixed_cells": "930",
+          "species_records": "10146",
+          "generation": "5",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "930",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138,
+          139,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 6.284057833333334,
+            "p95_sample_mean_ms": 10.550547,
+            "q1_sample_mean_ms": 5.37235675,
+            "q3_sample_mean_ms": 7.5637475,
+            "iqr_sample_mean_ms": 2.19139075,
+            "min_sample_mean_ms": 4.520726,
+            "max_sample_mean_ms": 10.799051,
+            "mean_sample_mean_ms": 6.618801901960785
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.859612,
+            "p95_sample_mean_ms": 2.6988793333333336,
+            "q1_sample_mean_ms": 0.7449694166666667,
+            "q3_sample_mean_ms": 1.1783483333333333,
+            "iqr_sample_mean_ms": 0.4333789166666666,
+            "min_sample_mean_ms": 0.6618873333333334,
+            "max_sample_mean_ms": 3.8301956666666666,
+            "mean_sample_mean_ms": 1.0894900784313726
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.13679250299706822,
+        "median_reduction_percent": 86.32074970029318,
+        "checksum": {
+          "unique_values": [
+            "12728391234266211025"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "96x96_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "96x96_mixed100",
+          "cells": "9216",
+          "mixed_cells": "9216",
+          "species_records": "18432",
+          "generation": "8",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "9216",
+          "eligible_mixed_cells": "9216",
+          "expected_old_leases": "9217",
+          "expected_batch_leases": "97",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          149,
+          150,
+          151,
+          152,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          180,
+          181,
+          182,
+          183,
+          184,
+          185,
+          186,
+          187,
+          188,
+          189,
+          190,
+          191,
+          192,
+          193,
+          194,
+          195,
+          196,
+          197,
+          198,
+          199,
+          200,
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          212,
+          213,
+          214,
+          215,
+          216
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 5.812033333333334,
+            "p95_sample_mean_ms": 7.465502666666667,
+            "q1_sample_mean_ms": 5.444463416666666,
+            "q3_sample_mean_ms": 6.306982833333333,
+            "iqr_sample_mean_ms": 0.8625194166666663,
+            "min_sample_mean_ms": 5.127856,
+            "max_sample_mean_ms": 8.29783,
+            "mean_sample_mean_ms": 5.989913745098039
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 1.1729818333333333,
+            "p95_sample_mean_ms": 1.8457043333333332,
+            "q1_sample_mean_ms": 1.0782635833333334,
+            "q3_sample_mean_ms": 1.3008006666666667,
+            "iqr_sample_mean_ms": 0.22253708333333333,
+            "min_sample_mean_ms": 0.9339686666666666,
+            "max_sample_mean_ms": 2.1386696666666665,
+            "mean_sample_mean_ms": 1.2400337450980392
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.20181952959664143,
+        "median_reduction_percent": 79.81804704033586,
+        "checksum": {
+          "unique_values": [
+            "7801356302373643045"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed0",
+          "cells": "98304",
+          "mixed_cells": "0",
+          "species_records": "98304",
+          "generation": "11",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          228,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          240,
+          241,
+          242,
+          243,
+          244,
+          245,
+          246,
+          247,
+          248,
+          249,
+          250,
+          251,
+          252,
+          253,
+          254,
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          266,
+          267,
+          268,
+          269,
+          270,
+          271,
+          272,
+          273,
+          274,
+          275,
+          276,
+          277,
+          278,
+          279,
+          280,
+          281,
+          282,
+          283,
+          284,
+          285,
+          286,
+          287
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 54.40301983333333,
+            "p95_sample_mean_ms": 56.42153966666667,
+            "q1_sample_mean_ms": 53.287757166666665,
+            "q3_sample_mean_ms": 55.15714575,
+            "iqr_sample_mean_ms": 1.8693885833333326,
+            "min_sample_mean_ms": 51.39951633333334,
+            "max_sample_mean_ms": 57.253459,
+            "mean_sample_mean_ms": 54.302093735294115
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 7.8510035,
+            "p95_sample_mean_ms": 9.052709333333334,
+            "q1_sample_mean_ms": 7.675579583333333,
+            "q3_sample_mean_ms": 8.187102166666666,
+            "iqr_sample_mean_ms": 0.511522583333333,
+            "min_sample_mean_ms": 7.1814013333333335,
+            "max_sample_mean_ms": 9.070676333333333,
+            "mean_sample_mean_ms": 7.944851
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1443119062885109,
+        "median_reduction_percent": 85.56880937114892,
+        "checksum": {
+          "unique_values": [
+            "15573508058083566373"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed10",
+          "cells": "98304",
+          "mixed_cells": "9834",
+          "species_records": "108138",
+          "generation": "14",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "9834",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          291,
+          292,
+          293,
+          294,
+          295,
+          296,
+          297,
+          298,
+          299,
+          300,
+          301,
+          302,
+          303,
+          304,
+          305,
+          306,
+          307,
+          308,
+          309,
+          310,
+          311,
+          312,
+          313,
+          314,
+          315,
+          316,
+          317,
+          318,
+          319,
+          320,
+          321,
+          322,
+          323,
+          324,
+          325,
+          326,
+          327,
+          328,
+          329,
+          330,
+          331,
+          332,
+          333,
+          334,
+          335,
+          336,
+          337,
+          338,
+          339,
+          340,
+          341,
+          342,
+          343,
+          344,
+          345,
+          346,
+          347,
+          348,
+          349,
+          350,
+          351,
+          352,
+          353,
+          354,
+          355,
+          356,
+          357,
+          358
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 54.257723666666664,
+            "p95_sample_mean_ms": 59.584674666666665,
+            "q1_sample_mean_ms": 53.67949024999999,
+            "q3_sample_mean_ms": 55.30192941666667,
+            "iqr_sample_mean_ms": 1.6224391666666733,
+            "min_sample_mean_ms": 52.730321,
+            "max_sample_mean_ms": 61.843556,
+            "mean_sample_mean_ms": 54.82575480392157
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 8.530655500000002,
+            "p95_sample_mean_ms": 9.720685,
+            "q1_sample_mean_ms": 8.103121666666667,
+            "q3_sample_mean_ms": 8.73588225,
+            "iqr_sample_mean_ms": 0.632760583333333,
+            "min_sample_mean_ms": 7.539963666666666,
+            "max_sample_mean_ms": 11.249507666666666,
+            "mean_sample_mean_ms": 8.505824098039216
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1572247216342551,
+        "median_reduction_percent": 84.27752783657449,
+        "checksum": {
+          "unique_values": [
+            "2395103307110009057"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "256x384_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "256x384_mixed100",
+          "cells": "98304",
+          "mixed_cells": "98304",
+          "species_records": "196608",
+          "generation": "17",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "98304",
+          "eligible_mixed_cells": "98304",
+          "expected_old_leases": "98305",
+          "expected_batch_leases": "769",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          362,
+          363,
+          364,
+          365,
+          366,
+          367,
+          368,
+          369,
+          370,
+          371,
+          372,
+          373,
+          374,
+          375,
+          376,
+          377,
+          378,
+          379,
+          380,
+          381,
+          382,
+          383,
+          384,
+          385,
+          386,
+          387,
+          388,
+          389,
+          390,
+          391,
+          392,
+          393,
+          394,
+          395,
+          396,
+          397,
+          398,
+          399,
+          400,
+          401,
+          402,
+          403,
+          404,
+          405,
+          406,
+          407,
+          408,
+          409,
+          410,
+          411,
+          412,
+          413,
+          414,
+          415,
+          416,
+          417,
+          418,
+          419,
+          420,
+          421,
+          422,
+          423,
+          424,
+          425,
+          426,
+          427,
+          428,
+          429
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 60.8572815,
+            "p95_sample_mean_ms": 79.47811566666667,
+            "q1_sample_mean_ms": 59.88330858333334,
+            "q3_sample_mean_ms": 63.012986500000004,
+            "iqr_sample_mean_ms": 3.1296779166666653,
+            "min_sample_mean_ms": 57.713213333333336,
+            "max_sample_mean_ms": 81.85427333333332,
+            "mean_sample_mean_ms": 63.32911393137255
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 12.031231666666667,
+            "p95_sample_mean_ms": 16.842113666666666,
+            "q1_sample_mean_ms": 11.58039475,
+            "q3_sample_mean_ms": 12.763915666666666,
+            "iqr_sample_mean_ms": 1.1835209166666658,
+            "min_sample_mean_ms": 10.779623,
+            "max_sample_mean_ms": 20.678033666666668,
+            "mean_sample_mean_ms": 12.536925950980391
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.19769584460762787,
+        "median_reduction_percent": 80.23041553923721,
+        "checksum": {
+          "unique_values": [
+            "6058367967630598949"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed0",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed0",
+          "cells": "223744",
+          "mixed_cells": "0",
+          "species_records": "223744",
+          "generation": "20",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          433,
+          434,
+          435,
+          436,
+          437,
+          438,
+          439,
+          440,
+          441,
+          442,
+          443,
+          444,
+          445,
+          446,
+          447,
+          448,
+          449,
+          450,
+          451,
+          452,
+          453,
+          454,
+          455,
+          456,
+          457,
+          458,
+          459,
+          460,
+          461,
+          462,
+          463,
+          464,
+          465,
+          466,
+          467,
+          468,
+          469,
+          470,
+          471,
+          472,
+          473,
+          474,
+          475,
+          476,
+          477,
+          478,
+          479,
+          480,
+          481,
+          482,
+          483,
+          484,
+          485,
+          486,
+          487,
+          488,
+          489,
+          490,
+          491,
+          492,
+          493,
+          494,
+          495,
+          496,
+          497,
+          498,
+          499,
+          500
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 124.25621100000001,
+            "p95_sample_mean_ms": 165.70606266666667,
+            "q1_sample_mean_ms": 122.03852266666667,
+            "q3_sample_mean_ms": 132.90755183333334,
+            "iqr_sample_mean_ms": 10.869029166666678,
+            "min_sample_mean_ms": 120.37343266666666,
+            "max_sample_mean_ms": 169.462364,
+            "mean_sample_mean_ms": 131.22397064705882
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 18.430233333333334,
+            "p95_sample_mean_ms": 27.583603,
+            "q1_sample_mean_ms": 17.877966,
+            "q3_sample_mean_ms": 19.421745,
+            "iqr_sample_mean_ms": 1.5437790000000007,
+            "min_sample_mean_ms": 16.681781666666666,
+            "max_sample_mean_ms": 33.70934666666667,
+            "mean_sample_mean_ms": 19.40866966666667
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.148324443382016,
+        "median_reduction_percent": 85.1675556617984,
+        "checksum": {
+          "unique_values": [
+            "1820632662275786533"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed10",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "23",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "22380",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          504,
+          505,
+          506,
+          507,
+          508,
+          509,
+          510,
+          511,
+          512,
+          513,
+          514,
+          515,
+          516,
+          517,
+          518,
+          519,
+          520,
+          521,
+          522,
+          523,
+          524,
+          525,
+          526,
+          527,
+          528,
+          529,
+          530,
+          531,
+          532,
+          533,
+          534,
+          535,
+          536,
+          537,
+          538,
+          539,
+          540,
+          541,
+          542,
+          543,
+          544,
+          545,
+          546,
+          547,
+          548,
+          549,
+          550,
+          551,
+          552,
+          553,
+          554,
+          555,
+          556,
+          557,
+          558,
+          559,
+          560,
+          561,
+          562,
+          563,
+          564,
+          565,
+          566,
+          567,
+          568,
+          569,
+          570,
+          571
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 126.840428,
+            "p95_sample_mean_ms": 150.11455733333335,
+            "q1_sample_mean_ms": 124.20051558333333,
+            "q3_sample_mean_ms": 130.09161999999998,
+            "iqr_sample_mean_ms": 5.89110441666665,
+            "min_sample_mean_ms": 121.59080666666667,
+            "max_sample_mean_ms": 166.03936166666668,
+            "mean_sample_mean_ms": 130.05219929411766
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 19.1423295,
+            "p95_sample_mean_ms": 31.64397,
+            "q1_sample_mean_ms": 18.507649583333333,
+            "q3_sample_mean_ms": 20.012703583333334,
+            "iqr_sample_mean_ms": 1.5050540000000012,
+            "min_sample_mean_ms": 17.442847,
+            "max_sample_mean_ms": 32.29543566666667,
+            "mean_sample_mean_ms": 19.968905411764705
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.1509166265191095,
+        "median_reduction_percent": 84.90833734808905,
+        "checksum": {
+          "unique_values": [
+            "8639063770173828685"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed100",
+        "kind": "dense",
+        "grid_pattern": "all_gas",
+        "fixture": {
+          "fixture": "736x304_mixed100",
+          "cells": "223744",
+          "mixed_cells": "223744",
+          "species_records": "447488",
+          "generation": "26",
+          "grid_pattern": "all_gas",
+          "eligible_cells": "223744",
+          "eligible_mixed_cells": "223744",
+          "expected_old_leases": "223745",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "0.90"
+        },
+        "sample_line_numbers": [
+          575,
+          576,
+          577,
+          578,
+          579,
+          580,
+          581,
+          582,
+          583,
+          584,
+          585,
+          586,
+          587,
+          588,
+          589,
+          590,
+          591,
+          592,
+          593,
+          594,
+          595,
+          596,
+          597,
+          598,
+          599,
+          600,
+          601,
+          602,
+          603,
+          604,
+          605,
+          606,
+          607,
+          608,
+          609,
+          610,
+          611,
+          612,
+          613,
+          614,
+          615,
+          616,
+          617,
+          618,
+          619,
+          620,
+          621,
+          622,
+          623,
+          624,
+          625,
+          626,
+          627,
+          628,
+          629,
+          630,
+          631,
+          632,
+          633,
+          634,
+          635,
+          636,
+          637,
+          638,
+          639,
+          640,
+          641,
+          642
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 138.19266016666666,
+            "p95_sample_mean_ms": 148.92355633333332,
+            "q1_sample_mean_ms": 135.64306466666665,
+            "q3_sample_mean_ms": 141.10486258333333,
+            "iqr_sample_mean_ms": 5.461797916666683,
+            "min_sample_mean_ms": 132.72384366666668,
+            "max_sample_mean_ms": 150.85072666666667,
+            "mean_sample_mean_ms": 138.9944964019608
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 27.222747333333334,
+            "p95_sample_mean_ms": 29.415705666666668,
+            "q1_sample_mean_ms": 26.526792916666665,
+            "q3_sample_mean_ms": 27.862788083333335,
+            "iqr_sample_mean_ms": 1.3359951666666703,
+            "min_sample_mean_ms": 25.443987000000003,
+            "max_sample_mean_ms": 29.45007766666667,
+            "mean_sample_mean_ms": 27.25314818627451
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 0.19699126784665305,
+        "median_reduction_percent": 80.3008732153347,
+        "checksum": {
+          "unique_values": [
+            "1270049974456206117"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 0.9
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10_one_gas_per_row_chunk",
+        "kind": "control",
+        "grid_pattern": "one_gas_per_row_chunk",
+        "fixture": {
+          "fixture": "736x304_mixed10_one_gas_per_row_chunk",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "29",
+          "grid_pattern": "one_gas_per_row_chunk",
+          "eligible_cells": "1824",
+          "eligible_mixed_cells": "219",
+          "expected_old_leases": "1825",
+          "expected_batch_leases": "1825",
+          "gate_max_median_ratio": "1.03"
+        },
+        "sample_line_numbers": [
+          646,
+          647,
+          648,
+          649,
+          650,
+          651,
+          652,
+          653,
+          654,
+          655,
+          656,
+          657,
+          658,
+          659,
+          660,
+          661,
+          662,
+          663,
+          664,
+          665,
+          666,
+          667,
+          668,
+          669,
+          670,
+          671,
+          672,
+          673,
+          674,
+          675,
+          676,
+          677,
+          678,
+          679,
+          680,
+          681,
+          682,
+          683,
+          684,
+          685,
+          686,
+          687,
+          688,
+          689,
+          690,
+          691,
+          692,
+          693,
+          694,
+          695,
+          696,
+          697,
+          698,
+          699,
+          700,
+          701,
+          702,
+          703,
+          704,
+          705,
+          706,
+          707,
+          708,
+          709,
+          710,
+          711,
+          712,
+          713
+        ],
+        "status": "FAIL",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 2.368669833333333,
+            "p95_sample_mean_ms": 6.593644,
+            "q1_sample_mean_ms": 2.245319,
+            "q3_sample_mean_ms": 2.5619619166666667,
+            "iqr_sample_mean_ms": 0.3166429166666669,
+            "min_sample_mean_ms": 2.061703,
+            "max_sample_mean_ms": 7.348704333333333,
+            "mean_sample_mean_ms": 2.7481796176470588
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 4.762045333333333,
+            "p95_sample_mean_ms": 8.526032333333333,
+            "q1_sample_mean_ms": 4.491119416666667,
+            "q3_sample_mean_ms": 5.007099,
+            "iqr_sample_mean_ms": 0.5159795833333334,
+            "min_sample_mean_ms": 4.1975576666666665,
+            "max_sample_mean_ms": 12.292795666666665,
+            "mean_sample_mean_ms": 5.174577284313726
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 2.0104301858870297,
+        "median_reduction_percent": -101.04301858870298,
+        "checksum": {
+          "unique_values": [
+            "16807856681829695867"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": false,
+            "max_median_ratio": 1.03
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      },
+      {
+        "scenario": "736x304_mixed10_all_inactive",
+        "kind": "control",
+        "grid_pattern": "all_inactive",
+        "fixture": {
+          "fixture": "736x304_mixed10_all_inactive",
+          "cells": "223744",
+          "mixed_cells": "22380",
+          "species_records": "246124",
+          "generation": "32",
+          "grid_pattern": "all_inactive",
+          "eligible_cells": "0",
+          "eligible_mixed_cells": "0",
+          "expected_old_leases": "1",
+          "expected_batch_leases": "1",
+          "gate_max_median_ratio": "1.03"
+        },
+        "sample_line_numbers": [
+          717,
+          718,
+          719,
+          720,
+          721,
+          722,
+          723,
+          724,
+          725,
+          726,
+          727,
+          728,
+          729,
+          730,
+          731,
+          732,
+          733,
+          734,
+          735,
+          736,
+          737,
+          738,
+          739,
+          740,
+          741,
+          742,
+          743,
+          744,
+          745,
+          746,
+          747,
+          748,
+          749,
+          750,
+          751,
+          752,
+          753,
+          754,
+          755,
+          756,
+          757,
+          758,
+          759,
+          760,
+          761,
+          762,
+          763,
+          764,
+          765,
+          766,
+          767,
+          768,
+          769,
+          770,
+          771,
+          772,
+          773,
+          774,
+          775,
+          776,
+          777,
+          778,
+          779,
+          780,
+          781,
+          782,
+          783,
+          784
+        ],
+        "status": "PASS",
+        "timing": {
+          "old": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.8129266666666666,
+            "p95_sample_mean_ms": 1.154518,
+            "q1_sample_mean_ms": 0.7511696666666666,
+            "q3_sample_mean_ms": 0.9085555000000001,
+            "iqr_sample_mean_ms": 0.15738583333333345,
+            "min_sample_mean_ms": 0.6837646666666667,
+            "max_sample_mean_ms": 1.8040513333333335,
+            "mean_sample_mean_ms": 0.8716854215686275
+          },
+          "batch": {
+            "sample_count": 34,
+            "render_count": 102,
+            "median_ms_per_render": 0.8350658333333333,
+            "p95_sample_mean_ms": 1.1855813333333334,
+            "q1_sample_mean_ms": 0.79290175,
+            "q3_sample_mean_ms": 0.9174379166666667,
+            "iqr_sample_mean_ms": 0.12453616666666678,
+            "min_sample_mean_ms": 0.7346603333333334,
+            "max_sample_mean_ms": 1.3262326666666666,
+            "mean_sample_mean_ms": 0.8812292745098039
+          }
+        },
+        "allocation": {
+          "old": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          },
+          "batch": {
+            "total_bytes": 0,
+            "max_bytes_per_render": 0.0,
+            "median_bytes_per_render": 0.0,
+            "mean_bytes_per_render": 0.0,
+            "nonzero_sample_count": 0
+          }
+        },
+        "median_ratio_new_over_old": 1.0272339038371645,
+        "median_reduction_percent": -2.723390383716451,
+        "checksum": {
+          "unique_values": [
+            "13137388737127203621"
+          ],
+          "old_new_all_samples_equal": true
+        },
+        "gates": {
+          "timing": {
+            "pass": true,
+            "max_median_ratio": 1.03
+          },
+          "allocation": {
+            "pass": true,
+            "rule": "both max bytes/render and total warm sample bytes must not increase"
+          },
+          "checksum": {
+            "pass": true,
+            "rule": "all 68 old/new sample checksums in this scenario must be identical"
+          }
+        }
+      }
+    ]
+  },
+  "native_liquid": {
+    "base": "1f4151e39acaa6358abc186d571b0effdbc1396b",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "sources": {
+      "mods/CycleTrim/OniSim/native/src/presentation.rs": "71ff03f106a1e557cc738b5be95e3497d614833afdecb9eead270ab12449c207",
+      "mods/CycleTrim/OniSim/native/src/presentation_liquid.rs": "97ed853c8a11a4c25a01f0e171ed30fd088413b341ddb465f57a658311ca2267",
+      "mods/CycleTrim/OniSim/native/src/presentation_liquid_tests.rs": "6aac4b8e6358ff39c9f825bba4a3499beb3ec0610ffd23fbe8a3d76e16553ef8"
+    },
+    "sampling": {
+      "warmup_rounds": 3,
+      "measured_rounds": 17,
+      "samples_per_variant": 34,
+      "order": "alternating ABBA/BAAB",
+      "cpu_affinity": [
+        0
+      ]
+    },
+    "cases": [
+      {
+        "pattern": "liquid",
+        "width": 17,
+        "height": 19,
+        "baseline_us": 29.84053,
+        "candidate_us": 24.528212499999995,
+        "change_percent": -17.802356392463558,
+        "min_us": [
+          21.22491,
+          17.996724999999998
+        ],
+        "max_us": [
+          767.523015,
+          490.73343
+        ],
+        "iqr_us": [
+          29.954337499999998,
+          19.435252500000004
+        ]
+      },
+      {
+        "pattern": "liquid",
+        "width": 96,
+        "height": 96,
+        "baseline_us": 940.6895046296297,
+        "candidate_us": 781.7121851851853,
+        "change_percent": -16.90008431709221,
+        "min_us": [
+          824.7199722222222,
+          703.474138888889
+        ],
+        "max_us": [
+          1907.4828703703704,
+          1875.6763796296295
+        ],
+        "iqr_us": [
+          108.3066111111109,
+          125.34254629629629
+        ]
+      },
+      {
+        "pattern": "liquid",
+        "width": 256,
+        "height": 384,
+        "baseline_us": 9589.17295,
+        "candidate_us": 8562.9173,
+        "change_percent": -10.702233188942545,
+        "min_us": [
+          8964.1367,
+          7561.511199999999
+        ],
+        "max_us": [
+          25823.6598,
+          12740.6753
+        ],
+        "iqr_us": [
+          818.8889500000005,
+          697.8741750000008
+        ]
+      },
+      {
+        "pattern": "liquid",
+        "width": 736,
+        "height": 304,
+        "baseline_us": 21807.651874999996,
+        "candidate_us": 18513.088375,
+        "change_percent": -15.107373865302943,
+        "min_us": [
+          20759.83525,
+          17419.79625
+        ],
+        "max_us": [
+          33536.039500000006,
+          33584.922000000006
+        ],
+        "iqr_us": [
+          1338.9443750000028,
+          1291.135000000002
+        ]
+      },
+      {
+        "pattern": "mixed",
+        "width": 17,
+        "height": 19,
+        "baseline_us": 16.651510000000002,
+        "candidate_us": 13.7228375,
+        "change_percent": -17.588029554076478,
+        "min_us": [
+          14.101569999999999,
+          11.463524999999999
+        ],
+        "max_us": [
+          66.792015,
+          83.89245000000001
+        ],
+        "iqr_us": [
+          5.4699925,
+          3.156654999999999
+        ]
+      },
+      {
+        "pattern": "mixed",
+        "width": 96,
+        "height": 96,
+        "baseline_us": 445.00949537037036,
+        "candidate_us": 384.8979537037037,
+        "change_percent": -13.507923379620767,
+        "min_us": [
+          399.4971018518519,
+          336.72249074074074
+        ],
+        "max_us": [
+          670.9827777777778,
+          590.334
+        ],
+        "iqr_us": [
+          25.692458333333207,
+          50.16445601851859
+        ]
+      },
+      {
+        "pattern": "mixed",
+        "width": 256,
+        "height": 384,
+        "baseline_us": 4873.48625,
+        "candidate_us": 4285.4722,
+        "change_percent": -12.06557318182645,
+        "min_us": [
+          4593.8972,
+          3775.9728999999998
+        ],
+        "max_us": [
+          8840.302,
+          5708.949
+        ],
+        "iqr_us": [
+          333.077725000001,
+          437.6272250000002
+        ]
+      },
+      {
+        "pattern": "mixed",
+        "width": 736,
+        "height": 304,
+        "baseline_us": 11617.847375,
+        "candidate_us": 9679.10325,
+        "change_percent": -16.687636378938052,
+        "min_us": [
+          10367.3875,
+          8373.99625
+        ],
+        "max_us": [
+          19082.4955,
+          20182.22825
+        ],
+        "iqr_us": [
+          1346.675187499999,
+          1194.0936249999995
+        ]
+      },
+      {
+        "pattern": "no_liquid",
+        "width": 17,
+        "height": 19,
+        "baseline_us": 0.7506349999999999,
+        "candidate_us": 0.47625,
+        "change_percent": -36.55371785221845,
+        "min_us": [
+          0.613,
+          0.4328
+        ],
+        "max_us": [
+          3.455525,
+          4.11305
+        ],
+        "iqr_us": [
+          0.576235,
+          0.31027000000000005
+        ]
+      },
+      {
+        "pattern": "no_liquid",
+        "width": 96,
+        "height": 96,
+        "baseline_us": 22.695685185185184,
+        "candidate_us": 17.360319444444446,
+        "change_percent": -23.50828228893238,
+        "min_us": [
+          19.241611111111112,
+          14.303824074074074
+        ],
+        "max_us": [
+          30.454981481481482,
+          23.266796296296295
+        ],
+        "iqr_us": [
+          2.2472546296296265,
+          2.706944444444442
+        ]
+      },
+      {
+        "pattern": "no_liquid",
+        "width": 256,
+        "height": 384,
+        "baseline_us": 255.98210000000003,
+        "candidate_us": 210.9653,
+        "change_percent": -17.585917140300044,
+        "min_us": [
+          210.238,
+          172.6008
+        ],
+        "max_us": [
+          326.6819,
+          479.2566
+        ],
+        "iqr_us": [
+          52.232774999999975,
+          46.06215
+        ]
+      },
+      {
+        "pattern": "no_liquid",
+        "width": 736,
+        "height": 304,
+        "baseline_us": 588.312375,
+        "candidate_us": 490.731625,
+        "change_percent": -16.58655403942505,
+        "min_us": [
+          494.684,
+          392.91249999999997
+        ],
+        "max_us": [
+          779.5515,
+          850.3655
+        ],
+        "iqr_us": [
+          103.85712499999988,
+          110.85875000000004
+        ]
+      },
+      {
+        "pattern": "multicomponent",
+        "width": 17,
+        "height": 19,
+        "baseline_us": 42.75416,
+        "candidate_us": 38.64649,
+        "change_percent": -9.6076498754741,
+        "min_us": [
+          37.874075000000005,
+          33.794430000000006
+        ],
+        "max_us": [
+          70.759045,
+          61.29428
+        ],
+        "iqr_us": [
+          4.129122500000001,
+          3.005958749999998
+        ]
+      },
+      {
+        "pattern": "multicomponent",
+        "width": 96,
+        "height": 96,
+        "baseline_us": 1674.9568472222222,
+        "candidate_us": 1480.152203703704,
+        "change_percent": -11.630427604244598,
+        "min_us": [
+          1528.1919907407407,
+          1400.339509259259
+        ],
+        "max_us": [
+          2080.301462962963,
+          1984.1044814814813
+        ],
+        "iqr_us": [
+          135.59693981481473,
+          126.5140671296299
+        ]
+      },
+      {
+        "pattern": "multicomponent",
+        "width": 256,
+        "height": 384,
+        "baseline_us": 21704.75795,
+        "candidate_us": 19789.50105,
+        "change_percent": -8.824133880746643,
+        "min_us": [
+          21049.453100000002,
+          18788.1191
+        ],
+        "max_us": [
+          29017.253999999997,
+          26959.726799999997
+        ],
+        "iqr_us": [
+          1138.2360500000032,
+          1175.0231499999973
+        ]
+      },
+      {
+        "pattern": "multicomponent",
+        "width": 736,
+        "height": 304,
+        "baseline_us": 52969.85725,
+        "candidate_us": 48632.038,
+        "change_percent": -8.18922208819054,
+        "min_us": [
+          50427.6315,
+          45617.780750000005
+        ],
+        "max_us": [
+          66799.41675,
+          64503.784999999996
+        ],
+        "iqr_us": [
+          2891.790249999991,
+          3122.2543750000114
+        ]
+      }
+    ]
+  }
+}

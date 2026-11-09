@@ -1,0 +1,663 @@
+{
+  "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+  "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+  "receipts": {
+    "cycletrim-build": {
+      "command": [
+        "/workspace/scratch/6c1cf53f37e8/OniMods/target/release/onim",
+        "build",
+        "-m",
+        "CycleTrim",
+        "--release"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 21.604854803998023,
+      "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+      "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb"
+    },
+    "native-build": {
+      "command": [
+        "cargo",
+        "+1.99.1",
+        "build",
+        "--release",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "mods/CycleTrim/OniSim/native/Cargo.toml"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 7.066286863999267,
+      "source_commit": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528"
+    },
+    "native-full": {
+      "command": [
+        "cargo",
+        "+1.99.1",
+        "test",
+        "--release",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "mods/CycleTrim/OniSim/native/Cargo.toml"
+      ],
+      "exit_code": 101,
+      "seconds": 1.7168547399996896,
+      "native_revision": "5e64a228228dcf3b8bc285b0d1d9451f88eb9528",
+      "counts": {
+        "passed": 109,
+        "failed": 11,
+        "ignored": 7
+      }
+    },
+    "jlib-pack-final": {
+      "command": [
+        "dotnet",
+        "pack",
+        "mods/Jlib/Jlib/Jlib.csproj",
+        "-c",
+        "Release",
+        "-m:1",
+        "-p:BuildInParallel=false",
+        "-p:ImportDirectoryBuildProps=false",
+        "-p:OniManagedPath=/workspace/scratch/515b7b30a25d/oni-managed",
+        "--disable-build-servers"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 7.746532052005932,
+      "log": "/workspace/scratch/e6e4326d6164/validation/round2/jlib-pack-final.log"
+    },
+    "jlib-host-final": {
+      "command": [
+        "dotnet",
+        "run",
+        "--project",
+        "mods/Jlib/Jlib.Tests/Jlib.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-restore",
+        "-p:ImportDirectoryBuildProps=false",
+        "--",
+        "--inspect",
+        "mods/Jlib/Jlib/bin/Release/net48/Jlib.dll",
+        "mods/Jlib/Jlib/bin/Release/netstandard2.1/Jlib.dll",
+        "--inspect-package",
+        "mods/Jlib/artifacts/Jlib.zip"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 1.8657012380062952,
+      "log": "/workspace/scratch/e6e4326d6164/validation/round2/jlib-host-final.log"
+    },
+    "loader-final": {
+      "command": [
+        "dotnet",
+        "tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll",
+        "dist/CycleTrim/OniSim"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 7.950348508005845,
+      "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+      "environment": {
+        "CYCLETRIM_ONISIM_GPU": "0"
+      },
+      "build_config": "explicit OniManagedPath, serial compilation; initial omitted path rejected before runtime"
+    },
+    "release-guards": {
+      "command": [
+        "python",
+        "scripts/verify_cycletrim_release_binary.py"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 11.680331090996333,
+      "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01"
+    },
+    "package-verification": {
+      "schema_version": 1,
+      "created_utc": "2026-11-09T01:44:19.315727+00:00",
+      "scope": "ZIP CRC/layout/hash and static owned-assembly metadata; no game DLL execution or ONI runtime test",
+      "checks": [
+        {
+          "name": "completed_cycletrim_build_receipt",
+          "passed": true,
+          "detail": {
+            "command": [
+              "/workspace/scratch/6c1cf53f37e8/OniMods/target/release/onim",
+              "build",
+              "-m",
+              "CycleTrim",
+              "--release"
+            ],
+            "returncode": 0,
+            "elapsed_seconds": 21.604854803998023,
+            "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+            "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb"
+          }
+        },
+        {
+          "name": "CycleTrim_all_zip_entry_crc",
+          "passed": true,
+          "detail": {
+            "entries": 115,
+            "first_bad_entry": null
+          }
+        },
+        {
+          "name": "CycleTrim_unambiguous_zip_paths",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "CycleTrim_mod_info_version",
+          "passed": true,
+          "detail": "0.4.10"
+        },
+        {
+          "name": "CycleTrim_static_id",
+          "passed": true,
+          "detail": "LIghtJUNction.CycleTrim"
+        },
+        {
+          "name": "CycleTrim_managed_dll_allowlist",
+          "passed": true,
+          "detail": [
+            "CycleTrim.dll",
+            "implementation/CycleTrim.dll",
+            "implementation/OniSim.Compatibility.dll"
+          ]
+        },
+        {
+          "name": "CycleTrim_all_zip_files_match_distribution_directory",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_all_zip_entry_crc",
+          "passed": true,
+          "detail": {
+            "entries": 11,
+            "first_bad_entry": null
+          }
+        },
+        {
+          "name": "Jlib_unambiguous_zip_paths",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_mod_info_version",
+          "passed": true,
+          "detail": "0.3.2"
+        },
+        {
+          "name": "Jlib_static_id",
+          "passed": true,
+          "detail": "LIghtJUNction.Jlib"
+        },
+        {
+          "name": "Jlib_managed_dll_allowlist",
+          "passed": true,
+          "detail": [
+            "Jlib.dll"
+          ]
+        },
+        {
+          "name": "Jlib_all_zip_files_match_distribution_directory",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "one_separate_Jlib_provider_no_consumer_duplicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_distribution_zip_matches_pack_artifact",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "cycletrim_package_checker_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "actual_package_bootstrap_gate_external_Jlib_and_no_game_or_PLib_payloads",
+          "passed": true,
+          "detail": "PASS CycleTrim package: bootstrap gate, external Jlib implementation, no embedded PLib or game libraries."
+        },
+        {
+          "name": "bootstrap_assembly_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "bootstrap_assembly_single_assembly_definition",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "implementation_assembly_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "implementation_assembly_single_assembly_definition",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_assembly_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "Jlib_assembly_single_assembly_definition",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "actual_bootstrap_identity",
+          "passed": true,
+          "detail": "CycleTrim.Bootstrap"
+        },
+        {
+          "name": "actual_implementation_identity_and_version",
+          "passed": true,
+          "detail": "CycleTrim, 0.4.10.0"
+        },
+        {
+          "name": "actual_Jlib_identity_and_version",
+          "passed": true,
+          "detail": "Jlib, 0.3.2.0"
+        },
+        {
+          "name": "implementation_zip_dist_build_output_equal",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_zip_dist_net48_build_output_equal",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "bootstrap_owned_static_decompilation_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "actual_bootstrap_minimum_Jlib_metadata",
+          "passed": true,
+          "detail": [
+            "0.3.2"
+          ]
+        },
+        {
+          "name": "actual_bootstrap_consumes_minimum_metadata_before_successful_dependency_return",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "Jlib_owned_API_static_decompilation_returncode",
+          "passed": true,
+          "detail": 0
+        },
+        {
+          "name": "actual_Jlib_API_version_constant",
+          "passed": true,
+          "detail": [
+            "0.3.2"
+          ]
+        },
+        {
+          "name": "native_zip_dist_platform_target_sha256_equal",
+          "passed": true,
+          "detail": {
+            "zip": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+            "distribution": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+            "platform_build_target": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723"
+          }
+        },
+        {
+          "name": "native_build_manifest_binary_sha_matches",
+          "passed": true,
+          "detail": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723"
+        },
+        {
+          "name": "native_build_manifest_target_and_source_commit",
+          "passed": true,
+          "detail": {
+            "schema": 1,
+            "target": "linux-x64",
+            "triple": "x86_64-unknown-linux-gnu",
+            "sourceSha256": "9216f7c0942b2212a226260983a2c6826fa83ea67b251e1d57ae07bd384b16ae",
+            "binarySha256": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+            "commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+            "gameRuntimeTested": false
+          }
+        },
+        {
+          "name": "native_is_64_bit_little_endian_ELF",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "name": "reused_Jlib_441_assertion_host_and_static_package_receipt",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "errors": [],
+      "packages": {
+        "CycleTrim": {
+          "path": "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim.zip",
+          "bytes": 3430842,
+          "sha256": "b8fe86f05ab54e61dbcfb0e2d453a2c0969e080984d2f116eba80509147bc01f",
+          "entries": 115,
+          "crc_all_entries_passed": true,
+          "mod_version": "0.4.10",
+          "static_id": "LIghtJUNction.CycleTrim",
+          "managed_dll_entries": [
+            "CycleTrim.dll",
+            "implementation/CycleTrim.dll",
+            "implementation/OniSim.Compatibility.dll"
+          ],
+          "bootstrap": {
+            "name": "CycleTrim.Bootstrap",
+            "version": "1.0.0.0",
+            "sha256": "326f62487a41afa7b155b4b9d788629547cd8be124439b67ea5f7957d8fdc776",
+            "reader": {
+              "command": [
+                "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd",
+                "--disable-updatecheck",
+                "--dump-table",
+                "Assembly",
+                "--json",
+                "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/CycleTrim.dll"
+              ],
+              "returncode": 0,
+              "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/bootstrap_assembly.stdout",
+              "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/bootstrap_assembly.stderr"
+            },
+            "minimum_Jlib_metadata": [
+              "0.3.2"
+            ],
+            "static_reader": {
+              "command": [
+                "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd",
+                "--disable-updatecheck",
+                "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/CycleTrim.dll"
+              ],
+              "returncode": 0,
+              "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/bootstrap_owned_static_decompilation.stdout",
+              "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/bootstrap_owned_static_decompilation.stderr"
+            }
+          },
+          "implementation": {
+            "name": "CycleTrim",
+            "version": "0.4.10.0",
+            "sha256": "7ba09d1c084f21c54b0af6ff7a129c977b96ef7645ac7b084ac47e6f054c7767",
+            "reader": {
+              "command": [
+                "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd",
+                "--disable-updatecheck",
+                "--dump-table",
+                "Assembly",
+                "--json",
+                "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/implementation/CycleTrim.dll"
+              ],
+              "returncode": 0,
+              "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/implementation_assembly.stdout",
+              "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/implementation_assembly.stderr"
+            }
+          }
+        },
+        "Jlib": {
+          "path": "/workspace/scratch/e6e4326d6164/OniMods/dist/Jlib.zip",
+          "bytes": 567807,
+          "sha256": "ed86e53f0e2cdcb66c19533a57f0e07278a565670b4ec7298ffd84ec0bc24303",
+          "entries": 11,
+          "crc_all_entries_passed": true,
+          "mod_version": "0.3.2",
+          "static_id": "LIghtJUNction.Jlib",
+          "managed_dll_entries": [
+            "Jlib.dll"
+          ],
+          "assembly": {
+            "name": "Jlib",
+            "version": "0.3.2.0",
+            "sha256": "7b3918d973e9ee820d368d2a16200a616a01d1bf55589339853747ac784239a0",
+            "reader": {
+              "command": [
+                "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd",
+                "--disable-updatecheck",
+                "--dump-table",
+                "Assembly",
+                "--json",
+                "/workspace/scratch/e6e4326d6164/OniMods/dist/Jlib/Jlib.dll"
+              ],
+              "returncode": 0,
+              "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/Jlib_assembly.stdout",
+              "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/Jlib_assembly.stderr"
+            }
+          },
+          "api_version_constants": [
+            "0.3.2"
+          ],
+          "api_static_reader": {
+            "command": [
+              "/workspace/scratch/6c1cf53f37e8/toolchain/ilspy/ilspycmd",
+              "--disable-updatecheck",
+              "-t",
+              "Jlib.Runtime.JlibApi",
+              "/workspace/scratch/e6e4326d6164/OniMods/dist/Jlib/Jlib.dll"
+            ],
+            "returncode": 0,
+            "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/Jlib_owned_API_static_decompilation.stdout",
+            "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/Jlib_owned_API_static_decompilation.stderr"
+          }
+        }
+      },
+      "build_receipt": {
+        "command": [
+          "/workspace/scratch/6c1cf53f37e8/OniMods/target/release/onim",
+          "build",
+          "-m",
+          "CycleTrim",
+          "--release"
+        ],
+        "returncode": 0,
+        "elapsed_seconds": 21.604854803998023,
+        "source_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+        "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb"
+      },
+      "package_checker": {
+        "command": [
+          "dotnet",
+          "tests/OniMods.JlibBootstrap.Tests/bin/Release/net10.0/FixtureConsumer.Bootstrap.dll",
+          "--check-package",
+          "dist/CycleTrim.zip",
+          "CycleTrim"
+        ],
+        "returncode": 0,
+        "stdout_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/cycletrim_package_checker.stdout",
+        "stderr_path": "/workspace/scratch/e6e4326d6164/validation/round2/package-metadata/cycletrim_package_checker.stderr",
+        "output": "PASS CycleTrim package: bootstrap gate, external Jlib implementation, no embedded PLib or game libraries."
+      },
+      "native": {
+        "entry": "OniSim/linux-x64/liboni_sim_core.so",
+        "distribution_path": "/workspace/scratch/e6e4326d6164/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so",
+        "target_path": "/workspace/scratch/e6e4326d6164/OniMods/mods/CycleTrim/OniSim/native/target/platform-build/x86_64-unknown-linux-gnu/release/liboni_sim_core.so",
+        "bytes": 8259400,
+        "sha256": {
+          "zip": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+          "distribution": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+          "platform_build_target": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723"
+        },
+        "build_manifest": {
+          "schema": 1,
+          "target": "linux-x64",
+          "triple": "x86_64-unknown-linux-gnu",
+          "sourceSha256": "9216f7c0942b2212a226260983a2c6826fa83ea67b251e1d57ae07bd384b16ae",
+          "binarySha256": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+          "commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+          "gameRuntimeTested": false
+        }
+      },
+      "reused_Jlib_test_evidence": {
+        "receipt": {
+          "command": [
+            "dotnet",
+            "run",
+            "--project",
+            "mods/Jlib/Jlib.Tests/Jlib.Tests.csproj",
+            "-c",
+            "Release",
+            "--no-restore",
+            "-p:ImportDirectoryBuildProps=false",
+            "--",
+            "--inspect",
+            "mods/Jlib/Jlib/bin/Release/net48/Jlib.dll",
+            "mods/Jlib/Jlib/bin/Release/netstandard2.1/Jlib.dll",
+            "--inspect-package",
+            "mods/Jlib/artifacts/Jlib.zip"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 1.8657012380062952,
+          "log": "/workspace/scratch/e6e4326d6164/validation/round2/jlib-host-final.log"
+        },
+        "log_path": "/workspace/scratch/e6e4326d6164/validation/round2/jlib-host-final.log",
+        "log_sha256": "0865787d3223b289926767a51085f97c68ad71c380bba0402091d0ebf77221df"
+      },
+      "benchmark_binary_scope": {
+        "benchmark_log": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final.log",
+        "sha256": "052e6794292c2a9103c1fd34bea25d2eeed1e5cb4942a8ebd49cd81c1b1dba89",
+        "same_as_delivered_native": false,
+        "explanation": "Managed ABBA deliberately held the earlier native binary constant on both sides to isolate managed changes. The final release native has separate native benchmarks, release guard tests and final fixture smoke; this check does not claim packaged-binary FPS or end-to-end timing."
+      },
+      "passed": true
+    },
+    "independent-review": {
+      "schema_version": 1,
+      "reviewed_at_utc": "2026-11-09T01:42:19.635509+00:00",
+      "reviewer": "/root/validation_audit",
+      "status": "PASS",
+      "reviewed_commits": {
+        "OniMods": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+        "Jlib": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+        "root_gitlink_matches_Jlib": true,
+        "worktree_heads_match": true,
+        "publication_status": "Commit identifiers supplied by root as pushed; this review checks local immutable Git objects, not a fresh network push status."
+      },
+      "source_provenance": {
+        "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final-sources.json",
+        "sha256": "9935034a0727f923b624a84cb371661cc64278a365634832f1f5b2181a818c83",
+        "source_count": 18,
+        "all_match_reviewed_commit_and_worktree": true,
+        "mismatches": [],
+        "changed_since_initial": [
+          "mods/Jlib/Jlib/Multicomponent/MulticomponentPatches.cs",
+          "tests/CycleTrim.PerformanceProbe.Tests/MulticomponentBatchRegression.cs"
+        ],
+        "current_sources_were_not_substituted_for_historical_manifest": true
+      },
+      "evidence": {
+        "final_log": {
+          "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final.log",
+          "sha256": "8218bda46c94389c10ff641d4cc09c8a7df466a6d9dadde44644860dfb3c3bd8"
+        },
+        "final_analysis": {
+          "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final-analysis.json",
+          "sha256": "7e066d070ce3f4fd4905985aa3be58313d781410ec201578770210fbda389794"
+        },
+        "run": {
+          "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-final-run.json",
+          "sha256": "249dbbe3ac1648eef8c88cca9f0b32493dfa61e0c50fa13482fc627ec97ac79c"
+        },
+        "initial_failed_analysis": {
+          "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/benchmark-initial-analysis.json",
+          "sha256": "12757101b8fc0f0d1beac158dae134dd99eeeb101fc54d9b807c5145130c9f24"
+        },
+        "analyzer": {
+          "path": "/workspace/scratch/e6e4326d6164/validation/multicomponent-batch/analyze.py",
+          "sha256": "73bd7807ed11b2d448771a61bf1b3b6332156fa95038ce33e98093001abdc9c2"
+        }
+      },
+      "checks": {
+        "all_748_samples_preserved_in_input_order": true,
+        "eleven_scenarios_with_68_samples_and_34_per_variant": true,
+        "fixed_gates_unchanged_from_initial": true,
+        "independent_fraction_arithmetic_recomputed_all_timing_allocation_checksum_gates": true,
+        "max_timing_metric_difference_ms": 2.930988785010413e-14,
+        "frozen_baseline_prefix_body_matches_git_revision": true,
+        "all_warm_sample_allocations_zero": true,
+        "initial_failed_run_retained": true
+      },
+      "results": {
+        "dense_reduction_percent_min": 79.79865000373262,
+        "dense_reduction_percent_max": 85.88736860768964,
+        "controls": [
+          {
+            "scenario": "736x304_mixed10_one_gas_per_row_chunk",
+            "old_median_ms": 2.2193725,
+            "new_median_ms": 2.1149363333333335,
+            "reduction_percent": 4.705661923208774,
+            "max_ratio": 1.03,
+            "pass": true
+          },
+          {
+            "scenario": "736x304_mixed10_all_inactive",
+            "old_median_ms": 0.7837135,
+            "new_median_ms": 0.8024981666666666,
+            "reduction_percent": -2.3968793017686525,
+            "max_ratio": 1.03,
+            "pass": true
+          }
+        ],
+        "all_eleven_pass": true
+      },
+      "final_packaged_native_smoke": {
+        "metadata": "/workspace/scratch/e6e4326d6164/validation/native-fixture-smoke/smoke-final-native.json",
+        "metadata_sha256": "dc48cf3564486eaa0a102f8baa9c6083448dd0635928c7a2b83b87070b8e3777",
+        "native_sha256": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+        "pass": true,
+        "same_existing_four_layouts_and_thread_lease_checks": true,
+        "assertions": 652315
+      },
+      "limitations": [
+        "No new performance timing was run during this review.",
+        "Formal managed timings use the captured old native SHA 052e6794... to isolate managed changes; the final packaged native SHA bb65d2dc... separately passed the existing non-timed compatibility smoke.",
+        "Host .NET 10 game doubles and authored native publications do not establish Unity/Mono FPS or real-save behavior."
+      ],
+      "errors": []
+    }
+  },
+  "bootstrap": {
+    "scenarios": 18,
+    "result": "PASS",
+    "evidence": "validation/round2/bootstrap.log"
+  },
+  "presentation_family": {
+    "passed": 12,
+    "failed": 0,
+    "ignored_manual_benchmarks": 3,
+    "liquid_regressions_passed": 4
+  },
+  "host_non_timing": {
+    "result": "PASS",
+    "evidence": "validation/multicomponent-batch/host-regressions-contiguous.log"
+  },
+  "invocation_corrections": [
+    {
+      "test": "OniSim.Loader.Tests",
+      "initial": "Explicit ImportDirectoryBuildProps=false omitted OniManagedPath; Jlib target correctly rejected missing compile references.",
+      "final": "Set explicit verified compile reference path; serial build and native smoke passed. No product source was changed."
+    }
+  ],
+  "runtime_acceptance": {
+    "Unity_Mono": "not run",
+    "hardware_GPU": "not available / tests did not pass",
+    "save_specific_FPS": "not measured",
+    "Steam_or_NuGet_publication": "not performed"
+  }
+}

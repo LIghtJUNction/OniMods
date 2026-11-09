@@ -1,0 +1,79 @@
+{
+  "code_commit": "11ff143aafb7ed26b3881f528be5f03f54beac01",
+  "jlib_commit": "22ac027a069a67813db8aa2f7a162c0e8a5327fb",
+  "platform": "linux-x64",
+  "packages": [
+    {
+      "name": "CycleTrim-0.4.10-linux-x64.zip",
+      "size_bytes": 3430842,
+      "sha256": "b8fe86f05ab54e61dbcfb0e2d453a2c0969e080984d2f116eba80509147bc01f"
+    },
+    {
+      "name": "Jlib-0.3.2.zip",
+      "size_bytes": 567807,
+      "sha256": "ed86e53f0e2cdcb66c19533a57f0e07278a565670b4ec7298ffd84ec0bc24303"
+    }
+  ],
+  "drive_folder_url": "https://drive.google.com/drive/folders/1JL2xhermjB_FsFvCEgl_4iFVWDRVaf08",
+  "native_sha256": "bb65d2dc7e44193dd921d9c01797f449f6411fe4ef4989e8e235fa42b0456723",
+  "steam_publication": false,
+  "nuget_publication": false,
+  "files": [
+    {
+      "name": "CycleTrim-0.4.10-linux-x64.zip",
+      "id": "1ttF2tNf8u8otkvCHfvzwbGjW4P5FalWx",
+      "url": "https://drive.google.com/file/d/1ttF2tNf8u8otkvCHfvzwbGjW4P5FalWx/view?usp=drivesdk",
+      "size_bytes": 3430842,
+      "parent_id": "1JL2xhermjB_FsFvCEgl_4iFVWDRVaf08",
+      "readback_verified": [
+        "id",
+        "name",
+        "size",
+        "parent"
+      ],
+      "sha256": "b8fe86f05ab54e61dbcfb0e2d453a2c0969e080984d2f116eba80509147bc01f"
+    },
+    {
+      "name": "Jlib-0.3.2.zip",
+      "id": "1YpRGO-8yTzF1BW2mbuQIu_87j2YuH2W7",
+      "url": "https://drive.google.com/file/d/1YpRGO-8yTzF1BW2mbuQIu_87j2YuH2W7/view?usp=drivesdk",
+      "size_bytes": 567807,
+      "parent_id": "1JL2xhermjB_FsFvCEgl_4iFVWDRVaf08",
+      "readback_verified": [
+        "id",
+        "name",
+        "size",
+        "parent"
+      ],
+      "sha256": "ed86e53f0e2cdcb66c19533a57f0e07278a565670b4ec7298ffd84ec0bc24303"
+    },
+    {
+      "name": "CycleTrim-0.4.10-performance-evidence.zip",
+      "id": "1lfAuPQAFa2SXooPChD00gfre2Ywtj82A",
+      "url": "https://drive.google.com/file/d/1lfAuPQAFa2SXooPChD00gfre2Ywtj82A/view?usp=drivesdk",
+      "size_bytes": 190828,
+      "parent_id": "1JL2xhermjB_FsFvCEgl_4iFVWDRVaf08",
+      "readback_verified": [
+        "id",
+        "name",
+        "size",
+        "parent"
+      ],
+      "sha256": "3ff7c58057ac681d46b4070c1ea628174445fb721389d911ec5619215ef18d0d"
+    },
+    {
+      "name": "CycleTrim-0.4.10-performance-report.md",
+      "id": "1w8Ic09wWsxP9cTVcihukt94pyO25-rH-",
+      "url": "https://drive.google.com/file/d/1w8Ic09wWsxP9cTVcihukt94pyO25-rH-/view?usp=drivesdk",
+      "size_bytes": 15195,
+      "parent_id": "1JL2xhermjB_FsFvCEgl_4iFVWDRVaf08",
+      "readback_verified": [
+        "id",
+        "name",
+        "size",
+        "parent"
+      ],
+      "sha256": "80c302d01bff113737095c8025657cdffaeb30aaf3ec8c9022d6f6bf7b554e6e"
+    }
+  ]
+}
