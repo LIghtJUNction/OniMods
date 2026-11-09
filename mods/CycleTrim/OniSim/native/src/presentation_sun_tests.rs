@@ -36,7 +36,7 @@ fn fixture(width: usize, height: usize, pattern: &str) -> (PhysicsWorld, Element
         random ^= random << 5;
         world.write.element[cell] = match pattern {
             "vacuum" => 0,
-            "blocked" => 4,
+            "gas" | "blocked" => 4,
             _ => (random % 6) as u16,
         };
         world.write.mass[cell] = if pattern == "vacuum" {
@@ -46,6 +46,7 @@ fn fixture(width: usize, height: usize, pattern: &str) -> (PhysicsWorld, Element
         };
         world.write.properties[cell] = match pattern {
             "blocked" if (cell / world.stride) % 17 == 0 => 0x20,
+            "override" => 0x30,
             "mixed" => ((random >> 8) as u8) & 0x30,
             _ => 0,
         };
@@ -66,7 +67,7 @@ fn fixture(width: usize, height: usize, pattern: &str) -> (PhysicsWorld, Element
     (world, elements)
 }
 
-// Frozen former production loop: preserve its arithmetic and traversal exactly.
+// Frozen production loop from 07e18765 (CycleTrim 0.4.10).
 fn original(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable) {
     let override_index = elements
         .elements
@@ -86,7 +87,7 @@ fn original(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable) {
             let mut remaining = 1.0;
             for row in (y..top).rev() {
                 let public = row * world.width + column;
-                let current = world.internal_index(public);
+                let current = (row + 1) * world.stride + column + 1;
                 let above = current + world.stride;
                 let flags = world.write.properties[current];
                 let index = if flags & 0x30 == 0x30 {
@@ -116,8 +117,8 @@ fn original(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable) {
 
 #[test]
 fn matches_original_offsets_overlaps_and_degenerate_rectangles() {
-    for (width, height) in [(1, 1), (3, 5), (17, 19), (256, 384)] {
-        for pattern in ["vacuum", "mixed", "blocked", "split"] {
+    for (width, height) in [(1, 1), (3, 5), (17, 19), (63, 64), (64, 65), (65, 66), (129, 71), (256, 384)] {
+        for pattern in ["vacuum", "gas", "mixed", "blocked", "override", "split"] {
             let (mut world, elements) = fixture(width, height, pattern);
             // Check degenerate rectangles independently: both height 0 and -1
             // write the same top=0 row, so grouping them could hide a failure.
@@ -127,6 +128,7 @@ fn matches_original_offsets_overlaps_and_degenerate_rectangles() {
                 vec![[0, 2, width as i32, -1]],
                 vec![[-99, -99, 0, 0]],
                 vec![[i32::MIN, i32::MIN, -1, i32::MIN]],
+                Vec::new(),
             ];
             for offsets in layouts {
                 world.world_offsets = offsets;
@@ -141,13 +143,106 @@ fn matches_original_offsets_overlaps_and_degenerate_rectangles() {
 }
 
 #[test]
+fn matches_original_unmasked_exact_arithmetic() {
+    let _restore = crate::float_env::FloatEnv::capture().install();
+    let (mut world, mut elements) = fixture(129, 71, "vacuum");
+    elements.elements[0].record.default_mass = 1.0;
+    elements.elements[0].record.light_absorption = 0.0;
+    let mut raw = 0_u32;
+    unsafe {
+        std::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut raw, options(nostack, preserves_flags));
+    }
+    for exception in 0..6 {
+        let mode = ((raw | 0x1f80) & !0x3f) & !(1 << (exception + 7));
+        let mut a = vec![0x96; world.width * world.height];
+        let mut b = a.clone();
+        world.world_offsets.push([1, 2, 127, 64]);
+        unsafe {
+            std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &mode, options(nostack, preserves_flags));
+        }
+        original(black_box(&mut a), black_box(&world), black_box(&elements));
+        update(black_box(&mut b), black_box(&world), black_box(&elements));
+        let mut after = 0_u32;
+        unsafe {
+            std::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut after, options(nostack, preserves_flags));
+            std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &raw, options(nostack, preserves_flags));
+        }
+        assert_eq!(a, b, "unmasked exception {exception}");
+        assert_eq!(after, mode, "unexpected arithmetic flags for exception {exception}");
+    }
+}
+
+#[test]
+fn matches_original_material_cache_collisions_and_table_changes() {
+    let (mut world, mut elements) = fixture(129, 71, "mixed");
+    let gas = elements.elements[4].clone();
+    elements.elements.resize(198, gas);
+    for (index, element) in elements.elements.iter_mut().enumerate().skip(6) {
+        element.record.default_mass = (index + 1) as f32;
+        element.record.light_absorption = (index % 17) as f32 / 128.0;
+    }
+    for (cell, element) in world.write.element.iter_mut().enumerate() {
+        // The four distinct entries all collide in the direct-mapped cache.
+        *element = [4, 68, 132, 196][cell % 4];
+    }
+    for iteration in 0..4 {
+        let mut a = vec![0x96; world.width * world.height];
+        let mut b = a.clone();
+        original(&mut a, &world, &elements);
+        update(&mut b, &world, &elements);
+        assert_eq!(a, b, "table change {iteration}");
+        elements.elements[68].record.default_mass *= 0.5;
+        elements.elements[132].record.light_absorption += 0.0625;
+    }
+}
+
+#[test]
+fn unused_materials_do_not_raise_exceptions() {
+    let _restore = crate::float_env::FloatEnv::capture().install();
+    let (mut world, mut elements) = fixture(129, 71, "gas");
+    world.write.mass.fill(0.5);
+    elements.elements[4].record.default_mass = 1.0;
+    elements.elements[4].record.light_absorption = 0.0;
+    for (index, element) in elements.elements.iter_mut().enumerate() {
+        if index != 4 {
+            element.record.default_mass = 0.0;
+            element.record.light_absorption = f32::from_bits(0x7f80_0001);
+        }
+    }
+    let mut a = vec![0x96; world.width * world.height];
+    let mut b = a.clone();
+    let mode = 0x1f80_u32;
+    let mut flags = [0_u32; 2];
+    for (index, (output, implementation)) in [
+        (&mut a, original as fn(&mut [u8], &PhysicsWorld, &ElementTable)),
+        (&mut b, update as fn(&mut [u8], &PhysicsWorld, &ElementTable)),
+    ].into_iter().enumerate() {
+        unsafe {
+            std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &mode, options(nostack, preserves_flags));
+        }
+        implementation(black_box(output), black_box(&world), black_box(&elements));
+        unsafe {
+            std::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut flags[index], options(nostack, preserves_flags));
+        }
+    }
+    assert_eq!(a, b);
+    assert_eq!(flags, [mode; 2]);
+}
+
+#[test]
 fn matches_original_ieee_words_and_fp_environment() {
+    for pattern in ["mixed", "override"] {
+        check_ieee_words_and_fp_environment(pattern);
+    }
+}
+
+fn check_ieee_words_and_fp_environment(pattern: &str) {
     let _restore = crate::float_env::FloatEnv::capture().install();
     let edge = [
         0, 0x80000000, 1, 0x00800000, 0x3f800000, 0xbf800000, 0x7f7fffff, 0x7f800000, 0xff800000,
         0x7fc01234, 0x7f801234,
     ];
-    let (mut world, mut elements) = fixture(17, 19, "mixed");
+    let (mut world, mut elements) = fixture(65, 19, pattern);
     for cell in 0..world.write.mass.len() {
         world.write.mass[cell] = f32::from_bits(edge[cell % edge.len()]);
     }
@@ -192,22 +287,27 @@ fn matches_original_ieee_words_and_fp_environment() {
 #[test]
 #[ignore = "explicit single-core microbenchmark, not part of correctness tests"]
 fn benchmark_sun_indexing() {
-    const SAMPLES: usize = 41;
+    const BLOCKS: usize = 17;
+    const SAMPLES: usize = 2 * BLOCKS;
     println!(
         "SUN_CSV,pattern,width,height,original_us,candidate_us,speedup,original_samples_us,candidate_samples_us"
     );
     let mut gate = true;
-    let mut improvement = false;
-    for pattern in ["vacuum", "mixed", "blocked", "split"] {
-        for (width, height) in [(17, 19), (96, 96), (256, 384), (512, 512), (1024, 1024)] {
+    for pattern in ["gas", "mixed", "vacuum", "blocked", "override", "split"] {
+        for (width, height) in [(17, 19), (96, 96), (256, 384), (736, 304)] {
             let (world, elements) = fixture(width, height, pattern);
             let mut a = vec![0; width * height];
             let mut b = a.clone();
             let mut samples: [Vec<f64>; 2] = std::array::from_fn(|_| Vec::new());
             let repeat = (262_144 / (width * height)).clamp(1, 200);
-            for pair in 0..5 + SAMPLES {
-                for offset in 0..2 {
-                    let kind = (pair + offset) % 2;
+            for _ in 0..8 {
+                original(black_box(&mut a), black_box(&world), black_box(&elements));
+                update(black_box(&mut b), black_box(&world), black_box(&elements));
+            }
+            assert_eq!(a, b);
+            for block in 0..BLOCKS {
+                let order = if block % 2 == 0 { [0, 1, 1, 0] } else { [1, 0, 0, 1] };
+                for kind in order {
                     let start = Instant::now();
                     for _ in 0..repeat {
                         if kind == 0 {
@@ -218,9 +318,8 @@ fn benchmark_sun_indexing() {
                             black_box(&b);
                         }
                     }
-                    if pair >= 5 {
-                        samples[kind].push(start.elapsed().as_secs_f64() * 1e6 / repeat as f64);
-                    }
+                    samples[kind].push(start.elapsed().as_secs_f64() * 1e6 / repeat as f64);
+                    assert_eq!(a, b);
                 }
             }
             assert_eq!(a, b);
@@ -228,10 +327,14 @@ fn benchmark_sun_indexing() {
                 x.sort_by(f64::total_cmp);
                 x
             });
-            let ratio = sorted[0][SAMPLES / 2] / sorted[1][SAMPLES / 2];
-            if width >= 256 {
-                gate &= ratio >= 1.0 / 1.03;
-                improvement |= ratio >= 1.10;
+            let medians = sorted.map(|x| (x[SAMPLES / 2 - 1] + x[SAMPLES / 2]) * 0.5);
+            let ratio = medians[0] / medians[1];
+            // Fixed before timing: dense scenes must improve >=10%; meaningful
+            // zero/block/override/overlap controls may not regress >3%.
+            // The tiny 17x19 case is reported, without a timing admission gate.
+            if width >= 96 {
+                let minimum = if matches!(pattern, "gas" | "mixed") { 1.0 / 0.90 } else { 1.0 / 1.03 };
+                gate &= ratio >= minimum;
             }
             let series = |x: &[f64]| {
                 x.iter()
@@ -241,15 +344,15 @@ fn benchmark_sun_indexing() {
             };
             println!(
                 "SUN_CSV,{pattern},{width},{height},{:.6},{:.6},{ratio:.6},{},{}",
-                sorted[0][SAMPLES / 2],
-                sorted[1][SAMPLES / 2],
+                medians[0],
+                medians[1],
                 series(&samples[0]),
                 series(&samples[1])
             );
         }
     }
     assert!(
-        gate && improvement,
-        "fixed sunlight benchmark gates failed: no regression={gate}, improvement={improvement}"
+        gate,
+        "fixed sunlight locality benchmark gates failed"
     );
 }
