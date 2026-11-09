@@ -299,6 +299,7 @@ impl<'a> PreparedStep<'a> {
                     region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
                     region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             }
+            let liquid_flow_ms = lap();
             if let Some(gpu) = systems.gpu.as_deref_mut() {
                 gpu.diffuse_diseases(world, elements, diseases, region).map_err(|error|
                     Error::new(Status::InternalFailure, format!("GPU disease diffusion failed: {error}")))?;
@@ -358,7 +359,7 @@ impl<'a> PreparedStep<'a> {
             }
             let remaining_ms = lap();
             if profiling {
-                eprintln!("[CycleTrim OniSim] region profile index={index} temperature+sync={temperature_ms:.3}ms gas+sync={gas_phase_ms:.3}ms transport={transport_ms:.3}ms diffusion+sync={diffusion_ms:.3}ms remaining={remaining_ms:.3}ms");
+                eprintln!("[CycleTrim OniSim] region profile index={index} temperature+sync={temperature_ms:.3}ms gas+sync={gas_phase_ms:.3}ms transport={transport_ms:.3}ms diffusion+sync={diffusion_ms:.3}ms liquid_flow_and_sync_wall={liquid_flow_ms:.3}ms remaining={remaining_ms:.3}ms");
             }
         }
         world.tick_seed = world.tick_seed.wrapping_add(1);

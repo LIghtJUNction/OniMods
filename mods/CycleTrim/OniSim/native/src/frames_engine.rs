@@ -100,10 +100,12 @@ impl Engine {
         let unchanged_batch = empty_batch || idle_frames;
         let reuse_derived = unchanged_batch && self.empty_publication_streak >= 2;
         static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        let mut profile_batch = false;
         if *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some()) {
             let zero_with_commands = !empty_batch && !idle_frames && frames.iter().all(|frame| frame.elapsed == 0.0);
             let category = if empty_batch { 0 } else if idle_frames { 1 } else if zero_with_commands { 2 } else { 3 };
             self.publication_profile[category] += 1;
+            profile_batch = self.publication_profile.iter().sum::<u32>() % 64 == 1;
             if zero_with_commands {
                 let mut batch_mask = 0u8;
                 for frame in &frames {
@@ -131,6 +133,18 @@ impl Engine {
                 self.zero_early_mask = 0;
             }
         }
+        // Only sampled diagnostic batches read the clock. Simulation wall time
+        // includes GPU waits; publication stages below operate on CPU storage.
+        let mut profile_mark = profile_batch.then(std::time::Instant::now);
+        let mut lap = || match profile_mark.as_mut() {
+            Some(start) => {
+                let now = std::time::Instant::now();
+                let elapsed = now.duration_since(*start).as_secs_f64() * 1000.0;
+                *start = now;
+                elapsed
+            }
+            None => 0.0,
+        };
         if reuse_derived {
             static LOG_EMPTY: std::sync::Once = std::sync::Once::new();
             static LOG_ZERO: std::sync::Once = std::sync::Once::new();
@@ -221,6 +235,7 @@ impl Engine {
             // Prepare returns these owned slots to submission's native LIFO.
             output.retired_slots.push(frame.early);
         }
+        let simulation_ms = lap();
 
         // CopySimDataToGame publishes/clears accumulated component energy only
         // once for the whole Step, rather than after every processed frame.
@@ -248,14 +263,19 @@ impl Engine {
         {
             self.world.accumulated_flow.fill(0.0);
         }
+        let grid_ms = lap();
         if !reuse_derived {
             output.presentation.update(&self.world, &self.elements)?;
+        }
+        let textures_ms = lap();
+        if !reuse_derived {
             output.multicomponent.update_from_world(
                 &output.grid,
                 &self.elements,
                 &self.world,
             );
         }
+        let species_ms = lap();
         output.grid.set_num_frames(frame_count);
         output.events.publish_to(&mut output.grid)?;
         for (index, pointer) in output.presentation.pointers().into_iter().enumerate() {
@@ -266,6 +286,12 @@ impl Engine {
         // visibility storage here; copying old.visible would remove its delay.
         std::mem::swap(&mut self.world.active_mask, &mut output.visible);
         if unchanged_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
+        if profile_batch {
+            let finalize_ms = lap();
+            let total_ms = simulation_ms + grid_ms + textures_ms + species_ms + finalize_ms;
+            let gpu_active = self.gpu.is_some();
+            eprintln!("[CycleTrim OniSim] batch profile frames={frame_count} gpu_active={gpu_active} reuse_derived={reuse_derived} simulation_wall={simulation_ms:.3}ms grid_publish_wall={grid_ms:.3}ms textures_wall={textures_ms:.3}ms species_publish_wall={species_ms:.3}ms finalize_wall={finalize_ms:.3}ms measured_wall={total_ms:.3}ms");
+        }
         Ok(())
     }
 

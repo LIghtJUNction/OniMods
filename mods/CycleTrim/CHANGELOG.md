@@ -1,3 +1,11 @@
+## 2026-11-09 — 0.4.11
+
+- Prepare energy and velocity for small regions that use CPU transport while a GPU is available, preserving the selected backend's inputs.
+- Generate sunlight images in contiguous row tiles and reuse material coefficients within each update. Preserve per-column arithmetic, byte output and floating-point exception behavior, including overlapping worlds and override spans.
+- Reuse gas transport staging capacity per GPU device, pack sparse rows directly, and find active gases through indexed membership instead of repeated linear searches. Refresh all inputs for every region, omit unused host velocity buffers on GPU paths, and preserve diffusion-mask ownership.
+- Omit unused host velocity validation when GPU operators generate velocity. CPU transport retains its full validation, and generated device velocities still pass the existing CFL check before results reach world state.
+- Extend the existing GPU diagnostic launch argument with sampled batch timings for simulation and waits, grid publication, textures and species publication, plus GPU activation state and the liquid-flow phase. Report elapsed time explicitly; clock reads remain disabled when profiling is off.
+
 ## 2026-11-09 — 0.4.10
 
 - Read multicomponent texture data in bounded batches of up to 128 contiguous cells. Copy native records under one publication lease, release it, then resolve elements and compute the existing colors. This removes per-cell native lock acquisition from the batch path without holding the lock across game callbacks.

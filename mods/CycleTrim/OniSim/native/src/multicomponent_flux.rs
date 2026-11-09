@@ -1,12 +1,15 @@
-//! Production promotion of the GPU multicomponent operator's CPU reference.
-//! Global gas channels + CPU upwind face flux. This path does not dispatch the
-//! GPU multicomponent operator, even if the separate GPU thermal path is enabled.
+//! Regional gas transport with GPU pressure/thermal operators and a CPU
+//! upwind fallback; both paths share exact host packing and Grid projection.
 
 use crate::events::EventQueues;
 use crate::fluid_helpers::notify;
 use crate::simulation_step::FIXED_DT;
 use crate::tables::ElementTable;
 use crate::world::{PhysicsWorld, Region};
+
+#[path = "multicomponent_staging.rs"]
+mod staging;
+pub(crate) use staging::GasStaging;
 
 pub(crate) const GAS_CHANNELS: usize = 8;
 // Local GPU tensors are independent of the fixed legacy projection table.
@@ -496,8 +499,16 @@ fn can_project_without_losing_species(mass: &[f32], channels: usize) -> bool {
 /// Isolate cells whose two-face stencil contains three or more species.
 fn isolate_unrepresentable_stencils(mass: &mut [f32], enthalpy: &mut [f32], solid: &mut [u32],
     width: usize, height: usize, channels: usize, radius: isize) {
+    isolate_unrepresentable_stencils_reusing_masks(mass, enthalpy, solid,
+        width, height, channels, radius, &mut Vec::new());
+}
+
+fn isolate_unrepresentable_stencils_reusing_masks(mass: &mut [f32], enthalpy: &mut [f32],
+    solid: &mut [u32], width: usize, height: usize, channels: usize, radius: isize,
+    masks: &mut Vec<u16>) {
     if channels <= 2 { return; }
-    let mut masks = vec![0u16; width * height];
+    masks.clear();
+    masks.resize(width * height, 0);
     for (cell, mask) in masks.iter_mut().enumerate() {
         if solid[cell] == 0 {
             for channel in 0..channels {
@@ -584,215 +595,65 @@ fn step_region_with_dispatch(
     elements: &ElementTable,
     events: &mut EventQueues,
     region: Region,
-    gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
+    mut gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
     gpu_diffusion: bool,
     diffusion_solid: Option<&mut Vec<u32>>,
     gpu_available: bool,
     minimum_gpu_cells: usize,
 ) -> crate::status::Result<bool> {
-    if world.gas_channel_count == 0 {
-        rebuild_gas_channels(world, elements);
-    }
-    let channels = world.gas_channel_count;
-    if channels == 0 {
-        return Ok(false);
-    }
+    let mut staging = gpu.as_deref_mut().map(|device|
+        std::mem::take(&mut device.gas_staging)).unwrap_or_default();
+    let result = step_region_prepared(world, elements, events, region, gpu.as_deref_mut(),
+        gpu_diffusion, diffusion_solid, gpu_available, minimum_gpu_cells, &mut staging);
+    if let Some(device) = gpu { device.gas_staging = staging; }
+    result
+}
 
-    let min_x = region.min_x.max(1) as usize;
-    let min_y = region.min_y.max(1) as usize;
-    let max_x = (region.max_x as usize).min(world.width);
-    let max_y = (region.max_y as usize).min(world.height);
-    if max_x <= min_x || max_y <= min_y {
-        return Ok(false);
-    }
-    let width = max_x - min_x;
-    let height = max_y - min_y;
-    if gpu_available && (width < 2 || height < 2) {
-        return Ok(false);
-    }
-    let count = width * height;
-
-    // Map each region's active gases independently of the global table.
-    // Stencils that would exceed the two-slot cell representation are still
-    // isolated before transport.
-    let mut local_elements: Vec<u16> = world.gas_element_of_channel[..world.gas_channel_count].to_vec();
-    let mut local_projection = false;
-    if gpu_available {
-        let mut active = Vec::new();
-        'scan: for y in min_y..max_y { for x in min_x..max_x {
-            let cell = y * world.stride + x;
-            for (id, mass) in [(world.write.element[cell], world.write.mass[cell]),
-                               (world.mixture_element[cell], world.mixture_mass[cell])] {
-                if mass <= 0.0 || !mass.is_finite() ||
-                    !elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1) { continue; }
-                if !active.contains(&id) {
-                    active.push(id);
-                    if active.len() > MAX_REGION_GASES { break 'scan; }
-                }
-            }
-        }}
-        if active.len() < 2 {
-            return Ok(false);
-        }
-        if active.len() <= MAX_REGION_GASES {
-            local_elements = active;
-            local_projection = true;
-        }
-    }
-    let channels = local_elements.len();
-    let mut local_channel_of_element = vec![usize::MAX; elements.elements.len()];
-    for (channel, &id) in local_elements.iter().enumerate() {
-        local_channel_of_element[id as usize] = channel;
-    }
-
-    // Packed sparse cells use 16 bytes, equal to three dense channels plus
-    // temperature, and avoid expanding the channel tensor on the CPU.
-    let use_gpu = gpu_available && count >= minimum_gpu_cells;
-    let sparse = use_gpu && channels >= 3 && local_projection;
-    let mut sparse_cells = if sparse { vec![onisim_gpu::multicomponent::PackedSparseCell::default(); count] } else { Vec::new() };
-    let mut masks = if sparse { vec![0u16; count] } else { Vec::new() };
-    let mut any_mixture = false;
-    let mut mass = if sparse { Vec::new() } else { vec![0.0f32; count * channels] };
-    let mut enthalpy = if use_gpu { Vec::new() } else { vec![0.0f32; count * channels] };
-    let mut temperature = if sparse { Vec::new() } else { vec![1.0f32; count] };
-    let mut solid = vec![0u32; count];
-    // Sparse GPU input generates velocity on the device; no host arrays are read.
-    let mut velocity_x = if sparse { Vec::new() } else { vec![0.0f32; count] };
-    let mut velocity_y = if sparse { Vec::new() } else { vec![0.0f32; count] };
-    let mut species = vec![
-        SpeciesInfo {
-            element_id: 0,
-            vertical_drift: 0.0,
-            specific_heat: 1.0,
-            conductivity: 0.0,
-        };
-        channels
-    ];
-    for channel in 0..channels {
-        let element_id = local_elements[channel];
-        let record = &elements.elements[element_id as usize].record;
-        species[channel] = SpeciesInfo {
-            element_id,
-            vertical_drift: 0.0,
-            specific_heat: record.specific_heat_capacity,
-            conductivity: record.thermal_conductivity,
-        };
-    }
-
-    for y in 0..height {
-        for x in 0..width {
-            let public_y = min_y + y;
-            let public_x = min_x + x;
-            let cell = public_y * world.stride + public_x;
-            let local = y * width + x;
-            let cell_temperature = world.write.temperature[cell].max(1.0);
-            if sparse { sparse_cells[local].temperature = cell_temperature; }
-            else { temperature[local] = cell_temperature; }
-            let impermeable = world.write.properties[cell] & 1 != 0;
-            let phase = elements.elements[world.write.element[cell] as usize]
-                .record
-                .state
-                & 3;
-            // The dense tensor cannot represent every element yet. Treat any
-            // cell with an unmapped phase/component as a wall for this pass;
-            // projecting a partial tensor would otherwise delete its mass.
-            let primary_channel = local_channel_of_element[world.write.element[cell] as usize];
-            let mixture_channel = local_channel_of_element.get(world.mixture_element[cell] as usize)
-                .copied().unwrap_or(usize::MAX);
-            let primary_unsupported = world.write.mass[cell] > 0.0 && (phase != 1 || primary_channel == usize::MAX);
-            let mixture_unsupported = world.mixture_mass[cell] > 0.0 && mixture_channel == usize::MAX;
-            if impermeable || primary_unsupported || mixture_unsupported {
-                solid[local] = 1;
-                continue;
-            }
-            let base = local * channels;
-            if sparse {
-                let m1 = world.write.mass[cell];
-                let m2 = world.mixture_mass[cell];
-                let has_m1 = m1 > 1e-6 && m1.is_finite();
-                let has_m2 = m2 > 1e-6 && m2.is_finite();
-                let first = if has_m1 { primary_channel } else { 0 };
-                let second = if has_m2 { mixture_channel } else { first };
-                let first_m = if has_m1 { m1 } else { 0.0 };
-                let second_m = if has_m2 { m2 } else { 0.0 };
-                sparse_cells[local] = onisim_gpu::multicomponent::PackedSparseCell {
-                    first: first as u16, second: second as u16,
-                    first_mass: first_m, second_mass: second_m,
-                    temperature: cell_temperature,
-                };
-                if first_m > 0.0 { masks[local] |= 1u16 << first; any_mixture = true; }
-                if second_m > 0.0 { masks[local] |= 1u16 << second; any_mixture = true; }
-                continue;
-            }
-            if world.write.mass[cell] > 0.0 && phase == 1 {
-                mass[base + primary_channel] = world.write.mass[cell];
-                any_mixture = true;
-            }
-            if world.mixture_mass[cell] > 0.0 {
-                mass[base + mixture_channel] += world.mixture_mass[cell];
-                any_mixture = true;
-            }
-            if !use_gpu {
-                for channel in 0..channels {
-                    let m = mass[base + channel].max(0.0);
-                    enthalpy[local * channels + channel] = m * temperature[local] * species[channel].specific_heat;
-                }
-            }
-        }
-    }
-
-    if sparse { isolate_stencil_masks(&masks, &mut solid, width, height, 2); }
-    else { isolate_unrepresentable_stencils(&mut mass, &mut enthalpy, &mut solid, width, height, channels, 2); }
-    if sparse {
-        if !masks.iter().zip(&solid).any(|(&mask,&blocked)| mask!=0 && blocked==0) { return Ok(false); }
-    } else if !mass.iter().any(|&value| value > 0.0) { return Ok(false); }
-    if !use_gpu {
-        density_gradient_velocities(&mass, &solid, width, height, channels, &mut velocity_x, &mut velocity_y);
-    }
-
-    // Even a pure gas region needs its deferred gas-to-gas thermal faces.
-    if !any_mixture {
-        return Ok(false);
-    }
-
+fn step_region_prepared(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    events: &mut EventQueues,
+    region: Region,
+    gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
+    gpu_diffusion: bool,
+    diffusion_solid: Option<&mut Vec<u32>>,
+    gpu_available: bool,
+    minimum_gpu_cells: usize,
+    staging: &mut GasStaging,
+) -> crate::status::Result<bool> {
+    let Some(staging::GasRegion { min_x, min_y, width, height, channels,
+        use_gpu, sparse, local_projection }) = staging.prepare(world, elements, region,
+            gpu_available, minimum_gpu_cells) else { return Ok(false); };
+    let GasStaging { local_elements, sparse_cells, mass, enthalpy, temperature,
+        solid, velocity_x, velocity_y, species, gpu_species, species_conductivity,
+        next_mass, projected, next_enthalpy, next_temperature, .. } = staging;
     let dt = FIXED_DT * 0.25;
     // Three masses plus temperature already occupy 16 bytes per cell, the
     // same as compact projection; select channels on the GPU instead.
     let packed_gpu = use_gpu && channels >= 3;
-    let mut next_mass = if packed_gpu { Vec::new() } else { vec![0.0f32; mass.len()] };
-    let mut projected = if packed_gpu { vec![onisim_gpu::multicomponent::ProjectedLiquidCell::default();count] } else { Vec::new() };
-    let mut next_enthalpy = if !use_gpu { vec![0.0f32; mass.len()] } else { Vec::new() };
-    let mut next_temperature = if use_gpu && !packed_gpu { vec![0.0f32; count] } else { Vec::new() };
     let used_gpu = use_gpu;
     if let Some(gpu) = if use_gpu { gpu } else { None } {
-        let gpu_species: Vec<_> = species.iter().map(|s| onisim_gpu::multicomponent::SpeciesInfo {
-            element_id: s.element_id,
-            phase: 1,
-            specific_heat_capacity: s.specific_heat,
-            vertical_drift: s.vertical_drift,
-        }).collect();
         let state = onisim_gpu::multicomponent::State {
-            mass: &mass, enthalpy: &enthalpy, velocity_x: &velocity_x,
-            velocity_y: &velocity_y, solid: &solid, species: &gpu_species,
+            mass: mass, enthalpy: enthalpy, velocity_x: velocity_x,
+            velocity_y: velocity_y, solid: solid, species: gpu_species,
         };
-        let species_conductivity: Vec<_> = species.iter().map(|s| s.conductivity).collect();
         if sparse {
-            if !gpu.step_sparse_gas_projected(width,height,channels,&state,&temperature,&species_conductivity,gpu_diffusion,dt,&sparse_cells,&mut projected)
+            if !gpu.step_sparse_gas_projected(width,height,channels,&state,temperature,species_conductivity,gpu_diffusion,dt,sparse_cells,projected)
                 .map_err(|error| crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU sparse gas pressure/transport failed: {error}")))? {
                 return Ok(false);
             }
         } else if packed_gpu {
-            if !gpu.step_gas_projected(width,height,channels,&state,&temperature,&species_conductivity,gpu_diffusion,dt,&mut projected)
+            if !gpu.step_gas_projected(width,height,channels,&state,temperature,species_conductivity,gpu_diffusion,dt,projected)
                 .map_err(|error| crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU gas pressure/transport failed: {error}")))? {
                 return Ok(false);
             }
         } else {
-            gpu.step_gas(width, height, channels, &state, &temperature, &species_conductivity, gpu_diffusion, dt, &mut next_mass, &mut next_temperature)
+            gpu.step_gas(width, height, channels, &state, temperature, species_conductivity, gpu_diffusion, dt, next_mass, next_temperature)
                 .map_err(|error| crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU gas pressure/transport failed: {error}")))?;
         }
     } else {
-        cpu_step(&mass, &enthalpy, &velocity_x, &velocity_y, &solid, &species,
-            width, height, channels, dt, &mut next_mass, &mut next_enthalpy);
+        cpu_step(mass, enthalpy, velocity_x, velocity_y, solid, species,
+            width, height, channels, dt, next_mass, next_enthalpy);
     }
 
     for y in 0..height {
@@ -852,7 +713,7 @@ fn step_region_with_dispatch(
             }
         }
     }
-    if let Some(output) = diffusion_solid { *output = solid; }
+    if let Some(output) = diffusion_solid { *output = std::mem::take(solid); }
     Ok(true)
 }
 

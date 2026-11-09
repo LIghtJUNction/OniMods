@@ -676,11 +676,14 @@ impl MulticomponentGpu {
     }
 
     /// Upload material state; velocities will be generated on the GPU.
+    /// Host velocity slices are unused and may be empty. Device velocities must
+    /// pass the existing CFL reduction before transport results are exposed.
     pub fn upload_for_density_velocity(&mut self, state: &State<'_>) -> Result<(), String> {
         self.upload_impl(state, false, None, 1)
     }
 
     /// Upload masses and material properties while enthalpy is generated from temperatures on the GPU.
+    /// Host velocity slices are unused, as with upload_for_density_velocity.
     pub fn upload_for_temperature(&mut self, state: &State<'_>, temperature: &[f32]) -> Result<(), String> {
         self.upload_impl(state, false, Some(temperature), 1)
     }
@@ -1009,7 +1012,11 @@ impl MulticomponentGpu {
         self.uploaded = false;
         self.pending_cfl_dt = None;
         self.current_is_a = true;
-        let max_rate = validate_state_for_phase(state, self.count, self.channels, temperature, phase)?;
+        let max_rate = if upload_velocity {
+            validate_state_for_phase::<true>(state, self.count, self.channels, temperature, phase)?
+        } else {
+            validate_state_for_phase::<false>(state, self.count, self.channels, temperature, phase)?
+        };
         self.queue.write_buffer(&self.mass_a, 0, bytemuck::cast_slice(state.mass));
         if temperature.is_none() {
             self.queue.write_buffer(&self.enthalpy_a, 0, bytemuck::cast_slice(state.enthalpy));
@@ -1330,14 +1337,14 @@ fn validate_state(state: &State<'_>, count: usize, channels: usize) -> Result<f3
 }
 
 fn validate_state_with_temperature(state: &State<'_>, count: usize, channels: usize, temperature: Option<&[f32]>) -> Result<f32, String> {
-    validate_state_for_phase(state, count, channels, temperature, 1)
+    validate_state_for_phase::<true>(state, count, channels, temperature, 1)
 }
 
-fn validate_state_for_phase(state: &State<'_>, count: usize, channels: usize, temperature: Option<&[f32]>, phase: u8) -> Result<f32, String> {
+fn validate_state_for_phase<const HOST_VELOCITY: bool>(state: &State<'_>, count: usize, channels: usize, temperature: Option<&[f32]>, phase: u8) -> Result<f32, String> {
     let values = count.checked_mul(channels).ok_or("tensor dimensions overflow")?;
     if state.mass.len() != values || (temperature.is_none() && state.enthalpy.len() != values)
         || temperature.is_some_and(|t| t.len() != count)
-        || state.velocity_x.len() != count || state.velocity_y.len() != count
+        || (HOST_VELOCITY && (state.velocity_x.len() != count || state.velocity_y.len() != count))
         || state.solid.len() != count || state.species.len() != channels {
         return Err("input tensor or species metadata dimensions mismatch".into());
     }
@@ -1356,11 +1363,13 @@ fn validate_state_for_phase(state: &State<'_>, count: usize, channels: usize, te
     // |vy + drift| reaches its maximum at one of the drift extremes.
     // Compute those extremes once instead of scanning every species for
     // every cell in a potentially large region.
-    let min_drift = state.species.iter().map(|s| s.vertical_drift).fold(f32::INFINITY, f32::min);
-    let max_drift = state.species.iter().map(|s| s.vertical_drift).fold(f32::NEG_INFINITY, f32::max);
+    let (min_drift, max_drift) = if HOST_VELOCITY {
+        (state.species.iter().map(|s| s.vertical_drift).fold(f32::INFINITY, f32::min),
+            state.species.iter().map(|s| s.vertical_drift).fold(f32::NEG_INFINITY, f32::max))
+    } else { (0.0, 0.0) };
     if state.mass.iter().any(|v| !v.is_finite() || *v < 0.0)
         || state.enthalpy.iter().any(|v| !v.is_finite() || *v < 0.0)
-        || state.velocity_x.iter().chain(state.velocity_y).any(|v| !v.is_finite()) {
+        || (HOST_VELOCITY && state.velocity_x.iter().chain(state.velocity_y).any(|v| !v.is_finite())) {
         return Err("state contains negative mass/enthalpy or non-finite values".into());
     }
     let mut max_rate = 0.0f32;
@@ -1394,9 +1403,11 @@ fn validate_state_for_phase(state: &State<'_>, count: usize, channels: usize, te
                 return Err("nonempty gas species must have positive sensible enthalpy".into());
             }
         }
-        let max_vertical = (state.velocity_y[cell] + min_drift).abs()
-            .max((state.velocity_y[cell] + max_drift).abs());
-        max_rate = max_rate.max(state.velocity_x[cell].abs() + max_vertical);
+        if HOST_VELOCITY {
+            let max_vertical = (state.velocity_y[cell] + min_drift).abs()
+                .max((state.velocity_y[cell] + max_drift).abs());
+            max_rate = max_rate.max(state.velocity_x[cell].abs() + max_vertical);
+        }
     }
     Ok(max_rate)
 }
@@ -1483,6 +1494,38 @@ pub fn cpu_step(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generated_velocity_upload_validates_material_without_host_velocity() {
+        let species = [SpeciesInfo { element_id: 1, phase: 1,
+            specific_heat_capacity: 2.0, vertical_drift: 0.25 }];
+        let state = State { mass: &[1.0], enthalpy: &[], velocity_x: &[],
+            velocity_y: &[], solid: &[0], species: &species };
+        let check = |state: &State<'_>, temperature: &[f32]| {
+            validate_state_for_phase::<false>(state, 1, 1, Some(temperature), 1)
+        };
+        assert_eq!(check(&state, &[300.0]).unwrap(), 0.0);
+        // These buffers are neither uploaded nor read by the material path.
+        let ignored_velocity = State { velocity_x: &[f32::NAN],
+            velocity_y: &[f32::INFINITY], ..state };
+        assert_eq!(check(&ignored_velocity, &[300.0]).unwrap(), 0.0);
+        assert!(validate_state_with_temperature(&state, 1, 1, Some(&[300.0])).is_err());
+        assert!(validate_state_with_temperature(&ignored_velocity, 1, 1, Some(&[300.0])).is_err());
+        for mass in [-1.0, f32::NAN, f32::INFINITY] {
+            assert!(check(&State { mass: &[mass], ..state }, &[300.0]).is_err());
+        }
+        for temperature in [f32::NAN, f32::INFINITY, f32::MAX, -1.0] {
+            assert!(check(&state, &[temperature]).is_err());
+        }
+        assert!(check(&state, &[]).is_err());
+        assert!(check(&State { mass: &[], ..state }, &[300.0]).is_err());
+        assert!(check(&State { solid: &[1], ..state }, &[300.0]).is_err());
+        assert!(check(&State { species: &[], ..state }, &[300.0]).is_err());
+        assert!(validate_state_for_phase::<false>(&state, 1, 1, Some(&[300.0]), 2).is_err());
+        let energy = State { enthalpy: &[600.0], ..state };
+        assert_eq!(validate_state_for_phase::<false>(&energy, 1, 1, None, 1).unwrap(), 0.0);
+        assert!(validate_state_for_phase::<false>(&State { enthalpy: &[0.0], ..energy }, 1, 1, None, 1).is_err());
+    }
 
     #[test]
     fn temperature_input_rejects_invalid_or_overflowing_enthalpy() {
