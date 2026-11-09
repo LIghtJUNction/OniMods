@@ -1,0 +1,221 @@
+{
+  "utc": "2026-11-09T12:06:57.054543+00:00",
+  "source_commit": "663f32a050069e8ff2fa0241d96da33248bc5938",
+  "baseline_commit": "f40858eb626b8b4d18f0683ce3d0ed17b62fa1ea",
+  "executables_sha256": {
+    "baseline": "647b34691af0c651b0e71c953f3a0866f1086ed4c921f207b47615fe308f6740",
+    "candidate": "d0b0b4543b6b16d68076f5af2f9eb51e80687dabc9583184a0dd0027b4dbc5c3"
+  },
+  "driver_sha256": "1eb5b72330d68754558bac9efa67f785db0f370adda208b4745cc05223b757ff",
+  "plan_sha256": "5f830f53a72d92f23c9cf5b2b09a73dde682debb7dce7eb2dac92ea95ea626b5",
+  "summary_sha256": "b94acd005a732fd8c39b50df94f3942de9a2220a2390cdfe69b57841d7377bd6",
+  "inputs_sha256": "3696e3417f02634b0662ce4c127714c2995836d1ed8fcd38c11105db6f7171f9",
+  "scope": "Native CPU submission through real worker/Engine/PreparedStep and stable Grid publication; no GPU hardware or managed/Unity envelope. Full combination versus f408 baseline, not an isolated causal estimate of Box incremental speedup.",
+  "unit": "microseconds per complete production batch; each sample is the mean of four measured batches",
+  "p95_estimator": "nearest-rank of 34 four-batch sample means, not individual-frame latency P95",
+  "raw_rows": 1292,
+  "case_count": 19,
+  "samples_per_case_per_side": 34,
+  "recorded_blocks": 323,
+  "invalid_blocks": 0,
+  "retry_blocks": 0,
+  "output_equality": "all recorded canonical byte-image SHA-256 values match",
+  "performance_accepted": false,
+  "failed_cases": [
+    "96x96_regions_dt0.2",
+    "96x96_command_dt0.2"
+  ],
+  "cases": [
+    {
+      "case": "96x96_pure_dt0.2",
+      "baseline_median_us": 1847.174625,
+      "candidate_median_us": 1771.763625,
+      "change_percent": -4.082505193573671,
+      "baseline_p95_us": 5168.28675,
+      "candidate_p95_us": 3770.421,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_liquid_dt0.2",
+      "baseline_median_us": 3265.341375,
+      "candidate_median_us": 3254.932625,
+      "change_percent": -0.31876452733827776,
+      "baseline_p95_us": 5572.3785,
+      "candidate_p95_us": 5295.78575,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_mixed_dt0.2",
+      "baseline_median_us": 3833.919,
+      "candidate_median_us": 3525.907375,
+      "change_percent": -8.033858435715524,
+      "baseline_p95_us": 11318.9245,
+      "candidate_p95_us": 6686.25025,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_thermal_dt0.2",
+      "baseline_median_us": 853.268375,
+      "candidate_median_us": 823.4615,
+      "change_percent": -3.4932590815873077,
+      "baseline_p95_us": 3344.7635,
+      "candidate_p95_us": 1379.7235,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_regions_dt0.2",
+      "baseline_median_us": 1839.625125,
+      "candidate_median_us": 1962.0994999999998,
+      "change_percent": 6.65757242253362,
+      "baseline_p95_us": 3164.185,
+      "candidate_p95_us": 5065.25175,
+      "maximum_change_percent": 3,
+      "gate_passed": false
+    },
+    {
+      "case": "256x384_pure_dt0.2",
+      "baseline_median_us": 22525.926,
+      "candidate_median_us": 21014.769375,
+      "change_percent": -6.7085216607743465,
+      "baseline_p95_us": 36358.953,
+      "candidate_p95_us": 46079.26425,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "256x384_liquid_dt0.2",
+      "baseline_median_us": 24322.7385,
+      "candidate_median_us": 23796.709,
+      "change_percent": -2.162706719886831,
+      "baseline_p95_us": 41384.722,
+      "candidate_p95_us": 38599.434,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "256x384_mixed_dt0.2",
+      "baseline_median_us": 30506.87875,
+      "candidate_median_us": 29581.281625,
+      "change_percent": -3.0340603920353537,
+      "baseline_p95_us": 56120.97,
+      "candidate_p95_us": 57057.735,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "256x384_thermal_dt0.2",
+      "baseline_median_us": 10394.9405,
+      "candidate_median_us": 10042.448625,
+      "change_percent": -3.390994638208844,
+      "baseline_p95_us": 14325.778,
+      "candidate_p95_us": 23254.76975,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "256x384_regions_dt0.2",
+      "baseline_median_us": 26677.211125,
+      "candidate_median_us": 25077.1165,
+      "change_percent": -5.99798313812685,
+      "baseline_p95_us": 48797.9355,
+      "candidate_p95_us": 38984.953,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "736x304_pure_dt0.2",
+      "baseline_median_us": 60856.272625,
+      "candidate_median_us": 56180.199125,
+      "change_percent": -7.683798724930535,
+      "baseline_p95_us": 104067.1855,
+      "candidate_p95_us": 99826.309,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "736x304_mixed_dt0.2",
+      "baseline_median_us": 71682.96512499999,
+      "candidate_median_us": 71648.96350000001,
+      "change_percent": -0.0474333406000782,
+      "baseline_p95_us": 139207.724,
+      "candidate_p95_us": 122773.11,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_regions_dt1.0",
+      "baseline_median_us": 8701.61075,
+      "candidate_median_us": 8176.650874999999,
+      "change_percent": -6.032904597576949,
+      "baseline_p95_us": 16551.01275,
+      "candidate_p95_us": 16206.391,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_empty_dt0.2",
+      "baseline_median_us": 67.64574999999999,
+      "candidate_median_us": 62.20075,
+      "change_percent": -8.049286170971559,
+      "baseline_p95_us": 717.851,
+      "candidate_p95_us": 118.94075,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_zero_dt0.2",
+      "baseline_median_us": 77.810625,
+      "candidate_median_us": 78.849625,
+      "change_percent": 1.3352932199169443,
+      "baseline_p95_us": 452.9295,
+      "candidate_p95_us": 448.70575,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "96x96_command_dt0.2",
+      "baseline_median_us": 296.47237500000006,
+      "candidate_median_us": 330.376,
+      "change_percent": 11.43567760739932,
+      "baseline_p95_us": 2387.256,
+      "candidate_p95_us": 650.39025,
+      "maximum_change_percent": 3,
+      "gate_passed": false
+    },
+    {
+      "case": "96x96_alternating_idle_dt0.0",
+      "baseline_median_us": 287.70825,
+      "candidate_median_us": 73.52575,
+      "change_percent": -74.44433727569508,
+      "baseline_p95_us": 532.81875,
+      "candidate_p95_us": 153.28475,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "256x384_alternating_idle_dt0.0",
+      "baseline_median_us": 3550.44275,
+      "candidate_median_us": 746.34425,
+      "change_percent": -78.97884003340148,
+      "baseline_p95_us": 12790.3245,
+      "candidate_p95_us": 3015.14575,
+      "maximum_change_percent": 3,
+      "gate_passed": true
+    },
+    {
+      "case": "736x304_alternating_idle_dt0.0",
+      "baseline_median_us": 10914.208999999999,
+      "candidate_median_us": 2531.554,
+      "change_percent": -76.80497047472703,
+      "baseline_p95_us": 22829.74275,
+      "candidate_p95_us": 9289.5275,
+      "maximum_change_percent": -10,
+      "gate_passed": true
+    }
+  ],
+  "post_run_policy": "No optional timing or paired diagnostics; no threshold changes, no sample supplementation. Original summary and raw logs retained unchanged."
+}

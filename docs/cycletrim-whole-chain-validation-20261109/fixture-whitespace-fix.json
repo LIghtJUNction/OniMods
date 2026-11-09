@@ -1,0 +1,7 @@
+{
+  "path": "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs",
+  "before_sha256": "a93392e63adbaf4376f18db724ffaf07a0e9144dead152b04157d7e60d57d8e8",
+  "after_sha256": "281a5ca6b66971fbf12e1919d693f194440f8dc21c4a4485c603766d9403acd7",
+  "change": "Remove one empty line at EOF. No C# token changes.",
+  "reason": "Full committed-range git diff --check detected a blank line that unstaged tracked-only checks omitted for the formerly untracked fixture."
+}

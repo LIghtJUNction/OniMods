@@ -1,0 +1,161 @@
+{
+  "reviewed_utc": "2026-11-09T12:44:20.108520+00:00",
+  "reviewer_sha256": "26d829607edcd113163d46cf8f0beaca44a97e71f1028fa8c3032ddbc6667ed7",
+  "presentation_parser_sha256": "b3d9eaf309c241d6d7a765190d79154b5c1ccd037f84baa49881034b40ad1fc3",
+  "native_raw_logs_verified": 5168,
+  "native_snapshots_verified": 41344,
+  "presentation_raw_samples_verified": 2448,
+  "same_native_baseline_executable_and_142_source_entries": true,
+  "native": [
+    {
+      "round": "n1",
+      "source_head": "eb318f72aa7dc516a197f0103e37e1462d1a103d",
+      "samples": 1292,
+      "accepted": false,
+      "failed": [
+        {
+          "case": "736x304_pure_dt0.2",
+          "change_percent": 0.42760709574247713,
+          "limit": -5
+        }
+      ]
+    },
+    {
+      "round": "n2",
+      "source_head": "938ada6ecde8693513940d599e7aa5c18f3e5d22",
+      "samples": 1292,
+      "accepted": false,
+      "failed": [
+        {
+          "case": "96x96_mixed_dt0.2",
+          "change_percent": 7.220989657933163,
+          "limit": 3
+        },
+        {
+          "case": "736x304_mixed_dt0.2",
+          "change_percent": 3.5986769480838454,
+          "limit": 3
+        },
+        {
+          "case": "96x96_command_dt0.2",
+          "change_percent": 5.247409101519818,
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "round": "n3",
+      "source_head": "663f32a050069e8ff2fa0241d96da33248bc5938",
+      "samples": 1292,
+      "accepted": false,
+      "failed": [
+        {
+          "case": "96x96_regions_dt0.2",
+          "change_percent": 6.65757242253362,
+          "limit": 3
+        },
+        {
+          "case": "96x96_command_dt0.2",
+          "change_percent": 11.43567760739932,
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "round": "n4",
+      "source_head": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+      "samples": 1292,
+      "accepted": false,
+      "failed": [
+        {
+          "case": "96x96_liquid_dt0.2",
+          "change_percent": 4.356518761066108,
+          "limit": 3
+        },
+        {
+          "case": "96x96_mixed_dt0.2",
+          "change_percent": 5.337620802042986,
+          "limit": 3
+        },
+        {
+          "case": "256x384_mixed_dt0.2",
+          "change_percent": 5.7185055735863966,
+          "limit": 3
+        },
+        {
+          "case": "736x304_mixed_dt0.2",
+          "change_percent": 3.1938677233224633,
+          "limit": 3
+        },
+        {
+          "case": "96x96_command_dt0.2",
+          "change_percent": 4.5191498364061555,
+          "limit": 3
+        }
+      ]
+    }
+  ],
+  "presentation": [
+    {
+      "round": "p1",
+      "source_head": "0942cb9ce9d7f8b4249c30622744c9d7817304f9",
+      "samples": 612,
+      "accepted": false,
+      "failed": [
+        {
+          "shape": "96x96",
+          "scenario": "command_two_prepares",
+          "change_percent": 8.869301122207784,
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "round": "p2",
+      "source_head": "938ada6ecde8693513940d599e7aa5c18f3e5d22",
+      "samples": 612,
+      "accepted": true,
+      "failed": []
+    },
+    {
+      "round": "p3",
+      "source_head": "663f32a050069e8ff2fa0241d96da33248bc5938",
+      "samples": 612,
+      "accepted": false,
+      "failed": [
+        {
+          "shape": "256x384",
+          "scenario": "command_two_prepares",
+          "change_percent": 4.419022128047523,
+          "limit": 3
+        },
+        {
+          "shape": "736x304",
+          "scenario": "command_two_prepares",
+          "change_percent": 4.4093055990423125,
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "round": "p4",
+      "source_head": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+      "samples": 612,
+      "accepted": false,
+      "failed": [
+        {
+          "shape": "736x304",
+          "scenario": "command_two_prepares",
+          "change_percent": 3.6576626671638746,
+          "limit": 3
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "No new timing, resampling, sample deletion or changed gates.",
+    "No optional paired/CPU diagnostics and no attribution of failures to noise.",
+    "Presentation compares original/gate on the same native; native compares versions against f408.",
+    "No real ONI/Unity, GPU upload or displayed FPS measurements."
+  ]
+}

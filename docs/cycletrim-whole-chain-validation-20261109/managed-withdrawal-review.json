@@ -1,0 +1,67 @@
+{
+  "utc": "2026-11-09T13:01:38.685488+00:00",
+  "candidate_archive_commit": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+  "source_sha256": {
+    "mods/CycleTrim/ModInfo.OniSim.cs": "334f1bb8c6755fc5675d6a51ce52bda55748bda16b7431237a7d32821d1dc9d2",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/NativeLibrary.cs": "cbfed865c16334dd2298d8e7aa272bb74cec52584c94dc789727e59b32b7fb96",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSimPublicationReader.cs": "964ce1dd821865292f390f0449826c6993a9be02ebb736157b40c05ae9ffbaeb",
+    "tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj": "fc27a209ac6361d9dc47c64a29cfd18bf400b697804d928180a770f56cf903d3",
+    "tests/CycleTrim.Optimizations.Tests/Program.cs": "72b178f543c973704a053e84d498e17de06eeac0a5840d2f381b6722597edb39",
+    "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs": "a93392e63adbaf4376f18db724ffaf07a0e9144dead152b04157d7e60d57d8e8",
+    "scripts/verify_cycletrim_release_binary.py": "a55963612d275858fa28c19a7349c1319c62250b18ea5df48b3f1f878a0a896c"
+  },
+  "removed_sources_preserved_at_candidate_sha256": {
+    "mods/CycleTrim/Core/PresentationUploadGate.cs": "3bedb286ddbea7213b09b39976f910acda9be8345fc947143f52963784f80972",
+    "mods/CycleTrim/Patches/PropertyTexturePublicationPatch.cs": "f7da77144320b2a97500d5bfb6cbfda14f437dfd78786880c4f7b67071ceec0f",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/PresentationUpdate.cs": "2dbcd84ba2e3b412e137b5d91c0ca1c6a84b5afd7dd307f777a3cadcc722c244",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadFixture.cs": "8c9488682a444595ef9ba4fc5c31c08b8b977365bc50ff0b44e06b84e452f4f2",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadRegression.cs": "f35b629d904c36793c071b3aa93a86c311d6560972543b50e25b6691891a24a6",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeFixture.cs": "99f8ea6f52419ae38b0659f6fd50138e966eef6a6886da375ce618c2c36c83a7",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeRegression.cs": "2b0adc6b133a0f11ffd3b8ee30b6be03406dc5727e565039e09d5ba00bee7575",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeBenchmark.cs": "c1710df13ef12f79a0b133817fae26d71b3a5bc3cecf96cc6fa0395ac5d80444",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadDirtyDiagnostic.cs": "e28aa652eaca24ec51b3267ef0793dcadef1940defe21c896d7338f593a63f69"
+  },
+  "retained_sources_byte_identical_to_candidate": {
+    "mods/CycleTrim/Core/FrameTimingWindow.cs": "52fcb484f47c3440dc342cb3bd663200450a386a2ae6d3ae4ceb3961d2be1621",
+    "mods/CycleTrim/Patches/FrameRateUnlockPatch.cs": "0dd697ff94821aa020538875fac09bf4023ff4a2298dd46423b116870c97ad28",
+    "mods/CycleTrim/Patches/FrameStageProbe.cs": "a70b31a946a84cf7300cf401ea072c374476e0fdf0fa9181b36b35f2f455ac8e",
+    "tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs": "b8b45efcd523acc1a8ef68f1d599301a8a16b29401841ceee8ad4343a0bd8a56",
+    "tests/CycleTrim.Optimizations.Tests/FrameChainFixture.cs": "61999ef3370a7d7f6423e824483110a1451410f2accd367aa97dea082cdad138",
+    "mods/CycleTrim/Core/OniSimMulticomponentProvider.cs": "ef510e7e7dd6fd8c9e4a0ab887365522da6fb370b6f86e6112314bc5bbc87fe4",
+    "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj": "4a2320168ceb09235f4aa9d8312ceddc42f26fe5742945357093019112ccaeec"
+  },
+  "compatibility_byte_identical_to_f408": {
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/NativeLibrary.cs": "cbfed865c16334dd2298d8e7aa272bb74cec52584c94dc789727e59b32b7fb96",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSimPublicationReader.cs": "964ce1dd821865292f390f0449826c6993a9be02ebb736157b40c05ae9ffbaeb"
+  },
+  "logs_sha256": {
+    "managed-withdrawal-final-optimization-build.log": "039a240266c43c6359e0a9dab0644a93f5c48545d7e86abd7e2eca12cd2ad648",
+    "managed-withdrawal-final-optimizations.log": "ade31dab69063dace60969a0a7406211cea8372c2306bd65c792f31b9d9d72d1",
+    "managed-withdrawal-probe-build.log": "4de63680ce4d661aca90619e1e6ebb7554e0f5bfb6406a4b5e76ca344bfa215b",
+    "managed-withdrawal-probe.log": "eb1b003f74447c570922d6bd2d39c399b2dab6424546d28dfe064be96149674a",
+    "managed-withdrawal-frame-analyzer.log": "282b1c938be5aaacf6e30f974c7b03d4592c43203f9987c6628b54ad5f29da1a",
+    "managed-withdrawal-release-guard-negative.log": "b643dfbddeadf570ce761c070598aa4f12ee31f98d128e8930dc1fbb4559421d",
+    "managed-withdrawal-release-guard-negative.json": "e2188d06f95efd6eabb5b09f301f052a79fbab3e1a8dc521a18945597039211a"
+  },
+  "checks": {
+    "release_host_builds": "final Optimization build exit 0; unchanged PerformanceProbe build exit 0; both 0 warnings and 0 errors",
+    "optimizations": "final rebuilt host exit 0, all 11 retained families including existing actual Harmony 22-phase hook assertions; no new stub-only upload assertion",
+    "performance_probe": "exit 0 with --skip-synthetic-performance; functional provider/lease/probe tests only",
+    "frame_analyzer_regressions": "exit 0; 10 tests passed",
+    "removed_cli": "candidate CLI wiring absent in final source; earlier argument-rejection checks preserved as intermediate evidence, not rerun after fixture-only cleanup",
+    "release_binary_negative_control": "old archived d374 CycleTrim.dll: expected four failures and eighteen passes; exit 1",
+    "final_release_binary_positive_control": "pending parent final onim build; not claimed passed"
+  },
+  "scope": "Final host/source and unchanged compiled negative-control evidence; no ONI/Unity session or new performance run. Production upload withdrawal is checked through actual Release types/IL, not stub counts. Candidate assertions remain unchanged in pinned Git and rejected checkpoint.",
+  "host": {
+    "path": "/workspace/scratch/725bb75bc42e/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+    "bytes": 450560,
+    "sha256": "7a52d3d63aab585c5e2b4e63916337f930d3d1e68ffc6bedc79d50c4359f8196"
+  },
+  "final_execution": {
+    "path": "managed-withdrawal-final-execution.json",
+    "sha256": "e516c6cbe86040183d0223b26e8bffab43d88ccdd62426256fa817ae37ccffe2"
+  },
+  "intermediate_evidence_preserved": "managed-withdrawal-initial-review.json/md and all initial logs. Initial direct-upload stub PASS is not final evidence.",
+  "review_correction": "Removed the new PropertyTextureDirectUploadRegression class and its Program call because it only asserted host-stub behavior. Shared PropertyTextureFixture remains solely for existing stage-hook targets."
+}

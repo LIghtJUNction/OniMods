@@ -1,0 +1,151 @@
+{
+  "collected_at_utc": "2026-11-09T13:12:40.924081+00:00",
+  "scope": "Read-only exact-SHA GitHub Actions API and decoded logs; no local tests/builds/reruns",
+  "files": [
+    {
+      "path": "ci-87e070c.json",
+      "bytes": 146101,
+      "sha256": "867fe8b65779c100974447b7533f4c4f76b26c1a5617141c43b86e125e680893"
+    },
+    {
+      "path": "ci-0056559.json",
+      "bytes": 20028,
+      "sha256": "5c796991d2e6b69ee25dfa2040e6f912c2f25d15435029de9a1e2f146bac30c2"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175424702.log",
+      "bytes": 71903,
+      "sha256": "47d8a9695ec6cc4a8208e9c597d7b3e4d3d66a6fe967dbad83a68359e0d3649b"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175424803.log",
+      "bytes": 20240,
+      "sha256": "5cef72614ec70394c01ba67dc534ec93381dd7bdbe569839aa9372afd88a0fa5"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425033.log",
+      "bytes": 65305,
+      "sha256": "3afca302cf051d34cafaa6c332a82e9779aaa01d130b5bb704c384c87b20c778"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425071.log",
+      "bytes": 16698,
+      "sha256": "eaf3eed1eda20aa670a2afe10a833472a4504882eb0bc1b2161709d3bda59a80"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425101.log",
+      "bytes": 85902,
+      "sha256": "edb9ef91522f587309bcd2e2bad6ff24127105f62878177958b22a0d9538bf05"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425192.log",
+      "bytes": 78010,
+      "sha256": "6f7340c56060ea7f9383720b7074137ac9646963aea5469fa6934f09ed985e8c"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425293.log",
+      "bytes": 16224,
+      "sha256": "da5f7b07d79b17052f9378223c89039f5410b5123aa09fca65ff232512fc0b6f"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425596.log",
+      "bytes": 61546,
+      "sha256": "f44b73b2e5da5d6c3234feb585e24b3f51b5349bf0223907abb72de9328b1226"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175425895.log",
+      "bytes": 78232,
+      "sha256": "9501e6ecb46abd473b6f245eeb81866d0fd227f52768e5dfbd9562d8b5723778"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175426199.log",
+      "bytes": 57779,
+      "sha256": "4bb07c706ab31d551746120c705c381222686e18bbe8f3a01ea3b0450df3956e"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175426204.log",
+      "bytes": 14157,
+      "sha256": "5391c71d6dbe74647befa6481b292c489ee9d3bc3d820dd3818ff081f1f3f277"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175426288.log",
+      "bytes": 11003,
+      "sha256": "641c66676ad731abea85500e87dd677be7f60a2e28b44241b5db3a4b3caf1860"
+    },
+    {
+      "path": "ci-87e070c-raw/job-129175426556.log",
+      "bytes": 11366,
+      "sha256": "b075a0b5903b4ad21014499624ec03b5763b926ae22cb57d3e82de73ec40dcdd"
+    },
+    {
+      "path": "ci-87e070c-raw/jobs-42621761989.json",
+      "bytes": 4996,
+      "sha256": "bd68d934406d2a1384ef0781bfbb0e13231975447610c6b85492310caafd5a1d"
+    },
+    {
+      "path": "ci-87e070c-raw/jobs-42621762018.json",
+      "bytes": 9768,
+      "sha256": "462397851501a58e697c63610c9e174617955fa564c214bfc201ddd407c7399c"
+    },
+    {
+      "path": "ci-87e070c-raw/jobs-42621762070.json",
+      "bytes": 8670,
+      "sha256": "d1504bd44538b788c7bc5d5f77a4ba90c3bc4753cfb4c3f72056d3d45964c428"
+    },
+    {
+      "path": "ci-87e070c-raw/jobs-42621762073.json",
+      "bytes": 14405,
+      "sha256": "063a9f769dd47a7c0647c13e9c2cd4ed1b283e687ebd8dd4e4b6aedca3872af1"
+    },
+    {
+      "path": "ci-87e070c-raw/jobs-42621762342.json",
+      "bytes": 14922,
+      "sha256": "a5f604fdb7f9f9562864e8fd37c5671df192e4e6c5730a8bfdf518c65af3bbfd"
+    },
+    {
+      "path": "ci-87e070c-raw/runs-final.json",
+      "bytes": 76619,
+      "sha256": "dc8f12f598490052c4300f14b52bfe91f930c58ee9d6427c0449b63c3c152e3b"
+    },
+    {
+      "path": "ci-87e070c-raw/runs-initial.json",
+      "bytes": 76605,
+      "sha256": "a5e16a36825f42e9320c215eddf6665a7b9648533bfd35a7f6ae4afd34a54bc4"
+    },
+    {
+      "path": "ci-0056559-raw/compare-87-to-005.json",
+      "bytes": 15517,
+      "sha256": "5c268feef92b562475ddeadb01afb9eaf8ccbf45838c2037bd72121498355a8e"
+    },
+    {
+      "path": "ci-0056559-raw/job-129176302128.log",
+      "bytes": 153562,
+      "sha256": "fcbbb567ca142fc8fa21b0a7d0a1ab7dd829f67d13b27446c7c58f1c4b9279f3"
+    },
+    {
+      "path": "ci-0056559-raw/job-129176362600.log",
+      "bytes": 219773,
+      "sha256": "39fd20e4c9068e6cfc2e41abe698cb2ebacdf2163d08ac84c734aa4e12028ba6"
+    },
+    {
+      "path": "ci-0056559-raw/jobs-42622017477.json",
+      "bytes": 5298,
+      "sha256": "9c7e9458056a7809873db8bb679dbb8d8f3ea0804d15b087a4cb88f8ac1b064d"
+    },
+    {
+      "path": "ci-0056559-raw/jobs-42622017781.json",
+      "bytes": 8666,
+      "sha256": "6a86f7976e8aa44f94bfb990b86623a17375ec0ca4339b7d707669672c3fa84e"
+    },
+    {
+      "path": "ci-0056559-raw/onisim-native.yml",
+      "bytes": 3314,
+      "sha256": "982fda9e0b9f62ea9af43c2c01c8764814c41dbac98b20cd45893ab5f77ddae8"
+    },
+    {
+      "path": "ci-0056559-raw/runs-final.json",
+      "bytes": 29788,
+      "sha256": "b68ad74b5d2c90e6784ed37527d2bdc0a58a8b3dfd07fbc3dcc8cbff80065dfa"
+    }
+  ]
+}

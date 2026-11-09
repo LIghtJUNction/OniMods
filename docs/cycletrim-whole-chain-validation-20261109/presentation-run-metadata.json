@@ -1,0 +1,55 @@
+{
+  "created_utc": "2026-11-09T10:20:52.071626+00:00",
+  "git_head": "0942cb9ce9d7f8b4249c30622744c9d7817304f9",
+  "artifacts": {
+    "native": {
+      "path": "/workspace/scratch/725bb75bc42e/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so",
+      "bytes": 8288536,
+      "sha256": "95ac5dfaf52f7d5a53a045417043c2450db20ad49fe3dc0aeb7c37368a1a43f1"
+    },
+    "host": {
+      "path": "/workspace/scratch/725bb75bc42e/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+      "bytes": 478208,
+      "sha256": "d01f44377180ad7ded821de3ec83004edde9bc14a0f6625b7131b8d622371a70"
+    }
+  },
+  "source_sha256": {
+    "mods/CycleTrim/Core/PresentationUploadGate.cs": "cdb7cfca4413a0d0f05204abd85d75105419b31999cfe8d4f1d9f2ba544cd8b1",
+    "mods/CycleTrim/Patches/PropertyTexturePublicationPatch.cs": "f7da77144320b2a97500d5bfb6cbfda14f437dfd78786880c4f7b67071ceec0f",
+    "mods/CycleTrim/ModInfo.OniSim.cs": "c110f7850fb2ba393c7fcb1a3a00b4108740b654882f08cef180c37382bf2a6a",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/NativeLibrary.cs": "db9fd92647d3c3e099a2a47f07ce2c5308cbf1aecbbe784f4337296b2146b059",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSimPublicationReader.cs": "b1e4212fe83051b1010e136dc24adb60e475be71a3df3da90fe97861c047ec58",
+    "mods/CycleTrim/OniSim/managed/OniSim.Compatibility/PresentationUpdate.cs": "2dbcd84ba2e3b412e137b5d91c0ca1c6a84b5afd7dd307f777a3cadcc722c244",
+    "mods/CycleTrim/OniSim/native/src/lib.rs": "bf0febf19b9218711b3e258b20549b5550a3ad50a47fafeb57bcd13341ac15fe",
+    "mods/CycleTrim/OniSim/native/src/state.rs": "046af478ff01928e6516e06de906831eca55a5c7522e2af773b1d26292bf69fa",
+    "mods/CycleTrim/OniSim/native/src/frames_data.rs": "0336336d9136f2c756453d4f709062ede3999916d8f35afb09ec8b62f545d775",
+    "mods/CycleTrim/OniSim/native/src/frames_engine.rs": "d59f06cc35b60f0925a6ef6541ca05dc206b0824e608cf2fde60572bf6c13da6",
+    "mods/CycleTrim/OniSim/native/src/presentation_revision.rs": "516527fc9e4730e0850d086d0b01b856e6f6df3d48db3c733e9d12f82e0449cb",
+    "mods/CycleTrim/OniSim/native/src/presentation.rs": "71ff03f106a1e557cc738b5be95e3497d614833afdecb9eead270ab12449c207",
+    "mods/CycleTrim/OniSim/native/src/presentation_flow.rs": "f175bff5f91e29969f26f244b029ae0b058fcc91eb6f534f6255320bd4d48f5f",
+    "mods/CycleTrim/OniSim/native/src/presentation_flow_sse2.rs": "14cfb930abfaa98584a1b3517517c6fdaad6b7bde86cb472e77d1789a39e25f7",
+    "mods/CycleTrim/OniSim/native/src/presentation_liquid.rs": "97ed853c8a11a4c25a01f0e171ed30fd088413b341ddb465f57a658311ca2267",
+    "mods/CycleTrim/OniSim/native/src/presentation_sun.rs": "f90fa3829118c820e3f122302cabac6155ca8d39453745f7d48daa8de3e2791c",
+    "mods/CycleTrim/OniSim/native/Cargo.toml": "9735ad1657694b67935572662b475e53775bfa507833e5bbe816cdbbb8c37dd3",
+    "mods/CycleTrim/OniSim/native/Cargo.lock": "9cef8e13ce8bb384057116c4d1e265eab7dc239321ef8c8f164783b49eaebdfc",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadFixture.cs": "8c9488682a444595ef9ba4fc5c31c08b8b977365bc50ff0b44e06b84e452f4f2",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeBenchmark.cs": "c1710df13ef12f79a0b133817fae26d71b3a5bc3cecf96cc6fa0395ac5d80444",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeFixture.cs": "99f8ea6f52419ae38b0659f6fd50138e966eef6a6886da375ce618c2c36c83a7",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadNativeRegression.cs": "2b0adc6b133a0f11ffd3b8ee30b6be03406dc5727e565039e09d5ba00bee7575",
+    "tests/CycleTrim.Optimizations.Tests/PresentationUploadRegression.cs": "6862a02e6dc20a54a0091bc419fb5ffcd0054d2f107e5acf27b12a2f546c4a75",
+    "tests/CycleTrim.Optimizations.Tests/ConduitVisualFixture.cs": "ccea7949cb35fdff0e15ef1af0de8f1f5bbae56161965d35595b474f4385ab2a",
+    "tests/CycleTrim.Optimizations.Tests/Program.cs": "783551bb2ab44f834cfb6ceb47d938bddde90c195edab2a09461e3bd8ce40f93",
+    "tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj": "e75a95d837ddb8dcc9e55508d20f7eadc683ce6e4c3aad3abeeca95576393798"
+  },
+  "protocol_sha256": {
+    "plan-presentation-chain.md": "982e421ca6bff3f9fda44fdc3228ef48a0cb195dbb1839662743b69e2052d0a8",
+    "analyze-presentation-benchmark.py": "c014ccd33b817cd3ade2126470968ab6b0f803a73a1135c2a25a1830d25d43d7"
+  },
+  "environment": {
+    "DOTNET_TieredCompilation": "0",
+    "CYCLETRIM_ONISIM_GPU": "0",
+    "CYCLETRIM_ONISIM_WORKERS": "1"
+  },
+  "logical_cpu_count": 9,
+  "note": "Native final retained candidate; no liquid-scan candidate. Same native library for both managed variants. Exact runtime and Stopwatch frequency appear in the raw sample log."
+}

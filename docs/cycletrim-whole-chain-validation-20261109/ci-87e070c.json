@@ -1,0 +1,2959 @@
+{
+  "schema_version": 1,
+  "purpose": "Exact-commit GitHub Actions result collection after native/managed performance candidates were withdrawn.",
+  "repository": "LIghtJUNction/OniMods",
+  "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+  "collected_at_utc": "2026-11-09 13:11:01 UTC",
+  "query_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs?head_sha=87e070c5dc680bbc92c17ea28c841f170934c852&per_page=100",
+  "collection_complete": true,
+  "workflow_count": 5,
+  "job_count": 14,
+  "workflow_conclusions": {
+    "failure": 4,
+    "cancelled": 1
+  },
+  "job_conclusions": {
+    "failure": 8,
+    "success": 4,
+    "cancelled": 1,
+    "skipped": 1
+  },
+  "outcome": "FAIL; no global CI pass is claimed.",
+  "no_local_execution": "No local tests, builds, workflow edits, reruns or gate changes were performed for this collection.",
+  "native_default_suite_results": [
+    {
+      "job_id": 129175425596,
+      "job_name": "current-native-regression",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762018/job/129175425596",
+      "summary": {
+        "result": "FAILED",
+        "passed": 116,
+        "failed": 11,
+        "ignored": 9,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.99
+      },
+      "failed_tests": [
+        "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+        "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+        "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+        "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+        "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+        "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+        "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+        "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+        "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+        "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+        "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+      ],
+      "explicit_no_hardware_vulkan_count": 10,
+      "explicit_target_vulkan_disabled_count": 0,
+      "ffi_initialization_minus_one_count": 1
+    },
+    {
+      "job_id": 129175425895,
+      "job_name": "component-regression",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175425895",
+      "summary": {
+        "result": "FAILED",
+        "passed": 116,
+        "failed": 11,
+        "ignored": 9,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.99
+      },
+      "failed_tests": [
+        "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+        "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+        "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+        "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+        "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+        "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+        "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+        "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+        "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+        "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+        "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+      ],
+      "explicit_no_hardware_vulkan_count": 10,
+      "explicit_target_vulkan_disabled_count": 0,
+      "ffi_initialization_minus_one_count": 1
+    },
+    {
+      "job_id": 129175424702,
+      "job_name": "native (windows-2022, windows-x64)",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175424702",
+      "summary": {
+        "result": "FAILED",
+        "passed": 112,
+        "failed": 11,
+        "ignored": 9,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 1.15
+      },
+      "failed_tests": [
+        "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+        "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+        "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+        "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+        "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+        "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+        "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+        "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+        "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+        "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+        "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+      ],
+      "explicit_no_hardware_vulkan_count": 10,
+      "explicit_target_vulkan_disabled_count": 0,
+      "ffi_initialization_minus_one_count": 1
+    },
+    {
+      "job_id": 129175425033,
+      "job_name": "native (ubuntu-22.04, linux-x64)",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175425033",
+      "summary": {
+        "result": "FAILED",
+        "passed": 116,
+        "failed": 11,
+        "ignored": 9,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 1.22
+      },
+      "failed_tests": [
+        "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+        "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+        "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+        "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+        "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+        "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+        "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+        "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+        "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+        "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+        "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+      ],
+      "explicit_no_hardware_vulkan_count": 10,
+      "explicit_target_vulkan_disabled_count": 0,
+      "ffi_initialization_minus_one_count": 1
+    },
+    {
+      "job_id": 129175425192,
+      "job_name": "native (macos-15-intel, macos-x64)",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175425192",
+      "summary": {
+        "result": "FAILED",
+        "passed": 112,
+        "failed": 11,
+        "ignored": 9,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 1.95
+      },
+      "failed_tests": [
+        "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+        "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+        "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+        "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+        "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+        "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+        "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+        "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+        "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+        "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+        "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+      ],
+      "explicit_no_hardware_vulkan_count": 0,
+      "explicit_target_vulkan_disabled_count": 10,
+      "ffi_initialization_minus_one_count": 1
+    }
+  ],
+  "attribution_limits": [
+    "Every failed GPU test remains a failure, not skipped or passed.",
+    "Linux/Windows direct GPU tests expose the absent hardware Vulkan adapter diagnostic; Apple exposes its disabled Vulkan target. These are observed initialization failures, not evidence that the GPU algorithms pass on supported hardware.",
+    "The native pathfinder FFI failure only reports -1 versus expected 0. It is consistent with initialization failure, but this test log does not expose the backend reason; no stronger attribution is claimed.",
+    "Nine ignored native cases are explicitly manual timing harnesses. Their ignored status does not suppress the eleven failed GPU tests.",
+    "Native platform build, loader smoke, artifact upload and final bundle did not execute after suite failure; no CI-produced multi-platform bundle is certified.",
+    "The 87 whitespace failure and cancelled reference job remain visible. Separate 005 quality/reference results do not overwrite their historical conclusions.",
+    "Jobs were collected from the exact push SHA and run attempt 1; no PR-only helper or latest-main inference was used."
+  ],
+  "evidence_log_format": "Downloaded decoded job logs are stored as UTF-8 with CRLF normalized to LF; content is otherwise retained.",
+  "successor_commit": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+  "successor_difference": "GitHub compare returns one changed file, tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs, deleting one blank EOF line; no native files differ.",
+  "successor_compare_evidence": "ci-0056559-raw/compare-87-to-005.json",
+  "workflows": [
+    {
+      "id": 42621761989,
+      "name": "Mod quality",
+      "event": "push",
+      "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "workflow_path": ".github/workflows/mod-quality.yml",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621761989",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42621761989",
+      "created_at": "2026-11-09T13:00:55Z",
+      "updated_at": "2026-11-09T13:01:08Z",
+      "jobs": [
+        {
+          "id": 129175424803,
+          "name": "regression",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621761989/job/129175424803",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175424803",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:01:08Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Check changed-line whitespace",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Fetch pinned ONI compile references for Jlib host tests",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Test onim CLI regressions",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Check Mod source contracts and host behavior",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Report CycleTrim synthetic performance evidence",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 10,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Verify pinned FastTrack Fetch compatibility contract",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 11,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Verify pinned FastTrack stationary-critter compatibility contract",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 12,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:05Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 24,
+              "started_at": "2026-11-09T13:01:05Z",
+              "completed_at": "2026-11-09T13:01:06Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 25,
+              "started_at": "2026-11-09T13:01:06Z",
+              "completed_at": "2026-11-09T13:01:06Z"
+            }
+          ],
+          "assessment": "FAIL before source/host regressions: changed-line whitespace reports PropertyTextureFixture.cs line 91, new blank line at EOF. Commit 0056559 has a separate successful Mod quality run; the 87 result remains failed.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175424803.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175424803/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": [
+              "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs:91: new blank line at EOF.",
+              "##[error]Process completed with exit code 2."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 42621762018,
+      "name": "OniSim transport proof and regression",
+      "event": "push",
+      "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "workflow_path": ".github/workflows/onisim-transport.yml",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762018",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42621762018",
+      "created_at": "2026-11-09T13:00:55Z",
+      "updated_at": "2026-11-09T13:02:05Z",
+      "jobs": [
+        {
+          "id": 129175425071,
+          "name": "lean-proof",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762018/job/129175425071",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425071",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:58Z",
+          "completed_at": "2026-11-09T13:01:14Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:02Z"
+            },
+            {
+              "name": "Install pinned Lean release",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:02Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Compile 27 theorems and inspect logical dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:12Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:01:12Z",
+              "completed_at": "2026-11-09T13:01:12Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:12Z",
+              "completed_at": "2026-11-09T13:01:12Z"
+            }
+          ],
+          "assessment": "PASS: pinned Lean 4.19.0 validates 27 theorems; logged dependencies Classical.choice, Quot.sound, propext.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425071.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425071/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": []
+          }
+        },
+        {
+          "id": 129175425293,
+          "name": "historical-component-regression",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762018/job/129175425293",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425293",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:01:05Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Check complete changed-line whitespace",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Install pinned Rust and formatter",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Check historical candidate formatting without rewriting either snapshot",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Verify historical source and baseline hashes",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Build historical component regression only",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Compare ordered output and float bits with FTZ off and on",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Validate recorded timing matrix without claiming new CI performance",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            }
+          ],
+          "assessment": "FAIL before historical regression execution: changed-line whitespace reports PropertyTextureFixture.cs line 91, new blank line at EOF. All following historical format/hash/build/differential/timing-matrix checks are skipped. Commit 0056559 removes the offending blank line but does not rerun this path-filtered workflow.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425293.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425293/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": [
+              "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs:91: new blank line at EOF.",
+              "##[error]Process completed with exit code 2."
+            ]
+          }
+        },
+        {
+          "id": 129175425596,
+          "name": "current-native-regression",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762018/job/129175425596",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425596",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:58Z",
+          "completed_at": "2026-11-09T13:02:04Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Install current native toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:10Z"
+            },
+            {
+              "name": "Test current native code including the FIFO differential",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:10Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:02:02Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:02:02Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            }
+          ],
+          "assessment": "FAIL: current native default suite 116 passed, 11 failed, 9 ignored; same failed test set as native platform Linux.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425596.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425596/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "FAILED",
+                "passed": 116,
+                "failed": 11,
+                "ignored": 9,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 0.99
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+              "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+              "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+              "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+              "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+              "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+              "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+              "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+              "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+              "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+              "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+            ],
+            "failure_details": [
+              {
+                "test": "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (3539) panicked at src/gpu_sim.rs:1448:48:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": true,
+                "excerpt": [
+                  "thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (3537) panicked at src/gpu_pathfinder_ffi.rs:76:9:",
+                  "assertion `left == right` failed",
+                  "  left: -1",
+                  " right: 0"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (3542) panicked at src/gpu_sim.rs:1417:57:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (3543) panicked at src/gpu_sim.rs:1313:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (3544) panicked at src/gpu_sim.rs:1525:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (3545) panicked at src/gpu_sim.rs:1045:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (3546) panicked at src/gpu_sim.rs:1006:55:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (3549) panicked at src/gpu_sim.rs:1203:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (3550) panicked at src/gpu_sim.rs:1246:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (3547) panicked at src/gpu_sim.rs:1086:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (3551) panicked at src/gpu_sim.rs:1378:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                  "    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "gpu_sim::material_range_tests::profile_game_sized_gas_chain",
+                "reason": "manual GPU timing on the game-sized gas region"
+              },
+              {
+                "test": "messages_tests::benchmark_empty_publication_reuse",
+                "reason": "manual full-grid empty-publication benchmark"
+              },
+              {
+                "test": "messages_tests::benchmark_warmed_idle_publication",
+                "reason": "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"
+              },
+              {
+                "test": "multicomponent_flux::staging::tests::benchmark_gas_staging",
+                "reason": "manual paired host staging benchmark; no GPU dispatch"
+              },
+              {
+                "test": "native_chain_tests::benchmark_native_chain_sample",
+                "reason": "manual complete production worker/Engine/stable-Grid benchmark; external paired driver required"
+              },
+              {
+                "test": "presentation::liquid::tests::benchmark_liquid_update",
+                "reason": "manual complete liquid-update ABBA benchmark; run without concurrent benchmarks"
+              },
+              {
+                "test": "presentation::sun::tests::benchmark_sun_indexing",
+                "reason": "explicit single-core microbenchmark, not part of correctness tests"
+              },
+              {
+                "test": "presentation::validation_tests::benchmark_validation",
+                "reason": "manual complete presentation-validation benchmark; run after correctness tests"
+              },
+              {
+                "test": "world::publication_tests::benchmark_publication",
+                "reason": "targeted production publication benchmark; run after correctness tests"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 42621762342,
+      "name": "OniSim diamond proof and regression",
+      "event": "push",
+      "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "workflow_path": ".github/workflows/onisim-diamond.yml",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42621762342",
+      "created_at": "2026-11-09T13:00:55Z",
+      "updated_at": "2026-11-09T13:02:11Z",
+      "jobs": [
+        {
+          "id": 129175425895,
+          "name": "component-regression",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175425895",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425895",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:02:10Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:02Z"
+            },
+            {
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:02Z",
+              "completed_at": "2026-11-09T13:01:10Z"
+            },
+            {
+              "name": "Build original and optimized Rust components",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:10Z",
+              "completed_at": "2026-11-09T13:01:20Z"
+            },
+            {
+              "name": "Test the complete native Rust kernel without game files",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:20Z",
+              "completed_at": "2026-11-09T13:02:08Z"
+            },
+            {
+              "name": "Run differential correctness cases",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6,
+              "started_at": "2026-11-09T13:02:08Z",
+              "completed_at": "2026-11-09T13:02:08Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-11-09T13:02:08Z",
+              "completed_at": "2026-11-09T13:02:08Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-11-09T13:02:08Z",
+              "completed_at": "2026-11-09T13:02:08Z"
+            }
+          ],
+          "assessment": "FAIL: current native default suite 116 passed, 11 failed, 9 ignored; later component differential cases skipped.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425895.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425895/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "FAILED",
+                "passed": 116,
+                "failed": 11,
+                "ignored": 9,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 0.99
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+              "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+              "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+              "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+              "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+              "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+              "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+              "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+              "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+              "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+              "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+            ],
+            "failure_details": [
+              {
+                "test": "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (4068) panicked at src/gpu_sim.rs:1417:57:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (4069) panicked at src/gpu_sim.rs:1313:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (4061) panicked at src/gpu_sim.rs:1448:48:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": true,
+                "excerpt": [
+                  "thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (4059) panicked at src/gpu_pathfinder_ffi.rs:76:9:",
+                  "assertion `left == right` failed",
+                  "  left: -1",
+                  " right: 0"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (4071) panicked at src/gpu_sim.rs:1045:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (4070) panicked at src/gpu_sim.rs:1525:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (4072) panicked at src/gpu_sim.rs:1006:55:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (4073) panicked at src/gpu_sim.rs:1086:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (4075) panicked at src/gpu_sim.rs:1203:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (4076) panicked at src/gpu_sim.rs:1246:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (4077) panicked at src/gpu_sim.rs:1378:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                  "    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "gpu_sim::material_range_tests::profile_game_sized_gas_chain",
+                "reason": "manual GPU timing on the game-sized gas region"
+              },
+              {
+                "test": "messages_tests::benchmark_empty_publication_reuse",
+                "reason": "manual full-grid empty-publication benchmark"
+              },
+              {
+                "test": "messages_tests::benchmark_warmed_idle_publication",
+                "reason": "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"
+              },
+              {
+                "test": "multicomponent_flux::staging::tests::benchmark_gas_staging",
+                "reason": "manual paired host staging benchmark; no GPU dispatch"
+              },
+              {
+                "test": "native_chain_tests::benchmark_native_chain_sample",
+                "reason": "manual complete production worker/Engine/stable-Grid benchmark; external paired driver required"
+              },
+              {
+                "test": "presentation::liquid::tests::benchmark_liquid_update",
+                "reason": "manual complete liquid-update ABBA benchmark; run without concurrent benchmarks"
+              },
+              {
+                "test": "presentation::sun::tests::benchmark_sun_indexing",
+                "reason": "explicit single-core microbenchmark, not part of correctness tests"
+              },
+              {
+                "test": "presentation::validation_tests::benchmark_validation",
+                "reason": "manual complete presentation-validation benchmark; run after correctness tests"
+              },
+              {
+                "test": "world::publication_tests::benchmark_publication",
+                "reason": "targeted production publication benchmark; run after correctness tests"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 129175426199,
+          "name": "gpu-operator",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175426199",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426199",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:02:04Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:13Z"
+            },
+            {
+              "name": "Validate WGSL and run CPU transport invariants",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:13Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            },
+            {
+              "name": "Compile Vulkan benchmark executables",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-11-09T13:02:02Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            },
+            {
+              "name": "Smoke-test the EOS calibration CLI with synthetic records",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 6,
+              "started_at": "2026-11-09T13:02:02Z",
+              "completed_at": "2026-11-09T13:02:02Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-11-09T13:02:02Z",
+              "completed_at": "2026-11-09T13:02:03Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-11-09T13:02:03Z",
+              "completed_at": "2026-11-09T13:02:03Z"
+            }
+          ],
+          "assessment": "FAIL: independent GPU crate 21 passed, 25 failed, 6 ignored. All 25 failure sections explicitly report no hardware Vulkan adapter available. Later benchmark compilation and EOS smoke steps skipped.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175426199.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426199/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "FAILED",
+                "passed": 21,
+                "failed": 25,
+                "ignored": 6,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 0.06
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores",
+              "multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change",
+              "multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl",
+              "multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity",
+              "multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy",
+              "multicomponent::tests::gpu_density_velocity_matches_neighbour_gradients",
+              "multicomponent::tests::gpu_diffusion_preserves_species_and_energy_over_many_steps_with_wall",
+              "multicomponent::tests::liquid_diffusion_mixes_without_crossing_walls_and_conserves_each_species",
+              "multicomponent::tests::liquid_projection_matches_full_result_and_rejects_three_components",
+              "multicomponent::tests::packed_and_wide_sparse_inputs_can_alternate_without_stale_gpu_state",
+              "multicomponent::tests::pending_liquid_can_overlap_other_gpu_work_and_guards_reuse",
+              "multicomponent::tests::sparse_gas_upload_expands_mass_and_energy_and_checks_metadata",
+              "multicomponent::tests::sparse_input_partial_updates_preserve_other_blocks",
+              "multicomponent::tests::sparse_solid_partial_update_changes_only_target_cells",
+              "thermal_diffusion::tests::deferred_groups_recompute_only_changed_blocks_and_handle_skipped_revisions",
+              "thermal_diffusion::tests::deferred_groups_skip_only_faces_with_the_same_nonzero_group",
+              "thermal_diffusion::tests::gathered_faces_match_two_pass_gpu_with_deferred_groups",
+              "thermal_diffusion::tests::gpu_deferred_groups_match_cpu_with_packed_tails_and_changing_inputs",
+              "thermal_diffusion::tests::gpu_material_lookup_matches_cpu_for_odd_grid_and_table_changes",
+              "thermal_diffusion::tests::gpu_material_lookup_updates_last_partial_block",
+              "thermal_diffusion::tests::mass_upload_tracks_changed_blocks_and_external_overwrites",
+              "thermal_diffusion::tests::temperature_upload_tracks_gpu_results_and_external_access",
+              "thermal_diffusion::tests::thermal_diffusion_end_to_end_conserves_energy",
+              "thermal_enthalpy::tests::conductivity_uses_species_mass_weights_and_handles_empty_cells",
+              "thermal_enthalpy::tests::thermal_output_updates_species_enthalpy_without_intermediate_readback"
+            ],
+            "failure_details": [
+              {
+                "test": "multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl' (3765) panicked at src/multicomponent.rs:1959:95:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity' (3767) panicked at src/multicomponent.rs:2037:91:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores' (3751) panicked at src/gpu_pathfinder.rs:263:70:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change' (3764) panicked at src/multicomponent.rs:2003:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy' (3768) panicked at src/multicomponent.rs:1651:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::liquid_diffusion_mixes_without_crossing_walls_and_conserves_each_species",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::liquid_diffusion_mixes_without_crossing_walls_and_conserves_each_species' (3771) panicked at src/multicomponent.rs:1753:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::gpu_density_velocity_matches_neighbour_gradients",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::gpu_density_velocity_matches_neighbour_gradients' (3769) panicked at src/multicomponent.rs:1546:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::gpu_diffusion_preserves_species_and_energy_over_many_steps_with_wall",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::gpu_diffusion_preserves_species_and_energy_over_many_steps_with_wall' (3770) panicked at src/multicomponent.rs:1616:91:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::liquid_projection_matches_full_result_and_rejects_three_components",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::liquid_projection_matches_full_result_and_rejects_three_components' (3772) panicked at src/multicomponent.rs:1916:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::pending_liquid_can_overlap_other_gpu_work_and_guards_reuse",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::pending_liquid_can_overlap_other_gpu_work_and_guards_reuse' (3774) panicked at src/multicomponent.rs:1830:88:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::packed_and_wide_sparse_inputs_can_alternate_without_stale_gpu_state",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::packed_and_wide_sparse_inputs_can_alternate_without_stale_gpu_state' (3773) panicked at src/multicomponent.rs:1853:71:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::sparse_input_partial_updates_preserve_other_blocks",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::sparse_input_partial_updates_preserve_other_blocks' (3776) panicked at src/multicomponent.rs:1874:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::sparse_gas_upload_expands_mass_and_energy_and_checks_metadata",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::sparse_gas_upload_expands_mass_and_energy_and_checks_metadata' (3775) panicked at src/multicomponent.rs:1774:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "multicomponent::tests::sparse_solid_partial_update_changes_only_target_cells",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'multicomponent::tests::sparse_solid_partial_update_changes_only_target_cells' (3777) panicked at src/multicomponent.rs:1897:75:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::deferred_groups_recompute_only_changed_blocks_and_handle_skipped_revisions",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::deferred_groups_recompute_only_changed_blocks_and_handle_skipped_revisions' (3782) panicked at src/thermal_diffusion.rs:882:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::deferred_groups_skip_only_faces_with_the_same_nonzero_group",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::deferred_groups_skip_only_faces_with_the_same_nonzero_group' (3783) panicked at src/thermal_diffusion.rs:977:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::gathered_faces_match_two_pass_gpu_with_deferred_groups",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::gathered_faces_match_two_pass_gpu_with_deferred_groups' (3787) panicked at src/thermal_diffusion.rs:660:87:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::gpu_deferred_groups_match_cpu_with_packed_tails_and_changing_inputs",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::gpu_deferred_groups_match_cpu_with_packed_tails_and_changing_inputs' (3788) panicked at src/thermal_diffusion.rs:842:71:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::gpu_material_lookup_matches_cpu_for_odd_grid_and_table_changes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "error: test failed, to rerun pass `--lib`",
+                  "",
+                  "thread 'thermal_diffusion::tests::gpu_material_lookup_matches_cpu_for_odd_grid_and_table_changes' (3789) panicked at src/thermal_diffusion.rs:751:71:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::gpu_material_lookup_updates_last_partial_block",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::gpu_material_lookup_updates_last_partial_block' (3790) panicked at src/thermal_diffusion.rs:775:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::temperature_upload_tracks_gpu_results_and_external_access",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::temperature_upload_tracks_gpu_results_and_external_access' (3792) panicked at src/thermal_diffusion.rs:816:80:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::thermal_diffusion_end_to_end_conserves_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::thermal_diffusion_end_to_end_conserves_energy' (3793) panicked at src/thermal_diffusion.rs:1015:14:",
+                  "GPU creation failed: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_diffusion::tests::mass_upload_tracks_changed_blocks_and_external_overwrites",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_diffusion::tests::mass_upload_tracks_changed_blocks_and_external_overwrites' (3791) panicked at src/thermal_diffusion.rs:732:89:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_enthalpy::tests::thermal_output_updates_species_enthalpy_without_intermediate_readback",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_enthalpy::tests::thermal_output_updates_species_enthalpy_without_intermediate_readback' (3796) panicked at src/thermal_enthalpy.rs:244:66:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "thermal_enthalpy::tests::conductivity_uses_species_mass_weights_and_handles_empty_cells",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'thermal_enthalpy::tests::conductivity_uses_species_mass_weights_and_handles_empty_cells' (3795) panicked at src/thermal_enthalpy.rs:210:66:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores",
+                  "    multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "multicomponent::tests::benchmark_diffusion_thread_layouts",
+                "reason": "manual GPU kernel comparison"
+              },
+              {
+                "test": "multicomponent::tests::benchmark_transport_thread_layouts",
+                "reason": "manual GPU kernel comparison"
+              },
+              {
+                "test": "thermal_diffusion::tests::benchmark_deferred_presence_upload",
+                "reason": "manual GPU upload benchmark; run on an idle device"
+              },
+              {
+                "test": "thermal_diffusion::tests::benchmark_gather_against_two_pass",
+                "reason": "manual GPU dispatch benchmark"
+              },
+              {
+                "test": "thermal_diffusion::tests::benchmark_material_upload_at_game_grid_size",
+                "reason": "GPU timing probe; run explicitly on an idle device"
+              },
+              {
+                "test": "thermal_diffusion::tests::benchmark_temperature_changed_blocks",
+                "reason": "manual temperature upload benchmark"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 129175426204,
+          "name": "memory-probe-protocol",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175426204",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426204",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:01:21Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:01Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:01Z",
+              "completed_at": "2026-11-09T13:01:04Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:04Z",
+              "completed_at": "2026-11-09T13:01:10Z"
+            },
+            {
+              "name": "Build memory request protocol tests without game files",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:10Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Check UTC and non-UTC memory request boundaries",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            }
+          ],
+          "assessment": "PASS: memory request protocol reports 43 checks across three time zones.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175426204.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426204/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": []
+          }
+        },
+        {
+          "id": 129175426288,
+          "name": "lean-proof",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175426288",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426288",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:01:13Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:02Z"
+            },
+            {
+              "name": "Install Lean 4.19.0 through elan",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:02Z",
+              "completed_at": "2026-11-09T13:01:02Z"
+            },
+            {
+              "name": "Check all Lean proofs and logical dependencies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:02Z",
+              "completed_at": "2026-11-09T13:01:11Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:01:11Z",
+              "completed_at": "2026-11-09T13:01:11Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:11Z",
+              "completed_at": "2026-11-09T13:01:11Z"
+            }
+          ],
+          "assessment": "PASS: Lean 4.19.0 verifies 34 theorems with standard axioms.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175426288.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426288/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": []
+          }
+        },
+        {
+          "id": 129175426556,
+          "name": "pressure-projection-reference",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762342/job/129175426556",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426556",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:01:05Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:02Z"
+            },
+            {
+              "name": "Validate isolated variable-density Poisson reference",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:02Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-09T13:01:03Z",
+              "completed_at": "2026-11-09T13:01:03Z"
+            }
+          ],
+          "assessment": "PASS: isolated pressure reference reports 6 tests, OK.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175426556.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175426556/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": []
+          }
+        }
+      ]
+    },
+    {
+      "id": 42621762070,
+      "name": "ONI reference compatibility",
+      "event": "push",
+      "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "run_attempt": 1,
+      "workflow_path": ".github/workflows/oni-reference-compat.yml",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762070",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42621762070",
+      "created_at": "2026-11-09T13:00:55Z",
+      "updated_at": "2026-11-09T13:02:52Z",
+      "jobs": [
+        {
+          "id": 129175425101,
+          "name": "compile-and-surface",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762070/job/129175425101",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425101",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:02:52Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:00Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:04Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:04Z",
+              "completed_at": "2026-11-09T13:01:11Z"
+            },
+            {
+              "name": "Verify reference provenance and lag status",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:11Z",
+              "completed_at": "2026-11-09T13:01:16Z"
+            },
+            {
+              "name": "Fetch and verify pinned reference assemblies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:16Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 NavGrid method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 fetch method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 research queue method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:18Z"
+            },
+            {
+              "name": "Install pinned ILSpy command line tool",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:01:18Z",
+              "completed_at": "2026-11-09T13:01:23Z"
+            },
+            {
+              "name": "Verify CycleTrim reflected Harmony API against pinned references",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-09T13:01:23Z",
+              "completed_at": "2026-11-09T13:01:34Z"
+            },
+            {
+              "name": "Prepare allowlisted CycleTrim reference-API diagnostics on failure",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 11,
+              "started_at": "2026-11-09T13:01:34Z",
+              "completed_at": "2026-11-09T13:01:34Z"
+            },
+            {
+              "name": "Upload CycleTrim reference-API diagnostics on failure",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 12,
+              "started_at": "2026-11-09T13:01:34Z",
+              "completed_at": "2026-11-09T13:01:34Z"
+            },
+            {
+              "name": "Build CycleTrim against pinned references",
+              "status": "completed",
+              "conclusion": "cancelled",
+              "number": 13,
+              "started_at": "2026-11-09T13:01:34Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Verify compiled CycleTrim release safety guards",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 14,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Build OniMcp against pinned references",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 15,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 16,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Run source and host regressions",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Extract Harmony target API surface",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 18,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Prepare signatures-only API artifact",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 19,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Confirm API artifact contains no game binaries or decompiled source",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 20,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Upload API surface only",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 21,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Verify Harmony target API baseline",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 22,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Compile CycleTrim against .NET Standard 2.1",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 23,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Compile OniMcp against .NET Standard 2.1",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 24,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 47,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 48,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 49,
+              "started_at": "2026-11-09T13:02:50Z",
+              "completed_at": "2026-11-09T13:02:50Z"
+            }
+          ],
+          "assessment": "CANCELLED during CycleTrim reference build. Earlier reference provenance/method-body/reflection steps succeeded; final build guards/host regressions/API baseline/standard-2.1 builds skipped. Cancellation is not a successful reference result.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425101.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425101/logs"
+          },
+          "observed": {
+            "test_result_summaries": [],
+            "failed_tests": [],
+            "failure_details": [],
+            "ignored_tests": [],
+            "error_lines": [
+              "##[error]The operation was canceled."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 42621762073,
+      "name": "OniSim native platforms",
+      "event": "push",
+      "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "workflow_path": ".github/workflows/onisim-native.yml",
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42621762073",
+      "created_at": "2026-11-09T13:00:55Z",
+      "updated_at": "2026-11-09T13:09:07Z",
+      "jobs": [
+        {
+          "id": 129175424702,
+          "name": "native (windows-2022, windows-x64)",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175424702",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175424702",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:03:43Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:00:59Z",
+              "completed_at": "2026-11-09T13:01:01Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:01Z",
+              "completed_at": "2026-11-09T13:01:14Z"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:14Z",
+              "completed_at": "2026-11-09T13:01:26Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:26Z",
+              "completed_at": "2026-11-09T13:01:54Z"
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:54Z",
+              "completed_at": "2026-11-09T13:01:54Z"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:54Z",
+              "completed_at": "2026-11-09T13:03:39Z"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7,
+              "started_at": "2026-11-09T13:03:39Z",
+              "completed_at": "2026-11-09T13:03:39Z"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-11-09T13:03:39Z",
+              "completed_at": "2026-11-09T13:03:39Z"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-11-09T13:03:39Z",
+              "completed_at": "2026-11-09T13:03:39Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17,
+              "started_at": "2026-11-09T13:03:39Z",
+              "completed_at": "2026-11-09T13:03:39Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18,
+              "started_at": "2026-11-09T13:03:39Z",
+              "completed_at": "2026-11-09T13:03:41Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-11-09T13:03:41Z",
+              "completed_at": "2026-11-09T13:03:41Z"
+            }
+          ],
+          "assessment": "FAIL: default native suite 112 passed, 11 failed, 9 manual benchmarks ignored. Ten failures explicitly report no hardware Vulkan adapter; the FFI initialization test reports -1 rather than 0 without preserving a backend diagnostic.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175424702.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175424702/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "FAILED",
+                "passed": 112,
+                "failed": 11,
+                "ignored": 9,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 1.15
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+              "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+              "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+              "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+              "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+              "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+              "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+              "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+              "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+              "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+              "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+            ],
+            "failure_details": [
+              {
+                "test": "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": true,
+                "excerpt": [
+                  "thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (5780) panicked at src\\gpu_pathfinder_ffi.rs:76:9:",
+                  "assertion `left == right` failed",
+                  "  left: -1",
+                  " right: 0",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (5984) panicked at src\\gpu_sim.rs:1448:48:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (5904) panicked at src\\gpu_sim.rs:1417:57:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (6340) panicked at src\\gpu_sim.rs:1313:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (3152) panicked at src\\gpu_sim.rs:1525:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (3876) panicked at src\\gpu_sim.rs:1045:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (784) panicked at src\\gpu_sim.rs:1006:55:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (5300) panicked at src\\gpu_sim.rs:1086:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (1032) panicked at src\\gpu_sim.rs:1203:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (7464) panicked at src\\gpu_sim.rs:1246:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (1536) panicked at src\\gpu_sim.rs:1378:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                  "    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "gpu_sim::material_range_tests::profile_game_sized_gas_chain",
+                "reason": "manual GPU timing on the game-sized gas region"
+              },
+              {
+                "test": "messages_tests::benchmark_empty_publication_reuse",
+                "reason": "manual full-grid empty-publication benchmark"
+              },
+              {
+                "test": "messages_tests::benchmark_warmed_idle_publication",
+                "reason": "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"
+              },
+              {
+                "test": "multicomponent_flux::staging::tests::benchmark_gas_staging",
+                "reason": "manual paired host staging benchmark; no GPU dispatch"
+              },
+              {
+                "test": "native_chain_tests::benchmark_native_chain_sample",
+                "reason": "manual complete production worker/Engine/stable-Grid benchmark; external paired driver required"
+              },
+              {
+                "test": "presentation::liquid::tests::benchmark_liquid_update",
+                "reason": "manual complete liquid-update ABBA benchmark; run without concurrent benchmarks"
+              },
+              {
+                "test": "presentation::sun::tests::benchmark_sun_indexing",
+                "reason": "explicit single-core microbenchmark, not part of correctness tests"
+              },
+              {
+                "test": "presentation::validation_tests::benchmark_validation",
+                "reason": "manual complete presentation-validation benchmark; run after correctness tests"
+              },
+              {
+                "test": "world::publication_tests::benchmark_publication",
+                "reason": "targeted production publication benchmark; run after correctness tests"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 1."
+            ]
+          }
+        },
+        {
+          "id": 129175425033,
+          "name": "native (ubuntu-22.04, linux-x64)",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175425033",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425033",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:00:59Z",
+          "completed_at": "2026-11-09T13:02:27Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:01:00Z",
+              "completed_at": "2026-11-09T13:01:01Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:01Z",
+              "completed_at": "2026-11-09T13:01:04Z"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:04Z",
+              "completed_at": "2026-11-09T13:01:13Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:13Z",
+              "completed_at": "2026-11-09T13:01:21Z"
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-11-09T13:01:21Z",
+              "completed_at": "2026-11-09T13:01:21Z"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6,
+              "started_at": "2026-11-09T13:01:21Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-11-09T13:02:24Z",
+              "completed_at": "2026-11-09T13:02:24Z"
+            }
+          ],
+          "assessment": "FAIL: default native suite 116 passed, 11 failed, 9 manual benchmarks ignored. Ten failures explicitly report no hardware Vulkan adapter; the FFI initialization test reports -1 rather than 0 without preserving a backend diagnostic.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425033.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425033/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "FAILED",
+                "passed": 116,
+                "failed": 11,
+                "ignored": 9,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 1.22
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+              "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+              "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+              "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+              "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+              "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+              "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+              "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+              "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+              "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+              "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+            ],
+            "failure_details": [
+              {
+                "test": "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (4392) panicked at src/gpu_sim.rs:1448:48:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": true,
+                "excerpt": [
+                  "thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (4388) panicked at src/gpu_pathfinder_ffi.rs:76:9:",
+                  "assertion `left == right` failed",
+                  "  left: -1",
+                  " right: 0"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (4393) panicked at src/gpu_sim.rs:1417:57:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (4394) panicked at src/gpu_sim.rs:1313:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (4395) panicked at src/gpu_sim.rs:1525:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (4396) panicked at src/gpu_sim.rs:1045:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (4397) panicked at src/gpu_sim.rs:1006:55:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (4400) panicked at src/gpu_sim.rs:1203:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (4398) panicked at src/gpu_sim.rs:1086:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (4401) panicked at src/gpu_sim.rs:1246:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+                "explicit_no_hardware_vulkan": true,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (4402) panicked at src/gpu_sim.rs:1378:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"no hardware Vulkan adapter available\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                  "    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "gpu_sim::material_range_tests::profile_game_sized_gas_chain",
+                "reason": "manual GPU timing on the game-sized gas region"
+              },
+              {
+                "test": "messages_tests::benchmark_empty_publication_reuse",
+                "reason": "manual full-grid empty-publication benchmark"
+              },
+              {
+                "test": "messages_tests::benchmark_warmed_idle_publication",
+                "reason": "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"
+              },
+              {
+                "test": "multicomponent_flux::staging::tests::benchmark_gas_staging",
+                "reason": "manual paired host staging benchmark; no GPU dispatch"
+              },
+              {
+                "test": "native_chain_tests::benchmark_native_chain_sample",
+                "reason": "manual complete production worker/Engine/stable-Grid benchmark; external paired driver required"
+              },
+              {
+                "test": "presentation::liquid::tests::benchmark_liquid_update",
+                "reason": "manual complete liquid-update ABBA benchmark; run without concurrent benchmarks"
+              },
+              {
+                "test": "presentation::sun::tests::benchmark_sun_indexing",
+                "reason": "explicit single-core microbenchmark, not part of correctness tests"
+              },
+              {
+                "test": "presentation::validation_tests::benchmark_validation",
+                "reason": "manual complete presentation-validation benchmark; run after correctness tests"
+              },
+              {
+                "test": "world::publication_tests::benchmark_publication",
+                "reason": "targeted production publication benchmark; run after correctness tests"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 129175425192,
+          "name": "native (macos-15-intel, macos-x64)",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129175425192",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425192",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:01:03Z",
+          "completed_at": "2026-11-09T13:09:06Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:01:04Z",
+              "completed_at": "2026-11-09T13:01:07Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:01:07Z",
+              "completed_at": "2026-11-09T13:01:20Z"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:01:20Z",
+              "completed_at": "2026-11-09T13:01:43Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:01:43Z",
+              "completed_at": "2026-11-09T13:02:36Z"
+            },
+            {
+              "name": "Test unavailable Vulkan backend on Apple",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-09T13:02:36Z",
+              "completed_at": "2026-11-09T13:06:22Z"
+            },
+            {
+              "name": "Test native simulation behavior",
+              "status": "completed",
+              "conclusion": "failure",
+              "number": 6,
+              "started_at": "2026-11-09T13:06:22Z",
+              "completed_at": "2026-11-09T13:09:02Z"
+            },
+            {
+              "name": "Build native library and identity receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 7,
+              "started_at": "2026-11-09T13:09:02Z",
+              "completed_at": "2026-11-09T13:09:02Z"
+            },
+            {
+              "name": "Test platform loader against the built native library",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-11-09T13:09:02Z",
+              "completed_at": "2026-11-09T13:09:02Z"
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-11-09T13:09:02Z",
+              "completed_at": "2026-11-09T13:09:02Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17,
+              "started_at": "2026-11-09T13:09:02Z",
+              "completed_at": "2026-11-09T13:09:02Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18,
+              "started_at": "2026-11-09T13:09:02Z",
+              "completed_at": "2026-11-09T13:09:03Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-11-09T13:09:03Z",
+              "completed_at": "2026-11-09T13:09:04Z"
+            }
+          ],
+          "assessment": "FAIL: the explicit unavailable-backend contract test passes 1/1 (52 filtered); the later default native suite reports 112 passed, 11 failed, 9 ignored. Ten failures explicitly report Vulkan disabled for x86_64-macos; FFI initialization returns -1 rather than 0.",
+          "log": {
+            "available": true,
+            "path": "ci-87e070c-raw/job-129175425192.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129175425192/logs"
+          },
+          "observed": {
+            "test_result_summaries": [
+              {
+                "result": "ok",
+                "passed": 1,
+                "failed": 0,
+                "ignored": 0,
+                "measured": 0,
+                "filtered_out": 52,
+                "elapsed_seconds": 0
+              },
+              {
+                "result": "FAILED",
+                "passed": 112,
+                "failed": 11,
+                "ignored": 9,
+                "measured": 0,
+                "filtered_out": 0,
+                "elapsed_seconds": 1.95
+              }
+            ],
+            "failed_tests": [
+              "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+              "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+              "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+              "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+              "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+              "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+              "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+              "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+              "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+              "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+              "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+            ],
+            "failure_details": [
+              {
+                "test": "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": false,
+                "init_return_minus_one": true,
+                "excerpt": [
+                  "thread 'gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi' (32455) panicked at src/gpu_pathfinder_ffi.rs:76:9:",
+                  "assertion `left == right` failed",
+                  "  left: -1",
+                  " right: 0",
+                  "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes' (32457) panicked at src/gpu_sim.rs:1448:48:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy' (32458) panicked at src/gpu_sim.rs:1417:57:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components' (32459) panicked at src/gpu_sim.rs:1313:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass' (32460) panicked at src/gpu_sim.rs:1525:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes' (32462) panicked at src/gpu_sim.rs:1006:55:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order' (32461) panicked at src/gpu_sim.rs:1045:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy' (32463) panicked at src/gpu_sim.rs:1086:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region' (32465) panicked at src/gpu_sim.rs:1203:83:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass' (32466) panicked at src/gpu_sim.rs:1246:74:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\""
+                ]
+              },
+              {
+                "test": "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces",
+                "explicit_no_hardware_vulkan": false,
+                "explicit_target_vulkan_disabled": true,
+                "init_return_minus_one": false,
+                "excerpt": [
+                  "thread 'gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces' (32467) panicked at src/gpu_sim.rs:1378:77:",
+                  "called `Result::unwrap()` on an `Err` value: \"Vulkan backend is not enabled for target x86_64-macos (wgpu backends: Backends(0x0))\"",
+                  "",
+                  "",
+                  "failures:",
+                  "    gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+                  "    gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes"
+                ]
+              }
+            ],
+            "ignored_tests": [
+              {
+                "test": "gpu_sim::material_range_tests::profile_game_sized_gas_chain",
+                "reason": "manual GPU timing on the game-sized gas region"
+              },
+              {
+                "test": "messages_tests::benchmark_empty_publication_reuse",
+                "reason": "manual full-grid empty-publication benchmark"
+              },
+              {
+                "test": "messages_tests::benchmark_warmed_idle_publication",
+                "reason": "manual warmed production idle-batch benchmark; compare identical tests at two source revisions"
+              },
+              {
+                "test": "multicomponent_flux::staging::tests::benchmark_gas_staging",
+                "reason": "manual paired host staging benchmark; no GPU dispatch"
+              },
+              {
+                "test": "native_chain_tests::benchmark_native_chain_sample",
+                "reason": "manual complete production worker/Engine/stable-Grid benchmark; external paired driver required"
+              },
+              {
+                "test": "presentation::liquid::tests::benchmark_liquid_update",
+                "reason": "manual complete liquid-update ABBA benchmark; run without concurrent benchmarks"
+              },
+              {
+                "test": "presentation::sun::tests::benchmark_sun_indexing",
+                "reason": "explicit single-core microbenchmark, not part of correctness tests"
+              },
+              {
+                "test": "presentation::validation_tests::benchmark_validation",
+                "reason": "manual complete presentation-validation benchmark; run after correctness tests"
+              },
+              {
+                "test": "world::publication_tests::benchmark_publication",
+                "reason": "targeted production publication benchmark; run after correctness tests"
+              }
+            ],
+            "error_lines": [
+              "##[error]Process completed with exit code 101."
+            ]
+          }
+        },
+        {
+          "id": 129179399094,
+          "name": "bundle",
+          "head_sha": "87e070c5dc680bbc92c17ea28c841f170934c852",
+          "status": "completed",
+          "conclusion": "skipped",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42621762073/job/129179399094",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129179399094",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:09:07Z",
+          "completed_at": "2026-11-09T13:09:06Z",
+          "steps": [],
+          "assessment": "SKIPPED: depends on the failed native matrix; no combined platform artifact was validated or uploaded.",
+          "log": {
+            "available": false,
+            "reason": "No executed steps; skipped dependent job."
+          },
+          "observed": null
+        }
+      ]
+    }
+  ]
+}

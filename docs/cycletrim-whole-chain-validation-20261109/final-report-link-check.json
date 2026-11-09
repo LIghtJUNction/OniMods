@@ -1,0 +1,111 @@
+{
+  "checks": [
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/native_chain_tests.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/Core/FrameTimingWindow.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/Patches/FrameRateUnlockPatch.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/Patches/FrameStageProbe.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "scripts/analyze_cycletrim_frame_chain.py",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/Patches/AsyncPathProbeOptimizationPatch.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/Jlib",
+      "mode": "160000"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "scripts/verify_cycletrim_frame_chain_analyzer.py",
+      "mode": "100644"
+    },
+    {
+      "revision": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+      "path": "tests/CycleTrim.Optimizations.Tests",
+      "mode": "040000"
+    },
+    {
+      "revision": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+      "path": "mods/CycleTrim/OniSim/native/src",
+      "mode": "040000"
+    },
+    {
+      "revision": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+      "path": "tests/CycleTrim.Optimizations.Tests/PresentationUploadDirtyDiagnostic.cs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/grid.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/state.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/events.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/native_chain_tests.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "938ada6ecde8693513940d599e7aa5c18f3e5d22",
+      "path": "mods/CycleTrim/OniSim/native/src",
+      "mode": "040000"
+    },
+    {
+      "revision": "938ada6ecde8693513940d599e7aa5c18f3e5d22",
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_identity_tests.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/worker.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "path": "mods/CycleTrim/OniSim/native/src/worker_loop.rs",
+      "mode": "100644"
+    },
+    {
+      "revision": "663f32a050069e8ff2fa0241d96da33248bc5938",
+      "path": "mods/CycleTrim/OniSim/native/src/worker_payload_tests.rs",
+      "mode": "100644"
+    }
+  ],
+  "all_pinned_repo_targets_present": true,
+  "submodule_gitlinks_checked_as_tree_entries": true
+}

@@ -1,0 +1,4 @@
+Portable ABI inventory ignores MVID/suffix and detects field/packing changes; metadata/runtime fingerprints match
+OMC1 parser validation and fail-closed regressions passed
+Platform selection, default-on mapping attempt and unknown-profile refusal passed
+linux-x64 native exports, initialization, shutdown and resident module passed

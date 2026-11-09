@@ -1,0 +1,74 @@
+{
+  "source_commit": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+  "version": "0.4.12",
+  "command": "onim build -m CycleTrim --release",
+  "result": "success",
+  "platforms": [
+    "linux-x64"
+  ],
+  "game_runtime_tested": false,
+  "hardware_gpu_tested": false,
+  "managed_build_warnings": 0,
+  "managed_build_errors": 0,
+  "native_warnings": 38,
+  "native_build_manifest": {
+    "schema": 1,
+    "target": "linux-x64",
+    "triple": "x86_64-unknown-linux-gnu",
+    "sourceSha256": "f3730cfaaf9c0665908e6fe9c297c6e0498e0d42a809360733033e6f7c777c30",
+    "binarySha256": "acbbc0723b0beda7a3def95d87fdbd22c00cc2ff697f3064badde4706af5fa4d",
+    "commit": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+    "gameRuntimeTested": false
+  },
+  "files": {
+    "dist/CycleTrim.zip": {
+      "bytes": 3438972,
+      "sha256": "72831668a876501f3487ff68784ae62e46b385a586515b608442425b8af74b63"
+    },
+    "dist/CycleTrim/implementation/CycleTrim.dll": {
+      "bytes": 200704,
+      "sha256": "2c687c4332a763a3580a013c4ccad93369f55475a8a569d6fae75b4fbbf147f9"
+    },
+    "dist/CycleTrim/implementation/OniSim.Compatibility.dll": {
+      "bytes": 36864,
+      "sha256": "5c65d48d9ad85b9e104429257fd3150c15a86aaa632ceab9ac40979c9bd3a902"
+    },
+    "dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so": {
+      "bytes": 8270912,
+      "sha256": "acbbc0723b0beda7a3def95d87fdbd22c00cc2ff697f3064badde4706af5fa4d"
+    },
+    "tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll": {
+      "bytes": 40448,
+      "sha256": "9845cf8fd82f781d6a98ba55b573573ee13d5658580699a1d7a8af1ff661fcc4"
+    }
+  },
+  "reference_binary_declared_build": 737790,
+  "pinned_static_source_declared_build": 744825,
+  "validation": {
+    "zip_crc": true,
+    "zip_payload_matches_tested_files": true,
+    "managed_matches_built_release": true,
+    "all_30_baseline_exports_present_in_final_library": true,
+    "all_16_required_exports_present_in_final_library": true,
+    "candidate_metadata_export_absent": true,
+    "compatibility_candidate_metadata_il_absent": true,
+    "release_guard_checks": 22,
+    "actual_packaged_native_loader_initialization_shutdown_smoke": true,
+    "jlib_main_0_3_2_unchanged": true,
+    "full_committed_range_diff_check": true
+  },
+  "isolated_validation_library": {
+    "sha256": "b8a0242dd4f808ecc280c18bd89b50066daa51b11c6d7c94a5e48b8ddd57e0fb",
+    "same_binary_as_final": false,
+    "note": "Separate build artifacts. Final onim uses an explicit target triple and its platform-build directory. Source manifest equivalence is recorded separately; isolated-library export checks are not claimed for this file. Final library exports and loader smoke were checked directly.",
+    "command": "cargo +1.99.1 build --release --offline --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml",
+    "target": "Implicit host target; CARGO_TARGET_DIR shared native target, no --target argument"
+  },
+  "scope": "Retained production behavior plus diagnostics; rejected performance candidates are not shipped. No new performance gain is claimed.",
+  "final_native_build_command": "cargo build --release --locked --target x86_64-unknown-linux-gnu --target-dir mods/CycleTrim/OniSim/native/target/platform-build --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml",
+  "delivery_package": {
+    "path": "/workspace/scratch/725bb75bc42e/deliverables/CycleTrim-0.4.12-linux-x64.zip",
+    "bytes": 3438972,
+    "sha256": "72831668a876501f3487ff68784ae62e46b385a586515b608442425b8af74b63"
+  }
+}

@@ -1,0 +1,470 @@
+{
+  "schema_version": 1,
+  "purpose": "Exact final-source commit Actions results; preserves separate predecessor native CI instead of claiming untriggered native workflows passed.",
+  "repository": "LIghtJUNction/OniMods",
+  "head_sha": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+  "collected_at_utc": "2026-11-09 13:12:21 UTC",
+  "query_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs?head_sha=0056559f8aee4d63cd7ae3ef4c07561304b3e920&per_page=100",
+  "collection_complete": true,
+  "workflow_count": 2,
+  "job_count": 2,
+  "workflow_conclusions": {
+    "success": 2
+  },
+  "job_conclusions": {
+    "success": 2
+  },
+  "outcome": "The two workflows triggered by this exact final commit passed. This does not mean all native/GPU CI passed.",
+  "no_local_execution": "No local tests, builds, workflow edits, reruns or gate changes were performed for this collection.",
+  "native_workflow": {
+    "status": "not_triggered",
+    "conclusion": null,
+    "counted_as_pass": false,
+    "reason": "The only commit change deletes one EOF blank line in tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs. The exact-commit native platform workflow push paths do not include this path.",
+    "exact_workflow_url": "https://github.com/LIghtJUNction/OniMods/blob/0056559f8aee4d63cd7ae3ef4c07561304b3e920/.github/workflows/onisim-native.yml",
+    "push_paths": [
+      "mods/CycleTrim/OniSim/**",
+      "tests/OniSim.Loader.Tests/**",
+      "scripts/build_onisim_native.py",
+      ".github/workflows/onisim-native.yml"
+    ],
+    "workflow_evidence": "ci-0056559-raw/onisim-native.yml",
+    "native_ci_source_commit": "87e070c5dc680bbc92c17ea28c841f170934c852",
+    "native_ci_receipt": "ci-87e070c.json",
+    "native_ci_outcome": "Three native platform jobs failed their default suite. Linux 116 passed / 11 failed / 9 ignored; Windows and macOS each 112 passed / 11 failed / 9 ignored. Bundle skipped.",
+    "attribution_boundary": "Direct failures are unavailable hardware Vulkan on Linux/Windows and disabled Vulkan target on macOS. Each platform also has an FFI init -1 assertion without backend diagnostic. Failures remain failures; supported hardware operation is unvalidated."
+  },
+  "source_equivalence": {
+    "compare_url": "https://api.github.com/repos/LIghtJUNction/OniMods/compare/87e070c5dc680bbc92c17ea28c841f170934c852...0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+    "raw_evidence": "ci-0056559-raw/compare-87-to-005.json",
+    "status": "ahead",
+    "total_commits": 1,
+    "changed_files": [
+      {
+        "filename": "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "patch": "@@ -88,4 +88,3 @@ public void Apply()\n         }\n     }\n }\n-"
+      }
+    ],
+    "original_native_files_changed": 0,
+    "interpretation": "Native/GPU tracked source and native workflow are unchanged between 87 and 005. Native CI belongs to the tested 87 SHA; no 005 native run is invented."
+  },
+  "limits": [
+    "87 whitespace and cancelled reference failures remain preserved in their own receipt.",
+    "The two successful 005 workflows provide compile/source/fixture evidence, not live ONI/Unity acceptance or a performance speedup.",
+    "The 87 historical-component job stopped at whitespace; correcting whitespace without rerunning that path-filtered workflow does not establish a historical-component pass."
+  ],
+  "evidence_log_format": "Downloaded decoded logs are stored as UTF-8 with CRLF normalized to LF; content is otherwise retained.",
+  "workflows": [
+    {
+      "id": 42622017477,
+      "name": "Mod quality",
+      "head_sha": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "event": "push",
+      "workflow_path": ".github/workflows/mod-quality.yml",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42622017477",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42622017477",
+      "created_at": "2026-11-09T13:02:44Z",
+      "updated_at": "2026-11-09T13:07:37Z",
+      "jobs": [
+        {
+          "id": 129176302128,
+          "name": "regression",
+          "head_sha": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42622017477/job/129176302128",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129176302128",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:02:47Z",
+          "completed_at": "2026-11-09T13:07:36Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:02:47Z",
+              "completed_at": "2026-11-09T13:02:48Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:02:48Z",
+              "completed_at": "2026-11-09T13:02:52Z"
+            },
+            {
+              "name": "Check changed-line whitespace",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:02:52Z",
+              "completed_at": "2026-11-09T13:02:52Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:02:52Z",
+              "completed_at": "2026-11-09T13:03:00Z"
+            },
+            {
+              "name": "Fetch pinned ONI compile references for Jlib host tests",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-09T13:03:00Z",
+              "completed_at": "2026-11-09T13:03:03Z"
+            },
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-11-09T13:03:03Z",
+              "completed_at": "2026-11-09T13:03:13Z"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-09T13:03:13Z",
+              "completed_at": "2026-11-09T13:03:19Z"
+            },
+            {
+              "name": "Test onim CLI regressions",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:03:19Z",
+              "completed_at": "2026-11-09T13:03:30Z"
+            },
+            {
+              "name": "Check Mod source contracts and host behavior",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:03:30Z",
+              "completed_at": "2026-11-09T13:07:30Z"
+            },
+            {
+              "name": "Report CycleTrim synthetic performance evidence",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-09T13:07:30Z",
+              "completed_at": "2026-11-09T13:07:32Z"
+            },
+            {
+              "name": "Verify pinned FastTrack Fetch compatibility contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11,
+              "started_at": "2026-11-09T13:07:32Z",
+              "completed_at": "2026-11-09T13:07:33Z"
+            },
+            {
+              "name": "Verify pinned FastTrack stationary-critter compatibility contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-11-09T13:07:33Z",
+              "completed_at": "2026-11-09T13:07:34Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 23,
+              "started_at": "2026-11-09T13:07:34Z",
+              "completed_at": "2026-11-09T13:07:34Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 24,
+              "started_at": "2026-11-09T13:07:34Z",
+              "completed_at": "2026-11-09T13:07:34Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 25,
+              "started_at": "2026-11-09T13:07:34Z",
+              "completed_at": "2026-11-09T13:07:34Z"
+            }
+          ],
+          "log": {
+            "path": "ci-0056559-raw/job-129176302128.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129176302128/logs"
+          },
+          "error_annotations": [],
+          "assessment": "PASS: changed-line whitespace, CLI/source/host regressions, synthetic probe report and pinned compatibility checks all completed. This is source/fixture CI, not ONI/Unity runtime performance acceptance."
+        }
+      ]
+    },
+    {
+      "id": 42622017781,
+      "name": "ONI reference compatibility",
+      "head_sha": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+      "event": "push",
+      "workflow_path": ".github/workflows/oni-reference-compat.yml",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42622017781",
+      "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/42622017781",
+      "created_at": "2026-11-09T13:02:44Z",
+      "updated_at": "2026-11-09T13:10:33Z",
+      "jobs": [
+        {
+          "id": 129176362600,
+          "name": "compile-and-surface",
+          "head_sha": "0056559f8aee4d63cd7ae3ef4c07561304b3e920",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42622017781/job/129176362600",
+          "api_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129176362600",
+          "run_attempt": 1,
+          "started_at": "2026-11-09T13:02:55Z",
+          "completed_at": "2026-11-09T13:10:33Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-09T13:02:56Z",
+              "completed_at": "2026-11-09T13:02:57Z"
+            },
+            {
+              "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-11-09T13:02:57Z",
+              "completed_at": "2026-11-09T13:03:04Z"
+            },
+            {
+              "name": "Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-11-09T13:03:04Z",
+              "completed_at": "2026-11-09T13:03:12Z"
+            },
+            {
+              "name": "Verify reference provenance and lag status",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-11-09T13:03:12Z",
+              "completed_at": "2026-11-09T13:03:21Z"
+            },
+            {
+              "name": "Fetch and verify pinned reference assemblies",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-11-09T13:03:21Z",
+              "completed_at": "2026-11-09T13:03:26Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 NavGrid method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-11-09T13:03:26Z",
+              "completed_at": "2026-11-09T13:03:26Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 fetch method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-11-09T13:03:26Z",
+              "completed_at": "2026-11-09T13:03:26Z"
+            },
+            {
+              "name": "Verify pinned ONI 744825 research queue method-body contract",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-11-09T13:03:26Z",
+              "completed_at": "2026-11-09T13:03:26Z"
+            },
+            {
+              "name": "Install pinned ILSpy command line tool",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-11-09T13:03:26Z",
+              "completed_at": "2026-11-09T13:03:34Z"
+            },
+            {
+              "name": "Verify CycleTrim reflected Harmony API against pinned references",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-11-09T13:03:34Z",
+              "completed_at": "2026-11-09T13:03:44Z"
+            },
+            {
+              "name": "Prepare allowlisted CycleTrim reference-API diagnostics on failure",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 11,
+              "started_at": "2026-11-09T13:03:44Z",
+              "completed_at": "2026-11-09T13:03:44Z"
+            },
+            {
+              "name": "Upload CycleTrim reference-API diagnostics on failure",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 12,
+              "started_at": "2026-11-09T13:03:44Z",
+              "completed_at": "2026-11-09T13:03:44Z"
+            },
+            {
+              "name": "Build CycleTrim against pinned references",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-11-09T13:03:44Z",
+              "completed_at": "2026-11-09T13:04:54Z"
+            },
+            {
+              "name": "Verify compiled CycleTrim release safety guards",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14,
+              "started_at": "2026-11-09T13:04:54Z",
+              "completed_at": "2026-11-09T13:05:00Z"
+            },
+            {
+              "name": "Build OniMcp against pinned references",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15,
+              "started_at": "2026-11-09T13:05:00Z",
+              "completed_at": "2026-11-09T13:05:47Z"
+            },
+            {
+              "name": "Pack shared Jlib package for host regressions",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 16,
+              "started_at": "2026-11-09T13:05:47Z",
+              "completed_at": "2026-11-09T13:05:50Z"
+            },
+            {
+              "name": "Run source and host regressions",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 17,
+              "started_at": "2026-11-09T13:05:50Z",
+              "completed_at": "2026-11-09T13:10:06Z"
+            },
+            {
+              "name": "Extract Harmony target API surface",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 18,
+              "started_at": "2026-11-09T13:10:06Z",
+              "completed_at": "2026-11-09T13:10:20Z"
+            },
+            {
+              "name": "Prepare signatures-only API artifact",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-11-09T13:10:20Z",
+              "completed_at": "2026-11-09T13:10:20Z"
+            },
+            {
+              "name": "Confirm API artifact contains no game binaries or decompiled source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20,
+              "started_at": "2026-11-09T13:10:20Z",
+              "completed_at": "2026-11-09T13:10:20Z"
+            },
+            {
+              "name": "Upload API surface only",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21,
+              "started_at": "2026-11-09T13:10:20Z",
+              "completed_at": "2026-11-09T13:10:22Z"
+            },
+            {
+              "name": "Verify Harmony target API baseline",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 22,
+              "started_at": "2026-11-09T13:10:22Z",
+              "completed_at": "2026-11-09T13:10:22Z"
+            },
+            {
+              "name": "Compile CycleTrim against .NET Standard 2.1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 23,
+              "started_at": "2026-11-09T13:10:22Z",
+              "completed_at": "2026-11-09T13:10:26Z"
+            },
+            {
+              "name": "Compile OniMcp against .NET Standard 2.1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 24,
+              "started_at": "2026-11-09T13:10:26Z",
+              "completed_at": "2026-11-09T13:10:29Z"
+            },
+            {
+              "name": "Post Run actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 47,
+              "started_at": "2026-11-09T13:10:29Z",
+              "completed_at": "2026-11-09T13:10:30Z"
+            },
+            {
+              "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 48,
+              "started_at": "2026-11-09T13:10:30Z",
+              "completed_at": "2026-11-09T13:10:30Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 49,
+              "started_at": "2026-11-09T13:10:30Z",
+              "completed_at": "2026-11-09T13:10:30Z"
+            }
+          ],
+          "log": {
+            "path": "ci-0056559-raw/job-129176362600.log",
+            "download_api": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/jobs/129176362600/logs"
+          },
+          "error_annotations": [],
+          "assessment": "PASS: pinned-reference provenance and method contracts, reflected Harmony API, CycleTrim/OniMcp builds, compiled release guards, source/host regressions, signatures-only API artifact, Harmony baseline and both .NET Standard 2.1 builds completed. Failure-only diagnostics steps are skipped by design, not missing acceptance checks."
+        }
+      ]
+    }
+  ]
+}

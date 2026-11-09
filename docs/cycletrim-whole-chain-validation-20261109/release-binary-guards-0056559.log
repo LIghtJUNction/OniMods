@@ -1,0 +1,22 @@
+PASS rejected presentation upload gate is absent
+PASS rejected property-texture publication patch is absent
+PASS presentation reader is not registered into an upload gate
+PASS CycleTrim does not wrap the original external texture uploads
+PASS multicomponent publication provider remains registered
+PASS existing texture lerper optimization remains installed
+PASS SmartReservoir Harmony interception is absent
+PASS automatic GPU chore recosting Harmony patch is absent
+PASS unused managed GPU chore recosting bridge is absent
+PASS async mismatch logs a skip
+PASS async mismatch returns incoming IL
+PASS async mismatch does not throw
+PASS IdleChore is not busy work
+PASS pickup and chore paths use the idle guard
+PASS busy chore paths avoid navigator component lookups
+PASS busy chore stamps reuse navigator cached root cell
+PASS release decompile exposes identity-cache methods
+PASS pickup hot path caches duplicant identity classification
+PASS priority invalidation does not materialize untracked throttle state
+PASS priority invalidation reuses Brain cached chore consumer
+PASS stationary probes reuse vanilla cached root cell
+PASS stationary critter identity lookup is first-hit only

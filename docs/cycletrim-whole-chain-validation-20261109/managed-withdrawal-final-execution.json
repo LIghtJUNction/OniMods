@@ -1,0 +1,44 @@
+{
+  "started_utc": "2026-11-09T12:59:50.723718+00:00",
+  "source_sha256": {
+    "tests/CycleTrim.Optimizations.Tests/Program.cs": "72b178f543c973704a053e84d498e17de06eeac0a5840d2f381b6722597edb39",
+    "tests/CycleTrim.Optimizations.Tests/PropertyTextureFixture.cs": "a93392e63adbaf4376f18db724ffaf07a0e9144dead152b04157d7e60d57d8e8",
+    "tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj": "fc27a209ac6361d9dc47c64a29cfd18bf400b697804d928180a770f56cf903d3",
+    "tests/CycleTrim.Optimizations.Tests/FrameRateDiagnosticsRegression.cs": "b8b45efcd523acc1a8ef68f1d599301a8a16b29401841ceee8ad4343a0bd8a56",
+    "mods/CycleTrim/Patches/FrameStageProbe.cs": "a70b31a946a84cf7300cf401ea072c374476e0fdf0fa9181b36b35f2f455ac8e",
+    "mods/CycleTrim/Core/FrameTimingWindow.cs": "52fcb484f47c3440dc342cb3bd663200450a386a2ae6d3ae4ceb3961d2be1621",
+    "mods/CycleTrim/Patches/FrameRateUnlockPatch.cs": "0dd697ff94821aa020538875fac09bf4023ff4a2298dd46423b116870c97ad28"
+  },
+  "runs": [
+    {
+      "command": [
+        "/workspace/scratch/6c1cf53f37e8/toolchain/dotnet/dotnet",
+        "build",
+        "tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj",
+        "-c",
+        "Release",
+        "--disable-build-servers",
+        "-m:1"
+      ],
+      "exit_code": 0,
+      "log": "managed-withdrawal-final-optimization-build.log",
+      "log_sha256": "039a240266c43c6359e0a9dab0644a93f5c48545d7e86abd7e2eca12cd2ad648"
+    },
+    {
+      "command": [
+        "/workspace/scratch/6c1cf53f37e8/toolchain/dotnet/dotnet",
+        "tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll"
+      ],
+      "exit_code": 0,
+      "log": "managed-withdrawal-final-optimizations.log",
+      "log_sha256": "ade31dab69063dace60969a0a7406211cea8372c2306bd65c792f31b9d9d72d1"
+    }
+  ],
+  "note": "Final source after removing the self-referential direct-upload stub assertions; no performance benchmark.",
+  "finished_utc": "2026-11-09T13:00:11.276402+00:00",
+  "host": {
+    "path": "/workspace/scratch/725bb75bc42e/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+    "bytes": 450560,
+    "sha256": "7a52d3d63aab585c5e2b4e63916337f930d3d1e68ffc6bedc79d50c4359f8196"
+  }
+}

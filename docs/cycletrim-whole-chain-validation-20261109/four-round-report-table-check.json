@@ -1,0 +1,51 @@
+{
+  "reviewed_utc": "2026-11-09T12:53:47.877972+00:00",
+  "report": "/workspace/scratch/725bb75bc42e/OniMods/docs/cycletrim-whole-chain-20261109.md",
+  "report_sha256": "5623124502458c5820310b36ecb73590f15d34076dc3cd0ab56438edc4609af1",
+  "checker_sha256": "c3d4523a6a0eaa050739d888126f4ce145d8511ae97644aa24c3813580b4e79b",
+  "raw_review_receipt_sha256": "8f6f67140d43b7ca487c6ccd36c02634827e4b041c8d65a55c7a8d03c4708315",
+  "formal_rows": 112,
+  "tables": [
+    {
+      "table": "1A",
+      "rows": 19,
+      "matched": true
+    },
+    {
+      "table": "1B",
+      "rows": 19,
+      "matched": true
+    },
+    {
+      "table": "1C",
+      "rows": 19,
+      "matched": true
+    },
+    {
+      "table": "1D",
+      "rows": 19,
+      "matched": true
+    },
+    {
+      "table": "2A",
+      "rows": 9,
+      "matched": true
+    },
+    {
+      "table": "2B",
+      "rows": 9,
+      "matched": true
+    },
+    {
+      "table": "2D",
+      "rows": 9,
+      "matched": true
+    },
+    {
+      "table": "2E",
+      "rows": 9,
+      "matched": true
+    }
+  ],
+  "check": "All eight complete matrices: case names, both medians and P95, percentage changes, original thresholds and decisions. Display rounding only; gate recomputation uses full raw precision in four-round-review.json."
+}

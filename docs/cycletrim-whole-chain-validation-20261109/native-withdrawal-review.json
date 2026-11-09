@@ -1,0 +1,897 @@
+{
+  "utc": "2026-11-09T12:49:29.984519+00:00",
+  "baseline_commit": "f40858eb626b8b4d18f0683ce3d0ed17b62fa1ea",
+  "validation_parent_commit": "d374cff01fd2df4b958ef3c08beabdbe15605b33",
+  "parent_is_final_build_commit": false,
+  "disposition": "Withdrawal of all current-round native production changes after N4 failed. No performance claim or new benchmark.",
+  "baseline_native_file_count": 103,
+  "all_baseline_production_bytes_equal": true,
+  "files": [
+    {
+      "path": "mods/CycleTrim/OniSim/native/Cargo.lock",
+      "baseline_sha256": "9cef8e13ce8bb384057116c4d1e265eab7dc239321ef8c8f164783b49eaebdfc",
+      "restored_sha256": "9cef8e13ce8bb384057116c4d1e265eab7dc239321ef8c8f164783b49eaebdfc",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/Cargo.toml",
+      "baseline_sha256": "9735ad1657694b67935572662b475e53775bfa507833e5bbe816cdbbb8c37dd3",
+      "restored_sha256": "9735ad1657694b67935572662b475e53775bfa507833e5bbe816cdbbb8c37dd3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/examples/flow_cpu_bench.rs",
+      "baseline_sha256": "de73dd520ebce62758037b8bf49507e6fb1349be0672c6a91250262c7872ebd4",
+      "restored_sha256": "de73dd520ebce62758037b8bf49507e6fb1349be0672c6a91250262c7872ebd4",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/include/oni_sim.h",
+      "baseline_sha256": "18a7d3e4ba6b569ec57b0eae11ce2f8f1c2c2946bde5778b29b6ef3d340a3a31",
+      "restored_sha256": "18a7d3e4ba6b569ec57b0eae11ce2f8f1c2c2946bde5778b29b6ef3d340a3a31",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/bytes.rs",
+      "baseline_sha256": "cf2bb99377052808522958b32e95d0bb59e3bc25f6007f03b8bf8a8cdc88a3ee",
+      "restored_sha256": "cf2bb99377052808522958b32e95d0bb59e3bc25f6007f03b8bf8a8cdc88a3ee",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material.rs",
+      "baseline_sha256": "9284535dd4fb4d89ad56eff90f40f99c800e0bfb53366027513204e69d1f54bd",
+      "restored_sha256": "9284535dd4fb4d89ad56eff90f40f99c800e0bfb53366027513204e69d1f54bd",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_add_gas.rs",
+      "baseline_sha256": "f62739f12b4040ddbdc47094857f696172b3764256a6f13af1948cdf5644bfe2",
+      "restored_sha256": "f62739f12b4040ddbdc47094857f696172b3764256a6f13af1948cdf5644bfe2",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_add_liquid.rs",
+      "baseline_sha256": "359f5f38c00ae11b47a4d0e3973a4b963a699fc933272d705a3440c77e26437b",
+      "restored_sha256": "359f5f38c00ae11b47a4d0e3973a4b963a699fc933272d705a3440c77e26437b",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_add_solid.rs",
+      "baseline_sha256": "7da7cb74c934dcde2ed298b30c2588c76288e4f4ed616e5a54b65da2fe7c2911",
+      "restored_sha256": "7da7cb74c934dcde2ed298b30c2588c76288e4f4ed616e5a54b65da2fe7c2911",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_commands.rs",
+      "baseline_sha256": "e244580f2c79b617499573d184a5da821fad8c97e4d3ff4ecd40eb921f442aba",
+      "restored_sha256": "e244580f2c79b617499573d184a5da821fad8c97e4d3ff4ecd40eb921f442aba",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_mass.rs",
+      "baseline_sha256": "f9446b654f9098ccbf6818c686de9ec952f15cbeff06b0aa1e50825a9ff06e76",
+      "restored_sha256": "f9446b654f9098ccbf6818c686de9ec952f15cbeff06b0aa1e50825a9ff06e76",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/cell_material_rect.rs",
+      "baseline_sha256": "f23643e892dd6551874095c56521206d4ba4d5f471f731d3cc41d36ae9005511",
+      "restored_sha256": "f23643e892dd6551874095c56521206d4ba4d5f471f731d3cc41d36ae9005511",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/component_handles.rs",
+      "baseline_sha256": "692f20bbc0e6ca40278bb23342fd1488a6e24e5f44feee1b1bdcecc0c499ff1d",
+      "restored_sha256": "692f20bbc0e6ca40278bb23342fd1488a6e24e5f44feee1b1bdcecc0c499ff1d",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/conduit.rs",
+      "baseline_sha256": "773c3dab05b21e4d8a84e3da39e09f2e95d5b43260a435c3e34b7d8c297e4fd0",
+      "restored_sha256": "773c3dab05b21e4d8a84e3da39e09f2e95d5b43260a435c3e34b7d8c297e4fd0",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/conduit_ffi.rs",
+      "baseline_sha256": "c5e2ab4e329e7edc5a2ddda7b1ee421f7e9b5c8f6ab7b9f58471c8f50da05fd7",
+      "restored_sha256": "c5e2ab4e329e7edc5a2ddda7b1ee421f7e9b5c8f6ab7b9f58471c8f50da05fd7",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/diagnostics.rs",
+      "baseline_sha256": "dfe6e7c307b8b0a037c95a1f272ed1c089f3e821b8d2b06ea6a61be5bee950e3",
+      "restored_sha256": "dfe6e7c307b8b0a037c95a1f272ed1c089f3e821b8d2b06ea6a61be5bee950e3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/diamond.rs",
+      "baseline_sha256": "f10401943f6af3386485c22d06f27ad06201ab8e0c5963c9eae5fb61800b59b5",
+      "restored_sha256": "f10401943f6af3386485c22d06f27ad06201ab8e0c5963c9eae5fb61800b59b5",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/disease.rs",
+      "baseline_sha256": "265b7ca9fd08929f291252213c046359f4d3817cf2b4f93f1c555fe85e6075b9",
+      "restored_sha256": "265b7ca9fd08929f291252213c046359f4d3817cf2b4f93f1c555fe85e6075b9",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/disease_emitters.rs",
+      "baseline_sha256": "586ba010b024c7488ddffc714176d7b8d93b2a52a927dec0117b00840a150bd3",
+      "restored_sha256": "586ba010b024c7488ddffc714176d7b8d93b2a52a927dec0117b00840a150bd3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/disease_fields.rs",
+      "baseline_sha256": "83190c067c99a39b34a15746a28087094797ec2470f99da230bdee2543f8d821",
+      "restored_sha256": "83190c067c99a39b34a15746a28087094797ec2470f99da230bdee2543f8d821",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/disease_tests.rs",
+      "baseline_sha256": "a5e7f54d0911e299a3ebefedef72fe36c55b30761eb983412da448bb5b264e75",
+      "restored_sha256": "a5e7f54d0911e299a3ebefedef72fe36c55b30761eb983412da448bb5b264e75",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/event_consolidation.rs",
+      "baseline_sha256": "ff91fa54d17e8a6b4efcd1b45865446b0ca4703fba706979587b16c4f2f04ce9",
+      "restored_sha256": "ff91fa54d17e8a6b4efcd1b45865446b0ca4703fba706979587b16c4f2f04ce9",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/event_records.rs",
+      "baseline_sha256": "63dbd4bb53397d3fdf90d6250edabf3b11216a2e2270e2a9eece8341a7235851",
+      "restored_sha256": "63dbd4bb53397d3fdf90d6250edabf3b11216a2e2270e2a9eece8341a7235851",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/event_sort.rs",
+      "baseline_sha256": "133c18d43fe9d5b4e73facf0bfa095eeac3907744c116e469cc962e6d353906c",
+      "restored_sha256": "133c18d43fe9d5b4e73facf0bfa095eeac3907744c116e469cc962e6d353906c",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/events.rs",
+      "baseline_sha256": "976600b74b57ebc3118a7dbd5499271ca6e567bfbd8adca6e72216e763946d4d",
+      "restored_sha256": "976600b74b57ebc3118a7dbd5499271ca6e567bfbd8adca6e72216e763946d4d",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/float_env.rs",
+      "baseline_sha256": "d814a0832fdb6b0cd9e526acc1b96822957d1c8169b452aa33afbf73b4a76f57",
+      "restored_sha256": "d814a0832fdb6b0cd9e526acc1b96822957d1c8169b452aa33afbf73b4a76f57",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/fluid.rs",
+      "baseline_sha256": "935ecafb122c1b9b511d76e18f4daf607d8229dbdc1f33a511e76b2945d711dc",
+      "restored_sha256": "935ecafb122c1b9b511d76e18f4daf607d8229dbdc1f33a511e76b2945d711dc",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/fluid_displacement.rs",
+      "baseline_sha256": "6f3c1217cd11ac38dc95665d82fe2a745f48ccf02a786838a9629236fa8c4b94",
+      "restored_sha256": "6f3c1217cd11ac38dc95665d82fe2a745f48ccf02a786838a9629236fa8c4b94",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/fluid_helpers.rs",
+      "baseline_sha256": "d0e3c4596be61147b9f5a579db58c16548844c09e75443233ac6b5ac9bc248a5",
+      "restored_sha256": "d0e3c4596be61147b9f5a579db58c16548844c09e75443233ac6b5ac9bc248a5",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/fluid_pressure.rs",
+      "baseline_sha256": "5ad4b91b4eb5dbbc324f34d641a13193f75e2651b91517f42d84ca80c28bfa1f",
+      "restored_sha256": "5ad4b91b4eb5dbbc324f34d641a13193f75e2651b91517f42d84ca80c28bfa1f",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/fluid_pressure_reference.rs",
+      "baseline_sha256": "da2521d86a4de15925dd68e858753affa6f4c39b722737586747259884103311",
+      "restored_sha256": "da2521d86a4de15925dd68e858753affa6f4c39b722737586747259884103311",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames.rs",
+      "baseline_sha256": "19d3858423bd1e5621c5e8a57126ce0a268c0f59a4cd0410b331d78f3d214686",
+      "restored_sha256": "19d3858423bd1e5621c5e8a57126ce0a268c0f59a4cd0410b331d78f3d214686",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_commands.rs",
+      "baseline_sha256": "5ef330600cf0bba948d0399bd03b753403bcb157e1d3a88b59558a66cd60b877",
+      "restored_sha256": "5ef330600cf0bba948d0399bd03b753403bcb157e1d3a88b59558a66cd60b877",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_commands_energy.rs",
+      "baseline_sha256": "7f8a4de9b78f135c75168aa14781a78954a1a6bd564c2e89e19887c243f21b7b",
+      "restored_sha256": "7f8a4de9b78f135c75168aa14781a78954a1a6bd564c2e89e19887c243f21b7b",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_commands_parse.rs",
+      "baseline_sha256": "e70a1af236b8edea385a08a450d4ae27760323106785c93fa02bbc6a5799439e",
+      "restored_sha256": "e70a1af236b8edea385a08a450d4ae27760323106785c93fa02bbc6a5799439e",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_commands_process.rs",
+      "baseline_sha256": "61507c320ea5dfa12eaf212a8c5c5cb6bd6662340464b412d37e3088c3bd671e",
+      "restored_sha256": "61507c320ea5dfa12eaf212a8c5c5cb6bd6662340464b412d37e3088c3bd671e",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_data.rs",
+      "baseline_sha256": "ca2f9feab64071f35869e2a9d50244da58d9addfb259fd566e6590c77754bb64",
+      "restored_sha256": "ca2f9feab64071f35869e2a9d50244da58d9addfb259fd566e6590c77754bb64",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_engine.rs",
+      "baseline_sha256": "05f458df8c3fce63a520f5c975c73e61c0438aa0ae0bb23e5500a935b0327de4",
+      "restored_sha256": "05f458df8c3fce63a520f5c975c73e61c0438aa0ae0bb23e5500a935b0327de4",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/frames_plan.rs",
+      "baseline_sha256": "0bd9b2e1072af57e6038687a0997a926d2967acd92174c8a06b83d25a2917e5c",
+      "restored_sha256": "0bd9b2e1072af57e6038687a0997a926d2967acd92174c8a06b83d25a2917e5c",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/gas.rs",
+      "baseline_sha256": "85eaa40609d49c0ddbac90a38d93390d95be2980b7e01c1c316e373b9eb28371",
+      "restored_sha256": "85eaa40609d49c0ddbac90a38d93390d95be2980b7e01c1c316e373b9eb28371",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/gpu_pathfinder_ffi.rs",
+      "baseline_sha256": "ae6f908e88834335be5eda5ea2e1f166ccffc0316071923f96068e4185f2d4fc",
+      "restored_sha256": "ae6f908e88834335be5eda5ea2e1f166ccffc0316071923f96068e4185f2d4fc",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/gpu_sim.rs",
+      "baseline_sha256": "a90429f46088a6a7d3d56799a87a23ccfe92dbfc9cb6cff3094116584154cf7d",
+      "restored_sha256": "a90429f46088a6a7d3d56799a87a23ccfe92dbfc9cb6cff3094116584154cf7d",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/grid.rs",
+      "baseline_sha256": "024e47c245777e584ca4cafd2f82e58da76ed46d59380e8cfde1ff6de6176169",
+      "restored_sha256": "024e47c245777e584ca4cafd2f82e58da76ed46d59380e8cfde1ff6de6176169",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/hydraulic_regression_tests.rs",
+      "baseline_sha256": "4cb2e07b56dd177820dedf2ced7b7f77c378ca5262f4a2c91b4a7f1e52129576",
+      "restored_sha256": "4cb2e07b56dd177820dedf2ced7b7f77c378ca5262f4a2c91b4a7f1e52129576",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/id_validation.rs",
+      "baseline_sha256": "82cd8f1582759c06bf476db1372309daade943676170f9d02eedb8d3648b18a1",
+      "restored_sha256": "82cd8f1582759c06bf476db1372309daade943676170f9d02eedb8d3648b18a1",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/interactions.rs",
+      "baseline_sha256": "97d7ff33136f731574dd3c18115120c6c73e832d49cf8cd9cf93223fa9fb5940",
+      "restored_sha256": "97d7ff33136f731574dd3c18115120c6c73e832d49cf8cd9cf93223fa9fb5940",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/lib.rs",
+      "baseline_sha256": "4f357d76826f7a916a1326d63360f95ecec87bf7c17d1ecd4f15862976dc4c5c",
+      "restored_sha256": "1faec1ca0878d923d5e15cfff0d5566106b4faa2b1926536abbcd74d53e672ba",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": true
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components.rs",
+      "baseline_sha256": "3b057c83636fcb264fc478b921819235b5b099aa6bc3123fbadc8a1ad509983b",
+      "restored_sha256": "3b057c83636fcb264fc478b921819235b5b099aa6bc3123fbadc8a1ad509983b",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components_consumer.rs",
+      "baseline_sha256": "6d1dd2a1c96b614129d9b948ecd458a417f1231fdafdfc848d8f3b9325535ecc",
+      "restored_sha256": "6d1dd2a1c96b614129d9b948ecd458a417f1231fdafdfc848d8f3b9325535ecc",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components_emitter.rs",
+      "baseline_sha256": "6e143aa9dd66c3705ad93311cec2d6088f45294937cdb12b2b2000ff7b9dbf34",
+      "restored_sha256": "6e143aa9dd66c3705ad93311cec2d6088f45294937cdb12b2b2000ff7b9dbf34",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components_flood.rs",
+      "baseline_sha256": "f57e65e8a3a8b798cede3ae4150dd5a7c6c6435fa9867ce22f511e0217674ad9",
+      "restored_sha256": "f57e65e8a3a8b798cede3ae4150dd5a7c6c6435fa9867ce22f511e0217674ad9",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components_flood_baseline.rs",
+      "baseline_sha256": "3ef2e65be9f6041ab0ad0d3c946b42e915d1b8440b6e8266a04e316f2dba6536",
+      "restored_sha256": "3ef2e65be9f6041ab0ad0d3c946b42e915d1b8440b6e8266a04e316f2dba6536",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/mass_components_flood_tests.rs",
+      "baseline_sha256": "c450445924676646b0d0d1d86184d08aabd8f04436e2d9a87ade74099632b8d1",
+      "restored_sha256": "c450445924676646b0d0d1d86184d08aabd8f04436e2d9a87ade74099632b8d1",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/messages.rs",
+      "baseline_sha256": "9888db9c153adb7d6761d2735272e90f9d0fdfa456c8659d74103c269be524e8",
+      "restored_sha256": "9888db9c153adb7d6761d2735272e90f9d0fdfa456c8659d74103c269be524e8",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/messages_cells.rs",
+      "baseline_sha256": "ab09b7f377b52c3b1257c4551470c4fb0ea26476d032fef704ffac91369d75a1",
+      "restored_sha256": "ab09b7f377b52c3b1257c4551470c4fb0ea26476d032fef704ffac91369d75a1",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/messages_tests.rs",
+      "baseline_sha256": "02393112e757dea26f13c74c0b4d4ceec450c64209d525d7b4d97c6f421074e3",
+      "restored_sha256": "02393112e757dea26f13c74c0b4d4ceec450c64209d525d7b4d97c6f421074e3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/messages_world.rs",
+      "baseline_sha256": "5a5121e45f5ff9bf85e43e9da97264a52f6712163c845479c3814dda425833a9",
+      "restored_sha256": "5a5121e45f5ff9bf85e43e9da97264a52f6712163c845479c3814dda425833a9",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/multicomponent_flux.rs",
+      "baseline_sha256": "382a65e6f0e36fb8cac4db45cc6623cc8539c810a09769759bba6dd1e19078c2",
+      "restored_sha256": "382a65e6f0e36fb8cac4db45cc6623cc8539c810a09769759bba6dd1e19078c2",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/multicomponent_publication.rs",
+      "baseline_sha256": "fc8554ede8fbc20f35b9a14b1ee9c74c83c78e219e34c89e4fb9c23e3e9b9015",
+      "restored_sha256": "fc8554ede8fbc20f35b9a14b1ee9c74c83c78e219e34c89e4fb9c23e3e9b9015",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/multicomponent_staging.rs",
+      "baseline_sha256": "8c416148c68aec184ce834029578c453c48ea3ba9740c097d66b7c738c1965ad",
+      "restored_sha256": "8c416148c68aec184ce834029578c453c48ea3ba9740c097d66b7c738c1965ad",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/multicomponent_staging_tests.rs",
+      "baseline_sha256": "1f9b51c5a02b815dc247ef88b7db037cdbc78842e6a513b7223015d47c018d81",
+      "restored_sha256": "1f9b51c5a02b815dc247ef88b7db037cdbc78842e6a513b7223015d47c018d81",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/numeric.rs",
+      "baseline_sha256": "9e542c2157e2057ab33286fba7744aca9200fbf510d1e264713b99f79b2b1d72",
+      "restored_sha256": "9e542c2157e2057ab33286fba7744aca9200fbf510d1e264713b99f79b2b1d72",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/offgas.rs",
+      "baseline_sha256": "0fbeb600eda014ef77bfd05633dfe03737c7b4a2030ac93828143309f02de55d",
+      "restored_sha256": "0fbeb600eda014ef77bfd05633dfe03737c7b4a2030ac93828143309f02de55d",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/parallel.rs",
+      "baseline_sha256": "bf71aa3e04dc0ae15bcd6aa740f8d61683639b1cb5ea435d26d7d1572210f148",
+      "restored_sha256": "bf71aa3e04dc0ae15bcd6aa740f8d61683639b1cb5ea435d26d7d1572210f148",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/partial_melt.rs",
+      "baseline_sha256": "25af4976245278978252aaee3c88099e872eeba768042b3cef430f9834308584",
+      "restored_sha256": "25af4976245278978252aaee3c88099e872eeba768042b3cef430f9834308584",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/partial_transition.rs",
+      "baseline_sha256": "f68c3ba379de8b0c9805299ca3983bfada87dd40f3b7eef284c755f11f237e6a",
+      "restored_sha256": "f68c3ba379de8b0c9805299ca3983bfada87dd40f3b7eef284c755f11f237e6a",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/postprocess.rs",
+      "baseline_sha256": "86a664f042e2f53bfa8b7927482aaadcda068c35297c4da96f8b69a1375c4b09",
+      "restored_sha256": "86a664f042e2f53bfa8b7927482aaadcda068c35297c4da96f8b69a1375c4b09",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/postprocess_pressure.rs",
+      "baseline_sha256": "e254c67fd45e82f98a6536ac06e54cc52ab6d3f21857b0314f5c16a4c81d40e6",
+      "restored_sha256": "e254c67fd45e82f98a6536ac06e54cc52ab6d3f21857b0314f5c16a4c81d40e6",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation.rs",
+      "baseline_sha256": "71ff03f106a1e557cc738b5be95e3497d614833afdecb9eead270ab12449c207",
+      "restored_sha256": "71ff03f106a1e557cc738b5be95e3497d614833afdecb9eead270ab12449c207",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_flow.rs",
+      "baseline_sha256": "f175bff5f91e29969f26f244b029ae0b058fcc91eb6f534f6255320bd4d48f5f",
+      "restored_sha256": "f175bff5f91e29969f26f244b029ae0b058fcc91eb6f534f6255320bd4d48f5f",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_flow_sse2.rs",
+      "baseline_sha256": "14cfb930abfaa98584a1b3517517c6fdaad6b7bde86cb472e77d1789a39e25f7",
+      "restored_sha256": "14cfb930abfaa98584a1b3517517c6fdaad6b7bde86cb472e77d1789a39e25f7",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_liquid.rs",
+      "baseline_sha256": "97ed853c8a11a4c25a01f0e171ed30fd088413b341ddb465f57a658311ca2267",
+      "restored_sha256": "97ed853c8a11a4c25a01f0e171ed30fd088413b341ddb465f57a658311ca2267",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_liquid_tests.rs",
+      "baseline_sha256": "6aac4b8e6358ff39c9f825bba4a3499beb3ec0610ffd23fbe8a3d76e16553ef8",
+      "restored_sha256": "6aac4b8e6358ff39c9f825bba4a3499beb3ec0610ffd23fbe8a3d76e16553ef8",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_sun.rs",
+      "baseline_sha256": "f90fa3829118c820e3f122302cabac6155ca8d39453745f7d48daa8de3e2791c",
+      "restored_sha256": "f90fa3829118c820e3f122302cabac6155ca8d39453745f7d48daa8de3e2791c",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_sun_tests.rs",
+      "baseline_sha256": "1756051ee70603f077056d51dd2983b799257572b4835b29a7d7488a14a486d6",
+      "restored_sha256": "1756051ee70603f077056d51dd2983b799257572b4835b29a7d7488a14a486d6",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/presentation_validation_tests.rs",
+      "baseline_sha256": "7b1cd5691d0ced5213bce6d4b742208b8ab14da3d73455677488f30313a81935",
+      "restored_sha256": "7b1cd5691d0ced5213bce6d4b742208b8ab14da3d73455677488f30313a81935",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/pressure_sweep.rs",
+      "baseline_sha256": "7751624fcf7d687ca7557e7987a58366ad0edef9fbda2d6f4acc1eae0d5b3dc7",
+      "restored_sha256": "7751624fcf7d687ca7557e7987a58366ad0edef9fbda2d6f4acc1eae0d5b3dc7",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/radiation.rs",
+      "baseline_sha256": "f6ca11a9fce0373ddd438ca38cae014662d080c0898e9d744068ec7aab08d24c",
+      "restored_sha256": "f6ca11a9fce0373ddd438ca38cae014662d080c0898e9d744068ec7aab08d24c",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/radiation_rays.rs",
+      "baseline_sha256": "04479e0524217b35a3400b1c4d0ab65856827ec4a9411b0f31c6a9038f1c9622",
+      "restored_sha256": "04479e0524217b35a3400b1c4d0ab65856827ec4a9411b0f31c6a9038f1c9622",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/radiation_region.rs",
+      "baseline_sha256": "c20d9cec2b1579265b250ccd719407290629ea973b9cf675b1a7d7e297467f98",
+      "restored_sha256": "c20d9cec2b1579265b250ccd719407290629ea973b9cf675b1a7d7e297467f98",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/save.rs",
+      "baseline_sha256": "8eec55c3497186c8078df17fe33be548e5b3d9bf0acc36db126530f3a2beca90",
+      "restored_sha256": "8eec55c3497186c8078df17fe33be548e5b3d9bf0acc36db126530f3a2beca90",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/simulation_step.rs",
+      "baseline_sha256": "633efbc290d8ae37bfafa0f4a8614585b8f3d8527137d153ae95b0be4d9c1a5a",
+      "restored_sha256": "633efbc290d8ae37bfafa0f4a8614585b8f3d8527137d153ae95b0be4d9c1a5a",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs",
+      "baseline_sha256": "bc24d293d6ffcf715bd36ce667bf42182cc7406e27381ab2fa5c31d1cc4ccde6",
+      "restored_sha256": "bc24d293d6ffcf715bd36ce667bf42182cc7406e27381ab2fa5c31d1cc4ccde6",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/state.rs",
+      "baseline_sha256": "325246db55db9fb0ceb73d14ebf223f96bd2defef8a46f308c3d9744b5970541",
+      "restored_sha256": "325246db55db9fb0ceb73d14ebf223f96bd2defef8a46f308c3d9744b5970541",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/status.rs",
+      "baseline_sha256": "c20acfc8a40173cbfbe370b1d13e5690f52812002e616a1fa6075c514ba0fef5",
+      "restored_sha256": "c20acfc8a40173cbfbe370b1d13e5690f52812002e616a1fa6075c514ba0fef5",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/sublimation.rs",
+      "baseline_sha256": "3fef2890bec8249302833287a1d76001016b93fcba87a6667002145a3bb602a7",
+      "restored_sha256": "3fef2890bec8249302833287a1d76001016b93fcba87a6667002145a3bb602a7",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/tables.rs",
+      "baseline_sha256": "03a033bfc519ef46e6b153699c41c6b1e2adc9e3aa8a9949cd41292c10342d70",
+      "restored_sha256": "03a033bfc519ef46e6b153699c41c6b1e2adc9e3aa8a9949cd41292c10342d70",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal.rs",
+      "baseline_sha256": "79d7090f85846bab65f4ff8c0e9d7e3155da0b18b8376ca703e9e5c9b709650c",
+      "restored_sha256": "79d7090f85846bab65f4ff8c0e9d7e3155da0b18b8376ca703e9e5c9b709650c",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal_cache_tests.rs",
+      "baseline_sha256": "67f27375f564ba2169635a3cb3d6376cbab7b949130a47b6cc70c6daf982d316",
+      "restored_sha256": "67f27375f564ba2169635a3cb3d6376cbab7b949130a47b6cc70c6daf982d316",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal_components.rs",
+      "baseline_sha256": "337a603f3c9d2ec5595af46d4ce92b8d665901aa943ccd762bd307fcbd4f94c3",
+      "restored_sha256": "337a603f3c9d2ec5595af46d4ce92b8d665901aa943ccd762bd307fcbd4f94c3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal_components_buildings.rs",
+      "baseline_sha256": "f4adddc674f4ce47cd599a341558ceaf40547e2f65ddfcaa4b20a3f2bf980659",
+      "restored_sha256": "f4adddc674f4ce47cd599a341558ceaf40547e2f65ddfcaa4b20a3f2bf980659",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal_components_chunks.rs",
+      "baseline_sha256": "823fe39788515e8c1ae81b0afad0f856c7fce30a0c7ed86a1cef876e95552f7f",
+      "restored_sha256": "823fe39788515e8c1ae81b0afad0f856c7fce30a0c7ed86a1cef876e95552f7f",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/thermal_components_tests.rs",
+      "baseline_sha256": "ce59fd8f9c704c8936200268691354049c5525beb29e1577dd621808e7f1a372",
+      "restored_sha256": "ce59fd8f9c704c8936200268691354049c5525beb29e1577dd621808e7f1a372",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/transition.rs",
+      "baseline_sha256": "796bcc2b83b383037a17b81a405df08645c980cdad1f7dcde2c3f71991839862",
+      "restored_sha256": "796bcc2b83b383037a17b81a405df08645c980cdad1f7dcde2c3f71991839862",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/unstable.rs",
+      "baseline_sha256": "e8560b8412b366e9ec447fd23b79330a22885662c915de709a726cd44ec04f63",
+      "restored_sha256": "e8560b8412b366e9ec447fd23b79330a22885662c915de709a726cd44ec04f63",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/worker.rs",
+      "baseline_sha256": "6b461b2a71abc4f04416d3b7f25e82d258459f22846ad060b82ebe687fbc19d3",
+      "restored_sha256": "6b461b2a71abc4f04416d3b7f25e82d258459f22846ad060b82ebe687fbc19d3",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/worker_loop.rs",
+      "baseline_sha256": "59756a1cde54cb3b01430ffb0061e28384c4fc60ccc2da66b3b5dc5bf552375a",
+      "restored_sha256": "59756a1cde54cb3b01430ffb0061e28384c4fc60ccc2da66b3b5dc5bf552375a",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/worker_shape.rs",
+      "baseline_sha256": "0c7312386aeff87f6f7925eac680e41f4d1b4dbf4b7e6e7e620b7f5f282961e8",
+      "restored_sha256": "0c7312386aeff87f6f7925eac680e41f4d1b4dbf4b7e6e7e620b7f5f282961e8",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/world.rs",
+      "baseline_sha256": "83c09a1054b525f13c874172dda016af153b1b3f136ff899b613e56495275c5b",
+      "restored_sha256": "83c09a1054b525f13c874172dda016af153b1b3f136ff899b613e56495275c5b",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/world_cells.rs",
+      "baseline_sha256": "79aa9c1a68d86bf35cd80929f26ab76508ea58408edd2181799d5267897c55c4",
+      "restored_sha256": "79aa9c1a68d86bf35cd80929f26ab76508ea58408edd2181799d5267897c55c4",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/world_messages.rs",
+      "baseline_sha256": "2a89f897be14179840e74db5d958581e7d843558d2682dedc3ae388f5b63d230",
+      "restored_sha256": "2a89f897be14179840e74db5d958581e7d843558d2682dedc3ae388f5b63d230",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/world_messages_cells.rs",
+      "baseline_sha256": "9c00b426abac992ef14c16afacc74960bf5aab16737894c73d6c6c894ad08724",
+      "restored_sha256": "9c00b426abac992ef14c16afacc74960bf5aab16737894c73d6c6c894ad08724",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/world_publication_tests.rs",
+      "baseline_sha256": "7f86469b6534a4261424e83854af517f16fbf512d513d4dd2e5a9949ce35d8dc",
+      "restored_sha256": "7f86469b6534a4261424e83854af517f16fbf512d513d4dd2e5a9949ce35d8dc",
+      "production_bytes_equal": true,
+      "test_hook_only_difference": false
+    }
+  ],
+  "retained_harness": [
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/native_chain_tests.rs",
+      "sha256": "51d9476fab24ce422022eceeb62c12d42427fb06b4a74f5177356b3b29146fe0",
+      "matches_fixed_baseline_harness": true
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/native_chain_fixture.rs",
+      "sha256": "7496c4acdc219692705aed7e6a88fec622da3676da916d1dfc775141dfd6343f",
+      "matches_fixed_baseline_harness": true
+    },
+    {
+      "path": "mods/CycleTrim/OniSim/native/src/native_chain_snapshot.rs",
+      "sha256": "eef6c518d68d2edca032101bbfef25d48ac3f51f369f42d26abb667ecedb9a04",
+      "matches_fixed_baseline_harness": true
+    }
+  ],
+  "exact_lib_suffix": "\n#[cfg(test)]\nmod native_chain_tests;\n",
+  "source_export_names_equal_to_baseline": true,
+  "source_export_names": [
+    "ConduitTemperatureManager_Add",
+    "ConduitTemperatureManager_Clear",
+    "ConduitTemperatureManager_Initialize",
+    "ConduitTemperatureManager_Remove",
+    "ConduitTemperatureManager_Set",
+    "ConduitTemperatureManager_Shutdown",
+    "ConduitTemperatureManager_Update",
+    "ONISIM_AcquireMulticomponentUpdate",
+    "ONISIM_CopyGridImage",
+    "ONISIM_CopyMulticomponentImage",
+    "ONISIM_GetAbiVersion",
+    "ONISIM_GetCapabilities",
+    "ONISIM_GetGeneration",
+    "ONISIM_GetGrid",
+    "ONISIM_GetLastError",
+    "ONISIM_GetLastStatus",
+    "ONISIM_GpuPathfinder_EvaluateChores",
+    "ONISIM_GpuPathfinder_InitGrid",
+    "ONISIM_IsReady",
+    "ONISIM_ReleaseMulticomponentUpdate",
+    "ONISIM_TryInitialize",
+    "SIM_BeginSave",
+    "SIM_DebugCrash",
+    "SIM_EndSave",
+    "SIM_HandleMessage",
+    "SIM_HandleMessages",
+    "SIM_Initialize",
+    "SIM_Shutdown",
+    "SYSINFO_Acquire",
+    "SYSINFO_Release"
+  ],
+  "official_required_exports": [
+    "ConduitTemperatureManager_Add",
+    "ConduitTemperatureManager_Clear",
+    "ConduitTemperatureManager_Initialize",
+    "ConduitTemperatureManager_Remove",
+    "ConduitTemperatureManager_Set",
+    "ConduitTemperatureManager_Shutdown",
+    "ConduitTemperatureManager_Update",
+    "SIM_BeginSave",
+    "SIM_DebugCrash",
+    "SIM_EndSave",
+    "SIM_HandleMessage",
+    "SIM_HandleMessages",
+    "SIM_Initialize",
+    "SIM_Shutdown",
+    "SYSINFO_Acquire",
+    "SYSINFO_Release"
+  ],
+  "removed_optional_candidate_export": "ONISIM_GetPresentationUpdate",
+  "safety_logic": "Baseline bytes retained for FFI capacity/overflow/native-overlap guards, species read-lease lifetime, worker barrier/visibility handoff/fault-retention/drop paths, stable Grid addresses, generation/lifecycle checks and existing physics validation. No original assertions weakened or original tests skipped. Candidate-only tests removed with their features, preserved at immutable d374.",
+  "binary_validation": {
+    "utc": "2026-11-09T12:51:45.063280+00:00",
+    "isolated_library": "/workspace/scratch/725bb75bc42e/chain-validation/native-withdrawn/liboni_sim_core.so",
+    "sha256": "b8a0242dd4f808ecc280c18bd89b50066daa51b11c6d7c94a5e48b8ddd57e0fb",
+    "bytes": 8273400,
+    "official_required_exports_present": true,
+    "all_baseline_api_exports_present": true,
+    "api_export_names": [
+      "ConduitTemperatureManager_Add",
+      "ConduitTemperatureManager_Clear",
+      "ConduitTemperatureManager_Initialize",
+      "ConduitTemperatureManager_Remove",
+      "ConduitTemperatureManager_Set",
+      "ConduitTemperatureManager_Shutdown",
+      "ConduitTemperatureManager_Update",
+      "ONISIM_AcquireMulticomponentUpdate",
+      "ONISIM_CopyGridImage",
+      "ONISIM_CopyMulticomponentImage",
+      "ONISIM_GetAbiVersion",
+      "ONISIM_GetCapabilities",
+      "ONISIM_GetGeneration",
+      "ONISIM_GetGrid",
+      "ONISIM_GetLastError",
+      "ONISIM_GetLastStatus",
+      "ONISIM_GpuPathfinder_EvaluateChores",
+      "ONISIM_GpuPathfinder_InitGrid",
+      "ONISIM_IsReady",
+      "ONISIM_ReleaseMulticomponentUpdate",
+      "ONISIM_TryInitialize",
+      "SIM_BeginSave",
+      "SIM_DebugCrash",
+      "SIM_EndSave",
+      "SIM_HandleMessage",
+      "SIM_HandleMessages",
+      "SIM_Initialize",
+      "SIM_Shutdown",
+      "SYSINFO_Acquire",
+      "SYSINFO_Release"
+    ],
+    "candidate_optional_export_absent": true,
+    "dist_modified": false,
+    "rust_toolchain": "1.99.1",
+    "build_profile": "release, --offline --locked"
+  },
+  "correctness_validation": {
+    "mode": "correctness only; no performance benchmark",
+    "historical_driver_scope": "retained_idle label only enforces restored liquid-source equality; no retained candidate performance path is present",
+    "case_count": 19,
+    "fresh_processes": 38,
+    "snapshots_per_process": 24,
+    "output_equality": "all recorded canonical byte-image SHA-256 values match",
+    "directory": "/workspace/scratch/725bb75bc42e/chain-validation/native-chain-correctness-withdrawn",
+    "inputs_sha256": "1ba96e301b96d2f84e9884b4760ed3419577cd6c1144ec2df167ae659db4ffe3",
+    "summary_sha256": "2a7dab47b972d18699d47cfeea0ed6dce78d563b93f0cf0107837433b4638e62",
+    "driver_exit_code": 0
+  },
+  "full_suite_validation": {
+    "utc": "2026-11-09T12:53:52.838012+00:00",
+    "command": [
+      "/workspace/scratch/725bb75bc42e/chain-validation/native-withdrawn-tests",
+      "--nocapture"
+    ],
+    "returncode": 101,
+    "exe_sha256": "af33dd387765bc9bd1710392f0f68d320a3fb2a9722e7ced5a2e51fcae8e326d",
+    "log_sha256": "618d4bdca83096595b50aa7a6cae26b2f64523d29fa21245b975e5ffde5a5fbc",
+    "environment": {
+      "CYCLETRIM_ONISIM_GPU": "0",
+      "CYCLETRIM_ONISIM_WORKERS": "1"
+    },
+    "test_threads": "libtest default; no --test-threads override",
+    "same_failed_test_set": true,
+    "failed_count": 11,
+    "failed_tests": [
+      "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+      "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+      "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+      "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+      "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+      "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+      "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+      "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+      "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+      "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+      "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+    ],
+    "new_failed_tests": [],
+    "test_summary": "test result: FAILED. 116 passed; 11 failed; 9 ignored; 0 measured; 0 filtered out; finished in 1.72s"
+  },
+  "test_executable": {
+    "path": "/workspace/scratch/725bb75bc42e/chain-validation/native-withdrawn-tests",
+    "sha256": "af33dd387765bc9bd1710392f0f68d320a3fb2a9722e7ced5a2e51fcae8e326d",
+    "bytes": 10052248
+  },
+  "validation_finished_utc": "2026-11-09T12:53:52.838012+00:00"
+}

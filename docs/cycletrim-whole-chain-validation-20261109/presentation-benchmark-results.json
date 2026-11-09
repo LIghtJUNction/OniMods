@@ -1,0 +1,354 @@
+{
+  "raw_log": "/workspace/scratch/725bb75bc42e/chain-validation/presentation-benchmark-final.log",
+  "runtime": {
+    "runtime": "10.0.12",
+    "native": "/workspace/scratch/725bb75bc42e/OniMods/dist/CycleTrim/OniSim/linux-x64/liboni_sim_core.so",
+    "blocks": "17",
+    "iterations": "4",
+    "warmup_per_sample": "4",
+    "order": "alternating ABBA/BAAB",
+    "gpu": "0",
+    "workers": "1",
+    "stopwatch_frequency": "1000000000",
+    "tiered_compilation": "0"
+  },
+  "sample_count": 612,
+  "correctness_gate_pass": true,
+  "timing_gate_pass": false,
+  "scope": "same candidate native library; real worker/FFI/descriptor and production managed gate; instrumented Unity CPU-copy stubs; no real graphics upload or game FPS",
+  "results": [
+    {
+      "shape": "96x96",
+      "scenario": "render_repeat",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 33808.5,
+          "median_update_ms": 0.008452125,
+          "p95_sample_mean_update_ms": 0.03379175,
+          "reported_min_update_ms": 0.008414,
+          "reported_max_update_ms": 0.067595,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 774144,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 1905.5,
+          "median_update_ms": 0.000476375,
+          "p95_sample_mean_update_ms": 0.00057,
+          "reported_min_update_ms": 0.000419,
+          "reported_max_update_ms": 0.00061,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "8de5e216df7365778a9df2a50922cc390a2a900c1854ce3c1d19b1da882722e1",
+      "candidate_over_original": 0.05636156587840336,
+      "median_reduction_percent": 94.36384341215967,
+      "timing_gate": "scale control; no timing threshold",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "96x96",
+      "scenario": "zero_prepare",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 163549.0,
+          "median_update_ms": 0.04088725,
+          "p95_sample_mean_update_ms": 0.08775125,
+          "reported_min_update_ms": 0.036086,
+          "reported_max_update_ms": 0.088413,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 774144,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 155924.0,
+          "median_update_ms": 0.038981,
+          "p95_sample_mean_update_ms": 0.068908,
+          "reported_min_update_ms": 0.037331,
+          "reported_max_update_ms": 0.075884,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "8de5e216df7365778a9df2a50922cc390a2a900c1854ce3c1d19b1da882722e1",
+      "candidate_over_original": 0.9533778867495368,
+      "median_reduction_percent": 4.662211325046317,
+      "timing_gate": "scale control; no timing threshold",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "96x96",
+      "scenario": "command_two_prepares",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 1878440.0,
+          "median_update_ms": 0.46961,
+          "p95_sample_mean_update_ms": 0.9401595,
+          "reported_min_update_ms": 0.400694,
+          "reported_max_update_ms": 1.783021,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 774144,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 2045044.5,
+          "median_update_ms": 0.511261125,
+          "p95_sample_mean_update_ms": 1.85396375,
+          "reported_min_update_ms": 0.38773,
+          "reported_max_update_ms": 2.046963,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 774144,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "65fdcfd13e36347a0b0bf108103fb09a4d2455c952c877bec356b0d5f53c4108",
+      "candidate_over_original": 1.0886930112220778,
+      "median_reduction_percent": -8.869301122207784,
+      "timing_gate": "candidate median <= 103% of baseline",
+      "timing_gate_pass": false
+    },
+    {
+      "shape": "256x384",
+      "scenario": "render_repeat",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 1018031.5,
+          "median_update_ms": 0.254507875,
+          "p95_sample_mean_update_ms": 0.40443125,
+          "reported_min_update_ms": 0.213212,
+          "reported_max_update_ms": 0.433879,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 8257536,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 2071.5,
+          "median_update_ms": 0.000517875,
+          "p95_sample_mean_update_ms": 0.00062375,
+          "reported_min_update_ms": 0.000451,
+          "reported_max_update_ms": 0.000624,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "024dabc27bdac40ebb475323823fa25faa3d4cefbc3ee10237085c88b4891ffa",
+      "candidate_over_original": 0.0020348093354675173,
+      "median_reduction_percent": 99.79651906645324,
+      "timing_gate": "candidate median <= 90% of baseline",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "256x384",
+      "scenario": "zero_prepare",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 5479857.5,
+          "median_update_ms": 1.369964375,
+          "p95_sample_mean_update_ms": 2.032772,
+          "reported_min_update_ms": 0.588733,
+          "reported_max_update_ms": 2.187677,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 8257536,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 3787597.5,
+          "median_update_ms": 0.946899375,
+          "p95_sample_mean_update_ms": 1.45393325,
+          "reported_min_update_ms": 0.440032,
+          "reported_max_update_ms": 1.746381,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "024dabc27bdac40ebb475323823fa25faa3d4cefbc3ee10237085c88b4891ffa",
+      "candidate_over_original": 0.6911854003502829,
+      "median_reduction_percent": 30.881459964971715,
+      "timing_gate": "candidate median <= 90% of baseline",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "256x384",
+      "scenario": "command_two_prepares",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 20010784.5,
+          "median_update_ms": 5.002696125,
+          "p95_sample_mean_update_ms": 6.62788625,
+          "reported_min_update_ms": 4.316569,
+          "reported_max_update_ms": 6.710049,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 8257536,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 20134346.0,
+          "median_update_ms": 5.0335865,
+          "p95_sample_mean_update_ms": 9.68553775,
+          "reported_min_update_ms": 4.467803,
+          "reported_max_update_ms": 13.972283,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 8257536,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "e38349811fc77168cadd3e67a46da51f6c3af5e961fa8c60d32325240e444b57",
+      "candidate_over_original": 1.0061747454228993,
+      "median_reduction_percent": -0.6174745422899308,
+      "timing_gate": "candidate median <= 103% of baseline",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "736x304",
+      "scenario": "render_repeat",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 2927552.0,
+          "median_update_ms": 0.731888,
+          "p95_sample_mean_update_ms": 0.94551125,
+          "reported_min_update_ms": 0.568694,
+          "reported_max_update_ms": 0.975776,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 18794496,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 2231.5,
+          "median_update_ms": 0.000557875,
+          "p95_sample_mean_update_ms": 0.00150325,
+          "reported_min_update_ms": 0.000467,
+          "reported_max_update_ms": 0.012072,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "681da9751d55f812537ca4cbd22baf2f5c485a04a6e85ae55e52c1d671db3bc6",
+      "candidate_over_original": 0.0007622409439695691,
+      "median_reduction_percent": 99.92377590560304,
+      "timing_gate": "candidate median <= 90% of baseline",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "736x304",
+      "scenario": "zero_prepare",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 8384184.0,
+          "median_update_ms": 2.096046,
+          "p95_sample_mean_update_ms": 5.94325375,
+          "reported_min_update_ms": 1.394624,
+          "reported_max_update_ms": 6.510313,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 18794496,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 4990511.0,
+          "median_update_ms": 1.24762775,
+          "p95_sample_mean_update_ms": 3.3754765,
+          "reported_min_update_ms": 1.009802,
+          "reported_max_update_ms": 3.665099,
+          "loads_per_sample": 0,
+          "applies_per_sample": 0,
+          "input_bytes_per_sample": 0,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "681da9751d55f812537ca4cbd22baf2f5c485a04a6e85ae55e52c1d671db3bc6",
+      "candidate_over_original": 0.5952291839014984,
+      "median_reduction_percent": 40.47708160985016,
+      "timing_gate": "candidate median <= 90% of baseline",
+      "timing_gate_pass": true
+    },
+    {
+      "shape": "736x304",
+      "scenario": "command_two_prepares",
+      "variants": {
+        "original": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 46743891.5,
+          "median_update_ms": 11.685972875,
+          "p95_sample_mean_update_ms": 15.37468425,
+          "reported_min_update_ms": 10.622547,
+          "reported_max_update_ms": 15.737223,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 18794496,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        },
+        "revision_gate": {
+          "sample_count": 34,
+          "iterations_per_sample": 4,
+          "median_sample_ticks": 45527837.5,
+          "median_update_ms": 11.381959375,
+          "p95_sample_mean_update_ms": 15.04307725,
+          "reported_min_update_ms": 10.582351,
+          "reported_max_update_ms": 17.307146,
+          "loads_per_sample": 20,
+          "applies_per_sample": 20,
+          "input_bytes_per_sample": 18794496,
+          "median_measuring_thread_managed_allocated_bytes": 0.0
+        }
+      },
+      "sha256": "56a776ee2aa36b047b0185c25c8e6123e7676f1bca7afdb0cd62e3b3ca7ff9a1",
+      "candidate_over_original": 0.9739847504994316,
+      "median_reduction_percent": 2.601524950056844,
+      "timing_gate": "candidate median <= 103% of baseline",
+      "timing_gate_pass": true
+    }
+  ]
+}

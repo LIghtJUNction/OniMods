@@ -1,0 +1,32 @@
+{
+  "utc": "2026-11-09T12:53:52.838012+00:00",
+  "command": [
+    "/workspace/scratch/725bb75bc42e/chain-validation/native-withdrawn-tests",
+    "--nocapture"
+  ],
+  "returncode": 101,
+  "exe_sha256": "af33dd387765bc9bd1710392f0f68d320a3fb2a9722e7ced5a2e51fcae8e326d",
+  "log_sha256": "618d4bdca83096595b50aa7a6cae26b2f64523d29fa21245b975e5ffde5a5fbc",
+  "environment": {
+    "CYCLETRIM_ONISIM_GPU": "0",
+    "CYCLETRIM_ONISIM_WORKERS": "1"
+  },
+  "test_threads": "libtest default; no --test-threads override",
+  "same_failed_test_set": true,
+  "failed_count": 11,
+  "failed_tests": [
+    "gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi",
+    "gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes",
+    "gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy",
+    "gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components",
+    "gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass",
+    "gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order",
+    "gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes",
+    "gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy",
+    "gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region",
+    "gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass",
+    "gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces"
+  ],
+  "new_failed_tests": [],
+  "test_summary": "test result: FAILED. 116 passed; 11 failed; 9 ignored; 0 measured; 0 filtered out; finished in 1.72s"
+}
