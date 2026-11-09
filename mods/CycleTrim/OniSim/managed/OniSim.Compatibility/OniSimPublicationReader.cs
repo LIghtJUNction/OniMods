@@ -54,24 +54,6 @@ namespace OniSim.Compatibility
             leaseThreadId = 0;
         }
 
-        /// <summary>
-        /// Atomically reads optional presentation metadata without retaining a
-        /// native lease. Older libraries and unavailable publications decline;
-        /// callers must keep the original texture upload in those cases.
-        /// </summary>
-        public bool TryGetPresentationUpdate(out PresentationUpdate update)
-        {
-            update = default(PresentationUpdate);
-            if (leaseHeld || api.GetPresentationUpdate == null)
-                return false;
-            if (api.GetPresentationUpdate(out update, PresentationUpdate.ByteSize) != 1 || !update.IsValid)
-            {
-                update = default(PresentationUpdate);
-                return false;
-            }
-            return true;
-        }
-
         private void CheckNativeStatus()
         {
             int status = api.GetLastStatus();

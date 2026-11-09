@@ -67,6 +67,15 @@ def main() -> int:
         capture_output=True,
         text=True,
     ).stdout
+    mod_info_code = decompile("CycleTrim.ModInfo")
+    # Inspect the emitted assembly, not just source-file names. Removing the
+    # reader alone would leave the five Load/Apply wrappers in the hot path.
+    assembly_il = subprocess.run(
+        [shutil.which("ilspycmd") or "ilspycmd", "-il", str(ASSEMBLY)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
     create_state_code = method_slice(
         busy_code,
         "private static State CreateState",
@@ -93,6 +102,29 @@ def main() -> int:
         "States.GetValue(__instance, StateFactory)"
     )
     checks = {
+        "rejected presentation upload gate is absent": (
+            "CycleTrim.Core.PresentationUploadGate" not in classes
+        ),
+        "rejected property-texture publication patch is absent": (
+            "CycleTrim.Patches.PropertyTexturePublicationPatch" not in classes
+        ),
+        "presentation reader is not registered into an upload gate": (
+            "PresentationUploadGate" not in mod_info_code
+            and "TryGetPresentationUpdate" not in mod_info_code
+        ),
+        "CycleTrim does not wrap the original external texture uploads": (
+            "Texture2D::LoadRawTextureData" not in assembly_il
+            and "PropertyTextures::UpdateProperty" not in assembly_il
+            and 'ldstr "UpdateProperty"' not in assembly_il
+        ),
+        "multicomponent publication provider remains registered": (
+            "OniSimPublicationReader.Open" in mod_info_code
+            and "new OniSimMulticomponentProvider" in mod_info_code
+            and "MulticomponentCellAccess.RegisterProvider" in mod_info_code
+        ),
+        "existing texture lerper optimization remains installed": (
+            "TextureLerperOptimization.Apply(harmony)" in mod_info_code
+        ),
         "SmartReservoir Harmony interception is absent": (
             "CycleTrim.Patches.SmartReservoirSignalPatch" not in classes
         ),

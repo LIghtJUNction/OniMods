@@ -10,17 +10,6 @@ namespace CycleTrim.Optimizations.Tests
         {
             try
             {
-                if (args.Length == 2 && args[0] == "--diagnose-presentation-dirty")
-                {
-                    PresentationUploadDirtyDiagnostic.Run(args[1]);
-                    return 0;
-                }
-                if (args.Length == 2 && (args[0] == "--regression-presentation-native"
-                    || args[0] == "--benchmark-presentation-native"))
-                {
-                    PresentationUploadNativeRegression.Run(args[1], args[0] == "--benchmark-presentation-native");
-                    return 0;
-                }
                 if (args.Length == 1 && args[0] == "--benchmark-save")
                 {
                     SaveMetadataBenchmark.Run();
@@ -82,7 +71,7 @@ namespace CycleTrim.Optimizations.Tests
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit", "zoom-animation", "frame-rate", "presentation-upload", "pickup-highlight" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit", "zoom-animation", "frame-rate", "pickup-highlight" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -109,7 +98,6 @@ namespace CycleTrim.Optimizations.Tests
                 case "animation": AnimationSymbolRegression.Run(); break;
                 case "zoom-animation": ZoomAnimationRegression.Run(); break;
                 case "frame-rate": FrameRateDiagnosticsRegression.Run(); break;
-                case "presentation-upload": PresentationUploadRegression.Run(); break;
                 case "pickup-highlight": PickupHighlightRegression.Run(); break;
                 case "conduit":
                     ConduitVisualRefreshGateRegression.Run();

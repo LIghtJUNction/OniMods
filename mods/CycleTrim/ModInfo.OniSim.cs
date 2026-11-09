@@ -61,9 +61,6 @@ namespace CycleTrim
                     if (!string.IsNullOrWhiteSpace(nativePath))
                     {
                         var reader = OniSimPublicationReader.Open(nativePath);
-#if !PERFORMANCE_PROBE_HOST_TESTS
-                        PresentationUploadGate.SetReader(reader);
-#endif
                         var provider = new OniSimMulticomponentProvider(reader.Acquire, reader.Release);
                         if (!MulticomponentCellAccess.RegisterProvider(provider))
                             Console.WriteLine("[CycleTrim] Multicomponent provider was already registered.");
