@@ -1,3 +1,16 @@
+## 2026-11-09 — 0.4.10
+
+- Read multicomponent texture data in bounded batches of up to 128 contiguous cells. Copy native records under one publication lease, release it, then resolve elements and compute the existing colors. This removes per-cell native lock acquisition from the batch path without holding the lock across game callbacks.
+- Reuse liquid gradients already calculated for the next row, preserving the original image bytes and exceptional floating-point behavior. Scratch storage is bounded by the world width and is reused after warmup.
+- Require Jlib 0.3.2 for the optional batch-provider interface. The standalone dependency bootstrap rejects older providers before loading the CycleTrim implementation and tells the player to update Jlib.
+- Preserve the existing single-cell path for other providers and batch failures. Host tests cover copied-data lifetime, invalid data, nested reads, exceptions and concurrent texture workers; Unity/Mono and save-specific FPS remain separate acceptance work.
+
+## 2026-11-09 — 0.4.9
+
+- Reuse the existing SIMD element-ID validator before texture publication.
+- Reuse unchanged grid fields after both idle publication buffers are warm, while copying accumulated flow before its periodic reset.
+- Pool resource-hover traversal collections and clear object references on success or failure. Measurements and verification are recorded in [the 0.4.9 report](../../docs/cycletrim-performance-20261109.md).
+
 ## Unreleased — simulation time and complete frame measurements (2026-11-08)
 
 - Preserve the original `SimEveryTick` input and accumulated simulation time; remove the frame patch's unconditional `2/60` second truncation.

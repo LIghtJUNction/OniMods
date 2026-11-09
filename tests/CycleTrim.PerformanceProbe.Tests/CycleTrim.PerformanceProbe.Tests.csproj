@@ -28,6 +28,8 @@
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentOverlayPatch.cs" Link="Jlib/MulticomponentOverlayPatch.cs" />
     <Compile Include="../../mods/CycleTrim/Core/MulticomponentCellAccess.cs" Link="MulticomponentCellAccess.cs" />
     <Compile Include="../../mods/CycleTrim/Core/OniSimMulticomponentProvider.cs" Link="OniSimMulticomponentProvider.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />
+    <Compile Include="../../mods/Jlib/PLibCore/PThreadLocalPool.cs" Link="PThreadLocalPool.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPhysiologyPatches.cs" Link="MulticomponentPhysiologyPatches.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentVisualPatches.cs" Link="MulticomponentVisualPatches.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/Multicomponent/MulticomponentPlantPatches.cs" Link="MulticomponentPlantPatches.cs" />

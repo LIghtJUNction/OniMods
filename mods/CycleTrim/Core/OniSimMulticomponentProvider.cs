@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Jlib.Multicomponent;
 
 namespace CycleTrim.Core
@@ -45,11 +46,13 @@ namespace CycleTrim.Core
     /// OniSim's double-buffered GameData handoff. Fail-closed on any version,
     /// flag, pointer, bounds, or thermodynamic invariant mismatch.
     /// </summary>
-    public sealed class OniSimMulticomponentProvider : IMulticomponentCellProvider
+    public sealed class OniSimMulticomponentProvider : IMulticomponentCellProvider,
+        IMulticomponentCellBatchProvider
     {
         public const uint CurrentVersion = 1;
         public const uint FlagLegacySingleElement = 1;
         public const uint FlagMulticomponentCoexistence = 2;
+        internal const int MaximumBatchSpeciesRecords = 4096;
         [ThreadStatic]
         private static MulticomponentSpecies[] speciesBuffer;
 
@@ -178,6 +181,179 @@ namespace CycleTrim.Core
             finally
             {
                 releaseUpdate();
+            }
+        }
+
+        public bool TryGetCellBatch(int firstCell, int count, out IMulticomponentCellBatch batch)
+        {
+            batch = null;
+            if (firstCell < 0 || count <= 0
+                || count > Jlib.Multicomponent.MulticomponentCellAccess.MaximumBatchCells)
+                return false;
+
+            var reader = ThreadLocalObjectPool<CellBatch>.Rent();
+            reader.Begin(this, firstCell, count);
+            bool retained = false;
+            try
+            {
+                IntPtr pointer = acquireUpdate();
+                if (pointer == IntPtr.Zero)
+                    return false;
+                try
+                {
+                    NativeMulticomponentUpdate update;
+                    if (!TryReadUpdateHeader(pointer, out update) || !reader.Copy(update))
+                        return false;
+                }
+                finally
+                {
+                    releaseUpdate();
+                }
+                // No native pointers or lease escape. Element resolution and
+                // game callbacks run only when the managed copy is consumed.
+                batch = reader;
+                retained = true;
+                return true;
+            }
+            finally
+            {
+                if (!retained)
+                    reader.Dispose();
+            }
+        }
+
+        private sealed class CellBatch : IMulticomponentCellBatch
+        {
+            private readonly byte[] cells = new byte[
+                Jlib.Multicomponent.MulticomponentCellAccess.MaximumBatchCells * 24];
+            // Fixed-size scratch bounds per-thread retained memory. An
+            // unusually large native span uses the existing per-cell reader.
+            private readonly byte[] species = new byte[MaximumBatchSpeciesRecords * 20];
+            private readonly bool[] readable = new bool[
+                Jlib.Multicomponent.MulticomponentCellAccess.MaximumBatchCells];
+            private MulticomponentSpecies[] components = Array.Empty<MulticomponentSpecies>();
+            private OniSimMulticomponentProvider owner;
+            private int firstCell, cellCount, thread;
+            private uint firstSpecies;
+            private bool active;
+            private bool reading;
+
+            internal void Begin(OniSimMulticomponentProvider provider, int first, int count)
+            {
+                owner = provider;
+                firstCell = first;
+                cellCount = count;
+                thread = Thread.CurrentThread.ManagedThreadId;
+                active = true;
+            }
+
+            internal bool Copy(NativeMulticomponentUpdate update)
+            {
+                if ((ulong)firstCell + (uint)cellCount > update.CellCount
+                    || !Address(update.Cells, (ulong)firstCell * 24,
+                        (ulong)cellCount * 24, out var start))
+                    return false;
+                Marshal.Copy(start, cells, 0, cellCount * 24);
+
+                uint minimum = uint.MaxValue;
+                ulong maximum = 0;
+                for (int i = 0; i < cellCount; i++)
+                {
+                    int at = i * 24;
+                    uint offset = BitConverter.ToUInt32(cells, at);
+                    ushort count = BitConverter.ToUInt16(cells, at + 4);
+                    readable[i] = BitConverter.ToUInt16(cells, at + 6) == (count == 0 ? 0 : 1)
+                        && (ulong)offset + count <= update.TotalSpeciesRecords;
+                    if (!readable[i] || count == 0)
+                        continue;
+                    minimum = Math.Min(minimum, offset);
+                    maximum = Math.Max(maximum, (ulong)offset + count);
+                }
+                firstSpecies = minimum == uint.MaxValue ? 0 : minimum;
+                ulong span = maximum - firstSpecies;
+                if (span > MaximumBatchSpeciesRecords)
+                    return false;
+                if (span == 0)
+                    return true;
+                if (!Address(update.Species, (ulong)firstSpecies * 20, span * 20, out start))
+                    return false;
+                Marshal.Copy(start, species, 0, (int)span * 20);
+                return true;
+            }
+
+            public bool TryGetCell(int cell, out MulticomponentCellSnapshot snapshot)
+            {
+                snapshot = default(MulticomponentCellSnapshot);
+                if (!active || reading || thread != Thread.CurrentThread.ManagedThreadId
+                    || cell < firstCell || (long)cell >= (long)firstCell + cellCount)
+                    return false;
+                int index = cell - firstCell;
+                if (!readable[index])
+                    return false;
+                int at = index * 24;
+                int count = BitConverter.ToUInt16(cells, at + 4);
+                if (components.Length < count)
+                    components = new MulticomponentSpecies[Math.Min(MaximumBatchSpeciesRecords,
+                        Math.Max(count, Math.Max(4, components.Length * 2)))];
+                uint offset = BitConverter.ToUInt32(cells, at);
+                reading = true;
+                try
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        int record = checked((int)(offset - firstSpecies) + i) * 20;
+                        float mass = ReadSingle(species, record + 4);
+                        if (species[record + 3] != 0 || mass <= 0f
+                            || !TryMapPhase(species[record + 2], out var phase))
+                            return false;
+                        Element element = owner.resolveElement(BitConverter.ToUInt16(species, record));
+                        if (element == null)
+                            return false;
+                        components[i] = new MulticomponentSpecies(element, phase, mass,
+                            ReadSingle(species, record + 8), ReadSingle(species, record + 12),
+                            ReadSingle(species, record + 16));
+                    }
+                    snapshot = new MulticomponentCellSnapshot(components, count,
+                        ReadSingle(cells, at + 8), ReadSingle(cells, at + 12),
+                        ReadSingle(cells, at + 16), ReadSingle(cells, at + 20));
+                    return true;
+                }
+                finally { reading = false; }
+            }
+
+            public void Dispose()
+            {
+                if (!active)
+                    return;
+                if (thread != Thread.CurrentThread.ManagedThreadId)
+                    throw new InvalidOperationException("A cell batch must be disposed on its acquiring thread.");
+                if (reading)
+                    throw new InvalidOperationException("A cell batch cannot be disposed during element resolution.");
+                active = false;
+                owner = null;
+                firstCell = cellCount = thread = 0;
+                firstSpecies = 0;
+                Array.Clear(components, 0, components.Length);
+                Array.Clear(readable, 0, readable.Length);
+                ThreadLocalObjectPool<CellBatch>.Return(this);
+            }
+
+            private static float ReadSingle(byte[] source, int offset)
+            {
+                var value = new Int32SingleUnion { Bits = BitConverter.ToInt32(source, offset) };
+                return value.Value;
+            }
+
+            private static bool Address(IntPtr pointer, ulong offset, ulong length, out IntPtr result)
+            {
+                result = IntPtr.Zero;
+                if (pointer == IntPtr.Zero || pointer.ToInt64() < 0)
+                    return false;
+                ulong address = (ulong)pointer.ToInt64();
+                if (offset > long.MaxValue - address || length > long.MaxValue - address - offset)
+                    return false;
+                result = new IntPtr((long)(address + offset));
+                return true;
             }
         }
 

@@ -2,11 +2,11 @@
 
 ![CycleTrim](preview.gif)
 
-**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) first, then restart the game. Consumer packages no longer embed Jlib.
+**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) version **0.3.2 or later**, then restart the game. CycleTrim 0.4.10 uses the new batch-read interface; its bootstrap checks the dependency version before loading the implementation. Consumer packages no longer embed Jlib.
 
 A disruptive, high-risk experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. **Use it only with disposable test saves.**
 
-The current build (0.4.8 plus later commits on `main`) has started removing one-element-per-cell flow: OniSim lets a second gas species share a cell (`FLAG_MULTICOMPONENT_COEXISTENCE`), and multicomponent gas flux plus GPU thermal diffusion run inside the native tick. Saves still store the dominant element plus a runtime mixture overlay; three or more species and full save/load are not done. The original argument and limits are in [next cell representation](docs/next-cell-representation.md); the current GPU wiring is in [GPU progress](#gpu-progress-2026-11-08).
+The current build (0.4.10) has started removing one-element-per-cell flow: OniSim lets a second gas species share a cell (`FLAG_MULTICOMPONENT_COEXISTENCE`), and multicomponent gas flux plus GPU thermal diffusion run inside the native tick. Saves still store the dominant element plus a runtime mixture overlay; three or more species and full save/load are not done. The original argument and limits are in [next cell representation](docs/next-cell-representation.md); the current GPU wiring is in [GPU progress](#gpu-progress-2026-11-08).
 
 The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
 

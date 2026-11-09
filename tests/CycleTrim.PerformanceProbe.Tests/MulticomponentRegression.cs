@@ -411,22 +411,25 @@ public struct CellOffset
 
 public static class Grid
 {
+    public static int WidthInCells = 64;
+    public static int CellCount = int.MaxValue;
+    public static bool[] Active;
     public static Element[] Element = Array.Empty<Element>();
     public static float[] Mass = Array.Empty<float>();
     public static bool[] Solid = Array.Empty<bool>();
 
-    public static int XYToCell(int x, int y) { return y * 64 + x; }
+    public static int XYToCell(int x, int y) { return y * WidthInCells + x; }
     public static int PosToCell(UnityEngine.Vector3 position) { return XYToCell((int)position.x, (int)position.y); }
-    public static void CellToXY(int cell, out int x, out int y) { x = cell % 64; y = cell / 64; }
+    public static void CellToXY(int cell, out int x, out int y) { x = cell % WidthInCells; y = cell / WidthInCells; }
     public static int ClampX(int x) { return x < 0 ? 0 : x; }
     public static int ClampY(int y) { return y < 0 ? 0 : y; }
-    public static bool IsActiveWorld(int cell) { return cell >= 0; }
-    public static bool IsValidCell(int cell) { return cell >= 0; }
+    public static bool IsActiveWorld(int cell) { return IsValidCell(cell) && (Active == null || Active[cell]); }
+    public static bool IsValidCell(int cell) { return cell >= 0 && cell < CellCount; }
     public static bool IsWorldValidCell(int cell) { return cell >= 0; }
     public static bool IsSolidCell(int cell) { return false; }
     public static bool IsLiquid(int cell) { return false; }
-    public static int CellAbove(int cell) { return cell + 64; }
-    public static int OffsetCell(int cell, CellOffset offset) { return cell + offset.y * 64 + offset.x; }
+    public static int CellAbove(int cell) { return cell + WidthInCells; }
+    public static int OffsetCell(int cell, CellOffset offset) { return cell + offset.y * WidthInCells + offset.x; }
 }
 
 public sealed class GasBreatherFromWorldProvider { }
@@ -435,7 +438,23 @@ public sealed class SimDebugView { }
 
 public sealed class TextureRegion
 {
-    public void SetBytes(int x, int y, byte r, byte g, byte b, byte a) { }
+    public readonly int Width;
+    public readonly byte[] Bytes;
+    public Action<int, int> BeforeWrite;
+    public int Writes;
+    public TextureRegion(int width = 0, int height = 0)
+    {
+        Width = width;
+        Bytes = new byte[width * height * 4];
+    }
+    public void SetBytes(int x, int y, byte r, byte g, byte b, byte a)
+    {
+        BeforeWrite?.Invoke(x, y);
+        Writes++;
+        if (Bytes.Length == 0) return;
+        int at = (y * Width + x) * 4;
+        Bytes[at] = r; Bytes[at + 1] = g; Bytes[at + 2] = b; Bytes[at + 3] = a;
+    }
 }
 
 public sealed class OccupyArea

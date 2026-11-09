@@ -17,6 +17,16 @@ namespace CycleTrim.PerformanceProbe.Tests
             var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
             try
             {
+                if (args.Length == 1 && args[0] == "--regression-multicomponent-batch")
+                {
+                    MulticomponentBatchRegression.Run();
+                    return 0;
+                }
+                if (args.Length == 2 && args[0] == "--benchmark-multicomponent-visual")
+                {
+                    MulticomponentVisualBenchmark.Run(args[1]);
+                    return 0;
+                }
                 var skipSynthetic = args.Length == 1 && args[0] == "--skip-synthetic-performance";
                 if (args.Length > 0 && !syntheticOnly && !skipSynthetic)
                 {
@@ -38,6 +48,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptionsRegression.Run();
                 FetchLayoutControlRegression.Run();
                 MulticomponentRegression.Run();
+                MulticomponentBatchRegression.Run();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
