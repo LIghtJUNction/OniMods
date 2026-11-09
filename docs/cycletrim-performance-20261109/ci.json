@@ -1,0 +1,97 @@
+{
+  "code_revision": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+  "observed_at_utc": "2026-11-09T00:33:27.614Z",
+  "workflow_runs": [
+    {
+      "id": 42539832372,
+      "name": "OniSim transport proof and regression",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42539832372"
+    },
+    {
+      "id": 42539832354,
+      "name": "OniSim diamond proof and regression",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42539832354"
+    },
+    {
+      "id": 42539832279,
+      "name": "OniSim native platforms",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42539832279"
+    },
+    {
+      "id": 42539832331,
+      "name": "Mod quality",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42539832331"
+    },
+    {
+      "id": 42539832272,
+      "name": "ONI reference compatibility",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42539832272"
+    }
+  ],
+  "verified_failure_details": [
+    {
+      "workflow": "OniSim native platforms",
+      "job_id": 128912058533,
+      "platform": "linux-x64",
+      "passed": 105,
+      "failed": 11,
+      "ignored": 6,
+      "details": "Ten GPU tests report no hardware Vulkan adapter available; pathfinder FFI initialization returns -1. New idle and worker-startup regressions pass."
+    },
+    {
+      "workflow": "OniSim native platforms",
+      "job_id": 128912058711,
+      "platform": "windows-x64",
+      "passed": 101,
+      "failed": 11,
+      "ignored": 6,
+      "details": "Hardware Vulkan initialization failures; new regressions pass."
+    },
+    {
+      "workflow": "OniSim native platforms",
+      "job_id": 128912058867,
+      "platform": "macos-x64",
+      "passed": 101,
+      "failed": 11,
+      "ignored": 6,
+      "details": "GPU initialization fails because Vulkan backend is not enabled; new regressions pass."
+    },
+    {
+      "workflow": "OniSim transport proof and regression",
+      "job_id": 128912059047,
+      "passed": 105,
+      "failed": 11,
+      "ignored": 6,
+      "details": "Current native suite has the same GPU initialization failures; Lean proof and historical component jobs succeeded."
+    },
+    {
+      "workflow": "OniSim diamond proof and regression",
+      "job_id": 128912058973,
+      "component": "GPU operators",
+      "passed": 20,
+      "failed": 25,
+      "ignored": 6,
+      "details": "GPU operator failures report no hardware Vulkan adapter available; native component separately has the same eleven GPU initialization failures. Pressure projection reference, memory probe protocol, and Lean proof jobs succeeded."
+    }
+  ],
+  "limitations": [
+    "No real-game runtime or FPS validation performed.",
+    "No GPU-related assertions, gates, or ignored-test attributes were relaxed.",
+    "Documentation-only delivery commit may have separate workflow runs; these results identify the exact built code revision."
+  ]
+}

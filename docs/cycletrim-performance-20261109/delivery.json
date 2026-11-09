@@ -1,0 +1,113 @@
+{
+  "version": "0.4.9",
+  "code_revision": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+  "platform": "linux-x64",
+  "build": {
+    "command": [
+      "onim",
+      "build",
+      "-m",
+      "CycleTrim",
+      "--release"
+    ],
+    "exit_code": 0,
+    "seconds": 74.73297099099727,
+    "revision": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+    "include_onisim": true,
+    "platform": "linux-x64",
+    "game_runtime_tested": false
+  },
+  "loader": {
+    "command": [
+      "dotnet",
+      "run",
+      "--project",
+      "tests/OniSim.Loader.Tests",
+      "-c",
+      "Release",
+      "-p:BuildInParallel=false",
+      "-p:RestoreBuildInParallel=false",
+      "--",
+      "dist/CycleTrim/OniSim"
+    ],
+    "exit_code": 0,
+    "seconds": 9.434681097001885
+  },
+  "release_binary_guards": {
+    "passed": 16,
+    "checks": [
+      "PASS SmartReservoir Harmony interception is absent",
+      "PASS automatic GPU chore recosting Harmony patch is absent",
+      "PASS unused managed GPU chore recosting bridge is absent",
+      "PASS async mismatch logs a skip",
+      "PASS async mismatch returns incoming IL",
+      "PASS async mismatch does not throw",
+      "PASS IdleChore is not busy work",
+      "PASS pickup and chore paths use the idle guard",
+      "PASS busy chore paths avoid navigator component lookups",
+      "PASS busy chore stamps reuse navigator cached root cell",
+      "PASS release decompile exposes identity-cache methods",
+      "PASS pickup hot path caches duplicant identity classification",
+      "PASS priority invalidation does not materialize untracked throttle state",
+      "PASS priority invalidation reuses Brain cached chore consumer",
+      "PASS stationary probes reuse vanilla cached root cell",
+      "PASS stationary critter identity lookup is first-hit only"
+    ]
+  },
+  "native_suite": {
+    "command": [
+      "cargo",
+      "test",
+      "--release",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "mods/CycleTrim/OniSim/native/Cargo.toml"
+    ],
+    "exit_code": 101,
+    "seconds": 12.609280841999862,
+    "passed": 105,
+    "failed": 11,
+    "ignored": 6,
+    "failure_scope": "hardware GPU initialization"
+  },
+  "managed_optimization_families": 11,
+  "package": {
+    "name": "CycleTrim-0.4.9-linux-x64.zip",
+    "size": 3429909,
+    "sha256": "609471e2f3726bc798bc743160d430ce71f57f151eb0ee074c228e078664392a",
+    "verified_members": [
+      {
+        "member": "CycleTrim.dll",
+        "size": 15872,
+        "sha256": "6ae5bca384b8d5b2f03468729662209d1cc48069fb3325a961c4a2e5def165a3"
+      },
+      {
+        "member": "implementation/CycleTrim.dll",
+        "size": 190976,
+        "sha256": "fab51612f2205f2875cb4bb42b5bf2cd61d1049f2145c8b6f35e8c35161f833b"
+      },
+      {
+        "member": "implementation/OniSim.Compatibility.dll",
+        "size": 36864,
+        "sha256": "1ff8939e7cf402cf46bb87ff81760b573e937765c3b3950b90bc683063ac499c"
+      },
+      {
+        "member": "OniSim/linux-x64/liboni_sim_core.so",
+        "size": 8258656,
+        "sha256": "052e6794292c2a9103c1fd34bea25d2eeed1e5cb4942a8ebd49cd81c1b1dba89"
+      }
+    ],
+    "native_metadata": {
+      "schema": 1,
+      "target": "linux-x64",
+      "triple": "x86_64-unknown-linux-gnu",
+      "sourceSha256": "0d90a29caa8f5a57c09547697ccc15edfd683457b1f638bb85f34ea734bbf368",
+      "binarySha256": "052e6794292c2a9103c1fd34bea25d2eeed1e5cb4942a8ebd49cd81c1b1dba89",
+      "commit": "8b85f498b833f4db53e7d1e70d08e2d00e290297",
+      "gameRuntimeTested": false
+    },
+    "contains_game_reference_assemblies": false
+  },
+  "game_runtime_tested": false
+}
