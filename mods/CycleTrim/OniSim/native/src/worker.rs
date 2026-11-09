@@ -19,7 +19,7 @@ pub(crate) const MAX_QUEUED_FRAMES: usize = 30;
 type Handoff<D> = Box<dyn FnOnce(&mut D) + Send + 'static>;
 
 struct Returned<D> {
-    data: D,
+    data: Box<D>,
     handoff: Option<Handoff<D>>,
 }
 
@@ -37,11 +37,11 @@ impl Fault {
 struct Mailbox<F, D> {
     frames: Vec<F>,
     latest_regions: Option<Vec<Region>>,
-    ready: Option<D>,
+    ready: Option<Box<D>>,
     returned: Option<Returned<D>>,
     // Keep the last published buffer alive if the runner faults. Readers can
     // still hold its pointers until the session is shut down.
-    fault_retained: Option<D>,
+    fault_retained: Option<Box<D>>,
     leased: bool,
     stopping: bool,
     fault: Option<Fault>,
@@ -138,6 +138,11 @@ impl<F: Send + 'static, D: Send + 'static> Worker<F, D> {
     where
         R: FnMut(Vec<F>, &[Region], &mut D, &D) -> Result<()> + Send + 'static,
     {
+        // These two payloads keep one address through the publication barrier.
+        // Only their owning pointers move between the worker and ReadyLease;
+        // publishing a large D must not copy its header under the mailbox lock.
+        let output = Box::new(output);
+        let old = Box::new(old);
         let shared = Arc::new(Shared {
             mailbox: Mutex::new(Mailbox {
                 frames: Vec::new(),
@@ -294,19 +299,19 @@ impl<F: Send + 'static, D: Send + 'static> Drop for Worker<F, D> {
 
 pub(crate) struct ReadyLease<F: Send + 'static, D: Send + 'static> {
     shared: Arc<Shared<F, D>>,
-    data: Option<D>,
+    data: Option<Box<D>>,
 }
 
 impl<F: Send + 'static, D: Send + 'static> ReadyLease<F, D> {
     pub(crate) fn data(&self) -> &D {
         self.data
-            .as_ref()
+            .as_deref()
             .expect("ready lease is consumed only by release")
     }
 
     pub(crate) fn data_mut(&mut self) -> &mut D {
         self.data
-            .as_mut()
+            .as_deref_mut()
             .expect("ready lease is consumed only by release")
     }
 
@@ -362,6 +367,10 @@ impl<F: Send + 'static, D: Send + 'static> Drop for ReadyLease<F, D> {
         self.shared.changed.notify_all();
     }
 }
+
+#[cfg(test)]
+#[path = "worker_payload_tests.rs"]
+mod payload_tests;
 
 #[cfg(test)]
 mod tests {

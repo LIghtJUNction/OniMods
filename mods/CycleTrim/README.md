@@ -39,7 +39,7 @@ python3 scripts/analyze_cycletrim_frame_chain.py /absolute/path/Player.log --out
 
 父阶段和子阶段的耗时不能直接相加；`PrepareGameData` 和 `JobManager.Run` 都可能包含工作与等待，未归因时间也不能直接当作 GPU 时间。这里的更新入口频率不是显示器实际呈现的 FPS。诊断默认关闭，关闭时不安装专用计时补丁。[指标定义与验证范围](../../docs/cycletrim-whole-chain-20261109.md#4-22-个阶段的计时含义)
 
-本轮修正 empty/zero 交替交接反复丢失空闲发布复用状态的问题，并评估原生发布版本驱动的纹理上传复用。完整报告同时保留失败候选、全部对照场景与尾部耗时，不从单个函数的提速推导整局帧率；当前环境没有新的 ONI 实机或硬件 GPU 帧率验收。[完整实验记录](../../docs/cycletrim-whole-chain-20261109.md)
+本轮修正 empty/zero 交替交接反复丢失空闲发布复用状态的问题，评估原生发布版本驱动的纹理上传复用，并让两份发布结构固定存放、交接时只转移拥有它们的指针。完整报告同时保留失败候选、全部对照场景与尾部耗时，不从单个函数的提速推导整局帧率；当前环境没有新的 ONI 实机或硬件 GPU 帧率验收。[完整实验记录](../../docs/cycletrim-whole-chain-20261109.md)
 
 ## 算法演进：从一格一物排挤到 GPU 泊松压力投影 (Stage 2/2.1)
 

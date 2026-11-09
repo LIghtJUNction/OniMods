@@ -38,7 +38,7 @@ python3 scripts/analyze_cycletrim_frame_chain.py /absolute/path/Player.log --out
 
 Do not add parent and child inclusive times. `PrepareGameData` and `JobManager.Run` can include both work and waits, and unattributed time is not a GPU timer. Update-entry cadence is not presented FPS. Diagnostics are off by default; their timing-only patches are absent when disabled. The [validation report](../../docs/cycletrim-whole-chain-20261109.md) defines the measurements and their limits.
 
-This iteration repairs idle publication reuse across alternating empty/zero worker handovers and evaluates native publication revisions for texture-upload reuse. The report preserves failed candidates, every control scenario and tail timings. Function or host improvements do not establish whole-game FPS; this environment has no new ONI or hardware GPU frame-rate acceptance.
+This iteration repairs idle publication reuse across alternating empty/zero worker handovers, evaluates native publication revisions for texture-upload reuse, and keeps both publication payloads in fixed allocations so their owning pointers move through the handover. The report preserves failed candidates, every control scenario and tail timings. Function or host improvements do not establish whole-game FPS; this environment has no new ONI or hardware GPU frame-rate acceptance.
 
 ## Algorithm evolution: from per-cell displacement to GPU Poisson pressure projection (Stage 2/2.1)
 

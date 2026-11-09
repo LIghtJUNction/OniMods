@@ -9,8 +9,8 @@ use crate::world::Region;
 
 pub(super) fn entry<F, D, R>(
     shared: Arc<Shared<F, D>>,
-    output: D,
-    old: D,
+    output: Box<D>,
+    old: Box<D>,
     regions: Vec<Region>,
     runner: R,
 ) where
@@ -38,8 +38,8 @@ pub(super) fn entry<F, D, R>(
 
 fn run<F, D, R>(
     shared: &Shared<F, D>,
-    mut output: D,
-    mut old: D,
+    mut output: Box<D>,
+    mut old: Box<D>,
     mut regions: Vec<Region>,
     mut runner: R,
 ) where
@@ -59,7 +59,9 @@ fn run<F, D, R>(
 
         // The closure exclusively owns active simulation state. Submissions
         // accepted now remain in the mailbox for the next BeginFrameProcessing.
-        let result = catch_unwind(AssertUnwindSafe(|| runner(frames, &regions, &mut output, &old)));
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            runner(frames, &regions, output.as_mut(), old.as_ref())
+        }));
         let failure = match result {
             Ok(Ok(())) => None,
             Ok(Err(error)) => Some(error),
@@ -93,7 +95,7 @@ fn run<F, D, R>(
             }
         };
         if let Some(handoff) = returned.handoff.take() {
-            handoff(&mut old);
+            handoff(old.as_mut());
         }
         output = old;
         old = returned.data;
