@@ -25,6 +25,7 @@ pub(crate) struct PresentationBuffers {
     liquid_data: Box<[u32]>,
     material: Box<[u32]>,
     exposed: Box<[u8]>,
+    liquid_gradients: liquid::GradientCache,
 }
 
 impl PresentationBuffers {
@@ -35,6 +36,7 @@ impl PresentationBuffers {
             liquid_data: filled(count, 0)?.into_boxed_slice(),
             material: filled(count, 0)?.into_boxed_slice(),
             exposed: filled(count, 0)?.into_boxed_slice(),
+            liquid_gradients: liquid::GradientCache::default(),
         })
     }
 
@@ -59,7 +61,8 @@ impl PresentationBuffers {
             &self.exposed,
             world,
             elements,
-        );
+            &mut self.liquid_gradients,
+        )?;
         Ok(())
     }
 
