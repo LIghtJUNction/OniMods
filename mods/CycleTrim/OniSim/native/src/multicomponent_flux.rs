@@ -574,6 +574,22 @@ pub(crate) fn step_region_with_mask(
     gpu_diffusion: bool,
     diffusion_solid: Option<&mut Vec<u32>>,
 ) -> crate::status::Result<bool> {
+    let gpu_available = gpu.is_some();
+    step_region_with_dispatch(world, elements, events, region, gpu, gpu_diffusion,
+        diffusion_solid, gpu_available, if cfg!(test) { 0 } else { 256 })
+}
+
+fn step_region_with_dispatch(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    events: &mut EventQueues,
+    region: Region,
+    gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
+    gpu_diffusion: bool,
+    diffusion_solid: Option<&mut Vec<u32>>,
+    gpu_available: bool,
+    minimum_gpu_cells: usize,
+) -> crate::status::Result<bool> {
     if world.gas_channel_count == 0 {
         rebuild_gas_channels(world, elements);
     }
@@ -591,7 +607,7 @@ pub(crate) fn step_region_with_mask(
     }
     let width = max_x - min_x;
     let height = max_y - min_y;
-    if gpu.is_some() && (width < 2 || height < 2) {
+    if gpu_available && (width < 2 || height < 2) {
         return Ok(false);
     }
     let count = width * height;
@@ -601,7 +617,7 @@ pub(crate) fn step_region_with_mask(
     // isolated before transport.
     let mut local_elements: Vec<u16> = world.gas_element_of_channel[..world.gas_channel_count].to_vec();
     let mut local_projection = false;
-    if gpu.is_some() {
+    if gpu_available {
         let mut active = Vec::new();
         'scan: for y in min_y..max_y { for x in min_x..max_x {
             let cell = y * world.stride + x;
@@ -631,7 +647,7 @@ pub(crate) fn step_region_with_mask(
 
     // Packed sparse cells use 16 bytes, equal to three dense channels plus
     // temperature, and avoid expanding the channel tensor on the CPU.
-    let use_gpu = gpu.is_some() && (cfg!(test) || count >= 256);
+    let use_gpu = gpu_available && count >= minimum_gpu_cells;
     let sparse = use_gpu && channels >= 3 && local_projection;
     let mut sparse_cells = if sparse { vec![onisim_gpu::multicomponent::PackedSparseCell::default(); count] } else { Vec::new() };
     let mut masks = if sparse { vec![0u16; count] } else { Vec::new() };
@@ -716,7 +732,7 @@ pub(crate) fn step_region_with_mask(
                 mass[base + mixture_channel] += world.mixture_mass[cell];
                 any_mixture = true;
             }
-            if gpu.is_none() {
+            if !use_gpu {
                 for channel in 0..channels {
                     let m = mass[base + channel].max(0.0);
                     enthalpy[local * channels + channel] = m * temperature[local] * species[channel].specific_heat;
@@ -730,7 +746,7 @@ pub(crate) fn step_region_with_mask(
     if sparse {
         if !masks.iter().zip(&solid).any(|(&mask,&blocked)| mask!=0 && blocked==0) { return Ok(false); }
     } else if !mass.iter().any(|&value| value > 0.0) { return Ok(false); }
-    if gpu.is_none() {
+    if !use_gpu {
         density_gradient_velocities(&mass, &solid, width, height, channels, &mut velocity_x, &mut velocity_y);
     }
 
@@ -843,6 +859,63 @@ pub(crate) fn step_region_with_mask(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn gas_fixture(width: usize, height: usize) -> (PhysicsWorld, ElementTable, Region) {
+        let descriptions = [
+            (0x2d39bf75_u32, 0_u8), (0x6d95058c, 3), (0xa9360b34, 3),
+            (10, 1), (11, 1),
+        ];
+        let mut bytes = (descriptions.len() as i32).to_le_bytes().to_vec();
+        for (index, (hash, phase)) in descriptions.into_iter().enumerate() {
+            let mut record = [0u8; 164];
+            record[..4].copy_from_slice(&hash.to_le_bytes());
+            record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
+            record[10] = phase;
+            record[12..16].copy_from_slice(&(1.0 + index as f32 * 0.1).to_le_bytes());
+            bytes.extend_from_slice(&record);
+        }
+        bytes.resize(bytes.len() + descriptions.len() * 4, 0);
+        let elements = ElementTable::parse(&bytes).unwrap();
+        let mut world = PhysicsWorld::new(width + 1, height + 1, 7, &elements).unwrap();
+        for y in 1..=height {
+            for x in 1..=width {
+                let cell = y * world.stride + x;
+                world.write.element[cell] = 3;
+                world.write.mass[cell] = 1.0 + x as f32 * 0.01;
+                world.mixture_element[cell] = 4;
+                world.mixture_mass[cell] = 0.4 + y as f32 * 0.02;
+                world.write.temperature[cell] = 290.0 + (x + y) as f32;
+            }
+        }
+        world.write.properties[2 * world.stride + 2] = 1;
+        let region = Region {
+            min_x: 1, min_y: 1, max_x: width as i32 + 1, max_y: height as i32 + 1,
+            ..Region::default()
+        };
+        (world, elements, region)
+    }
+
+    #[test]
+    fn small_gpu_regions_prepare_cpu_energy_and_velocity() {
+        for (width, height) in [(2, 2), (8, 8), (15, 17)] {
+            let (mut expected, elements, region) = gas_fixture(width, height);
+            let (mut actual, _, _) = gas_fixture(width, height);
+            let before = actual.write.mass.clone();
+            assert!(step_region_with_dispatch(&mut expected, &elements,
+                &mut EventQueues::default(), region, None, false, None, false, 256).unwrap());
+            // A device is available, but this production-sized region is below
+            // the dispatch threshold. No GPU is needed to exercise its CPU path.
+            assert!(step_region_with_dispatch(&mut actual, &elements,
+                &mut EventQueues::default(), region, None, false, None, true, 256).unwrap());
+            assert_ne!(actual.write.mass, before, "CPU pressure velocity was left at zero");
+            assert_eq!(actual.write.element, expected.write.element);
+            assert_eq!(actual.write.mass, expected.write.mass);
+            assert_eq!(actual.mixture_element, expected.mixture_element);
+            assert_eq!(actual.mixture_mass, expected.mixture_mass);
+            assert_eq!(actual.write.temperature, expected.write.temperature);
+            assert_eq!(actual.species_mass, expected.species_mass);
+        }
+    }
 
     #[test]
     fn stencil_mask_matches_full_neighbour_union() {
