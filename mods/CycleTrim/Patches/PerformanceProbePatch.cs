@@ -66,20 +66,11 @@ namespace CycleTrim.Patches
 
         private static bool IsRequested()
         {
-            if (CycleTrimPatchOptions.EnablePerformanceDiagnostics)
-            {
-                return true;
-            }
             // Steam forwards launch arguments to an already-running client, but
             // does not forward the caller's environment into the game process.
-            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cycletrim-perf-probe") >= 0)
-            {
-                return true;
-            }
-            var value = Environment.GetEnvironmentVariable(EnvironmentVariable);
-            return string.Equals(value, "1", StringComparison.Ordinal)
-                || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
+            return CycleTrimPatchOptions.DiagnosticsRequested(
+                CycleTrimPatchOptions.EnablePerformanceDiagnostics,
+                Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable(EnvironmentVariable));
         }
 
         private static void EnsureInitialized()

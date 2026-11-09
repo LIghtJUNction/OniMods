@@ -1,6 +1,8 @@
 using System;
 using System.Globalization;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using CycleTrim.Core;
 using HarmonyLib;
 using UnityEngine;
@@ -21,6 +23,9 @@ namespace CycleTrim.Patches
         private static int lastGc0;
         private static int lastGc1;
         private static int lastGc2;
+        private static int captureThread;
+        private static long captureSequence;
+        private static long windowSequence;
 
         public static void Apply(string reason)
         {
@@ -61,11 +66,17 @@ namespace CycleTrim.Patches
             [HarmonyPrefix]
             internal static void Prefix(Game __instance, out TimingState __state)
             {
+                __state = default(TimingState);
+                if (timing != null && Thread.CurrentThread.ManagedThreadId != captureThread)
+                    return;
                 long now = Stopwatch.GetTimestamp();
                 if (timing == null || !ReferenceEquals(captureGame.Target, __instance))
                 {
                     timing = new FrameTimingWindow(Stopwatch.Frequency);
                     captureGame = new WeakReference(__instance);
+                    captureThread = Thread.CurrentThread.ManagedThreadId;
+                    captureSequence++;
+                    windowSequence = 0;
                 }
                 int generation = timing.Generation;
                 FrameTimingSummary summary;
@@ -160,13 +171,13 @@ namespace CycleTrim.Patches
             }
         }
 
-        private static TimingState BeginTiming(FrameTimingPhase phase)
+        internal static TimingState BeginTiming(FrameTimingPhase phase)
         {
-            return timing == null ? default(TimingState)
+            return timing == null || Thread.CurrentThread.ManagedThreadId != captureThread ? default(TimingState)
                 : timing.BeginTiming(phase, Stopwatch.GetTimestamp());
         }
 
-        private static void EndTiming(TimingState state)
+        internal static void EndTiming(TimingState state)
         {
             // Harmony can skip a prefix after another owner suppresses the
             // original. A default state must not consume an absent timer.
@@ -178,6 +189,7 @@ namespace CycleTrim.Patches
         {
             timing = null;
             captureGame = null;
+            captureThread = 0;
         }
 
         private static void SnapshotGcCounts()
@@ -203,9 +215,54 @@ namespace CycleTrim.Patches
                 summary.MeanMillisecondsOf(summary.UnattributedTicks), summary.MeanMillisecondsOf(summary.SimulationTicks),
                 summary.MeanMillisecondsOf(summary.StepTicks), gc0 - lastGc0, gc1 - lastGc1, gc2 - lastGc2,
                 (double)GC.GetTotalMemory(false) / (1024d * 1024d)));
+            ReportChain(summary, gc0 - lastGc0, gc1 - lastGc1, gc2 - lastGc2);
             lastGc0 = gc0;
             lastGc1 = gc1;
             lastGc2 = gc2;
+        }
+
+        private static void ReportChain(FrameTimingSummary summary, int gc0, int gc1, int gc2)
+        {
+            var json = new StringBuilder(4096);
+            json.Append("{\"schema\":1,\"frameAnchor\":\"Game.Update\"");
+            Number(json, "capture", captureSequence);
+            Number(json, "sequence", ++windowSequence);
+            Number(json, "firstFrame", summary.FirstFrame);
+            Number(json, "endFrame", summary.EndFrame);
+            Number(json, "frames", summary.Frames);
+            Number(json, "frequency", summary.Frequency);
+            Number(json, "totalTicks", summary.TotalTicks);
+            Number(json, "coveredTicks", summary.CoveredTicks);
+            Number(json, "unattributedTicks", summary.UnattributedTicks);
+            Number(json, "droppedScopes", summary.DroppedScopes);
+            Number(json, "p50Ticks", summary.P50Ticks);
+            Number(json, "p95Ticks", summary.P95Ticks);
+            Number(json, "p99Ticks", summary.P99Ticks);
+            Number(json, "maxTicks", summary.MaxTicks);
+            json.AppendFormat(CultureInfo.InvariantCulture,
+                ",\"gcCollectionsDelta\":[{0},{1},{2}],\"phases\":[", gc0, gc1, gc2);
+            for (int index = 0; index < summary.Phases.Length; index++)
+            {
+                if (index != 0)
+                    json.Append(',');
+                var phase = (FrameTimingPhase)index;
+                var value = summary.Phases[index];
+                json.Append("{\"name\":\"").Append(FrameStageProbe.Name(phase)).Append("\",\"resolved\":")
+                    .Append(FrameStageProbe.Resolved(phase) ? "true" : "false");
+                Number(json, "calls", value.Calls);
+                Number(json, "inclusiveTicks", value.InclusiveTicks);
+                Number(json, "selfTicks", value.SelfTicks);
+                Number(json, "maxTicks", value.MaxTicks);
+                json.Append('}');
+            }
+            json.Append("]}");
+            Debug.Log("[CycleTrim][FrameChain] " + json);
+        }
+
+        private static void Number(StringBuilder json, string name, long value)
+        {
+            json.Append(",\"").Append(name).Append("\":")
+                .Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
         [HarmonyPatch]

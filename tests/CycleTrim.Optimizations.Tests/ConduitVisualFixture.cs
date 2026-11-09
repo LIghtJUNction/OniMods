@@ -344,7 +344,7 @@ namespace UnityEngine
         public double SpriteTime;
     }
 
-    public sealed class Texture2D : Object { }
+    public sealed partial class Texture2D : Object { }
 
     public static class Time
     {

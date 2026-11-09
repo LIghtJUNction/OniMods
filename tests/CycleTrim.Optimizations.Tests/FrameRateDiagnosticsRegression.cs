@@ -1,5 +1,7 @@
 using System;
 using System.Reflection;
+using System.Text.Json;
+using System.Threading;
 using CycleTrim.Core;
 using CycleTrim.Patches;
 using HarmonyLib;
@@ -18,6 +20,10 @@ namespace CycleTrim.Optimizations.Tests
             CheckElapsedWindowBoundary();
             CheckDiscontinuityAndStaleScopes();
             CheckNestedScopes();
+            CheckIndependentStagesAndSelfTime();
+            CheckIndependentOpenScopeBoundary();
+            CheckBoundedScopesAndDuplicateFinalizers();
+            CheckDiagnosticRequests();
             var harmony = new Harmony(Owner);
             try
             {
@@ -47,6 +53,7 @@ namespace CycleTrim.Optimizations.Tests
                     "reports must expose distribution and GC counts without claiming GPU/render timing");
                 CheckLifecycleResets();
                 CheckExceptionAndReentrancy();
+                CheckStageHooksAndWorkerExclusion();
                 Console.WriteLine("PASS frame diagnostics preserve simulation time and measure complete callback intervals");
             }
             finally
@@ -171,9 +178,178 @@ namespace CycleTrim.Optimizations.Tests
                 typeof(FrameRateUnlockPatch.ProfileUpdate),
                 typeof(FrameRateUnlockPatch.ProfileStepTheSim),
                 typeof(FrameRateUnlockPatch.ProfileSimEveryTick),
-                typeof(FrameRateUnlockPatch.KeepUnlocked)
+                typeof(FrameRateUnlockPatch.KeepUnlocked),
+                typeof(FrameStageProbe.MainStages),
+                typeof(FrameStageProbe.NativePrepare)
             })
                 harmony.CreateClassProcessor(patch).Patch();
+        }
+
+        private static void CheckIndependentStagesAndSelfTime()
+        {
+            var window = new FrameTimingWindow(1000, 1);
+            FrameTimingSummary summary;
+            window.BeginFrame(0, 10, out summary);
+            var global = window.BeginTiming(FrameTimingPhase.GlobalUpdate, 0);
+            window.EndTiming(global, 4);
+            var update = window.BeginTiming(FrameTimingPhase.Update, 5);
+            var sim = window.BeginTiming(FrameTimingPhase.SimFrame, 6);
+            var native = window.BeginTiming(FrameTimingPhase.NativePrepare, 7);
+            window.EndTiming(native, 12);
+            var jobs = window.BeginTiming(FrameTimingPhase.Jobs, 13);
+            var objects = window.BeginTiming(FrameTimingPhase.ObjectSimulation, 14);
+            window.EndTiming(objects, 16);
+            window.EndTiming(jobs, 20);
+            window.EndTiming(sim, 21);
+            window.EndTiming(update, 25);
+            var textures = window.BeginTiming(FrameTimingPhase.PropertyTextures, 30);
+            jobs = window.BeginTiming(FrameTimingPhase.Jobs, 31);
+            window.EndTiming(jobs, 35);
+            window.EndTiming(textures, 38);
+            var ui = window.BeginTiming(FrameTimingPhase.UserInterface, 40);
+            window.EndTiming(ui, 42);
+            Check(window.BeginFrame(50, 11, out summary), "complete callback interval must close");
+            long self = 0;
+            foreach (var phase in summary.Phases) self += phase.SelfTicks;
+            Check(summary.FirstFrame == 10 && summary.EndFrame == 11
+                && summary.CoveredTicks == 34 && self == 34 && summary.UnattributedTicks == 16,
+                "independent callbacks and nested stages must partition the measured union once");
+            var job = summary.Phases[(int)FrameTimingPhase.Jobs];
+            Check(job.Calls == 2 && job.InclusiveTicks == 11 && job.SelfTicks == 9 && job.MaxTicks == 7,
+                "job work/waits retain inclusive time while child object work is excluded from self time");
+            Check(summary.Phases[(int)FrameTimingPhase.Update].SelfTicks == 5
+                && summary.Phases[(int)FrameTimingPhase.SimFrame].SelfTicks == 3,
+                "parent residual time must exclude measured children");
+        }
+
+        private static void CheckBoundedScopesAndDuplicateFinalizers()
+        {
+            var window = new FrameTimingWindow(1000, 1);
+            FrameTimingSummary summary;
+            window.BeginFrame(0, 0, out summary);
+            var states = new FrameTimingWindow.TimingState[64];
+            for (int i = 0; i < states.Length; i++)
+                states[i] = window.BeginTiming(FrameTimingPhase.SimEveryTick, i + 1);
+            var overflow = window.BeginTiming(FrameTimingPhase.SimEveryTick, 65);
+            Check(overflow.Window == null, "scope storage must remain bounded");
+            window.EndTiming(overflow, 66);
+            for (int i = states.Length - 1; i >= 0; i--)
+                window.EndTiming(states[i], 129 - i);
+            window.EndTiming(states[0], 150);
+            Check(window.BeginFrame(200, 1, out summary) && summary.DroppedScopes == 1
+                && summary.CoveredTicks == 128 && summary.SimulationTicks == 128,
+                "overflow must be disclosed and a duplicate finalizer must not count twice");
+        }
+
+        private static void CheckIndependentOpenScopeBoundary()
+        {
+            var window = new FrameTimingWindow(1000, 1);
+            FrameTimingSummary summary;
+            window.BeginFrame(0, 0, out summary);
+            var parent = window.BeginTiming(FrameTimingPhase.GlobalUpdate, 10);
+            var child = window.BeginTiming(FrameTimingPhase.UserInterface, 11);
+            window.EndTiming(child, 12);
+            int generation = window.Generation;
+            Check(!window.BeginFrame(20, 1, out summary) && window.Generation != generation,
+                "an open independent callback must invalidate an incomplete frame boundary");
+            window.EndTiming(parent, 22);
+            var update = window.BeginTiming(FrameTimingPhase.Update, 23);
+            window.EndTiming(update, 25);
+            Check(window.BeginFrame(30, 2, out summary) && summary.TotalTicks == 10
+                && summary.CoveredTicks == 2 && summary.UnattributedTicks == 8
+                && summary.Phases[(int)FrameTimingPhase.UserInterface].SelfTicks == 0
+                && summary.Phases[(int)FrameTimingPhase.GlobalUpdate].SelfTicks == 0,
+                "an abandoned parent and its completed children cannot enter the recovered interval");
+        }
+
+        private static void CheckDiagnosticRequests()
+        {
+            Check(CycleTrimPatchOptions.DiagnosticsRequested(false, new[] { "--cycletrim-perf-probe" }, null)
+                && CycleTrimPatchOptions.DiagnosticsRequested(false, Array.Empty<string>(), "YES")
+                && CycleTrimPatchOptions.DiagnosticsRequested(true, Array.Empty<string>(), null)
+                && !CycleTrimPatchOptions.DiagnosticsRequested(false, Array.Empty<string>(), "0"),
+                "options, launch argument and explicit environment settings must share diagnostic semantics");
+        }
+
+        private static void CheckStageHooksAndWorkerExclusion()
+        {
+            var game = new Game();
+            game.OnSpawn();
+            var global = new Global();
+            var objects = new StateMachineUpdater();
+            var animation = new KAnimBatchManager();
+            var textures = new PropertyTextures(1, 1) { Loading = true };
+            var paths = new Pathfinding();
+            var probes = new AsyncPathProber.Manager();
+            var camera = new CameraController();
+            var terrain = new GroundRenderer();
+            var app = new App();
+            game.FrameUpdateAction = () =>
+            {
+                game.SimEveryTick(0.2f);
+                game.UnsafeSim200ms(0.2f);
+                game.StepTheSim();
+            };
+            Debug.Messages.Clear();
+            for (int frame = 0; frame <= FrameTimingWindow.SampleCapacity; frame++)
+            {
+                Time.frameCount++;
+                game.Update();
+                global.Update();
+                global.LateUpdate();
+                new KScreenManager().Update();
+                game.LateUpdate();
+                objects.Render(0.2f);
+                objects.RenderEveryTick(0.2f);
+                textures.LateUpdate();
+                animation.UpdateDirty(frame);
+                animation.Render();
+                paths.UpdateNavGrids(false);
+                probes.TickFrame();
+                camera.Update();
+                terrain.Render(default(Vector2I), default(Vector2I), false);
+                KFMOD.RenderEveryTick(0.2f);
+                app.LateUpdate();
+                if (frame == 0)
+                {
+                    var capture = CurrentWindow();
+                    var worker = new Thread(() =>
+                    {
+                        Sim.HandleMessage(SimMessageHashes.PrepareGameData, 0, null);
+                        new Game().Update();
+                    });
+                    worker.Start();
+                    worker.Join();
+                    Check(ReferenceEquals(capture, CurrentWindow()),
+                        "an off-thread frame anchor cannot replace the active main-thread capture");
+                }
+            }
+            string report = Debug.Messages.Find(message => message.StartsWith("[CycleTrim][FrameChain] ", StringComparison.Ordinal));
+            Check(report != null, "coarse stage hooks must produce a structured complete-window report");
+            using (var json = JsonDocument.Parse(report.Substring("[CycleTrim][FrameChain] ".Length)))
+            {
+                var root = json.RootElement;
+                long frames = root.GetProperty("frames").GetInt64();
+                long self = 0;
+                bool nativeChecked = false;
+                foreach (var phase in root.GetProperty("phases").EnumerateArray())
+                {
+                    Check(phase.GetProperty("resolved").GetBoolean(), "all fixture stage targets must resolve");
+                    Check(phase.GetProperty("calls").GetInt64() == frames,
+                        "every coarse fixture hook must execute once on each completed main-thread interval");
+                    self += phase.GetProperty("selfTicks").GetInt64();
+                    if (phase.GetProperty("name").GetString() == "Sim.PrepareGameData")
+                    {
+                        nativeChecked = true;
+                        Check(phase.GetProperty("calls").GetInt64() == frames,
+                            "PrepareGameData must exclude other messages and off-thread invocations");
+                    }
+                }
+                Check(nativeChecked && self == root.GetProperty("coveredTicks").GetInt64()
+                    && self + root.GetProperty("unattributedTicks").GetInt64() == root.GetProperty("totalTicks").GetInt64(),
+                    "structured self totals must partition the full interval without adding inclusive parents");
+            }
+            Console.WriteLine(report);
         }
 
         private static Game RunFrames(int count)

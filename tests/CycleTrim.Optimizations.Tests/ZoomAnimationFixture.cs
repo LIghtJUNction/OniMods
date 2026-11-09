@@ -69,7 +69,7 @@ public sealed class KBatchedAnimController : UnityEngine.Object
     }
 }
 
-public sealed class CameraController
+public sealed partial class CameraController
 {
     public static CameraController Instance = new CameraController();
     public float OrthographicSize;

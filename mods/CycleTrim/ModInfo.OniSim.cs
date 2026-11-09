@@ -28,10 +28,14 @@ namespace CycleTrim
             // Steam forwards launch arguments to an existing client, but not
             // the launching shell's environment, so expose the native probe as
             // an explicit diagnostic-only launch argument as well.
-            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cycletrim-gpu-profile") >= 0)
+            var arguments = Environment.GetCommandLineArgs();
+            bool performanceDiagnostics = CycleTrimPatchOptions.DiagnosticsRequested(
+                options.EnablePerformanceDiagnostics, arguments,
+                Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));
+            if (performanceDiagnostics || Array.IndexOf(arguments, "--cycletrim-gpu-profile") >= 0)
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
-            else
-                Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", null);
+            // Preserve an explicit native diagnostic environment setting.
+            // --cycletrim-perf-probe now enables both ends of the frame chain.
             FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator
             // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).
@@ -42,7 +46,7 @@ namespace CycleTrim
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
-                options.EnablePerformanceDiagnostics, options.OptimizeSaveMetadata,
+                performanceDiagnostics, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
                 options.OptimizeAnimationSymbols, options.OptimizeStateMachineLookups,
                 options.ConduitAnimation, true);
@@ -57,6 +61,9 @@ namespace CycleTrim
                     if (!string.IsNullOrWhiteSpace(nativePath))
                     {
                         var reader = OniSimPublicationReader.Open(nativePath);
+#if !PERFORMANCE_PROBE_HOST_TESTS
+                        PresentationUploadGate.SetReader(reader);
+#endif
                         var provider = new OniSimMulticomponentProvider(reader.Acquire, reader.Release);
                         if (!MulticomponentCellAccess.RegisterProvider(provider))
                             Console.WriteLine("[CycleTrim] Multicomponent provider was already registered.");

@@ -18,6 +18,7 @@ namespace OniSim.Compatibility
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int StatusDelegate();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate ulong GenerationDelegate();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int CopyImageDelegate(IntPtr destination, int capacity);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int PresentationUpdateDelegate(out PresentationUpdate update, uint capacity);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int GpuPathfinderInitGridDelegate(uint width, uint height, IntPtr navMask, uint count);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int GpuPathfinderEvaluateChoresDelegate(uint originCell, IntPtr chores, uint count);
 
@@ -35,6 +36,7 @@ namespace OniSim.Compatibility
         public readonly StatusDelegate GetLastStatus;
         public readonly GenerationDelegate GetGeneration;
         public readonly CopyImageDelegate CopyGridImage, CopyMulticomponentImage;
+        public readonly PresentationUpdateDelegate GetPresentationUpdate;
         public readonly GpuPathfinderInitGridDelegate GpuPathfinderInitGrid;
         public readonly GpuPathfinderEvaluateChoresDelegate GpuPathfinderEvaluateChores;
         public readonly string Path;
@@ -64,6 +66,7 @@ namespace OniSim.Compatibility
             CopyMulticomponentImage = TryLoad<CopyImageDelegate>("ONISIM_CopyMulticomponentImage");
             AcquireMulticomponentUpdate = TryLoad<PointerDelegate>("ONISIM_AcquireMulticomponentUpdate");
             ReleaseMulticomponentUpdate = TryLoad<VoidDelegate>("ONISIM_ReleaseMulticomponentUpdate");
+            GetPresentationUpdate = TryLoad<PresentationUpdateDelegate>("ONISIM_GetPresentationUpdate");
             GpuPathfinderInitGrid = TryLoad<GpuPathfinderInitGridDelegate>("ONISIM_GpuPathfinder_InitGrid");
             GpuPathfinderEvaluateChores = TryLoad<GpuPathfinderEvaluateChoresDelegate>("ONISIM_GpuPathfinder_EvaluateChores");
             uint version = GetAbiVersion();

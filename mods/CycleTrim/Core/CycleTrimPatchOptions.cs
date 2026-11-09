@@ -1,7 +1,16 @@
+using System;
+
 namespace CycleTrim.Core
 {
     internal static class CycleTrimPatchOptions
     {
+        internal static bool DiagnosticsRequested(bool configured, string[] arguments, string environment)
+        {
+            return configured || Array.IndexOf(arguments, "--cycletrim-perf-probe") >= 0
+                || string.Equals(environment, "1", StringComparison.Ordinal)
+                || string.Equals(environment, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(environment, "yes", StringComparison.OrdinalIgnoreCase);
+        }
         internal static bool OptimizePickupCandidates { get; private set; } = true;
         internal static bool ThrottleBusyDuplicants { get; private set; } = true;
         internal static bool ThrottleStationaryCritters { get; private set; } = true;
