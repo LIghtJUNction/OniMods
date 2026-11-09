@@ -9,6 +9,10 @@ mod liquid;
 #[path = "presentation_sun.rs"]
 mod sun;
 
+#[cfg(test)]
+#[path = "presentation_validation_tests.rs"]
+mod validation_tests;
+
 use crate::bytes::overlaps;
 use crate::status::{Error, Result, Status};
 use crate::tables::ElementTable;
@@ -91,11 +95,7 @@ impl PresentationBuffers {
 
     fn validate(&self, world: &PhysicsWorld, elements: &ElementTable) -> Result<()> {
         if world.width.checked_mul(world.height) != Some(self.flow.len())
-            || world
-                .write
-                .element
-                .iter()
-                .any(|&element| element as usize >= elements.len())
+            || !crate::id_validation::valid_u16::<false>(&world.write.element, elements.len())
             || world.world_offsets.iter().any(|&[x, y, width, height]| {
                 let top = y as i64 + height as i64 - 1;
                 width > 0
