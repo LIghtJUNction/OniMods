@@ -125,6 +125,13 @@ enum Batch {
     ZeroAdvance,
     AdvanceZero,
     Immediate,
+    CommandThenZero,
+    ZeroThenCommand,
+    TwoZeroCommands,
+    CommandAdvance,
+    AdvanceCommand,
+    RepartitionZero,
+    AdvanceVisible,
 }
 
 fn scripted_frame(engine: &crate::frames_engine::Engine, elapsed: f32) -> crate::frames::QueuedFrame {
@@ -141,6 +148,17 @@ fn scripted_frame(engine: &crate::frames_engine::Engine, elapsed: f32) -> crate:
     ok(frame.early.queue(crate::frames_commands::SET_DEBUG, &debug,
         &crate::worker_shape::WorldShape::from_world(&engine.world), &engine.elements,
         engine.diseases.as_deref()));
+    frame
+}
+
+fn replacement_frame(engine: &crate::frames_engine::Engine, cell: usize, mass: f32)
+    -> crate::frames::QueuedFrame
+{
+    let mut frame = scripted_frame(engine, 0.0);
+    frame.material.modifications.push(crate::cell_material::Modification {
+        cell, callback: 23, temperature: 315.0, mass,
+        count: 0, element: 5, replace_type: 1, disease: 255, subtype: 1,
+    });
     frame
 }
 
@@ -182,8 +200,32 @@ fn presentation_revision_engine_oracle_child() {
         script.extend([Batch::Empty, Batch::Empty, Batch::Zero, Batch::Empty,
             Batch::Debug, Batch::Zero, Batch::Empty, Batch::Zero]);
     }
+    // Preserve the original 73-batch trajectory, then extend it. A zero-time
+    // command publication already owns one current, zero-flow image buffer;
+    // empty refreshes the other and the following zero must reuse it.
+    assert_eq!(script.len(), 73);
+    let original_batches = script.len();
+    let mut reuse_after_command = Vec::new();
+    for command in [Batch::Replace, Batch::Properties, Batch::CommandThenZero,
+        Batch::ZeroThenCommand, Batch::TwoZeroCommands]
+    {
+        reuse_after_command.push(script.len() + 2);
+        script.extend([command, Batch::Empty, Batch::Zero, Batch::Empty,
+            Batch::Debug, Batch::Zero, Batch::Advance]);
+    }
+    for mixed in [Batch::ZeroAdvance, Batch::AdvanceZero,
+        Batch::CommandAdvance, Batch::AdvanceCommand]
+    {
+        script.extend([mixed, Batch::Empty, Batch::Zero, Batch::Empty,
+            Batch::Zero, Batch::Advance]);
+    }
+    script.extend([Batch::RepartitionZero, Batch::Empty, Batch::Zero,
+        Batch::AdvanceVisible, Batch::Empty, Batch::Zero, Batch::Advance]);
+    assert_eq!(script.len(), 139);
     let mut file = std::io::BufWriter::new(std::fs::File::create(path).unwrap());
     let mut first_images = None;
+    let mut previous_revision = 0;
+    let mut current_regions = regions.clone();
     for (index, kind) in script.into_iter().enumerate() {
         let mut frames = Vec::new();
         match kind {
@@ -214,17 +256,39 @@ fn presentation_revision_engine_oracle_child() {
                     engine.diseases.as_deref()));
                 frames.push(frame);
             }
-            Batch::Replace => {
-                let mut frame = scripted_frame(&engine, 0.0);
-                frame.material.modifications.push(crate::cell_material::Modification {
-                    cell: top_liquid, callback: 23, temperature: 315.0, mass: 120.0,
-                    count: 0, element: 5, replace_type: 1, disease: 255, subtype: 1,
-                });
-                frames.push(frame);
-            }
+            Batch::Replace => frames.push(replacement_frame(&engine, top_liquid, 120.0)),
             Batch::Advance => frames.push(scripted_frame(&engine, 0.2)),
             Batch::ZeroAdvance => frames.extend([scripted_frame(&engine, 0.0), scripted_frame(&engine, 0.2)]),
             Batch::AdvanceZero => frames.extend([scripted_frame(&engine, 0.2), scripted_frame(&engine, 0.0)]),
+            Batch::CommandThenZero => frames.extend([
+                replacement_frame(&engine, top_liquid, 140.0), scripted_frame(&engine, 0.0)]),
+            Batch::ZeroThenCommand => frames.extend([
+                scripted_frame(&engine, 0.0), replacement_frame(&engine, top_liquid, 160.0)]),
+            Batch::TwoZeroCommands => frames.extend([
+                replacement_frame(&engine, top_liquid, 130.0), replacement_frame(&engine, top_liquid, 150.0)]),
+            Batch::CommandAdvance => frames.extend([
+                replacement_frame(&engine, top_liquid, 170.0), scripted_frame(&engine, 0.2)]),
+            Batch::AdvanceCommand => frames.extend([
+                scripted_frame(&engine, 0.2), replacement_frame(&engine, top_liquid, 180.0)]),
+            Batch::RepartitionZero => {
+                current_regions = vec![
+                    crate::world::Region { max_x: 17, sunlight: 0.6, ..regions[0] },
+                    crate::world::Region { min_x: 17, sunlight: 0.9, ..regions[0] },
+                ];
+                frames.push(scripted_frame(&engine, 0.0));
+            }
+            Batch::AdvanceVisible => {
+                let mut frame = scripted_frame(&engine, 0.2);
+                let mut debug = [0_u8; 12];
+                debug[..4].copy_from_slice(&0.001_f32.to_le_bytes());
+                debug[4..8].copy_from_slice(&0.001_f32.to_le_bytes());
+                // Unlike the other scripted advances, respect the preceding
+                // delayed visibility handoffs rather than simulate_all_active.
+                ok(frame.early.queue(crate::frames_commands::SET_DEBUG, &debug,
+                    &crate::worker_shape::WorldShape::from_world(&engine.world), &engine.elements,
+                    engine.diseases.as_deref()));
+                frames.push(frame);
+            }
             Batch::Immediate => {
                 // Mirrors State.with_world_mut's required cache invalidation.
                 engine.world.write.mass[top_liquid] = 33.0;
@@ -233,11 +297,24 @@ fn presentation_revision_engine_oracle_child() {
                 engine.invalidate_empty_publications();
             }
         }
+        if index == original_batches { engine.world.accumulated_flow.fill(3.25); }
+        if index >= original_batches {
+            // Prepare changes the previous publication's visibility. Engine's
+            // existing swap applies that input with its actual buffer delay.
+            for (cell, visible) in buffers[1 - index % 2].visible.iter_mut().enumerate() {
+                *visible = if (cell + index) % 7 == 0 { 0 } else { 255 };
+            }
+        }
         if force { engine.invalidate_empty_publications(); }
         let [first, second] = &mut buffers;
         let (output, old) = if index % 2 == 0 { (first, &*second) } else { (second, &*first) };
         output.retired_slots.clear();
-        ok(engine.run_batch(frames, &regions, output, old));
+        ok(engine.run_batch(frames, &current_regions, output, old));
+        if !force && reuse_after_command.contains(&index) {
+            assert_eq!(output.presentation_revision, previous_revision,
+                "zero commands -> empty -> zero must reuse the two current buffers at batch {index}");
+        }
+        previous_revision = output.presentation_revision;
         if index == 0 { first_images = Some(textures(output)); }
         if index == 4 {
             assert_ne!(first_images.as_ref().unwrap(), &textures(output),
@@ -298,6 +375,6 @@ fn presentation_revision_alternating_idle_matches_forced_engine_recomputation() 
         count += 1;
     }
     assert!(next(&mut forced).is_none());
-    assert_eq!(count, 73);
+    assert_eq!(count, 139);
     std::fs::remove_dir_all(directory).unwrap();
 }

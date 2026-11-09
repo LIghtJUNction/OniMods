@@ -27,6 +27,7 @@ namespace CycleTrim.Optimizations.Tests
             var harmony = Install();
             try
             {
+                RetainedSunHistories();
                 using (var fixture = new Images())
                 {
                     var textures = new PropertyTextures(8, 4);
@@ -177,6 +178,38 @@ namespace CycleTrim.Optimizations.Tests
             if (!condition) throw new InvalidOperationException("Presentation upload: " + detail);
         }
 
+        private static void RetainedSunHistories()
+        {
+            using (var fixture = new Images())
+            {
+                var textures = new PropertyTextures(8, 4);
+                PresentationUploadGate.SetReader(fixture.Read);
+                for (int step = 0; step < 8; step++)
+                {
+                    int buffer = step % 2;
+                    fixture.PublishSunHistory(buffer, buffer == 0 ? (byte)17 : (byte)203,
+                        (ulong)(100 + buffer));
+                    int before = textures.Textures.Sum(texture => texture.ApplyCalls);
+                    textures.LateUpdate();
+                    fixture.EqualPublishedPixels(textures);
+                    Check(textures.Textures.Sum(texture => texture.ApplyCalls) == before + 5,
+                        "different retained sun histories upload when their native buffer identities alternate");
+                    textures.LateUpdate();
+                    fixture.EqualPublishedPixels(textures);
+                    Check(textures.Textures.Sum(texture => texture.ApplyCalls) == before + 5,
+                        "rendering the same retained publication can still reuse its successful upload");
+                }
+                fixture.PublishSunHistory(0, 203, 102);
+                textures.LateUpdate();
+                int uploaded = textures.Textures.Sum(texture => texture.ApplyCalls);
+                fixture.PublishSunHistory(1, 203, 102);
+                textures.LateUpdate();
+                fixture.EqualPublishedPixels(textures);
+                Check(textures.Textures.Sum(texture => texture.ApplyCalls) == uploaded,
+                    "a subsequently proven identical history may share its identity across native addresses");
+            }
+        }
+
         private static void EqualCalls(PropertyTextures textures, int expected, string detail)
         {
             Check(textures.Textures.All(texture => texture.LoadCalls == expected && texture.ApplyCalls == expected), detail);
@@ -221,6 +254,12 @@ namespace CycleTrim.Optimizations.Tests
 
             internal void SwapPointers() { SetPointers(1); }
             internal void MismatchFlowPointer() { PropertyTextures.externalFlowTex = pointers[0][0]; }
+            internal void PublishSunHistory(int buffer, byte firstPixel, ulong revision)
+            {
+                Marshal.WriteByte(pointers[buffer][4], firstPixel);
+                Header.Revision = revision;
+                SetPointers(buffer);
+            }
             private void SetPointers(int index)
             {
                 var p = pointers[index];
@@ -233,6 +272,17 @@ namespace CycleTrim.Optimizations.Tests
             {
                 for (int i = 0; i < 5; i++)
                     Check(pixels[i].SequenceEqual(textures.Textures[i].UploadedBytes), "uploaded bytes match source image " + i);
+            }
+
+            internal void EqualPublishedPixels(PropertyTextures textures)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var expected = new byte[pixels[i].Length];
+                    Marshal.Copy(PropertyTextures.Pointer(i), expected, 0, expected.Length);
+                    Check(expected.SequenceEqual(textures.Textures[i].UploadedBytes),
+                        "retained image bytes match the currently published buffer " + i);
+                }
             }
 
             public void Dispose()

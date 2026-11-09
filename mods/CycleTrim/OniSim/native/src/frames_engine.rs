@@ -32,6 +32,9 @@ pub(crate) struct Engine {
     // An idle zero-time batch synchronizes read/write without changing cells.
     // Empty batches after that synchronization do not make read stale again.
     idle_read_synchronized: bool,
+    // None until the first reuse in this epoch compares all five image bytes.
+    // Warmup alone does not prove equality of sunlight's retained pixels.
+    presentation_images_equal: Option<bool>,
     presentation_revision: crate::presentation_revision::PresentationRevision,
     publication_profile: [u32; 4],
     zero_frame_command_mask: u8,
@@ -70,6 +73,7 @@ impl Engine {
             gpu,
             empty_publication_streak: 0,
             idle_read_synchronized: false,
+            presentation_images_equal: None,
             presentation_revision: Default::default(),
             publication_profile: [0; 4],
             zero_frame_command_mask: 0,
@@ -81,6 +85,12 @@ impl Engine {
     pub(crate) fn invalidate_empty_publications(&mut self) {
         self.empty_publication_streak = 0;
         self.idle_read_synchronized = false;
+        self.presentation_images_equal = None;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn exhaust_presentation_revision_for_test(&mut self) {
+        self.presentation_revision.exhaust_for_test();
     }
 
     /// One official Step/CopySimDataToGame batch. The worker calls this with
@@ -93,8 +103,9 @@ impl Engine {
         old: &GameData,
     ) -> Result<()> {
         let empty_batch = frames.is_empty();
-        let idle_frames = !empty_batch && frames.iter().all(|frame| {
-            frame.elapsed == 0.0 && frame.early.only_debug() && frame.material.is_empty()
+        let zero_time_frames = !empty_batch && frames.iter().all(|frame| frame.elapsed == 0.0);
+        let idle_frames = zero_time_frames && frames.iter().all(|frame| {
+            frame.early.only_debug() && frame.material.is_empty()
                 && frame.world.is_empty() && frame.thermal.is_empty() && frame.mass.is_empty()
                 && frame.radiation.is_empty()
         });
@@ -102,13 +113,13 @@ impl Engine {
         // liquid presentation also read. Refill both buffers then. Once that
         // synchronization is established, empty/zero alternation is unchanged
         // work: the worker may select either kind after a real Prepare handoff.
-        if idle_frames && !self.idle_read_synchronized { self.empty_publication_streak = 0; }
+        if idle_frames && !self.idle_read_synchronized { self.invalidate_empty_publications(); }
         let unchanged_batch = empty_batch || idle_frames;
         let reuse_derived = unchanged_batch && self.empty_publication_streak >= 2;
         static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         let mut profile_batch = false;
         if *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some()) {
-            let zero_with_commands = !empty_batch && !idle_frames && frames.iter().all(|frame| frame.elapsed == 0.0);
+            let zero_with_commands = zero_time_frames && !idle_frames;
             let category = if empty_batch { 0 } else if idle_frames { 1 } else if zero_with_commands { 2 } else { 3 };
             self.publication_profile[category] += 1;
             profile_batch = self.publication_profile.iter().sum::<u32>() % 64 == 1;
@@ -273,10 +284,19 @@ impl Engine {
         if !reuse_derived {
             output.presentation.update(&self.world, &self.elements)?;
             self.presentation_revision.generated();
+            output.presentation_revision = self.presentation_revision.current();
+            self.presentation_images_equal = None;
+        } else if self.presentation_revision.current() == 0 {
+            // Exhaustion permanently disables all identities, including old
+            // nonzero per-buffer IDs that would otherwise survive a reuse.
+            output.presentation_revision = 0;
+        } else if *self.presentation_images_equal.get_or_insert_with(|| {
+            output.presentation.same_image_bytes(&old.presentation)
+        }) {
+            // Both buffers contain exactly the same five images. A different
+            // retained sunlight history instead keeps this buffer's own ID.
+            output.presentation_revision = old.presentation_revision;
         }
-        // The existing reuse gate proves both alternating buffers contain the
-        // unchanged derived images. Their different addresses share one identity.
-        output.presentation_revision = self.presentation_revision.current();
         let textures_ms = lap();
         if !reuse_derived {
             output.multicomponent.update_from_world(
@@ -295,8 +315,16 @@ impl Engine {
         // ReadyLease::release_with. The native Step swaps output's existing
         // visibility storage here; copying old.visible would remove its delay.
         std::mem::swap(&mut self.world.active_mask, &mut output.visible);
-        if idle_frames { self.idle_read_synchronized = true; }
+        // Every zero-time frame synchronizes read after its commands. No later
+        // publication stage changes read/write, and none of these frames can
+        // generate flow after the batch's initial clear. A successful command
+        // batch has therefore already generated the first current buffer. The
+        // next unchanged batch need only refresh the other buffer. Advancing
+        // or mixed-time batches cannot establish this: their nonzero flow may
+        // be cleared by the next empty batch, changing its derived images.
+        if zero_time_frames { self.idle_read_synchronized = true; }
         if unchanged_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
+        else if zero_time_frames { self.empty_publication_streak = 1; }
         if profile_batch {
             let finalize_ms = lap();
             let total_ms = simulation_ms + grid_ms + textures_ms + species_ms + finalize_ms;

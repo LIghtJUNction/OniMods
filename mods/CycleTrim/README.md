@@ -2,11 +2,11 @@
 
 ![CycleTrim](preview.gif)
 
-**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib) **0.3.2 或更新版本**，再重启游戏。CycleTrim 0.4.10 使用新的批量读取接口，启动器会在加载实现前检查依赖版本。消费者包不再内嵌一份 Jlib。
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib) **0.3.2 或更新版本**，再重启游戏。CycleTrim 自 0.4.10 起使用新的批量读取接口，启动器会在加载实现前检查依赖版本。消费者包不再内嵌一份 Jlib。
 
 极具颠覆性的高风险实验性性能优化 Mod，仍在早期开发。方向是重构底层算法，把尽可能多的运算搬到 GPU。顺序是先加速，再兼容。**只在可丢弃的测试存档上使用。**
 
-当前版本（0.4.10）已经开始拆「一格一物」：OniSim 允许一格内第二种气体共存（`FLAG_MULTICOMPONENT_COEXISTENCE`），多组分气体通量与 GPU 热扩散已接入原生时间步。存档仍只保存主元素 + 运行时组分叠加，三种以上组分与完整存读档尚未贯通。原始分析与界限见 [下个版本：实验替换一格一物](docs/next-cell-representation.md)，GPU 接入现状见下文 [GPU 进度](#gpu-进度2026-11-08)。
+当前版本（0.4.12）已经开始拆「一格一物」：OniSim 允许一格内第二种气体共存（`FLAG_MULTICOMPONENT_COEXISTENCE`），多组分气体通量与 GPU 热扩散已接入原生时间步。存档仍只保存主元素 + 运行时组分叠加，三种以上组分与完整存读档尚未贯通。原始分析与界限见 [下个版本：实验替换一格一物](docs/next-cell-representation.md)，GPU 接入现状见下文 [GPU 进度](#gpu-进度2026-11-08)。
 
 下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
 
@@ -14,6 +14,8 @@
 
 ## 快速索引（本页为总览）
 
+- [全游戏更新链路与诊断（0.4.12）](#全游戏更新链路与诊断0412)
+- [本轮完整实验与验收边界](../../docs/cycletrim-whole-chain-20261109.md)
 - [下个版本：实验替换一格一物](docs/next-cell-representation.md)
 - [GPU 进度（2026-11-08）](#gpu-进度2026-11-08)
 - [多组分假设审计](docs/multicomponent-assumptions-audit.md)
@@ -24,6 +26,20 @@
 - [验证与兼容性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#兼容与说明)
 - [性能实测摘要](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#性能实测摘要)
 - [详细说明与日志](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#详细说明与日志)
+
+## 全游戏更新链路与诊断（0.4.12）
+
+一次游戏更新包含原生仿真、结果发布、建筑和对象状态机、寻路队列、属性纹理、动画以及 UI、相机和声音。GPU 内核变快之后，主线程仍可能在这些交接处计算或等待。0.4.12 把诊断扩展到 22 个阶段，并测量相邻 `Game.Update` 入口之间的完整间隔；独立 Unity 回调也在审查范围内。[调用链与源码依据](../../docs/cycletrim-whole-chain-20261109.md#2-一次更新经过哪些边界)
+
+在 Steam 启动参数中加入 `--cycletrim-perf-probe`，即可同时开启托管阶段与原生批次诊断。`Player.log` 中的 `[CycleTrim][FrameChain]` JSON 记录完整区间、中位数、P95/P99、各阶段包含子调用的耗时和扣除子调用的自身耗时，以及尚未归因的时间。日志解析命令：
+
+```bash
+python3 scripts/analyze_cycletrim_frame_chain.py /absolute/path/Player.log --output frame-chain.json
+```
+
+父阶段和子阶段的耗时不能直接相加；`PrepareGameData` 和 `JobManager.Run` 都可能包含工作与等待，未归因时间也不能直接当作 GPU 时间。这里的更新入口频率不是显示器实际呈现的 FPS。诊断默认关闭，关闭时不安装专用计时补丁。[指标定义与验证范围](../../docs/cycletrim-whole-chain-20261109.md#4-22-个阶段的计时含义)
+
+本轮修正 empty/zero 交替交接反复丢失空闲发布复用状态的问题，并评估原生发布版本驱动的纹理上传复用。完整报告同时保留失败候选、全部对照场景与尾部耗时，不从单个函数的提速推导整局帧率；当前环境没有新的 ONI 实机或硬件 GPU 帧率验收。[完整实验记录](../../docs/cycletrim-whole-chain-20261109.md)
 
 ## 算法演进：从一格一物排挤到 GPU 泊松压力投影 (Stage 2/2.1)
 

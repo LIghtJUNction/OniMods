@@ -68,6 +68,8 @@ mod presentation_revision;
 #[cfg(test)]
 mod presentation_revision_tests;
 #[cfg(test)]
+mod presentation_identity_tests;
+#[cfg(test)]
 mod native_chain_tests;
 mod radiation;
 mod radiation_rays;

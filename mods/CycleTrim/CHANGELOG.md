@@ -1,3 +1,12 @@
+## 2026-11-09 — 0.4.12
+
+- Trace 22 managed phases across the complete interval between consecutive `Game.Update` entries, including state-machine simulation/render callbacks, native prepare, job dispatch/wait, textures, animation, navigation, UI, camera, terrain and audio. Report inclusive and self time separately, track uncovered intervals and GC collection-count deltas, and discard incomplete lifecycle boundaries. Diagnostics remain off by default.
+- Unify managed and native diagnostics under `--cycletrim-perf-probe`, preserving explicit native profiling settings. Add a strict JSON log analyzer with bounded-window and schema checks; callback cadence and host timings are not presented game FPS.
+- Preserve idle derived-publication reuse across real empty/zero worker handovers. Commands, advancing batches and direct world mutations invalidate the previous content proof; the first required read/write synchronization still regenerates the affected publication buffers. A successfully completed all-zero-time command batch records its actual synchronization and counts its generated image as the first warmed buffer.
+- Publish an optional versioned native presentation descriptor and reuse a completed texture upload only when native content identity, texture identity, dimensions, length, image, cache epoch and Unity mutation counter agree. Changed inputs retain the original upload; failed or re-entrant operations cannot publish a stale completion stamp. Carry the existing cache record through the paired upload calls to avoid repeated lookups on changing frames.
+- Compare the five image byte arrays once at the first reuse in each unchanged epoch before sharing an identity across buffers. Dynamic world-offset changes can leave different historical sunlight pixels; those buffers retain independent identities and normal uploads. Preserve signed-zero and NaN bit patterns, clear the proof on invalidation, and keep all identities disabled after counter exhaustion.
+- Review the complete native-to-managed publication boundary and retain all experimental controls. The liquid-scan shortcut was removed after failing its predeclared complete-batch improvement gate. The report records failed attempts and subsequent complete comparisons separately, including tail timings and unavailable ONI/hardware GPU validation: [whole-chain report](../../docs/cycletrim-whole-chain-20261109.md).
+
 ## 2026-11-09 — 0.4.11
 
 - Prepare energy and velocity for small regions that use CPU transport while a GPU is available, preserving the selected backend's inputs.

@@ -66,6 +66,21 @@ impl PresentationBuffers {
         Ok(())
     }
 
+    /// Content identity includes retained pixels outside current world offsets.
+    /// Float equality is insufficient: +0/-0 and NaN payloads are image bytes.
+    pub(crate) fn same_image_bytes(&self, other: &Self) -> bool {
+        let flow_equal = self.flow.len() == other.flow.len() && unsafe {
+            // Every element is an initialized, padding-free [f32; 2]. These
+            // immutable byte views cover exactly the two owned allocations.
+            std::slice::from_raw_parts(self.flow.as_ptr().cast::<u8>(),
+                std::mem::size_of_val(&*self.flow))
+                == std::slice::from_raw_parts(other.flow.as_ptr().cast::<u8>(),
+                    std::mem::size_of_val(&*other.flow))
+        };
+        flow_equal && self.liquid == other.liquid && self.liquid_data == other.liquid_data
+            && self.material == other.material && self.exposed == other.exposed
+    }
+
     /// Descriptor fields +456, +464, +472, +480, +488, in that order.
     /// These are CPU addresses; they are not Unity native texture handles.
     pub(crate) fn pointers(&self) -> [usize; 5] {

@@ -33,6 +33,9 @@ impl PresentationRevision {
     }
 
     pub(crate) fn current(&self) -> u64 { self.0.unwrap_or(0) }
+
+    #[cfg(test)]
+    pub(crate) fn exhaust_for_test(&mut self) { self.0 = None; }
 }
 
 #[cfg(test)]

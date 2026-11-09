@@ -2,11 +2,11 @@
 
 ![CycleTrim](preview.gif)
 
-**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) version **0.3.2 or later**, then restart the game. CycleTrim 0.4.10 uses the new batch-read interface; its bootstrap checks the dependency version before loading the implementation. Consumer packages no longer embed Jlib.
+**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) version **0.3.2 or later**, then restart the game. CycleTrim has used the batch-read interface since 0.4.10; its bootstrap checks the dependency version before loading the implementation. Consumer packages no longer embed Jlib.
 
 A disruptive, high-risk experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. **Use it only with disposable test saves.**
 
-The current build (0.4.10) has started removing one-element-per-cell flow: OniSim lets a second gas species share a cell (`FLAG_MULTICOMPONENT_COEXISTENCE`), and multicomponent gas flux plus GPU thermal diffusion run inside the native tick. Saves still store the dominant element plus a runtime mixture overlay; three or more species and full save/load are not done. The original argument and limits are in [next cell representation](docs/next-cell-representation.md); the current GPU wiring is in [GPU progress](#gpu-progress-2026-11-08).
+The current build (0.4.12) has started removing one-element-per-cell flow: OniSim lets a second gas species share a cell (`FLAG_MULTICOMPONENT_COEXISTENCE`), and multicomponent gas flux plus GPU thermal diffusion run inside the native tick. Saves still store the dominant element plus a runtime mixture overlay; three or more species and full save/load are not done. The original argument and limits are in [next cell representation](docs/next-cell-representation.md); the current GPU wiring is in [GPU progress](#gpu-progress-2026-11-08).
 
 The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
 
@@ -14,6 +14,8 @@ This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is
 
 ## Index (summary page)
 
+- [Whole-game update chain and diagnostics (0.4.12)](#whole-game-update-chain-and-diagnostics-0412)
+- [Complete experiments and acceptance limits](../../docs/cycletrim-whole-chain-20261109.md)
 - [Next version: replace one element per cell](docs/next-cell-representation.md)
 - [GPU progress (2026-11-08)](#gpu-progress-2026-11-08)
 - [Multicomponent assumptions audit](docs/multicomponent-assumptions-audit.md)
@@ -23,6 +25,20 @@ This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is
 - [Compatibility](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#compatibility)
 - [Benchmark summary](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#benchmark-summary)
 - [Detailed docs and logs](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#detailed-docs-and-notes)
+
+## Whole-game update chain and diagnostics (0.4.12)
+
+A game update includes native simulation, publication, building and object state machines, pathfinding queues, property textures, animation, UI, camera and audio. Faster GPU kernels can still leave the main thread computing or waiting at those boundaries. Version 0.4.12 extends diagnostics to 22 phases and measures the complete interval between consecutive `Game.Update` entries, including independent Unity callbacks in the review. See the [call-chain evidence](../../docs/cycletrim-whole-chain-20261109.md).
+
+Add `--cycletrim-perf-probe` to the Steam launch arguments to enable both managed phase and native batch diagnostics. `[CycleTrim][FrameChain]` JSON in `Player.log` records complete intervals, median, P95/P99, inclusive and self phase time, and unattributed time. Parse the log with:
+
+```bash
+python3 scripts/analyze_cycletrim_frame_chain.py /absolute/path/Player.log --output frame-chain.json
+```
+
+Do not add parent and child inclusive times. `PrepareGameData` and `JobManager.Run` can include both work and waits, and unattributed time is not a GPU timer. Update-entry cadence is not presented FPS. Diagnostics are off by default; their timing-only patches are absent when disabled. The [validation report](../../docs/cycletrim-whole-chain-20261109.md) defines the measurements and their limits.
+
+This iteration repairs idle publication reuse across alternating empty/zero worker handovers and evaluates native publication revisions for texture-upload reuse. The report preserves failed candidates, every control scenario and tail timings. Function or host improvements do not establish whole-game FPS; this environment has no new ONI or hardware GPU frame-rate acceptance.
 
 ## Algorithm evolution: from per-cell displacement to GPU Poisson pressure projection (Stage 2/2.1)
 
