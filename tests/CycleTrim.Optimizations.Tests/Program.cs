@@ -50,6 +50,11 @@ namespace CycleTrim.Optimizations.Tests
                     ConduitVisualBenchmark.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--benchmark-pickup-highlight")
+                {
+                    PickupHighlightBenchmark.Run();
+                    return 0;
+                }
                 const string regressionPrefix = "--regression-";
                 if (args.Length == 1 && args[0].StartsWith(regressionPrefix, StringComparison.Ordinal))
                 {
@@ -58,7 +63,7 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
-                        + "save, save-scoped, power, conveyor, animation, conduit or state-machine; "
+                        + "save, save-scoped, power, conveyor, animation, conduit, pickup-highlight or state-machine; "
                         + "--regression- selects one family");
                 // Several negative cases irreversibly load another provider or
                 // a growable assembly. Each complete family gets its own process
@@ -66,7 +71,7 @@ namespace CycleTrim.Optimizations.Tests
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit", "zoom-animation", "frame-rate" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit", "zoom-animation", "frame-rate", "pickup-highlight" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -93,6 +98,7 @@ namespace CycleTrim.Optimizations.Tests
                 case "animation": AnimationSymbolRegression.Run(); break;
                 case "zoom-animation": ZoomAnimationRegression.Run(); break;
                 case "frame-rate": FrameRateDiagnosticsRegression.Run(); break;
+                case "pickup-highlight": PickupHighlightRegression.Run(); break;
                 case "conduit":
                     ConduitVisualRefreshGateRegression.Run();
                     ConduitVisualRegression.Run();

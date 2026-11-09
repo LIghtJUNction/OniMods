@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using CycleTrim.Core;
 using HarmonyLib;
 using UnityEngine;
 
@@ -116,48 +117,61 @@ namespace CycleTrim.Patches
             }
             state.Highlighted.Clear();
 
-            var context = new VisitContext
-            {
-                Tag = (Tag)tagField.GetValue(__instance),
-                Colour = (Color)colourField.GetValue(__instance)
-            };
+            var tag = (Tag)tagField.GetValue(__instance);
+            var colour = (Color)colourField.GetValue(__instance);
+            var context = ThreadLocalObjectPool<VisitContext>.Rent();
             try
             {
-                // Preserve vanilla's all-world semantics: the resource panel
-                // intentionally highlights matching items even when the camera
-                // is panned later. Cache component resolution, not visibility.
-                ICollection<Pickupable> pickupables =
-                    ClusterManager.Instance.activeWorld.worldInventory.GetPickupables(context.Tag);
-                if (pickupables != null)
+                context.Tag = tag;
+                context.Colour = colour;
+                try
                 {
-                    foreach (Pickupable pickupable in pickupables)
+                    // Preserve vanilla's all-world semantics: the resource panel
+                    // intentionally highlights matching items even when the camera
+                    // is panned later. Cache component resolution, not visibility.
+                    ICollection<Pickupable> pickupables =
+                        ClusterManager.Instance.activeWorld.worldInventory.GetPickupables(context.Tag);
+                    if (pickupables != null)
                     {
-                        if (pickupable == null)
-                            continue;
-                        var controller = GetController(pickupable);
-                        if (controller == null || !context.Seen.Add(controller))
-                            continue;
-                        controller.HighlightColour = context.Colour;
-                        context.Highlighted.Add(controller);
+                        foreach (Pickupable pickupable in pickupables)
+                        {
+                            if (pickupable == null)
+                                continue;
+                            var controller = GetController(pickupable);
+                            if (controller == null || !context.Seen.Add(controller))
+                                continue;
+                            controller.HighlightColour = context.Colour;
+                            context.Highlighted.Add(controller);
+                        }
                     }
                 }
-            }
-            catch (Exception error)
-            {
-                // Roll back a partially completed pass before vanilla takes
-                // over; vanilla must also own the matching pointer-exit event.
-                for (int i = 0; i < context.Highlighted.Count; i++)
+                catch (Exception error)
                 {
-                    var controller = context.Highlighted[i];
-                    if (controller != null)
-                        controller.HighlightColour = Color.black;
+                    // Roll back a partially completed pass before vanilla takes
+                    // over; vanilla must also own the matching pointer-exit event.
+                    for (int i = 0; i < context.Highlighted.Count; i++)
+                    {
+                        var controller = context.Highlighted[i];
+                        if (controller != null)
+                            controller.HighlightColour = Color.black;
+                    }
+                    state.UseVanilla = true;
+                    Console.WriteLine("[CycleTrim] Pickup hover cache failed; using vanilla: " + error.Message);
+                    return true;
                 }
-                state.UseVanilla = true;
-                Console.WriteLine("[CycleTrim] Pickup hover cache failed; using vanilla: " + error.Message);
-                return true;
+                state.Highlighted.AddRange(context.Highlighted);
+                return false;
             }
-            state.Highlighted.AddRange(context.Highlighted);
-            return false;
+            finally
+            {
+                // Nested callbacks rent a separate context. Release all object
+                // references on success, fallback and even rollback failure.
+                context.Tag = default(Tag);
+                context.Colour = default(Color);
+                context.Seen.Clear();
+                context.Highlighted.Clear();
+                ThreadLocalObjectPool<VisitContext>.Return(context);
+            }
         }
 
         private static KAnimControllerBase GetController(Pickupable pickupable)

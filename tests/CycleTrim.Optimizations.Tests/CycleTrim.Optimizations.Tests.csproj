@@ -29,5 +29,8 @@
     <Compile Include="../../mods/CycleTrim/Patches/ConduitVisual*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Patches/ZoomRenderAccelerationPatch.cs" Link="ZoomRenderAccelerationPatch.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/FrameRateUnlockPatch.cs" Link="FrameRateUnlockPatch.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/PickupHighlightOptimizationPatch.cs" Link="PickupHighlightOptimizationPatch.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />
+    <Compile Include="../../mods/Jlib/PLibCore/PThreadLocalPool.cs" Link="PThreadLocalPool.cs" />
   </ItemGroup>
 </Project>

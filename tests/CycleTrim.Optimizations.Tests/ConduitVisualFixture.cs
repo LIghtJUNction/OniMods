@@ -300,7 +300,7 @@ public static class GridVisibleArea
     }
 }
 
-public sealed class ClusterManager
+public sealed partial class ClusterManager
 {
     public static ClusterManager Instance { get; set; } = new ClusterManager();
     public int activeWorldId
