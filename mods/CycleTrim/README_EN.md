@@ -71,7 +71,7 @@ The new formulation treats fluid as a variable-density finite-volume continuum e
 
 ### 3. GPU Closed-Loop Pipeline Vision
 $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
-The complete physical loop remains resident in GPU Device Memory, leaving the CPU to manage high-level entity interactions, state publishing, and gameplay queries.
+The goal is to keep the complete physical loop in GPU memory while the CPU handles entity interactions, publication and gameplay queries. The execution boundaries below describe the current implementation, which has not reached that complete resident loop.
 
 > **Status**: The Stage 2 CPU mathematical reference (residual $10^{-7}$, divergence decay, zero-velocity fixed point, and semantic comparators) and Stage 2.1 WGSL kernels (7 GPU operator tests and benchmark harness) are completed. Regional gas pressure projection, transport and thermal work now chain between GPU buffers inside the native tick; a global Poisson solver has not replaced the vanilla displacement path.
 
@@ -84,9 +84,9 @@ OniSim creates a `GpuSimulation` on wgpu 30 (Vulkan backend) at startup, enabled
 - Whole-grid GPU thermal diffusion (variable-coefficient finite volume) and species sensible-enthalpy conversion. Temperatures stay resident across steps; species-presence masks are compressed and uploads are block-incremental.
 - Eligible gas regions: multicomponent concentration diffusion, density-gradient velocity, pressure projection, transport and thermal work chained between GPU buffers.
 - Eligible liquid regions: sparse GPU multicomponent diffusion, overlapped with the CPU gas-pressure pass; diffusion snapshots cover only the active region.
-- CPU side: bubble simulation skips empty spans, liquid droplets settle, bubbles and droplets share one sparse scan, and idle zero-time frames reuse the previous publication.
+- CPU work includes region eligibility and packing, applying phase-transition results, events and building components. Stages use their CPU path when no GPU is available or a region is ineligible. Idle zero-time frames can reuse already generated publication data.
 
-**Working tree (uncommitted, no in-game acceptance yet):** new WGSL operators for bubble/droplet movement, phase-transition selection, gas pressure faces with liquid hydraulic head, liquid flow, disease diffusion and growth, radiation regions and inactive-cell mass decay, plus shared resident SoA buffers (`resident_cells`) for chaining operators. `cargo check --release` passes; there is no matching `Player.log` run or differential acceptance for these paths.
+**Whole-chain source review, 2026-11-09:** bubbles, thermal work, phase-transition selection, eligible gas pressure/transport, disease and radiation have GPU call paths, interleaved with uploads, waits, readback and CPU application. Multicomponent liquid diffusion has a GPU path, while production `gpu_liquid_flow` remains `false`: liquid pressure, flow and ordered displacement still execute on the CPU. WGSL operators and `resident_cells` in the repository do not establish that the entire production update has moved to the GPU. The [native-stage review](../../docs/cycletrim-whole-chain-20261109.md) records each boundary and its source.
 
 **Still open:** every step still uploads, waits on the GPU and reads back — this is not a fully device-resident pipeline. Event application, building interaction and publication stay on the CPU. Pressure, partial-pressure and liquid-volume-fraction publication, three or more species and full save/load are incomplete, and whole-game FPS gains are not fully validated. The latest `Player.log` (2026-11-08 00:26) shows GPU acceleration active on an RTX 4060 Laptop; later commits have no new in-game log yet. Details: [OniSim/gpu/README.md](OniSim/gpu/README.md), [OniSim/docs/progress.md](OniSim/docs/progress.md).
 

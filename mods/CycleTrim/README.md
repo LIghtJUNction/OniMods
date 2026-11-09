@@ -72,7 +72,7 @@ python3 scripts/analyze_cycletrim_frame_chain.py /absolute/path/Player.log --out
 
 ### 3. GPU 闭环流水线愿景
 $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
-完整物理循环完全驻留在 GPU Device Memory，CPU 仅保留状态快照、接口与上层游戏发布。
+目标是让完整物理循环驻留显存，CPU 处理状态快照、接口与上层游戏发布；当前实际执行边界见下节，尚未实现这一整环驻留目标。
 
 > **阶段说明**：Stage 2 的 CPU 数值参考（残差 $10^{-7}$、散度收敛、零速度不动点等 6 项测试）与 Stage 2.1 的 WGSL 核心算子（7 项 GPU Operator 测试及 Benchmark）均已就绪。区域气体的压力投影、传输与热计算已在原生时间步里于 GPU 缓冲区之间接力；全局泊松求解器仍未替换原版排挤路径。
 
@@ -85,9 +85,9 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 - 全图 GPU 热扩散（变系数有限体积）与组分显热焓换算；温度在步间驻留显存，组分存在掩码压缩上传，按变化块上传。
 - 符合条件的气体区域：多组分浓度扩散、密度梯度速度、压力投影、传输与热计算在 GPU 缓冲区间接力。
 - 符合条件的液体区域：GPU 多组分稀疏扩散，与 CPU 气压遍历重叠执行；扩散快照只覆盖活动区域。
-- CPU 侧：气泡模拟跳过空段，液滴沉降，气泡与液滴共用一次稀疏扫描；空闲零时长帧复用上一帧发布结果。
+- CPU 侧：区域资格扫描和打包、相变结果应用、事件与建筑组件仍需处理；没有 GPU 或区域不符合条件时，相关阶段执行 CPU 路径。空闲零时长帧可复用已经生成的发布结果。
 
-**工作区（尚未提交、尚未实机验收）：** 新增气泡/液滴移动、相变判定、气体压力面通量与液体水头、液体流动、疾病扩散与生长、辐射区域、非活动格质量衰减等 WGSL 算子，以及供算子串联的常驻 SoA 缓冲（`resident_cells`）。`cargo check --release` 可通过，但这些路径还没有对应的 `Player.log` 实机记录与差分验收。
+**2026-11-09 整链源码审查：** 气泡、温度、相变选择、符合条件的气体压力/传输、疾病与辐射存在 GPU 调用路径；上传、等待、读回及 CPU 应用仍穿插在固定步内。液体多组分扩散有 GPU 路径，但生产 `gpu_liquid_flow` 固定为 `false`，液体压力、流动和有序排挤仍由 CPU 执行。仓库中存在液体流动等 WGSL 算子和 `resident_cells` 缓冲，不代表整条路径已经接管生产更新。逐阶段依据见[原生固定步审查](../../docs/cycletrim-whole-chain-20261109.md#原生固定步也保留-cpu-阶段和同步)。
 
 **仍未完成：** 每个时间步仍有 CPU 上传、GPU 等待与读回，不是全流程显存驻留；事件应用、建筑交互和结果发布仍在 CPU；气压/分压/液体体积占比发布值、三种以上组分、完整存读档未贯通；整局帧率提升未完整验证。最近一份 `Player.log`（11-08 00:26）记录 GPU 在 RTX 4060 Laptop 上激活，之后的提交尚无新的实机日志。细节见 [OniSim/gpu/README.md](OniSim/gpu/README.md) 与 [OniSim/docs/progress.md](OniSim/docs/progress.md)。
 
