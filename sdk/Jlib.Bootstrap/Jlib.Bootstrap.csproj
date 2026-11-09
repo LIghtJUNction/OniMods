@@ -17,6 +17,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="*.cs" />
+    <AssemblyMetadata Include="JlibMinimumVersion" Value="$(JlibMinimumVersion)" Condition="'$(JlibMinimumVersion)' != ''" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <Reference Include="Assembly-CSharp"><HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(OniManagedPath)/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>

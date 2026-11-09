@@ -10,7 +10,7 @@ namespace OniMods.JlibBootstrap
     internal enum StartupFailure
     {
         Missing, Disabled, Duplicate, NotInstalled, MissingLibrary, InvalidLibrary,
-        ConflictingLibrary, MissingImplementation, InvalidImplementation, StartupFailed
+        ConflictingLibrary, MissingImplementation, InvalidImplementation, StartupFailed, LibraryTooOld
     }
 
     internal static class DependencyLoader
@@ -48,7 +48,14 @@ namespace OniMods.JlibBootstrap
                 phase = "abi_contract";
                 var api = library.GetType("Jlib.Runtime.JlibApi", false);
                 if (api == null || !ReferenceEquals(api.Assembly, library) || !Constant(api, "AbiVersion", typeof(int), AbiVersion) ||
-                    !Constant(api, "StaticId", typeof(string), StaticId) || !ValidVersionConstant(api, "Version")) return false;
+                    !Constant(api, "StaticId", typeof(string), StaticId) || !TryVersionConstant(api, "Version", out var version)) return false;
+                var minimum = typeof(DependencyLoader).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                    .SingleOrDefault(attribute => attribute.Key == "JlibMinimumVersion");
+                if (minimum != null)
+                {
+                    if (!Version.TryParse(minimum.Value, out var required)) return false;
+                    if (version < required) { failure = StartupFailure.LibraryTooOld; return false; }
+                }
                 registerConsumer = api.GetMethod("RegisterConsumer", BindingFlags.Public | BindingFlags.Static,
                     null, new[] { typeof(Assembly), typeof(Mod) }, null);
                 if (registerConsumer == null || registerConsumer.ReturnType != typeof(void) || registerConsumer.ContainsGenericParameters)
@@ -68,13 +75,14 @@ namespace OniMods.JlibBootstrap
                 Equals(field.GetRawConstantValue(), expected);
         }
 
-        private static bool ValidVersionConstant(Type type, string name)
+        private static bool TryVersionConstant(Type type, string name, out Version version)
         {
+            version = null;
             var field = type == null ? null : type.GetField(name, BindingFlags.Public | BindingFlags.Static);
             if (field == null || !field.IsLiteral || field.IsInitOnly || field.FieldType != typeof(string))
                 return false;
             var raw = field.GetRawConstantValue() as string;
-            return !string.IsNullOrWhiteSpace(raw) && Version.TryParse(raw.Trim(), out _);
+            return !string.IsNullOrWhiteSpace(raw) && Version.TryParse(raw.Trim(), out version);
         }
 
         internal static bool SamePath(Assembly assembly, string expected)

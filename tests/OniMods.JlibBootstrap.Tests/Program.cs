@@ -13,7 +13,7 @@ internal static class Program
     private static int assertions;
     private static readonly string[] Cases = {
         "missing", "disabled", "duplicate", "not-installed", "missing-library", "invalid-path",
-        "bad-abi", "bad-static-id", "no-registrar", "wrong-name", "conflicting-path", "multiple-loaded", "lifecycle", "already-loaded", "missing-payload", "notices", "notice-retry"
+        "bad-abi", "bad-static-id", "old-version", "no-registrar", "wrong-name", "conflicting-path", "multiple-loaded", "lifecycle", "already-loaded", "missing-payload", "notices", "notice-retry"
     };
 
     private static int Main(string[] args)
@@ -99,7 +99,7 @@ internal static class Program
             Mod provider = null;
             if (scenario != "missing" && scenario != "notices" && scenario != "notice-retry")
             {
-                string fixture = scenario == "bad-abi" || scenario == "bad-static-id" || scenario == "no-registrar" ? scenario :
+                string fixture = scenario == "bad-abi" || scenario == "bad-static-id" || scenario == "old-version" || scenario == "no-registrar" ? scenario :
                     scenario == "missing-library" || scenario == "invalid-path" || scenario == "wrong-name" ? null : "good";
                 provider = Provider(Path.Combine(root, "provider"), fixture);
                 mods.Add(provider);
@@ -181,6 +181,16 @@ internal static class Program
                 Check(message.Contains("FixtureConsumer") && message.Contains("restart") && !message.Contains(root) &&
                     !message.Contains("private-provider-path") && !message.Contains("Exception"), "player message is actionable and excludes private paths or stack traces");
                 if (scenario == "notices") Check(message.Contains("SiblingConsumer"), "cross-assembly failures appear in the same native message");
+                if (scenario == "old-version")
+                {
+                    Check(message.Contains("Update Jlib"),
+                        "an older provider is rejected before implementation loading with an update instruction");
+                    var sibling = Assembly.LoadFrom(Fixture("sibling", "SiblingConsumer.Bootstrap.dll"));
+                    var loader = sibling.GetType(typeof(DependencyLoader).FullName);
+                    var arguments = new object[] { mods, null, null };
+                    Check((bool)loader.GetMethod("TryLoad", BindingFlags.NonPublic | BindingFlags.Static)
+                        .Invoke(null, arguments), "a consumer without a minimum-version requirement still accepts the same ABI-compatible provider");
+                }
             }
         }
         finally { Directory.Delete(root, true); }

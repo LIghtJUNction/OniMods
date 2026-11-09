@@ -95,6 +95,7 @@ namespace OniMods.JlibBootstrap
                 case StartupFailure.NotInstalled: return "Jlib installation is incomplete.";
                 case StartupFailure.MissingLibrary: return "Jlib installation is missing its library.";
                 case StartupFailure.InvalidLibrary: return "Jlib is incompatible or could not be loaded.";
+                case StartupFailure.LibraryTooOld: return "Jlib is older than this mod requires. Update Jlib, then restart.";
                 case StartupFailure.ConflictingLibrary: return "A conflicting Jlib copy is already loaded. Restart after fixing the mod list.";
                 case StartupFailure.MissingImplementation: return "The mod installation is incomplete (implementation DLL missing).";
                 case StartupFailure.InvalidImplementation: return "The mod implementation could not be verified.";

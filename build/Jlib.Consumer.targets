@@ -13,7 +13,7 @@
   <Target Name="BuildJlibBootstrap" BeforeTargets="GenerateModFiles;PackageOniOnlineArtifacts">
     <!-- Restore needs the consumer property too; NuGet's ProjectReference restore
          graph omits AdditionalProperties, so build this isolated project directly. -->
-    <Exec Command="dotnet build &quot;$(JlibRepositoryRoot)/sdk/Jlib.Bootstrap/Jlib.Bootstrap.csproj&quot; --configuration &quot;$(Configuration)&quot; --verbosity quiet -p:ConsumerAssemblyName=$(AssemblyName) -p:OniManagedPath=&quot;$(OniManagedPath)&quot;" />
+    <Exec Command="dotnet build &quot;$(JlibRepositoryRoot)/sdk/Jlib.Bootstrap/Jlib.Bootstrap.csproj&quot; --configuration &quot;$(Configuration)&quot; --verbosity quiet -p:ConsumerAssemblyName=$(AssemblyName) -p:JlibMinimumVersion=&quot;$(JlibMinimumVersion)&quot; -p:OniManagedPath=&quot;$(OniManagedPath)&quot;" />
     <Error Condition="!Exists('$(JlibBootstrapAssembly)')" Text="Jlib dependency bootstrap was not built: $(JlibBootstrapAssembly)" />
   </Target>
 </Project>
