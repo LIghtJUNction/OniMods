@@ -10,6 +10,11 @@ namespace CycleTrim.Optimizations.Tests
         {
             try
             {
+                if (args.Length == 2 && args[0] == "--diagnose-presentation-dirty")
+                {
+                    PresentationUploadDirtyDiagnostic.Run(args[1]);
+                    return 0;
+                }
                 if (args.Length == 2 && (args[0] == "--regression-presentation-native"
                     || args[0] == "--benchmark-presentation-native"))
                 {
