@@ -34,6 +34,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     env:
+      ONI_MANAGED_PATH: ${{ github.workspace }}/.oni-managed
       RUSTC_WRAPPER: ''
       RUSTC_WORKSPACE_WRAPPER: ''
       MACOSX_DEPLOYMENT_TARGET: '11.0'
@@ -50,6 +51,8 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.401'
+      - name: Fetch pinned compile references for the Jlib loader
+        run: python scripts/fetch_oni_reference_assemblies.py --manifest ci/oni-reference-assemblies.json --output .oni-managed
       - name: Test unavailable Vulkan backend on Apple
         if: runner.os == 'macOS'
         working-directory: mods/CycleTrim/OniSim
