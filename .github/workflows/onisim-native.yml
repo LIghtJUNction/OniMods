@@ -54,9 +54,25 @@ jobs:
         run: >-
           cargo +1.99.1 test --release --locked --manifest-path gpu/Cargo.toml --lib
           gpu_context::tests::unavailable_vulkan_backend_returns_errors_from_both_constructors -- --exact
-      - name: Test native simulation behavior
+      # Hosted runners have no hardware Vulkan adapter. Keep CPU and loader
+      # coverage here; these explicit hardware cases remain in the default test
+      # suite and must pass separately on a real GPU before release. No software
+      # adapter or successful no-op is substituted for hardware acceptance.
+      - name: Test native CPU simulation behavior (hardware cases excluded)
         working-directory: mods/CycleTrim/OniSim
-        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+        run: >-
+          cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml --
+          --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+          --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+          --skip gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
+          --skip gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
+          --skip gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order
+          --skip gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes
+          --skip gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region
+          --skip gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass
+          --skip gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces
       - name: Build native library and identity receipt
         run: python scripts/build_onisim_native.py --output-root artifacts/OniSim
       - name: Test platform loader against the built native library
