@@ -34,10 +34,23 @@ Detailed local logs are in `.cache/cpu-rewrite-20261110/`. The frame diagnostic 
 - [Three-platform native build and loader checks](https://github.com/LIghtJUNction/OniMods/actions/runs/42813291812) passed for Windows, macOS and Linux from `bbbaa289`. All three source and binary fingerprints were validated before packaging.
 - [Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42813291983) passed for the release implementation.
 - Hosted proof workflows initially failed because they attempted hardware Vulkan tests without a hardware adapter. Their CPU filters now match the native release workflow; the GPU operator job explicitly excludes its 27 hardware cases while still compiling them. The [diamond](https://github.com/LIghtJUNction/OniMods/actions/runs/42814487279) and [transport](https://github.com/LIghtJUNction/OniMods/actions/runs/42814487140) workflows then passed. Hardware tests remain in the default local suite; excluded CI tests are not counted as passed.
-- Reference CI identified an omitted `JobManager` signature baseline for the diagnostic hook. The added `Run(IWorkItemCollection)` target was reviewed against the artifact from the same pinned assembly hashes. The full baseline comparison passed locally after adding only that target.
+- Reference CI identified an omitted `JobManager` signature baseline for the diagnostic hook. The added `Run(IWorkItemCollection)` target was reviewed against the artifact from the same pinned assembly hashes. The full baseline comparison passed locally after adding only that target, and [reference compatibility CI](https://github.com/LIghtJUNction/OniMods/actions/runs/42815197427) then passed.
 
 ## Real-game boundary
 
 The installed versions before testing were CycleTrim 0.4.12 and Jlib 0.3.2. A disposable copy of the save was used to start the 0.4.13 / 0.3.3 baseline via Steam and OniMcp. Startup and short running samples were affected by paging and another project's compilation. The user requested closing the game before the candidate run; the process was terminated and its exit verified. The 0.4.14 candidate has not completed an ONI runtime acceptance run.
 
 The public release retains the existing all-platform native bundle requirement. Platform CI build/loader results, Legacy upload verification and actual ONI runtime compatibility are separate evidence. Full liquid species equality, complete mixture persistence and end-to-end open-space loss acceptance remain pending.
+
+## Publication and local delivery
+
+Both existing public Workshop items were updated through the Legacy single-ZIP publisher. The client subsequently downloaded each package and its SHA-256 matched the uploaded ZIP:
+
+| Item | Version | ZIP SHA-256 |
+| --- | --- | --- |
+| [CycleTrim](https://steamcommunity.com/sharedfiles/filedetails/?id=3807166689) | 0.4.14 | `e1e5a8236bfb169e64ab927c7634842fe95c4ebb0188b8a803a9191bca1c7e6d` |
+| [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) | 0.3.4 | `3297e65cc13f8d2659ffab06bdc319fa05eb6b2aacc579dca5e6ed1de8fe5346` |
+
+CycleTrim's first two client download checks returned Steam timeouts after the upload succeeded. The verifier now retries a timeout at ten-second intervals, up to five attempts within its existing five-minute deadline, and still requires a successful callback and matching ZIP hash. Other download failures still stop immediately. Publisher host regressions and its Release build passed; the subsequent consumer download verification succeeded without another upload.
+
+The existing local Dev copies were synchronized to these exact release ZIP contents, with all 130 packaged files verified. The game remained closed throughout publication and delivery.

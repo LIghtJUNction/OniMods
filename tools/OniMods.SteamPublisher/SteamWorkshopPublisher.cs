@@ -204,6 +204,7 @@ internal static partial class SteamWorkshopPublisher
         var downloadAttempts = 0;
         var downloadPending = false;
         var downloadCallbackReceived = false;
+        var retryTimedOutDownload = false;
         var downloadResult = EResult.k_EResultOK;
         using var callback = Callback<DownloadItemResult_t>.Create(result =>
         {
@@ -244,10 +245,21 @@ internal static partial class SteamWorkshopPublisher
                 downloadPending = false;
                 if (downloadResult != EResult.k_EResultOK)
                 {
-                    throw new InvalidOperationException(
-                        $"Workshop verification download failed: {downloadResult}; "
-                        + $"serverSize={remote.m_nFileSize}, "
-                        + $"serverUpdated={remote.m_rtimeUpdated}");
+                    if (downloadResult == EResult.k_EResultTimeout && downloadAttempts < 5)
+                    {
+                        retryTimedOutDownload = true;
+                        lastDownload = now;
+                        Console.Error.WriteLine(
+                            $"Workshop verification download timed out (attempt {downloadAttempts}/5); "
+                            + "retrying the download after 10 seconds without uploading again");
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"Workshop verification download failed: {downloadResult}; "
+                            + $"serverSize={remote.m_nFileSize}, "
+                            + $"serverUpdated={remote.m_rtimeUpdated}");
+                    }
                 }
             }
 
@@ -257,7 +269,7 @@ internal static partial class SteamWorkshopPublisher
             var shouldDownload = !downloadPending
                 && (downloadAttempts == 0
                     ? serverHasPackageSize || now - started >= TimeSpan.FromSeconds(30)
-                    : downloadAttempts < 2 && needsUpdate
+                    : downloadAttempts < 5 && (needsUpdate || retryTimedOutDownload)
                         && now - lastDownload >= TimeSpan.FromSeconds(10));
             if (shouldDownload)
             {
@@ -271,9 +283,11 @@ internal static partial class SteamWorkshopPublisher
                 lastDownload = now;
                 downloadPending = true;
                 downloadCallbackReceived = false;
+                retryTimedOutDownload = false;
             }
 
-            if (!downloadPending && downloadAttempts > 0
+            if (!downloadPending && downloadCallbackReceived
+                && downloadResult == EResult.k_EResultOK
                 && (localState & EItemState.k_EItemStateInstalled) != 0
                 && SteamUGC.GetItemInstallInfo(
                     fileId, out _, out var installedPath, 4096, out _))
