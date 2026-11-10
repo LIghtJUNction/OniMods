@@ -11,7 +11,7 @@ CycleTrim is rebuilding core simulation behavior. Crashes, missing materials, un
 [i]Hand-drawn-style animation: the planned architecture, still in development.[/i]
 
 [h2]More than one material in a cell[/h2]
-CycleTrim is exploring a different simulation for Oxygen Not Included: gases and liquids sharing, flowing and mixing within a cell, with GPU acceleration where possible. The following are [b]actual in-game screenshots from development builds[/b]; they do not mean these features are fully available in the current Workshop release.
+CycleTrim explores gas and liquid mixtures with GPU acceleration. The development screenshots below do not establish complete gameplay support.
 
 [h2]Architecture[/h2]
 Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
@@ -41,7 +41,7 @@ The experimental interface displays individual substances. Partial pressures are
 [h2]In development[/h2]
 [list]
 [*]Three or more substances per cell throughout transport, diffusion, exchange and rendering.
-[*]Multiple substances in one gas or liquid pipe cell, including storage, flow, building input/output, display and save/load. This is unfinished; no verified in-game screenshot is available yet.
+[*]Multicomponent pipes, including building input/output and save/load; no verified screenshot yet.
 [*]Saving and restoring every component and migrating experimental save formats.
 [*]GPU thermal diffusion, pressure and multicomponent computation, with fewer transfers between CPU and GPU.
 [*]In-game visual and physics validation of textures, information cards, density stratification and rising bubbles.
