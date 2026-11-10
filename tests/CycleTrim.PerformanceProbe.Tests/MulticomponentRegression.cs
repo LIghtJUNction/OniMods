@@ -434,7 +434,14 @@ public static class Grid
 
 public sealed class GasBreatherFromWorldProvider { }
 public sealed class PropertyTextures { }
-public sealed class SimDebugView { }
+public sealed class SimDebugView
+{
+    public int currentFrame = 0;
+    public static float minimumBreathable = 0.05f;
+    public static float optimallyBreathable = 1f;
+    public UnityEngine.Gradient breathableGradient = new UnityEngine.Gradient();
+    public UnityEngine.Color unbreathableColour = new UnityEngine.Color(0.5f, 0f, 0f, 1f);
+}
 
 public sealed class TextureRegion
 {
@@ -559,6 +566,11 @@ namespace UnityEngine
         }
     }
 
+    public sealed class Gradient
+    {
+        public Color Evaluate(float value) { return new Color(value, value, value, 1f); }
+    }
+
     public static class Mathf
     {
         public static float Clamp01(float value)
@@ -600,6 +612,20 @@ namespace HarmonyLib
 
     public static class AccessTools
     {
+        public delegate ref F FieldRef<T, F>(T instance);
+
+        public static FieldRef<T, F> FieldRefAccess<T, F>(string name)
+        {
+            var field = Field(typeof(T), name) ?? throw new MissingFieldException(typeof(T).FullName, name);
+            var method = new System.Reflection.Emit.DynamicMethod("field_ref_" + name,
+                typeof(F).MakeByRefType(), new[] { typeof(T) }, typeof(T), true);
+            var il = method.GetILGenerator();
+            il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+            il.Emit(System.Reflection.Emit.OpCodes.Ldflda, field);
+            il.Emit(System.Reflection.Emit.OpCodes.Ret);
+            return method.CreateDelegate<FieldRef<T, F>>();
+        }
+
         public static MethodInfo Method(Type type, string name, Type[] parameters = null)
         {
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;

@@ -1,3 +1,11 @@
+## 2026-11-10 — 0.4.13
+
+- Transport gas through equal species channels, including a single gas expanding into vacuum; preserve more than two gas components during transport.
+- Settle small residual changes and reuse unchanged settled regions; changed inputs wake calculation. Blocked faces no longer create artificial pressure gradients beside walls.
+- Apply space loss to all species using phase totals instead of only the Grid compatibility slot. Actual open-space gas/liquid acceptance remains pending.
+- Require Jlib 0.3.3 for batched overlay reads and total breathable-mass oxygen colours. Separate texture and overlay job timings in optional diagnostics.
+- Validation: 136 native tests passed, 9 ignored; targeted hardware Vulkan wall-gradient test and managed host regressions passed. Running gameplay FPS, complete liquid species equality and full mixture save persistence remain unverified or incomplete.
+
 ## 2026-11-09 — 0.4.12
 
 - Trace 22 managed phases across the complete interval between consecutive `Game.Update` entries, including state-machine simulation/render callbacks, native prepare, job dispatch/wait, textures, animation, navigation, UI, camera, terrain and audio. Report inclusive and self time separately, track uncovered intervals and GC collection-count deltas, and discard incomplete lifecycle boundaries. Diagnostics remain off by default.

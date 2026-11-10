@@ -26,6 +26,8 @@
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentPatches.cs" Link="Jlib/MulticomponentPatches.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentHoverCardPatch.cs" Link="Jlib/MulticomponentHoverCardPatch.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentOverlayPatch.cs" Link="Jlib/MulticomponentOverlayPatch.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Multicomponent/RenderCellCache.cs" Link="Jlib/RenderCellCache.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Multicomponent/BreathableGas.cs" Link="Jlib/BreathableGas.cs" />
     <Compile Include="../../mods/CycleTrim/Core/MulticomponentCellAccess.cs" Link="MulticomponentCellAccess.cs" />
     <Compile Include="../../mods/CycleTrim/Core/OniSimMulticomponentProvider.cs" Link="OniSimMulticomponentProvider.cs" />
     <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />

@@ -22,7 +22,8 @@ namespace CycleTrim.Patches
             "StateMachineUpdater.RenderEveryTick", "PropertyTextures.LateUpdate",
             "KAnimBatchManager.UpdateDirty", "KAnimBatchManager.Render", "Pathfinding.UpdateNavGrids",
             "AsyncPathProber.Manager.TickFrame", "KScreenManager.Update", "CameraController.Update",
-            "GroundRenderer.Render", "KFMOD.RenderEveryTick", "App.LateUpdate"
+            "GroundRenderer.Render", "KFMOD.RenderEveryTick", "App.LateUpdate",
+            "JobManager.PropertyTextures", "JobManager.SimDebugView"
         };
 
         internal static string Name(FrameTimingPhase phase) { return names[(int)phase]; }
@@ -62,7 +63,6 @@ namespace CycleTrim.Patches
                 Add(FrameTimingPhase.GlobalUpdate, "Global", "Update");
                 Add(FrameTimingPhase.GlobalLateUpdate, "Global", "LateUpdate");
                 Add(FrameTimingPhase.SimFrame, "Game", "UnsafeSim200ms", typeof(float));
-                Add(FrameTimingPhase.Jobs, "JobManager", "Run", AccessTools.TypeByName("IWorkItemCollection"));
                 Add(FrameTimingPhase.ObjectSimulation, "StateMachineUpdater", "AdvanceOneSimSubTick");
                 Add(FrameTimingPhase.ObjectRender, "StateMachineUpdater", "Render", typeof(float));
                 Add(FrameTimingPhase.ObjectRenderEveryTick, "StateMachineUpdater", "RenderEveryTick", typeof(float));
@@ -84,6 +84,41 @@ namespace CycleTrim.Patches
             private static void Prefix(MethodBase __originalMethod, out TimingState __state)
             {
                 __state = FrameRateUnlockPatch.BeginTiming(targets[__originalMethod]);
+            }
+
+            [HarmonyFinalizer, HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Exception __exception, TimingState __state)
+            {
+                FrameRateUnlockPatch.EndTiming(__state);
+                return __exception;
+            }
+        }
+
+        [HarmonyPatch(typeof(JobManager), "Run")]
+        internal static class JobStages
+        {
+            [ThreadStatic] private static Dictionary<Type, FrameTimingPhase> phases;
+            private static bool Prepare()
+            {
+                resolved[(int)FrameTimingPhase.Jobs] = true;
+                resolved[(int)FrameTimingPhase.PropertyTextureJobs] = true;
+                resolved[(int)FrameTimingPhase.OverlayJobs] = true;
+                return CycleTrimPatchOptions.EnablePerformanceDiagnostics;
+            }
+
+            [HarmonyPrefix, HarmonyPriority(Priority.First)]
+            private static void Prefix(IWorkItemCollection __0, out TimingState __state)
+            {
+                var type = __0.GetType();
+                if (phases == null) phases = new Dictionary<Type, FrameTimingPhase>();
+                if (!phases.TryGetValue(type, out var phase))
+                {
+                    string name = type.FullName ?? type.Name;
+                    phase = name.Contains("PropertyTextures") ? FrameTimingPhase.PropertyTextureJobs
+                        : name.Contains("SimDebugView") ? FrameTimingPhase.OverlayJobs : FrameTimingPhase.Jobs;
+                    phases[type] = phase;
+                }
+                __state = FrameRateUnlockPatch.BeginTiming(phase);
             }
 
             [HarmonyFinalizer, HarmonyPriority(Priority.Last)]
