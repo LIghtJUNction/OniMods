@@ -64,9 +64,23 @@ jobs:
           persist-credentials: false
       - name: Install current native toolchain
         run: rustup toolchain install 1.99.1 --profile minimal
-      - name: Test current native code including the FIFO differential
+      - name: Test current native CPU code including the FIFO differential (hardware cases excluded)
         working-directory: mods/CycleTrim/OniSim
-        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+        # Hosted runners have no hardware Vulkan adapter; hardware acceptance is separate.
+        run: >-
+          cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+          --
+          --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+          --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+          --skip gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
+          --skip gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
+          --skip gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order
+          --skip gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes
+          --skip gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region
+          --skip gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass
+          --skip gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces
   lean-proof:
     runs-on: ubuntu-22.04
     timeout-minutes: 10

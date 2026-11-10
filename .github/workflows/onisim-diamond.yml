@@ -25,12 +25,26 @@ jobs:
           toolchain: 1.99.1
       - name: Build original and optimized Rust components
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py build
-      - name: Test the complete native Rust kernel without game files
+      - name: Test native CPU behavior without game files (hardware cases excluded)
         working-directory: mods/CycleTrim/OniSim
         env:
           RUSTC_WRAPPER: ""
           RUSTC_WORKSPACE_WRAPPER: ""
-        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+        # Hosted runners have no hardware Vulkan adapter; hardware acceptance is separate.
+        run: >-
+          cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+          --
+          --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+          --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+          --skip gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
+          --skip gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
+          --skip gpu_sim::material_range_tests::liquid_dispatch_before_gas_pressure_matches_serial_order
+          --skip gpu_sim::material_range_tests::liquid_pipeline_cache_retains_multiple_region_shapes
+          --skip gpu_sim::material_range_tests::liquid_region_diffuses_on_gpu_and_preserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region
+          --skip gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass
+          --skip gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces
       - name: Run differential correctness cases
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py verify
   memory-probe-protocol:
@@ -67,8 +81,38 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.99.1
-      - name: Validate WGSL and run CPU transport invariants
-        run: cargo +1.99.1 test --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --lib
+      - name: Validate WGSL and run CPU transport invariants (hardware cases excluded)
+        # Still compile every GPU test. These explicit hardware cases run on a GPU host.
+        run: >-
+          cargo +1.99.1 test --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --lib
+          --
+          --skip gas_pressure_faces::tests::checkerboard_settles_sleeps_and_wakes_on_input_change
+          --skip gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores
+          --skip multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change
+          --skip multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl
+          --skip multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity
+          --skip multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy
+          --skip multicomponent::tests::gpu_density_velocity_matches_neighbour_gradients
+          --skip multicomponent::tests::gpu_diffusion_preserves_species_and_energy_over_many_steps_with_wall
+          --skip multicomponent::tests::liquid_diffusion_mixes_without_crossing_walls_and_conserves_each_species
+          --skip multicomponent::tests::liquid_projection_matches_full_result_and_rejects_three_components
+          --skip multicomponent::tests::packed_and_wide_sparse_inputs_can_alternate_without_stale_gpu_state
+          --skip multicomponent::tests::pending_liquid_can_overlap_other_gpu_work_and_guards_reuse
+          --skip multicomponent::tests::sparse_gas_upload_expands_mass_and_energy_and_checks_metadata
+          --skip multicomponent::tests::sparse_input_partial_updates_preserve_other_blocks
+          --skip multicomponent::tests::sparse_solid_partial_update_changes_only_target_cells
+          --skip multicomponent::tests::validated_substeps_transport_high_velocity_without_losing_mass
+          --skip thermal_diffusion::tests::deferred_groups_recompute_only_changed_blocks_and_handle_skipped_revisions
+          --skip thermal_diffusion::tests::deferred_groups_skip_only_faces_with_the_same_nonzero_group
+          --skip thermal_diffusion::tests::gathered_faces_match_two_pass_gpu_with_deferred_groups
+          --skip thermal_diffusion::tests::gpu_deferred_groups_match_cpu_with_packed_tails_and_changing_inputs
+          --skip thermal_diffusion::tests::gpu_material_lookup_matches_cpu_for_odd_grid_and_table_changes
+          --skip thermal_diffusion::tests::gpu_material_lookup_updates_last_partial_block
+          --skip thermal_diffusion::tests::mass_upload_tracks_changed_blocks_and_external_overwrites
+          --skip thermal_diffusion::tests::temperature_upload_tracks_gpu_results_and_external_access
+          --skip thermal_diffusion::tests::thermal_diffusion_end_to_end_conserves_energy
+          --skip thermal_enthalpy::tests::conductivity_uses_species_mass_weights_and_handles_empty_cells
+          --skip thermal_enthalpy::tests::thermal_output_updates_species_enthalpy_without_intermediate_readback
       - name: Compile Vulkan benchmark executables
         run: cargo +1.99.1 check --release --locked --manifest-path mods/CycleTrim/OniSim/gpu/Cargo.toml --all-targets
       - name: Smoke-test the EOS calibration CLI with synthetic records
