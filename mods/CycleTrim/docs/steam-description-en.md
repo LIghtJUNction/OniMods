@@ -13,22 +13,14 @@ CycleTrim is rebuilding core simulation behavior. Crashes, missing materials, un
 [h2]More than one material in a cell[/h2]
 CycleTrim is exploring a different simulation for Oxygen Not Included: gases and liquids sharing, flowing and mixing within a cell, with GPU acceleration where possible. The following are [b]actual in-game screenshots from development builds[/b]; they do not mean these features are fully available in the current Workshop release.
 
-[h2]Why move beyond one material per cell?[/h2]
-The stock grid's common interfaces primarily expose one element and one mass per cell. When materials meet, the simulation and game logic must handle occupancy, displacement and neighboring cells. CycleTrim is exploring cells that record the mass and state of multiple materials, allowing oxygen and carbon dioxide, or water and polluted water, to share space.
-
-This changes more than fluid equations: breathing, building consumption, sensors, visuals and saves must understand the individual components. These integrations are being developed and cannot be assumed to work automatically.
-
-[h2]How can this run on the GPU?[/h2]
-The CPU handles game events, buildings and complex control flow; GPU kernels run regular calculations across many cells in parallel. Development builds arrange part of the grid into arrays for thermal diffusion and eligible regional gas and liquid calculations. Cells calculate exchanges with their neighbours without concurrent writes to the same cell. Results still need to be synchronized back to game logic.
-
-[h2]How do we reduce transfers?[/h2]
-Uploading and reading back the whole map for every operator can erase the benefit of acceleration. In development builds, regional gas pressure projection, transport and heat calculations share GPU buffers; some inputs use compact formats and changed-block uploads, and readback is reduced where possible. Each timestep still involves CPU uploads, GPU waits and readback: the complete simulation is not yet GPU-resident.
+[h2]Architecture[/h2]
+Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
 
 [h2]Current progress[/h2]
 [list]
 [*]Version 0.4.13 transports all gas species without limiting a cell to two gas slots. Liquid species equality and complete mixture save/load remain unfinished.
 [*]The development timestep uses GPU thermal diffusion over the grid. Eligible gas regions use GPU concentration diffusion, density-gradient velocity, pressure projection, transport and heat; eligible liquid regions use GPU multicomponent diffusion. Some conditions still use CPU processing or exclude a region.
-[*]Operator mass/energy tests and a short test-save run have been performed. Gas operators can share GPU buffers, but uploads, synchronization and readback remain; the whole game simulation is not on the GPU.
+[*]Host/operator tests and short game runs have been performed; full gameplay integration remains experimental.
 [*]Phase changes, bubbles, some liquid flow, disease, radiation, building interactions and publication still rely on the CPU. Gas transport now retains three or more species per cell; building interactions, liquids and persistence still need end-to-end validation.
 [*]Published pressure, partial pressure and liquid volume fractions are unfinished; breathing, plants, pipes and other interactions still need end-to-end validation.
 [/list]
