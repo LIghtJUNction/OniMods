@@ -56,7 +56,7 @@ fn save(path: &PathBuf, settings: &Settings) -> Result<()> {
     }
     Ok(())
 }
-fn curl(settings: &Settings, _method: &str, payload: Option<&Value>, session: Option<&str>) -> Result<(u16, String, String)> {
+fn curl(settings: &Settings, method: &str, payload: Option<&Value>, session: Option<&str>) -> Result<(u16, String, String)> {
     let nonce = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let stem = format!("oni-mcp-{}-{nonce}", std::process::id());
     let dir = std::env::temp_dir();
@@ -66,7 +66,7 @@ fn curl(settings: &Settings, _method: &str, payload: Option<&Value>, session: Op
     let auth_path = dir.join(format!("{stem}.curlrc"));
     if let Some(body) = payload { fs::write(&body_path, serde_json::to_vec(body)?)?; }
     let mut cmd = Command::new("curl");
-    cmd.args(["--silent", "--show-error", "--max-time", "60", "--request", "POST",
+    cmd.args(["--silent", "--show-error", "--max-time", "60", "--request", method,
         "--header", "Content-Type: application/json", "--header", "Accept: application/json, text/event-stream",
         "--header", &format!("Mcp-Protocol-Version: {PROTOCOL}"),
         "--dump-header"]).arg(&header_path).arg("--output").arg(&output_path);
@@ -106,7 +106,7 @@ fn curl(settings: &Settings, _method: &str, payload: Option<&Value>, session: Op
 fn rpc(settings: &Settings, method: &str, params: Value, session: Option<&str>) -> Result<(Value, String)> {
     let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
     let req = json!({"jsonrpc":"2.0","id":id,"method":method,"params":params});
-    let (status, sid, body) = curl(settings, method, Some(&req), session)?;
+    let (status, sid, body) = curl(settings, "POST", Some(&req), session)?;
     if !(200..300).contains(&status) { bail!("server returned HTTP {status}: {body}"); }
     let parsed: Value = serde_json::from_str(&body).with_context(|| format!("invalid MCP response: {body}"))?;
     if let Some(error) = parsed.get("error") { bail!("MCP error: {error}"); }
@@ -117,10 +117,15 @@ fn request(settings: &Settings, method: &str, params: Value) -> Result<Value> {
         "protocolVersion": PROTOCOL, "capabilities": {}, "clientInfo": {"name":"oni-mcp-cli","version":env!("CARGO_PKG_VERSION")}
     }), None)?;
     if session.is_empty() { bail!("server did not return Mcp-Session-Id during initialize"); }
-    let _ = curl(settings, "notifications/initialized", Some(&json!({"jsonrpc":"2.0","method":"notifications/initialized"})), Some(&session))?;
-    let (result, _) = rpc(settings, method, params, Some(&session))?;
+    let result = (|| {
+        let (status, _, body) = curl(settings, "POST", Some(&json!({"jsonrpc":"2.0","method":"notifications/initialized"})), Some(&session))?;
+        if !(200..300).contains(&status) { bail!("initialization notification returned HTTP {status}: {body}"); }
+        let (result, _) = rpc(settings, method, params, Some(&session))?;
+        Ok(result)
+    })();
+    let _ = curl(settings, "DELETE", None, Some(&session));
     let _ = init;
-    Ok(result)
+    result
 }
 fn main() -> Result<()> {
     let cli=Cli::parse();
@@ -152,6 +157,9 @@ fn main() -> Result<()> {
             if !args.is_object() { bail!("tool arguments must be a JSON object"); }
             let r=request(&settings,"tools/call",json!({"name":name,"arguments":args}))?;
             println!("{}",serde_json::to_string_pretty(&r)?);
+            if r.get("isError").and_then(Value::as_bool) == Some(true) {
+                bail!("OniMcp tool reported an error");
+            }
         }
         Commands::Read { uri } => { let r=request(&settings,"resources/read",json!({"uri":uri}))?; println!("{}",serde_json::to_string_pretty(&r)?); }
     }

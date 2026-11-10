@@ -1081,6 +1081,17 @@ impl MulticomponentGpu {
         Ok(())
     }
 
+    /// Append validated substeps to a caller-owned command encoder.
+    pub fn encode_resident(&mut self, encoder: &mut wgpu::CommandEncoder, steps: usize, dt: f32) -> Result<(), String> {
+        if !self.uploaded || self.pending_cfl_dt.is_some() || self.velocity_externally_exposed.get()
+            || steps == 0 || !dt.is_finite() || dt <= 0.0 || dt * self.max_cfl_rate > 1.0 {
+            return Err("resident dispatch requires uploaded state, positive steps/dt and the validated CFL bound".into());
+        }
+        self.write_transport_params(dt);
+        self.encode_transport(encoder, steps);
+        Ok(())
+    }
+
     /// Queue reduction and transport together; validate the CFL before exposing results to the host.
     pub fn dispatch_with_deferred_cfl(&mut self, dt: f32) -> Result<(), String> {
         let mut encoder = self.device.create_command_encoder(&Default::default());
@@ -2015,6 +2026,29 @@ fn main(@builtin(global_invocation_id) id:vec3<u32>) {{
         assert!(gpu.readback_mass_and_temperature(&temp, &mut mass, &mut temperature).is_err());
         assert_eq!(mass, [7.0; 4]);
         assert_eq!(temperature, [8.0; 4]);
+    }
+
+    #[test]
+    fn validated_substeps_transport_high_velocity_without_losing_mass() {
+        let mut gpu = pollster::block_on(MulticomponentGpu::new(2, 2, 1)).unwrap();
+        let species = [SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0 }];
+        let state = State { mass: &[1.0; 4], enthalpy: &[300.0; 4], velocity_x: &[0.0; 4],
+            velocity_y: &[0.0; 4], solid: &[0; 4], species: &species };
+        gpu.upload(&state).unwrap();
+        let (vx, _) = gpu.velocity_buffers();
+        gpu.queue.write_buffer(vx, 0, bytemuck::cast_slice(&[30.0f32; 4]));
+        let rate = gpu.revalidate_velocity().unwrap();
+        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+        assert!(gpu.encode_resident(&mut encoder, 1, 0.1).is_err());
+        gpu.encode_resident(&mut encoder, 4, 0.025).unwrap();
+        gpu.queue.submit([encoder.finish()]);
+        let mut mass = [0.0; 4];
+        let mut enthalpy = [0.0; 4];
+        gpu.readback_state(&mut mass, &mut enthalpy).unwrap();
+        assert!(rate >= 30.0);
+        assert!(mass.iter().all(|m| *m >= 0.0));
+        assert!((mass.iter().sum::<f32>() - 4.0).abs() < 1e-5);
+        assert!((enthalpy.iter().sum::<f32>() - 1200.0).abs() < 1e-3);
     }
 
     #[test]

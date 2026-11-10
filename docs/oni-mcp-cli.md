@@ -35,11 +35,12 @@ Example:
 
 ```sh
 oni-mcp tools
-oni-mcp call game_control '{"domain":"speed","action":"time"}'
+oni-mcp call game_control '{"domain":"speed","action":"time","task":"Check whether the game is paused"}'
 oni-mcp read oni://tools/manifest
 ```
 
-Each invocation creates an MCP session using protocol 2025-11-25, performs one operation, and exits. Session IDs are not persisted. Use the live tool manifest because tool schemas evolve with the mod.
+Each invocation creates an MCP session using protocol 2025-11-25, performs one operation, closes the session, and exits. Session IDs are not persisted. Use the live tool manifest because tool schemas evolve with the mod.
+The server requires a `task` description on tool calls. Tool responses with `isError: true` produce a nonzero exit status.
 
 ## Releases
 

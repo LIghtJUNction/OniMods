@@ -349,6 +349,15 @@ internal static class Program
         GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
         Check(repeated.PauseCount == 0, "one MCP resume must release the one MCP-owned pause");
 
+        var externallyReleased = new SpeedControlScreen();
+        SpeedControlScreen.Instance = externallyReleased;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        externallyReleased.Unpause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(externallyReleased.IsPaused && externallyReleased.PauseCount == 1,
+            "MCP pause must reacquire a lease released by the game");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+
         var speedChange = new SpeedControlScreen();
         SpeedControlScreen.Instance = speedChange;
         speedChange.Pause(playSound: false);

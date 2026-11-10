@@ -870,7 +870,14 @@ impl GpuSimulation {
             pipeline.transport.current_mass_buffer(), vx, vy, pipeline.transport.solid_buffer(),
             channels, 1.0, 1.0, gauge, dt, 1.0, 1.0, 4, 1.0,
         )?;
-        pipeline.transport.encode_with_deferred_cfl(&mut encoder, dt)?;
+        // Projection can increase velocity beyond the transport CFL limit.
+        // Complete it first, measure the resulting rate, then advance the
+        // whole requested interval using stable conservative substeps.
+        self.context.submit(encoder);
+        let rate = pipeline.transport.revalidate_velocity()?;
+        let substeps = stable_transport_steps(dt, rate)?;
+        let mut encoder = self.context.command_encoder();
+        pipeline.transport.encode_resident(&mut encoder, substeps, dt / substeps as f32)?;
         let projected = started.elapsed();
         let cells = width * height;
         let (temperature, total_mass, heat_capacity) = pipeline.thermal.state_buffers();
@@ -974,6 +981,15 @@ impl GpuSimulation {
     }
 }
 
+fn stable_transport_steps(dt: f32, rate: f32) -> Result<usize, String> {
+    if !dt.is_finite() || dt <= 0.0 || !rate.is_finite() || rate < 0.0 {
+        return Err("invalid transport timestep or projected velocity".into());
+    }
+    let steps = ((dt * rate / 0.95).ceil() as usize).max(1);
+    if steps > 4096 { return Err(format!("projected velocity requires {steps} transport substeps")); }
+    Ok(steps)
+}
+
 #[cfg(test)]
 const MATERIAL_BLOCK: usize = 4096;
 
@@ -1000,6 +1016,13 @@ fn material_upload_ranges<T: PartialEq>(previous: &[T], current: &[T], table_cha
 #[cfg(test)]
 mod material_range_tests {
     use super::material_upload_ranges;
+
+    #[test]
+    fn transport_substeps_cover_the_whole_interval_within_cfl() {
+        assert_eq!(super::stable_transport_steps(0.1, 30.0).unwrap(), 4);
+        assert_eq!(super::stable_transport_steps(0.1, 0.0).unwrap(), 1);
+        assert!(super::stable_transport_steps(0.1, f32::NAN).is_err());
+    }
 
     #[test]
     fn liquid_pipeline_cache_retains_multiple_region_shapes() {

@@ -196,7 +196,8 @@ namespace OniMcp.Tools
             if (game == null || speedControl == null)
                 return;
 
-            if (ReferenceEquals(_mcpPauseGame, game) && ReferenceEquals(_mcpPauseScreen, speedControl))
+            if (ReferenceEquals(_mcpPauseGame, game) && ReferenceEquals(_mcpPauseScreen, speedControl)
+                && speedControl.IsPaused)
                 return;
 
             _mcpPauseGame = null;
