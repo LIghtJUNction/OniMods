@@ -342,6 +342,21 @@ struct LiquidProjection {
 struct LiquidPreparation { pipeline:wgpu::ComputePipeline, temperature:wgpu::Buffer, group:wgpu::BindGroup }
 struct LiquidSparsePreparation { pipeline:wgpu::ComputePipeline, cells:wgpu::Buffer, _temperatures:wgpu::Buffer, group:wgpu::BindGroup, temperature_groups:Vec<(wgpu::Buffer,wgpu::BindGroup)> }
 
+#[derive(Clone, Copy)]
+enum VelocityValidation {
+    Cfl(f32),
+    BoundedFlux,
+}
+
+impl VelocityValidation {
+    fn accepts(self, rate: f32) -> bool {
+        rate.is_finite() && rate >= 0.0 && match self {
+            Self::Cfl(dt) => (dt * rate).is_finite() && dt * rate <= 1.0,
+            Self::BoundedFlux => true,
+        }
+    }
+}
+
 pub struct MulticomponentGpu {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -377,7 +392,7 @@ pub struct MulticomponentGpu {
     current_is_a: bool,
     max_cfl_rate: f32,
     velocity_externally_exposed: Cell<bool>,
-    pending_cfl_dt: Option<f32>,
+    pending_velocity_validation: Option<VelocityValidation>,
     uploaded_drift: Vec<u32>,
     uploaded_heat: Vec<u32>,
     uploaded_solid: Vec<u32>,
@@ -559,7 +574,7 @@ impl MulticomponentGpu {
             current_is_a: true,
             max_cfl_rate: 0.0,
             velocity_externally_exposed: Cell::new(false),
-            pending_cfl_dt: None,
+            pending_velocity_validation: None,
             uploaded_drift: Vec::new(),
             uploaded_heat: Vec::new(),
             uploaded_solid: Vec::new(),
@@ -619,7 +634,7 @@ impl MulticomponentGpu {
     }
 
     fn encode_diffusion(&mut self, encoder: &mut wgpu::CommandEncoder) -> Result<(), String> {
-        if !self.uploaded || self.pending_cfl_dt.is_some() { return Err("diffusion requires uploaded state".into()); }
+        if !self.uploaded || self.pending_velocity_validation.is_some() { return Err("diffusion requires uploaded state".into()); }
         let groups_x = (self.width * self.channels).div_ceil(8);
         let groups_y = self.height.div_ceil(8);
         if groups_x > self.device.limits().max_compute_workgroups_per_dimension as usize || groups_y > self.device.limits().max_compute_workgroups_per_dimension as usize {
@@ -800,7 +815,7 @@ impl MulticomponentGpu {
 
     fn encode_sparse<T:SparseInput>(&mut self, encoder:&mut wgpu::CommandEncoder, cells:&[T], solid:&[u32], species:&[SpeciesInfo], phase:u8, temperature:Option<&wgpu::Buffer>) -> Result<(), String> {
         if self.liquid_projection_busy.load(std::sync::atomic::Ordering::Acquire) { return Err("liquid projection is still pending".into()); }
-        self.uploaded=false; self.pending_cfl_dt=None; self.current_is_a=true;
+        self.uploaded=false; self.pending_velocity_validation=None; self.current_is_a=true;
         if cells.len()!=self.count || solid.len()!=self.count || species.len()!=self.channels {
             return Err("sparse input dimensions mismatch".into());
         }
@@ -1010,7 +1025,7 @@ impl MulticomponentGpu {
     fn upload_impl(&mut self, state: &State<'_>, upload_velocity: bool, temperature: Option<&[f32]>, phase: u8) -> Result<(), String> {
         if self.liquid_projection_busy.load(std::sync::atomic::Ordering::Acquire) { return Err("liquid projection is still pending".into()); }
         self.uploaded = false;
-        self.pending_cfl_dt = None;
+        self.pending_velocity_validation = None;
         self.current_is_a = true;
         let max_rate = if upload_velocity {
             validate_state_for_phase::<true>(state, self.count, self.channels, temperature, phase)?
@@ -1051,7 +1066,7 @@ impl MulticomponentGpu {
     /// Recompute the CFL rate after another GPU operator modified velocity.
     /// Only one 32-bit scalar is copied to the host.
     pub fn revalidate_velocity(&mut self) -> Result<f32, String> {
-        if !self.uploaded || self.pending_cfl_dt.is_some() || self.count.div_ceil(64) > self.device.limits().max_compute_workgroups_per_dimension as usize {
+        if !self.uploaded || self.pending_velocity_validation.is_some() || self.count.div_ceil(64) > self.device.limits().max_compute_workgroups_per_dimension as usize {
             return Err("CFL reduction requires uploaded state and a supported grid".into());
         }
         self.queue.write_buffer(&self.cfl_maximum,0,bytemuck::bytes_of(&0u32));
@@ -1074,7 +1089,7 @@ impl MulticomponentGpu {
 
     /// Advance the current device-local mass/enthalpy tensors without copying them to the CPU.
     pub fn dispatch_resident(&mut self, steps: usize, dt: f32) -> Result<(), String> {
-        if !self.uploaded || self.pending_cfl_dt.is_some() || self.velocity_externally_exposed.get() || steps == 0 || !dt.is_finite() || dt <= 0.0 || dt * self.max_cfl_rate > 1.0 {
+        if !self.uploaded || self.pending_velocity_validation.is_some() || self.velocity_externally_exposed.get() || steps == 0 || !dt.is_finite() || dt <= 0.0 || dt * self.max_cfl_rate > 1.0 {
             return Err("resident dispatch requires uploaded state, positive steps/dt and the validated CFL bound".into());
         }
         self.dispatch_unchecked(steps, dt);
@@ -1083,7 +1098,7 @@ impl MulticomponentGpu {
 
     /// Append validated substeps to a caller-owned command encoder.
     pub fn encode_resident(&mut self, encoder: &mut wgpu::CommandEncoder, steps: usize, dt: f32) -> Result<(), String> {
-        if !self.uploaded || self.pending_cfl_dt.is_some() || self.velocity_externally_exposed.get()
+        if !self.uploaded || self.pending_velocity_validation.is_some() || self.velocity_externally_exposed.get()
             || steps == 0 || !dt.is_finite() || dt <= 0.0 || dt * self.max_cfl_rate > 1.0 {
             return Err("resident dispatch requires uploaded state, positive steps/dt and the validated CFL bound".into());
         }
@@ -1102,7 +1117,22 @@ impl MulticomponentGpu {
 
     /// Append CFL reduction and transport after a velocity-producing GPU pass.
     pub fn encode_with_deferred_cfl(&mut self, encoder: &mut wgpu::CommandEncoder, dt: f32) -> Result<(), String> {
-        if !self.uploaded || self.pending_cfl_dt.is_some() || !self.velocity_externally_exposed.get()
+        self.encode_checked_transport(encoder, dt, VelocityValidation::Cfl(dt))
+    }
+
+    /// Transport the whole interval in one bounded face-flux pass. Each face
+    /// removes at most dt * (min(1, .125/dt) + min(2, .125/dt)) of its donor;
+    /// across four faces this is at most one. Raw velocity therefore requires
+    /// a finite check, not a host round-trip and redundant CFL substeps.
+    /// The final readback validates device-generated velocities before exposing
+    /// any outputs, including when another operator changed them on the GPU.
+    pub fn encode_bounded_resident(&mut self, encoder: &mut wgpu::CommandEncoder, dt: f32) -> Result<(), String> {
+        self.encode_checked_transport(encoder, dt, VelocityValidation::BoundedFlux)
+    }
+
+    fn encode_checked_transport(&mut self, encoder: &mut wgpu::CommandEncoder, dt: f32,
+        validation: VelocityValidation) -> Result<(), String> {
+        if !self.uploaded || self.pending_velocity_validation.is_some() || !self.velocity_externally_exposed.get()
             || !dt.is_finite() || dt <= 0.0 || self.count.div_ceil(64) > self.device.limits().max_compute_workgroups_per_dimension as usize {
             return Err("deferred CFL requires uploaded state, changed velocity and positive timestep".into());
         }
@@ -1112,7 +1142,7 @@ impl MulticomponentGpu {
         { let mut pass=encoder.begin_compute_pass(&Default::default()); pass.set_pipeline(&self.cfl_pipeline);
           pass.set_bind_group(0,&self.cfl_group,&[]); pass.dispatch_workgroups(self.count.div_ceil(64) as u32,1,1); }
         self.encode_transport(encoder, 1);
-        self.pending_cfl_dt = Some(dt);
+        self.pending_velocity_validation = Some(validation);
         Ok(())
     }
 
@@ -1143,7 +1173,7 @@ impl MulticomponentGpu {
     /// Read the current mass tensor only when a CPU consumer actually needs it.
     pub fn readback_current(&mut self, output: &mut [f32]) -> Result<(), String> {
         let values = self.count * self.channels;
-        if !self.uploaded || self.pending_cfl_dt.is_some() || output.len() != values {
+        if !self.uploaded || self.pending_velocity_validation.is_some() || output.len() != values {
             return Err("readback requires uploaded state and a matching output tensor".into());
         }
         let final_buffer = if self.current_is_a { &self.mass_a } else { &self.mass_b };
@@ -1201,7 +1231,7 @@ impl MulticomponentGpu {
         }
         encoder.copy_buffer_to_buffer(self.current_mass_buffer(), 0, &self.readback, 0, mass_bytes);
         encoder.copy_buffer_to_buffer(temperature, 0, &self.readback, mass_bytes, temperature_bytes);
-        if self.pending_cfl_dt.is_some() {
+        if self.pending_velocity_validation.is_some() {
             encoder.copy_buffer_to_buffer(&self.cfl_maximum, 0, &self.readback, mass_bytes + temperature_bytes, 4);
         }
         let submission = self.queue.submit([encoder.finish()]);
@@ -1215,10 +1245,10 @@ impl MulticomponentGpu {
         {
             let view = self.readback.get_mapped_range(..).map_err(|e| e.to_string())?;
             let result: &[f32] = bytemuck::cast_slice(&view);
-            if let Some(dt) = self.pending_cfl_dt {
+            if let Some(validation) = self.pending_velocity_validation {
                 let rate = result[values+self.count];
                 checked_rate = Some(rate);
-                invalid_cfl = !rate.is_finite() || !(dt * rate).is_finite() || dt * rate > 1.0;
+                invalid_cfl = !validation.accepts(rate);
             }
             if !invalid_cfl {
                 mass_output.copy_from_slice(&result[..values]);
@@ -1226,8 +1256,8 @@ impl MulticomponentGpu {
             }
         }
         self.readback.unmap();
-        if invalid_cfl { self.uploaded = false; self.pending_cfl_dt = None; return Err("projected velocity exceeds CFL bound or is non-finite".into()); }
-        if self.pending_cfl_dt.take().is_some() {
+        if invalid_cfl { self.uploaded = false; self.pending_velocity_validation = None; return Err("projected velocity exceeds CFL bound or is non-finite".into()); }
+        if self.pending_velocity_validation.take().is_some() {
             self.max_cfl_rate = checked_rate.ok_or("missing CFL result")?;
             self.velocity_externally_exposed.set(false);
         }
@@ -1276,7 +1306,7 @@ impl MulticomponentGpu {
         let group=&projection.temperature_groups[index].1[if self.current_is_a {0} else {1}];
         {let mut pass=encoder.begin_compute_pass(&Default::default());pass.set_pipeline(&projection.pipeline);pass.set_bind_group(0,group,&[]);pass.dispatch_workgroups(self.count.div_ceil(64) as u32,1,1);}
         encoder.copy_buffer_to_buffer(&projection.output,0,&projection.readback,0,bytes);
-        if self.pending_cfl_dt.is_some() {encoder.copy_buffer_to_buffer(&self.cfl_maximum,0,&projection.readback,bytes,4);}
+        if self.pending_velocity_validation.is_some() {encoder.copy_buffer_to_buffer(&self.cfl_maximum,0,&projection.readback,bytes,4);}
         let submission=self.queue.submit([encoder.finish()]);
         let (send,receive)=mpsc::sync_channel(1);
         projection.readback.map_async(wgpu::MapMode::Read,..,move|result|{let _=send.send(result);});
@@ -1284,8 +1314,8 @@ impl MulticomponentGpu {
         receive.recv_timeout(Duration::from_secs(2)).map_err(|e|e.to_string())?.map_err(|e|e.to_string())?;
         let mut invalid_cfl=false; let mut checked_rate=None; let valid;
         {let view=projection.readback.get_mapped_range(..).map_err(|e|e.to_string())?;
-         if let Some(dt)=self.pending_cfl_dt {let rate=f32::from_bits(u32::from_le_bytes(view[bytes as usize..bytes as usize+4].try_into().unwrap()));
-             checked_rate=Some(rate);invalid_cfl=!rate.is_finite() || rate*dt>1.0;}
+         if let Some(validation)=self.pending_velocity_validation {let rate=f32::from_bits(u32::from_le_bytes(view[bytes as usize..bytes as usize+4].try_into().unwrap()));
+             checked_rate=Some(rate);invalid_cfl=!validation.accepts(rate);}
          if compact {
              let cells:&[CompactGasCell]=bytemuck::cast_slice(&view[..bytes as usize]);
              valid=cells.iter().all(|cell|cell.indices&0x8000_0000==0);
@@ -1299,14 +1329,14 @@ impl MulticomponentGpu {
              if valid && !invalid_cfl {output.copy_from_slice(cells);}
          }}
         projection.readback.unmap();
-        if invalid_cfl {self.uploaded=false;self.pending_cfl_dt=None;return Err("projected velocity exceeds CFL bound or is non-finite".into());}
-        if self.pending_cfl_dt.take().is_some() {self.max_cfl_rate=checked_rate.ok_or("missing CFL result")?;self.velocity_externally_exposed.set(false);}
+        if invalid_cfl {self.uploaded=false;self.pending_velocity_validation=None;return Err("projected velocity exceeds CFL bound or is non-finite".into());}
+        if self.pending_velocity_validation.take().is_some() {self.max_cfl_rate=checked_rate.ok_or("missing CFL result")?;self.velocity_externally_exposed.set(false);}
         Ok(valid)
     }
 
     pub fn readback_state(&mut self, mass_output: &mut [f32], enthalpy_output: &mut [f32]) -> Result<(), String> {
         let values = self.count * self.channels;
-        if !self.uploaded || self.pending_cfl_dt.is_some() || mass_output.len() != values || enthalpy_output.len() != values {
+        if !self.uploaded || self.pending_velocity_validation.is_some() || mass_output.len() != values || enthalpy_output.len() != values {
             return Err("readback requires uploaded state and matching output tensors".into());
         }
         let (mass_final, enthalpy_final) = if self.current_is_a {
@@ -2009,6 +2039,59 @@ fn main(@builtin(global_invocation_id) id:vec3<u32>) {{
         gpu.upload(&three_state).unwrap();
         assert!(!gpu.readback_projected_gas(&temp,&mut projected).unwrap());
         assert!(projected.iter().all(|cell|cell.first==99));
+    }
+
+    #[test]
+    fn bounded_transport_preserves_species_and_heat_with_large_velocities() {
+        let (width, height, channels) = (7, 5, 3);
+        let count = width * height;
+        let mut gpu = pollster::block_on(MulticomponentGpu::new(width, height, channels)).unwrap();
+        let species: Vec<_> = (0..channels).map(|c| SpeciesInfo {
+            element_id: c as u16 + 1, phase: 1, specific_heat_capacity: 1.0 + c as f32,
+            vertical_drift: (c as f32 - 1.0) * 500.0,
+        }).collect();
+        let solid: Vec<_> = (0..count).map(|i| u32::from(i % 13 == 0)).collect();
+        let mass: Vec<_> = (0..count * channels).map(|i|
+            if solid[i / channels] != 0 { 0.0 } else { ((i * 17) % 31) as f32 * 0.1 }).collect();
+        let enthalpy: Vec<_> = mass.iter().enumerate().map(|(i, m)|
+            m * species[i % channels].specific_heat_capacity * (200.0 + (i % 97) as f32)).collect();
+        let vx: Vec<_> = (0..count).map(|i| if i % 2 == 0 { 30000.0 } else { -2000.0 }).collect();
+        let vy: Vec<_> = (0..count).map(|i| if i % 3 == 0 { -10000.0 } else { 5000.0 }).collect();
+        let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &vx,
+            velocity_y: &vy, solid: &solid, species: &species };
+        let temp = gpu.device.create_buffer(&wgpu::BufferDescriptor { label: None, size: (count * 4) as u64,
+            usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+        gpu.queue.write_buffer(&temp, 0, bytemuck::cast_slice(&vec![300.0f32; count]));
+        for dt in [0.0001, 0.05, 0.5, 2.0] {
+            gpu.upload(&state).unwrap();
+            let _ = gpu.velocity_buffers();
+            let mut encoder = gpu.device.create_command_encoder(&Default::default());
+            gpu.encode_bounded_resident(&mut encoder, dt).unwrap();
+            let mut result = vec![0.0; mass.len()];
+            let mut temperatures = vec![0.0; count];
+            gpu.readback_mass_and_temperature_after(encoder, &temp, &mut result, &mut temperatures).unwrap();
+            let mut energy = vec![0.0; mass.len()];
+            gpu.readback_state(&mut result, &mut energy).unwrap();
+            assert!(result.iter().all(|m| m.is_finite() && *m >= -1e-6));
+            assert!(energy.iter().all(|e| e.is_finite() && *e >= -1e-3));
+            for c in 0..channels {
+                let total = |values: &[f32]| values.chunks_exact(channels).map(|cell| f64::from(cell[c])).sum::<f64>();
+                assert!((total(&result) - total(&mass)).abs() < 1e-4, "species {c}, dt {dt}");
+                assert!((total(&energy) - total(&enthalpy)).abs() < 0.02, "heat {c}, dt {dt}");
+            }
+        }
+        // A non-finite velocity written by a preceding device operator must
+        // still fail without publishing partially computed host arrays.
+        gpu.upload(&state).unwrap();
+        let (velocity, _) = gpu.velocity_buffers();
+        gpu.queue.write_buffer(velocity, 0, bytemuck::bytes_of(&f32::NAN));
+        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+        gpu.encode_bounded_resident(&mut encoder, 0.05).unwrap();
+        let mut result = vec![7.0; mass.len()];
+        let mut temperatures = vec![8.0; count];
+        assert!(gpu.readback_mass_and_temperature_after(encoder, &temp, &mut result, &mut temperatures).is_err());
+        assert!(result.iter().all(|&value| value == 7.0));
+        assert!(temperatures.iter().all(|&value| value == 8.0));
     }
 
     #[test]

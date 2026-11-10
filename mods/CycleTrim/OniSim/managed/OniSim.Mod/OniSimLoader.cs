@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace OniSim.CycleTrim
 {
@@ -20,6 +21,15 @@ namespace OniSim.CycleTrim
         private static readonly object Gate = new object();
         private static string mappedPath;
         private static NativeModule targetModule;
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ReadyDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int FrameStateDelegate();
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate IntPtr ErrorDelegate();
+        private static ReadyDelegate frameReady;
+        private static FrameStateDelegate frameState;
+        private static ErrorDelegate nativeError;
 
         // Standalone / CycleTrim entry: OniSim is on by default.
         // CYCLETRIM_ONISIM_ENABLE=0|false|off remains an emergency kill switch.
@@ -73,6 +83,9 @@ namespace OniSim.CycleTrim
                     // Validate the native Sim target prior to invoking Jlib's native component replacement.
                     targetModule = NativeModule.OpenTarget(path);
                     OfficialProfile.ValidateTarget(targetModule);
+                    frameReady = targetModule.Bind<ReadyDelegate>("ONISIM_IsReady");
+                    frameState = targetModule.Bind<FrameStateDelegate>("ONISIM_GetFrameState");
+                    nativeError = targetModule.Bind<ErrorDelegate>("ONISIM_GetLastError");
 
                     var replacement = Jlib.Runtime.JlibApi.ReplaceSimDll(gameAssembly, path);
                     if (!replacement.Succeeded)
@@ -95,6 +108,18 @@ namespace OniSim.CycleTrim
         {
             lock (Gate)
                 return mappedPath;
+        }
+
+        public static bool IsFrameReady()
+        {
+            if (mappedPath == null) throw new InvalidOperationException("OniSim is not mapped.");
+            // Coalesced completion events: no native mutex and no wait on the
+            // render thread. The regular query is used only to report a fault.
+            int state = frameState();
+            if (state == 0 || state == 2) return true;
+            if (state == 1) return false;
+            frameReady();
+            throw new InvalidOperationException("OniSim frame failed: " + Marshal.PtrToStringAnsi(nativeError()));
         }
 
         private static LoaderResult Mapped()

@@ -181,3 +181,56 @@ fn benchmark_native_chain_sample() {
     let mean = times.iter().sum::<f64>() / times.len() as f64;
     println!("NATIVE_CHAIN_SAMPLE,{scene},{width},{height},{elapsed},{warmup},{batches},{mean:.6},{ticks},{major_faults},{hwm},{values}");
 }
+
+#[test]
+#[ignore = "manual paired radiation CPU/GPU cost and output comparison"]
+fn benchmark_radiation_backends() {
+    let mut gpu = crate::gpu_sim::GpuSimulation::new(192, 288).unwrap();
+    for (width, height) in [(32, 32), (80, 174), (160, 274)] {
+        let (mut state, regions) = fixture::create(width, height, "mixed");
+        let elements = std::sync::Arc::get_mut(state.elements.as_mut().unwrap()).unwrap();
+        elements.elements[6].record.radiation_per_1000_mass = 3.0;
+        let mut world = state.world.take().unwrap();
+        world.radiation_enabled = true;
+        // The benchmark includes the right/top halo; unlike the complete
+        // worker fixture those cells must contain a real material record.
+        world.write.element.fill(fixture::GAS);
+        world.write.mass.fill(1.0);
+        let region = crate::world::Region { cosmic_radiation: 200.0, ..regions[0] };
+        let diseases = state.diseases.as_ref().unwrap();
+        for (stride, label) in [(usize::MAX, "none"), (97, "sparse"), (2, "dense")] {
+            for y in 1..=height { for x in 1..=width {
+                let cell = y * world.stride + x;
+                world.write.element[cell] = if cell % stride == 0 { 6 } else { fixture::GAS };
+                world.write.mass[cell] = if cell % stride == 0 { 1000.0 } else { 1.0 };
+            }}
+            let initial: Vec<_> = (0..world.write.mass.len()).map(|i| (i % 500) as f32).collect();
+            let mut cpu_times = Vec::new(); let mut gpu_times = Vec::new();
+            for iteration in 0..15 {
+                world.write.radiation.copy_from_slice(&initial);
+                world.radiation_transmission.fill(0.0);
+                let start = std::time::Instant::now();
+                crate::radiation::update_region(&mut world, elements, diseases, region).unwrap();
+                let cpu_time = start.elapsed().as_secs_f64() * 1000.0;
+                let expected = world.write.radiation.clone();
+                let transmission = world.radiation_transmission.clone();
+                world.write.radiation.copy_from_slice(&initial);
+                world.radiation_transmission.fill(0.0);
+                let start = std::time::Instant::now();
+                let work = gpu.begin_radiation_region(&world, elements, diseases, region).unwrap().unwrap();
+                gpu.finish_radiation_region(&mut world, work).unwrap();
+                let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
+                for y in region.min_y..=region.max_y { for x in region.min_x..=region.max_x {
+                    let cell = y as usize * world.stride + x as usize;
+                    assert!((world.write.radiation[cell] - expected[cell]).abs() < 0.001,
+                        "{label} {width}x{height} cell {cell}: {} != {}", world.write.radiation[cell], expected[cell]);
+                    assert!((world.radiation_transmission[cell] - transmission[cell]).abs() < 1e-5);
+                }}
+                if iteration >= 5 { cpu_times.push(cpu_time); gpu_times.push(gpu_time); }
+            }
+            cpu_times.sort_by(f64::total_cmp); gpu_times.sort_by(f64::total_cmp);
+            println!("RADIATION_BACKENDS,{width},{height},{label},cpu_ms={:.6},gpu_ms={:.6}",
+                (cpu_times[4] + cpu_times[5]) * 0.5, (gpu_times[4] + gpu_times[5]) * 0.5);
+        }
+    }
+}

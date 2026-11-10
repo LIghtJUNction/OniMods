@@ -6,6 +6,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::thread::{self, JoinHandle};
 
 use crate::status::{Error, Result, Status};
@@ -15,6 +16,13 @@ use crate::world::Region;
 mod run;
 
 pub(crate) const MAX_QUEUED_FRAMES: usize = 30;
+
+pub(crate) const STOPPED: i32 = 0;
+pub(crate) const BUSY: i32 = 1;
+pub(crate) const READY: i32 = 2;
+pub(crate) const FAILED: i32 = 3;
+// Updated by worker lifecycle events; observers never take either mutex.
+pub(crate) static FRAME_STATE: AtomicI32 = AtomicI32::new(STOPPED);
 
 type Handoff<D> = Box<dyn FnOnce(&mut D) + Send + 'static>;
 
@@ -50,9 +58,13 @@ struct Mailbox<F, D> {
 struct Shared<F, D> {
     mailbox: Mutex<Mailbox<F, D>>,
     changed: Condvar,
+    signal: Option<&'static AtomicI32>,
 }
 
 impl<F, D> Shared<F, D> {
+    fn signal(&self, state: i32) {
+        if let Some(signal) = self.signal { signal.store(state, Ordering::Release); }
+    }
     fn lock(&self) -> MutexGuard<'_, Mailbox<F, D>> {
         match self.mailbox.lock() {
             Ok(guard) => guard,
@@ -81,6 +93,7 @@ impl<F, D> Shared<F, D> {
             message: "simulation worker mailbox is poisoned".into(),
         });
         mailbox.stopping = true;
+        self.signal(FAILED);
         self.changed.notify_all();
     }
 
@@ -90,11 +103,14 @@ impl<F, D> Shared<F, D> {
             status: error.status,
             message: error.message,
         });
+        self.signal(FAILED);
         self.changed.notify_all();
     }
 
     fn request_stop(&self) {
-        self.lock().stopping = true;
+        let mut mailbox = self.lock();
+        mailbox.stopping = true;
+        self.signal(STOPPED);
         self.changed.notify_all();
     }
 }
@@ -138,6 +154,14 @@ impl<F: Send + 'static, D: Send + 'static> Worker<F, D> {
     where
         R: FnMut(Vec<F>, &[Region], &mut D, &D) -> Result<()> + Send + 'static,
     {
+        Self::spawn_notified(output, old, regions, runner, None)
+    }
+
+    pub(crate) fn spawn_notified<R>(output: D, old: D, regions: Vec<Region>, runner: R,
+        signal: Option<&'static AtomicI32>) -> Result<Self>
+    where
+        R: FnMut(Vec<F>, &[Region], &mut D, &D) -> Result<()> + Send + 'static,
+    {
         let shared = Arc::new(Shared {
             mailbox: Mutex::new(Mailbox {
                 frames: Vec::new(),
@@ -150,12 +174,15 @@ impl<F: Send + 'static, D: Send + 'static> Worker<F, D> {
                 fault: None,
             }),
             changed: Condvar::new(),
+            signal,
         });
+        shared.signal(BUSY);
         let worker_shared = Arc::clone(&shared);
         let thread = thread::Builder::new()
             .name("onisim-physics".into())
             .spawn(move || run::entry(worker_shared, output, old, regions, runner))
             .map_err(|error| {
+                shared.signal(FAILED);
                 Error::new(
                     Status::ResourceLimit,
                     format!("could not start simulation worker: {error}"),
@@ -233,6 +260,7 @@ impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
                     status: Status::InternalFailure,
                     message: "simulation frame capture panicked".into(),
                 });
+                self.shared.signal(FAILED);
                 self.shared.changed.notify_all();
                 drop(mailbox);
                 // FFI containment also marks the partially captured State
@@ -261,6 +289,7 @@ impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
             }
             if let Some(data) = mailbox.ready.take() {
                 mailbox.leased = true;
+                self.shared.signal(BUSY);
                 return Ok(ReadyLease {
                     shared: Arc::clone(&self.shared),
                     data: Some(data),
@@ -358,6 +387,7 @@ impl<F: Send + 'static, D: Send + 'static> Drop for ReadyLease<F, D> {
                 status: Status::InternalFailure,
                 message: "Prepare abandoned a ready simulation frame".into(),
             });
+            self.shared.signal(FAILED);
         }
         self.shared.changed.notify_all();
     }
@@ -374,6 +404,42 @@ mod tests {
 
     fn ok<T>(result: Result<T>) -> T {
         result.unwrap_or_else(|error| panic!("{}", error.message))
+    }
+
+    #[test]
+    fn completion_signal_tracks_busy_ready_failure_and_shutdown() {
+        static SIGNAL: AtomicI32 = AtomicI32::new(STOPPED);
+        let (started, entered) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let mut calls = 0;
+        let mut worker = ok(Worker::<(), ()>::spawn_notified(
+            (), (), Vec::new(), move |_, _, _, _| {
+                started.send(()).unwrap();
+                gate.recv_timeout(Duration::from_secs(2)).unwrap();
+                calls += 1;
+                if calls == 2 { return Err(Error::new(Status::InternalFailure, "signal test fault")); }
+                Ok(())
+            }, Some(&SIGNAL),
+        ));
+        let handle = worker.handle();
+        entered.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert_eq!(SIGNAL.load(Ordering::Acquire), BUSY);
+        release.send(()).unwrap();
+        {
+            let mut mailbox = handle.shared.lock();
+            while mailbox.ready.is_none() { mailbox = handle.shared.wait(mailbox); }
+            assert_eq!(SIGNAL.load(Ordering::Acquire), READY);
+        }
+        let lease = ok(handle.wait_ready());
+        assert_eq!(SIGNAL.load(Ordering::Acquire), BUSY);
+        ok(lease.release());
+        entered.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert_eq!(SIGNAL.load(Ordering::Acquire), BUSY);
+        release.send(()).unwrap();
+        assert!(handle.wait_ready().is_err());
+        assert_eq!(SIGNAL.load(Ordering::Acquire), FAILED);
+        assert!(worker.shutdown().is_err());
+        assert_eq!(SIGNAL.load(Ordering::Acquire), STOPPED);
     }
 
     #[test]

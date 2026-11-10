@@ -8,15 +8,15 @@ use onisim_gpu::{
     gas_pressure_faces::{GasCell, GasPressureFacesGpu, GasResult},
     bubble_settling::{Cell as BubbleCell, Material as BubbleMaterial, ResultCell as BubbleResult, BubbleSettlingGpu, PendingBubble},
     phase_transition::{PhaseCell, PhaseDecision, PhaseMaterial, PhaseTransitionGpu},
-    radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult},
     gpu_context::GpuContext,
     multicomponent::{MulticomponentGpu, State},
-    pressure_projection::PressureProjectionGpu,
     thermal_diffusion::ThermalDiffusionGpu,
     thermal_enthalpy::ThermalEnthalpyGpu,
 };
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
+#[cfg(test)]
+use onisim_gpu::radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult};
 
 pub(crate) struct GpuSimulation {
     pub(crate) context: Arc<GpuContext>,
@@ -48,9 +48,9 @@ pub(crate) struct GpuSimulation {
     disease_growth_elements: Vec<DiseaseElementMetadata>,
     disease_diffusion_meta: Vec<DiffusionDisease>,
     disease_diffusion_elements: Vec<DiffusionElement>,
-    radiation_region: RadiationRegionGpu,
-    radiation_cells: Vec<RadiationCell>,
-    radiation_result: Vec<RadiationResult>,
+    #[cfg(test)] radiation_region: RadiationRegionGpu,
+    #[cfg(test)] radiation_cells: Vec<RadiationCell>,
+    #[cfg(test)] radiation_result: Vec<RadiationResult>,
     gas_pressure_faces: GasPressureFacesGpu,
     pressure_cells: Vec<GasCell>,
     pressure_result: Vec<GasResult>,
@@ -69,11 +69,11 @@ pub(crate) struct GpuSimulation {
 
 struct GasPipeline {
     transport: MulticomponentGpu,
-    pressure: PressureProjectionGpu,
     thermal: ThermalDiffusionGpu,
     enthalpy: ThermalEnthalpyGpu,
 }
 
+#[cfg(test)]
 pub(crate) struct PendingRadiationRegion {
     pending: PendingRadiation,
     bounds: (usize, usize, usize, usize),
@@ -116,6 +116,7 @@ impl GpuSimulation {
         let disease_growth = DiseaseGrowthGpu::new(context.clone());
         let disease_diffusion = DiseaseDiffusionGpu::new(context.clone());
         let phase_transition = PhaseTransitionGpu::new(context.clone());
+        #[cfg(test)]
         let radiation_region = RadiationRegionGpu::new(context.clone());
         let gas_pressure_faces = GasPressureFacesGpu::new(context.clone());
         let bubble_settling = BubbleSettlingGpu::new(context.clone());
@@ -152,9 +153,9 @@ impl GpuSimulation {
             disease_growth_elements: Vec::new(),
             disease_diffusion_meta: Vec::new(),
             disease_diffusion_elements: Vec::new(),
-            radiation_region,
-            radiation_cells: Vec::new(),
-            radiation_result: Vec::new(),
+            #[cfg(test)] radiation_region,
+            #[cfg(test)] radiation_cells: Vec::new(),
+            #[cfg(test)] radiation_result: Vec::new(),
             gas_pressure_faces,
             pressure_cells: Vec::new(),
             pressure_result: Vec::new(),
@@ -483,6 +484,7 @@ impl GpuSimulation {
         Ok(true)
     }
 
+    #[cfg(test)]
     pub(crate) fn begin_radiation_region(&mut self, world: &PhysicsWorld, elements: &ElementTable,
         diseases: &DiseaseTable, region: crate::world::Region) -> Result<Option<PendingRadiationRegion>, String> {
         let (min_x, max_x, min_y, max_y) = (region.min_x as usize, region.max_x as usize, region.min_y as usize, region.max_y as usize);
@@ -508,6 +510,7 @@ impl GpuSimulation {
         Ok(Some(PendingRadiationRegion { pending, bounds: (min_x, max_x, min_y, max_y) }))
     }
 
+    #[cfg(test)]
     pub(crate) fn finish_radiation_region(&mut self, world: &mut PhysicsWorld, work: PendingRadiationRegion) -> Result<(), String> {
         let (min_x, max_x, min_y, max_y) = work.bounds;
         let count = (max_x - min_x + 1) * (max_y - min_y + 1);
@@ -778,14 +781,11 @@ impl GpuSimulation {
             let transport = onisim_gpu::pollster::block_on(MulticomponentGpu::new_with_context(
                 self.context.clone(), width, height, channels,
             ))?;
-            let pressure = onisim_gpu::pollster::block_on(PressureProjectionGpu::new_with_context(
-                self.context.clone(), width, height,
-            ))?;
             let thermal = onisim_gpu::pollster::block_on(ThermalDiffusionGpu::new_with_context(
                 self.context.clone(), width, height,
             ))?;
             let enthalpy = ThermalEnthalpyGpu::new(self.context.clone());
-            self.gas.push_front(GasPipeline { transport, pressure, thermal, enthalpy });
+            self.gas.push_front(GasPipeline { transport, thermal, enthalpy });
         }
         let pipeline = self.gas.front_mut().ok_or("GPU gas pipeline unavailable")?;
         let mut encoder = self.context.command_encoder();
@@ -804,26 +804,11 @@ impl GpuSimulation {
         pipeline.enthalpy.encode_conductivity(&mut encoder, width * height, channels, pipeline.transport.current_mass_buffer(),
             species_conductivity, pipeline.thermal.conductivity_buffer())?;
         let uploaded = started.elapsed();
-        let gauge = state.solid.iter().enumerate().find_map(|(cell, &solid)| {
-            let start = cell * channels;
-            let nonempty = if let Some(sparse)=sparse { sparse[cell].first_mass>0.0 || sparse[cell].second_mass>0.0 }
-                else { state.mass[start..start + channels].iter().any(|&m| m > 0.0) };
-            (solid == 0 && nonempty).then_some(cell)
-        }).ok_or("gas region has no nonempty fluid cell")?;
-        let (vx, vy) = pipeline.transport.velocity_buffers();
-        pipeline.pressure.encode_with_shared_state(
-            &mut encoder,
-            pipeline.transport.current_mass_buffer(), vx, vy, pipeline.transport.solid_buffer(),
-            channels, 1.0, 1.0, gauge, dt, 1.0, 1.0, 4, 1.0,
-        )?;
-        // Projection can increase velocity beyond the transport CFL limit.
-        // Complete it first, measure the resulting rate, then advance the
-        // whole requested interval using stable conservative substeps.
-        self.context.submit(encoder);
-        let rate = pipeline.transport.revalidate_velocity()?;
-        let substeps = stable_transport_steps(dt, rate)?;
-        let mut encoder = self.context.command_encoder();
-        pipeline.transport.encode_resident(&mut encoder, substeps, dt / substeps as f32)?;
+        // Gas density must be free to expand into vacuum. The CPU path uses
+        // this same density-gradient velocity; an incompressible projection
+        // cancels its divergence and adds a solver plus a host/GPU barrier.
+        // Bounded face flux already guarantees nonnegative transport.
+        pipeline.transport.encode_bounded_resident(&mut encoder, dt)?;
         let projected = started.elapsed();
         let cells = width * height;
         let (temperature, total_mass, heat_capacity) = pipeline.thermal.state_buffers();
@@ -847,11 +832,11 @@ impl GpuSimulation {
             LOG_FIRST_DIFFUSION.call_once(|| eprintln!("[CycleTrim OniSim] GPU concentration diffusion dispatch completed (region {width}x{height}, {channels} channels; unmapped gases may be excluded)"));
         }
         if profiling {
-            eprintln!("[CycleTrim OniSim] GPU gas profile {width}x{height}x{channels}: upload/setup={:.3}ms projection+CFL-submit={:.3}ms remaining-submit+GPU-wait+readback={:.3}ms", uploaded.as_secs_f64()*1000.0, (projected-uploaded).as_secs_f64()*1000.0, (started.elapsed()-projected).as_secs_f64()*1000.0);
+            eprintln!("[CycleTrim OniSim] GPU gas profile {width}x{height}x{channels}: upload/setup={:.3}ms bounded-transport-encode={:.3}ms submit+GPU-wait+readback={:.3}ms", uploaded.as_secs_f64()*1000.0, (projected-uploaded).as_secs_f64()*1000.0, (started.elapsed()-projected).as_secs_f64()*1000.0);
         }
         static LOG_FIRST_GAS_CHAIN: std::sync::Once = std::sync::Once::new();
         LOG_FIRST_GAS_CHAIN.call_once(|| {
-            eprintln!("[CycleTrim OniSim] GPU gas pressure, transport and heat chain completed (region {width}x{height}, {channels} channels)");
+            eprintln!("[CycleTrim OniSim] GPU gas density transport and heat completed in one submission (region {width}x{height}, {channels} channels)");
         });
         Ok(valid)
     }
@@ -927,15 +912,6 @@ impl GpuSimulation {
     }
 }
 
-fn stable_transport_steps(dt: f32, rate: f32) -> Result<usize, String> {
-    if !dt.is_finite() || dt <= 0.0 || !rate.is_finite() || rate < 0.0 {
-        return Err("invalid transport timestep or projected velocity".into());
-    }
-    let steps = ((dt * rate / 0.95).ceil() as usize).max(1);
-    if steps > 4096 { return Err(format!("projected velocity requires {steps} transport substeps")); }
-    Ok(steps)
-}
-
 #[cfg(test)]
 const MATERIAL_BLOCK: usize = 4096;
 
@@ -962,13 +938,6 @@ fn material_upload_ranges<T: PartialEq>(previous: &[T], current: &[T], table_cha
 #[cfg(test)]
 mod material_range_tests {
     use super::material_upload_ranges;
-
-    #[test]
-    fn transport_substeps_cover_the_whole_interval_within_cfl() {
-        assert_eq!(super::stable_transport_steps(0.1, 30.0).unwrap(), 4);
-        assert_eq!(super::stable_transport_steps(0.1, 0.0).unwrap(), 1);
-        assert!(super::stable_transport_steps(0.1, f32::NAN).is_err());
-    }
 
     #[test]
     fn liquid_pipeline_cache_retains_multiple_region_shapes() {
@@ -1362,7 +1331,7 @@ mod material_range_tests {
     }
 
     #[test]
-    fn gas_pressure_transport_and_heat_chain_conserves_mass_and_energy() {
+    fn gas_density_transport_and_heat_chain_conserves_mass_and_energy() {
         use super::GpuSimulation;
         use onisim_gpu::multicomponent::{SpeciesInfo, State};
         let (width, height, channels) = (6, 4, 2);
@@ -1411,6 +1380,51 @@ mod material_range_tests {
     }
 
     #[test]
+    fn direct_gas_transport_spreads_into_vacuum_without_crossing_walls_or_oscillating() {
+        use onisim_gpu::multicomponent::{SpeciesInfo, State};
+        let (width, height, channels) = (12, 10, 3);
+        let count = width * height;
+        let mut gpu = super::GpuSimulation::new(width, height).unwrap();
+        let species: Vec<_> = (0..channels).map(|c| SpeciesInfo {
+            element_id: c as u16 + 1, phase: 1, specific_heat_capacity: 1.0 + c as f32,
+            vertical_drift: 0.0,
+        }).collect();
+        let solid: Vec<_> = (0..count).map(|i| u32::from(i % width == 8)).collect();
+        let source = 5 * width + 4;
+        for amount in [0.001, 10000.0] {
+            let mut mass = vec![0.0; count * channels];
+            for c in 0..channels { mass[source * channels + c] = amount * (c + 1) as f32; }
+            let mut temperature = vec![400.0; count];
+            let mut next_mass = vec![0.0; mass.len()];
+            let mut next_temperature = vec![0.0; count];
+            let energy = |m: &[f32], t: &[f32]| m.iter().enumerate().map(|(i, &v)|
+                f64::from(v) * f64::from(species[i % channels].specific_heat_capacity) * f64::from(t[i / channels])).sum::<f64>();
+            let density_norm = |m: &[f32]| m.chunks_exact(channels).map(|v| v.iter().map(|&x| f64::from(x)).sum::<f64>().powi(2)).sum::<f64>();
+            let heat = energy(&mass, &temperature);
+            let mut previous_norm = density_norm(&mass);
+            for _ in 0..20 {
+                let state = State { mass: &mass, enthalpy: &[], velocity_x: &[], velocity_y: &[], solid: &solid, species: &species };
+                gpu.step_gas(width, height, channels, &state, &temperature, &[0.0; 3], true, 0.05,
+                    &mut next_mass, &mut next_temperature).unwrap();
+                assert!(next_mass.iter().all(|&v| v.is_finite() && v >= 0.0));
+                let norm = density_norm(&next_mass);
+                assert!(norm <= previous_norm * 1.00001, "density oscillation {norm} > {previous_norm}");
+                previous_norm = norm;
+                for c in 0..channels {
+                    let total: f64 = next_mass.iter().skip(c).step_by(channels).map(|&v| f64::from(v)).sum();
+                    assert!((total - f64::from(amount) * (c + 1) as f64).abs() < f64::from(amount) * 1e-4);
+                }
+                assert!((energy(&next_mass, &next_temperature) - heat).abs() < heat * 1e-5);
+                std::mem::swap(&mut mass, &mut next_mass);
+                std::mem::swap(&mut temperature, &mut next_temperature);
+            }
+            assert!((0..channels).all(|c| mass[(source + 1) * channels + c] > 0.0));
+            assert!((0..count).filter(|i| i % width >= 8).all(|i|
+                mass[i * channels..(i + 1) * channels].iter().all(|&v| v == 0.0)));
+        }
+    }
+
+    #[test]
     fn gas_pipeline_reuses_alternating_region_sizes() {
         use super::GpuSimulation;
         use onisim_gpu::multicomponent::{SpeciesInfo, State};
@@ -1440,14 +1454,16 @@ mod material_range_tests {
     fn profile_game_sized_gas_chain() {
         use super::GpuSimulation;
         use onisim_gpu::multicomponent::{SpeciesInfo, State};
-        let (width, height, channels) = (160, 274, 8);
+        let mut gpu = GpuSimulation::new(160, 274).unwrap();
+        for (width, height, channels) in [(32,32,1), (64,96,5), (80,174,2), (128,153,7), (160,274,6)] {
         let cells = width * height;
         let mut mass = vec![0.0; cells * channels];
         let mut enthalpy = vec![0.0; cells * channels];
         for cell in 0..cells {
             let first = cell % channels;
-            mass[cell * channels + first] = 1.0;
-            enthalpy[cell * channels + first] = 300.0;
+            let amount = if cell % width < width / 2 { 2.0 } else { 0.1 };
+            mass[cell * channels + first] = amount;
+            enthalpy[cell * channels + first] = amount * 300.0;
         }
         let velocity = vec![0.0; cells];
         let solid = vec![0; cells];
@@ -1456,13 +1472,20 @@ mod material_range_tests {
         }).collect();
         let state = State { mass: &mass, enthalpy: &enthalpy, velocity_x: &velocity,
             velocity_y: &velocity, solid: &solid, species: &species };
-        let mut gpu = GpuSimulation::new(width, height).unwrap();
         let mut out_mass = vec![0.0; mass.len()];
         let mut out_temperature = vec![0.0; cells];
         let conductivity = vec![1.0; channels];
-        for _ in 0..6 {
-            gpu.step_gas(width, height, channels, &state, &vec![300.0; cells], &conductivity, false, 0.05,
+        let temperatures = vec![300.0; cells];
+        let mut times = Vec::new();
+        for iteration in 0..25 {
+            let start = std::time::Instant::now();
+            gpu.step_gas(width, height, channels, &state, &temperatures, &conductivity, true, 0.05,
                 &mut out_mass, &mut out_temperature).unwrap();
+            if iteration >= 5 { times.push(start.elapsed().as_secs_f64() * 1000.0); }
+        }
+        times.sort_by(f64::total_cmp);
+        println!("GAS_CHAIN_SAMPLE,{width},{height},{channels},median_ms={:.6},min_ms={:.6},max_ms={:.6}",
+            (times[9] + times[10]) * 0.5, times[0], times[19]);
         }
     }
 

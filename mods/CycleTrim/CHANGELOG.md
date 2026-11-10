@@ -1,3 +1,13 @@
+## 2026-11-10 — 0.4.15
+
+- Require Jlib 0.3.5 and use an atomic native completion signal to avoid waiting for unfinished simulation on the render thread. Overlap managed sub-ticks with native work while retaining the existing publication ownership barrier.
+- Replace repeated per-cell mixture hashing with indexed sparse component lists. Retain every species and component order.
+- Retain settled gas snapshots for all active worlds; ignore blocked solid heat changes that do not affect gas transport.
+- Run gas density-driven transport in one GPU submission. Remove the incompressible projection and intermediate velocity readback; bounded face flux advances the whole interval, while non-finite device results still fail before publication.
+- Run environmental radiation directly on the CPU. Paired sparse/dense benchmarks favor visiting actual emitters over packing every cell, gathering 25 neighbors twice on the GPU, and reading every world back.
+- Recognize both Vacuum and 65535 as absent space backwalls. Limit space loss by elapsed time and phase amount, so small gas/liquid parcels survive initial exposure; apply the same phase fraction to every species.
+- Local and runtime validation are documented separately in the synchronization report. This does not make Unity-dependent gameplay fully asynchronous.
+
 ## 2026-11-10 — 0.4.14
 
 - Require Jlib 0.3.4 for parent-world pickup indexes, event-driven offset refresh, ordered tag candidates and bounded navigation selection. Retain native eligibility, reservation and priority checks; incompatible fetch owners retain their pipeline.

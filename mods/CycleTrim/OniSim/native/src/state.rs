@@ -257,7 +257,7 @@ impl State {
             self.radiation_emitters.take_engine_state(),
         )));
         let engine_for_worker = Arc::clone(&engine);
-        let worker = SimulationWorker::spawn(
+        let worker = SimulationWorker::spawn_notified(
             output,
             old,
             Vec::new(),
@@ -272,6 +272,7 @@ impl State {
                     })?
                     .run_batch(frames, regions, output, old)
             },
+            Some(&crate::worker::FRAME_STATE),
         );
         match worker {
             Ok(worker) => {

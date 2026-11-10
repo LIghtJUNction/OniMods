@@ -60,7 +60,7 @@ pub(crate) struct PhysicsWorld {
     // multicomponent publication advertises all components.
     pub(crate) mixture_element: Vec<u16>,
     pub(crate) mixture_mass: Vec<f32>,
-    pub(crate) extra_mixtures: std::collections::HashMap<usize, Vec<(u16, f32)>>,
+    pub(crate) extra_mixtures: crate::cell_mixtures::CellMixtures,
     // Dense NHWC gas channels (production promotion of the GPU operator layout).
     pub(crate) species_mass: Vec<f32>,
     pub(crate) gas_channel_of_element: Vec<u8>,
@@ -151,7 +151,7 @@ impl PhysicsWorld {
             building_contact_heat_transfer_scale: f32::from_bits(0x3a83126f),
             mixture_element: filled(count, vacuum_element)?,
             mixture_mass: filled(count, 0.0)?,
-            extra_mixtures: std::collections::HashMap::new(),
+            extra_mixtures: crate::cell_mixtures::CellMixtures::new(count)?,
             species_mass: filled(
                 count
                     .checked_mul(crate::multicomponent_flux::GAS_CHANNELS)

@@ -81,6 +81,7 @@ fn run<F, D, R>(
                 return;
             }
             mailbox.ready = Some(output);
+            shared.signal(super::READY);
             shared.changed.notify_all();
             loop {
                 if mailbox.stopping || mailbox.fault.is_some() {

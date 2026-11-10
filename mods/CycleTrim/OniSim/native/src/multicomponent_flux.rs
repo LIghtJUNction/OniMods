@@ -755,8 +755,26 @@ fn step_region_prepared(
         }
     }
     if settled {
-        // Bound retained snapshots when camera/active region extents change.
-        if idle.len() >= 4 { idle.clear(); }
+        // Retain the current worlds together. Clearing a four-entry cache while
+        // stepping eight worlds caused every following tick to miss again.
+        let capacity = world.regions.len().max(4);
+        if idle.len() >= capacity {
+            idle.retain(|&(x, y, width, height), _| {
+                world.regions.iter().any(|r| {
+                    let left = r.min_x.max(1) as usize;
+                    let bottom = r.min_y.max(1) as usize;
+                    x == left
+                        && y == bottom
+                        && width == (r.max_x as usize).min(world.width).saturating_sub(left)
+                        && height == (r.max_y as usize).min(world.height).saturating_sub(bottom)
+                })
+            });
+            if idle.len() >= capacity {
+                if let Some(evicted_key) = idle.keys().copied().min() {
+                    idle.remove(&evicted_key);
+                }
+            }
+        }
         idle.insert(key, IdleGasRegion { source: crate::gas_region_snapshot::GasRegionSnapshot::capture(world, key),
             solid: solid.clone(), species: species.clone(), thermal: gpu_diffusion });
     }
@@ -1013,4 +1031,88 @@ mod tests {
         assert!((after0 - before0).abs() / before0 < 1e-5);
         assert!((after1 - before1).abs() / before1 < 1e-5);
     }
+    #[test]
+    fn eight_settled_worlds_sleep_together_and_only_changed_world_wakes() {
+        let (mut world, table, _) = gas_fixture(32, 8);
+        for y in 1..=8 {
+            for x in 1..=32 {
+                let c = y * world.stride + x;
+                world.write.mass[c] = 1.0;
+                world.mixture_mass[c] = 0.5;
+                world.write.temperature[c] = 300.0;
+            }
+        }
+        let regions: Vec<_> = (0..8)
+            .map(|i| Region {
+                min_x: 1 + i * 4,
+                max_x: 5 + i * 4,
+                min_y: 1,
+                max_y: 9,
+                ..Region::default()
+            })
+            .collect();
+        world.regions = regions.clone();
+        let mut staging = GasStaging::default();
+        for _ in 0..3 {
+            for &region in &regions {
+                step_region_prepared(
+                    &mut world,
+                    &table,
+                    &mut EventQueues::default(),
+                    region,
+                    None,
+                    false,
+                    None,
+                    false,
+                    256,
+                    &mut staging,
+                )
+                .unwrap();
+            }
+        }
+        assert_eq!(staging.preparations, 8);
+        assert_eq!(staging.idle_hits, 16);
+        world.write.mass[3 * world.stride + 14] += 1.0;
+        for &region in &regions {
+            step_region_prepared(
+                &mut world,
+                &table,
+                &mut EventQueues::default(),
+                region,
+                None,
+                false,
+                None,
+                false,
+                256,
+                &mut staging,
+            )
+            .unwrap();
+        }
+        assert_eq!(staging.preparations, 9);
+        assert_eq!(staging.idle_hits, 23);
+    }
+
+    #[test]
+    fn sleeping_gas_ignores_blocked_solid_heat_but_wakes_when_wall_opens() {
+        let (mut world, _, _) = gas_fixture(8, 8);
+        let key = (1, 1, 8, 8);
+        let cell = 2 * world.stride + 2;
+        world.write.element[cell] = 2;
+        world.clear_cell_mixtures(cell);
+        let old = crate::gas_region_snapshot::GasRegionSnapshot::capture(&world, key);
+        world.write.temperature[cell] += 100.0;
+        world.write.mass[cell] += 100.0;
+        assert!(
+            old.matches(&world, key),
+            "blocked rock is not a gas transport input"
+        );
+        world.write.element[cell] = world.vacuum_element;
+        world.write.mass[cell] = 0.0;
+        world.write.properties[cell] = 0;
+        assert!(
+            !old.matches(&world, key),
+            "opening a wall must wake the gas solver"
+        );
+    }
+
 }

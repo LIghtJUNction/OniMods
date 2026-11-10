@@ -19,6 +19,7 @@ mod cell_material_add_solid;
 mod cell_material_commands;
 mod cell_material_mass;
 mod cell_material_rect;
+mod cell_mixtures;
 mod component_handles;
 mod conduit;
 mod conduit_ffi;
@@ -154,6 +155,11 @@ pub extern "C" fn ONISIM_TryInitialize(callback: state::Callback) {
     // Unlike the official entry point, this project extension never takes
     // ownership away from an already initialized game simulation.
     boundary((), || state::lock()?.initialize(callback))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ONISIM_GetFrameState() -> i32 {
+    worker::FRAME_STATE.load(std::sync::atomic::Ordering::Acquire)
 }
 
 #[unsafe(no_mangle)]

@@ -57,10 +57,13 @@ try
     var initialize = module.Bind<Initialize>("ONISIM_TryInitialize");
     var status = module.Bind<Status>("ONISIM_GetLastStatus");
     var shutdown = module.Bind<Shutdown>("SIM_Shutdown");
+    var frameState = module.Bind<Status>("ONISIM_GetFrameState");
+    if (frameState() != 0) throw new Exception("An unopened worker must report stopped");
     initialize(IntPtr.Zero);
     if (status() != 0) throw new Exception("Native initialization failed");
     shutdown();
     if (status() != 0) throw new Exception("Native shutdown failed");
+    if (frameState() != 0) throw new Exception("Shutdown retained a live frame signal");
     try
     {
         module.RequireSymbol("ONISIM_MissingSymbol");

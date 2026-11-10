@@ -96,6 +96,11 @@ namespace CycleTrim
 #if !PERFORMANCE_PROBE_HOST_TESTS
         partial void InstallMulticomponentShims(HarmonyLib.Harmony harmony)
         {
+            if (!string.IsNullOrWhiteSpace(OniSimLoader.GetMappedLibraryPath()))
+            {
+                SimulationFrameScheduler.Install(harmony, OniSimLoader.IsFrameReady);
+                Console.WriteLine("[CycleTrim] Native simulation readiness scheduler installed.");
+            }
             try
             {
                 Jlib.Multicomponent.MulticomponentPatches.ApplyAll(harmony);
