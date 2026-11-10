@@ -17,7 +17,7 @@ pub(crate) const GAS_CHANNELS: usize = 8;
 const MAX_REGION_GASES: usize = 16;
 const MAX_REGION_LIQUIDS: usize = 16;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct SpeciesInfo {
     element_id: u16,
     vertical_drift: f32,
@@ -398,6 +398,12 @@ fn cpu_step(
     mass_output: &mut [f32],
     enthalpy_output: &mut [f32],
 ) {
+    let flux = |a: f32, b: f32, speed: f32| {
+        let cap = 1.0f32.min(0.125 / dt);
+        let v = speed.clamp(-cap, cap);
+        let delta = if (a-b).abs() <= 1e-7f32.max(a.max(b)*1e-5) { 0.0 } else { a-b };
+        v * if v >= 0.0 { a } else { b } + 2.0f32.min(0.125/dt) * delta
+    };
     let idx = |x: usize, y: usize, c: usize| (y * width + x) * channels + c;
     mass_output.copy_from_slice(mass);
     enthalpy_output.copy_from_slice(enthalpy);
@@ -415,27 +421,23 @@ fn cpu_step(
                 let drift = species[c].vertical_drift;
                 if x + 1 < width && solid[cell + 1] == 0 {
                     let v = 0.5 * (velocity_x[cell] + velocity_x[cell + 1]);
-                    let donor = if v >= 0.0 { idx(x, y, c) } else { idx(x + 1, y, c) };
-                    mass_div += v * mass[donor];
-                    enthalpy_div += v * enthalpy[donor];
+                    mass_div += flux(mass[idx(x, y, c)], mass[idx(x + 1, y, c)], v);
+                    enthalpy_div += flux(enthalpy[idx(x, y, c)], enthalpy[idx(x + 1, y, c)], v);
                 }
                 if x > 0 && solid[cell - 1] == 0 {
                     let v = 0.5 * (velocity_x[cell - 1] + velocity_x[cell]);
-                    let donor = if v >= 0.0 { idx(x - 1, y, c) } else { idx(x, y, c) };
-                    mass_div -= v * mass[donor];
-                    enthalpy_div -= v * enthalpy[donor];
+                    mass_div -= flux(mass[idx(x - 1, y, c)], mass[idx(x, y, c)], v);
+                    enthalpy_div -= flux(enthalpy[idx(x - 1, y, c)], enthalpy[idx(x, y, c)], v);
                 }
                 if y + 1 < height && solid[cell + width] == 0 {
                     let v = 0.5 * (velocity_y[cell] + velocity_y[cell + width]) + drift;
-                    let donor = if v >= 0.0 { idx(x, y, c) } else { idx(x, y + 1, c) };
-                    mass_div += v * mass[donor];
-                    enthalpy_div += v * enthalpy[donor];
+                    mass_div += flux(mass[idx(x, y, c)], mass[idx(x, y + 1, c)], v);
+                    enthalpy_div += flux(enthalpy[idx(x, y, c)], enthalpy[idx(x, y + 1, c)], v);
                 }
                 if y > 0 && solid[cell - width] == 0 {
                     let v = 0.5 * (velocity_y[cell - width] + velocity_y[cell]) + drift;
-                    let donor = if v >= 0.0 { idx(x, y - 1, c) } else { idx(x, y, c) };
-                    mass_div -= v * mass[donor];
-                    enthalpy_div -= v * enthalpy[donor];
+                    mass_div -= flux(mass[idx(x, y - 1, c)], mass[idx(x, y, c)], v);
+                    enthalpy_div -= flux(enthalpy[idx(x, y - 1, c)], enthalpy[idx(x, y, c)], v);
                 }
                 let slot = idx(x, y, c);
                 mass_output[slot] = mass[slot] - dt * mass_div;
@@ -455,28 +457,28 @@ fn density_gradient_velocities(mass: &[f32], solid: &[u32], width: usize, height
             }
             // Density-gradient velocity proxy from total gas mass.
             let center = (0..channels).map(|c| mass[local * channels + c]).sum::<f32>();
-            let left = if x > 0 {
+            let left = if x > 0 && solid[local - 1] == 0 {
                 (0..channels)
                     .map(|c| mass[(local - 1) * channels + c])
                     .sum::<f32>()
             } else {
                 center
             };
-            let right = if x + 1 < width {
+            let right = if x + 1 < width && solid[local + 1] == 0 {
                 (0..channels)
                     .map(|c| mass[(local + 1) * channels + c])
                     .sum::<f32>()
             } else {
                 center
             };
-            let down = if y > 0 {
+            let down = if y > 0 && solid[local - width] == 0 {
                 (0..channels)
                     .map(|c| mass[(local - width) * channels + c])
                     .sum::<f32>()
             } else {
                 center
             };
-            let up = if y + 1 < height {
+            let up = if y + 1 < height && solid[local + width] == 0 {
                 (0..channels)
                     .map(|c| mass[(local + width) * channels + c])
                     .sum::<f32>()
@@ -564,6 +566,12 @@ fn isolate_stencil_masks(masks:&[u16], solid:&mut [u32], width:usize, height:usi
     }
 }
 
+#[derive(Clone)]
+struct IdleGasRegion {
+    mass: Vec<f32>, temperature: Vec<f32>, solid: Vec<u32>,
+    elements: Vec<u16>, species: Vec<SpeciesInfo>, thermal: bool,
+}
+
 /// Run one multicomponent gas transport pass over the active region.
 pub(crate) fn step_region(
     world: &mut PhysicsWorld,
@@ -622,15 +630,25 @@ fn step_region_prepared(
     staging: &mut GasStaging,
 ) -> crate::status::Result<bool> {
     let Some(staging::GasRegion { min_x, min_y, width, height, channels,
-        use_gpu, sparse, local_projection }) = staging.prepare(world, elements, region,
+        use_gpu, sparse, local_projection: _ }) = staging.prepare(world, elements, region,
             gpu_available, minimum_gpu_cells) else { return Ok(false); };
-    let GasStaging { local_elements, sparse_cells, mass, enthalpy, temperature,
+    let key = (min_x, min_y, width, height);
+    if staging.idle.get(&key).is_some_and(|old|
+        old.mass == staging.mass && old.temperature == staging.temperature
+        && old.solid == staging.solid && old.elements == staging.local_elements
+        && old.species == staging.species && old.thermal == gpu_diffusion) {
+        staging.idle_hits += 1;
+        if let Some(output) = diffusion_solid { *output = std::mem::take(&mut staging.solid); }
+        return Ok(true);
+    }
+    staging.idle.remove(&key);
+    let GasStaging { idle, local_elements, sparse_cells, mass, enthalpy, temperature,
         solid, velocity_x, velocity_y, species, gpu_species, species_conductivity,
         next_mass, projected, next_enthalpy, next_temperature, .. } = staging;
     let dt = FIXED_DT * 0.25;
-    // Three masses plus temperature already occupy 16 bytes per cell, the
-    // same as compact projection; select channels on the GPU instead.
-    let packed_gpu = use_gpu && channels >= 3;
+    // Full-channel output preserves every species; the old two-slot GPU
+    // projection is not authoritative simulation state.
+    let packed_gpu = false;
     let used_gpu = use_gpu;
     if let Some(gpu) = if use_gpu { gpu } else { None } {
         let state = onisim_gpu::multicomponent::State {
@@ -656,6 +674,8 @@ fn step_region_prepared(
             width, height, channels, dt, next_mass, next_enthalpy);
     }
 
+    let mut settled = true;
+    let mut components = Vec::with_capacity(channels);
     for y in 0..height {
         for x in 0..width {
             let local = y * width + x;
@@ -682,7 +702,12 @@ fn step_region_prepared(
             let mut heat = 0.0f32;
             let mut heat_capacity = 0.0f32;
             for channel in 0..channels {
-                let m = next_mass[local * channels + channel].max(0.0);
+                let slot = local * channels + channel;
+                let previous = mass[slot];
+                let candidate = next_mass[slot].max(0.0);
+                let m = if (candidate - previous).abs() <= 1e-7f32.max(previous * 1e-5) { previous }
+                    else { settled = false; candidate };
+                next_mass[slot] = m;
                 let h = if used_gpu { 0.0 } else { next_enthalpy[local * channels + channel].max(0.0) };
                 let global = world.gas_channel_of_element[local_elements[channel] as usize];
                 if global != u8::MAX { world.species_mass[start + global as usize] = m; }
@@ -692,26 +717,35 @@ fn step_region_prepared(
                 }
             }
             if heat_capacity > 0.0 {
-                world.write.temperature[cell] = if used_gpu { next_temperature[local].max(1.0) }
+                let next = if used_gpu { next_temperature[local].max(1.0) }
                     else { (heat / heat_capacity).max(1.0) };
-            }
-            if local_projection {
-                let mut first = (0usize, 0.0f32);
-                let mut second = (0usize, 0.0f32);
-                for channel in 0..channels {
-                    let m = next_mass[local * channels + channel].max(0.0);
-                    if m > first.1 { second = first; first = (channel, m); }
-                    else if m > second.1 { second = (channel, m); }
+                if (next - temperature[local]).abs() > 0.001 {
+                    world.write.temperature[cell] = next;
+                    settled = false;
                 }
-                if first.1 > 0.0 {
-                    project_gases(world, events, cell, local_elements[first.0], first.1, local_elements[second.0], second.1);
-                } else if world.write.mass[cell] > 0.0 && elements.elements[world.write.element[cell] as usize].record.state & 3 == 1 {
-                    project_gases(world, events, cell, world.vacuum_element, 0.0, world.vacuum_element, 0.0);
-                }
-            } else {
-                project_cell_to_write(world, elements, events, cell);
             }
+            // Keep all local species, including those outside the legacy dense
+            // channel cache. Dominance only chooses the display adapter slots.
+            components.clear();
+            components.extend((0..channels)
+                .filter_map(|channel| {
+                    let amount = next_mass[local * channels + channel].max(0.0);
+                    (amount > 0.0).then_some((local_elements[channel], amount))
+                }));
+            components.sort_unstable_by(|a,b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+            let first = components.first().copied().unwrap_or((world.vacuum_element, 0.0));
+            let second = components.get(1).copied().unwrap_or((world.vacuum_element, 0.0));
+            if components.len() > 2 {
+                let extra = world.extra_mixtures.entry(cell).or_default();
+                extra.clear(); extra.extend_from_slice(&components[2..]);
+            } else { world.extra_mixtures.remove(&cell); }
+            project_gases(world, events, cell, first.0, first.1, second.0, second.1);
+
         }
+    }
+    if settled {
+        idle.insert(key, IdleGasRegion { mass: mass.clone(), temperature: temperature.clone(),
+            solid: solid.clone(), elements: local_elements.clone(), species: species.clone(), thermal: gpu_diffusion });
     }
     if let Some(output) = diffusion_solid { *output = std::mem::take(solid); }
     Ok(true)
@@ -754,6 +788,62 @@ mod tests {
             ..Region::default()
         };
         (world, elements, region)
+    }
+
+    #[test]
+    fn settled_region_sleeps_and_added_gas_wakes_it() {
+        let (mut world, table, region) = gas_fixture(8,8);
+        for y in 1..=8 { for x in 1..=8 {
+            let c=y*world.stride+x;
+            world.write.mass[c]=1.0; world.mixture_mass[c]=0.5;
+            world.write.temperature[c]=300.0;
+        }}
+        let mut staging=GasStaging::default();
+        for _ in 0..3 {
+            step_region_prepared(&mut world,&table,&mut EventQueues::default(),region,
+                None,false,None,false,256,&mut staging).unwrap();
+        }
+        assert!(staging.idle_hits>0,"settled region did not sleep");
+        let hits=staging.idle_hits; let c=3*world.stride+3;
+        let before=world.write.mass[c+1]; world.write.mass[c]+=1.0;
+        step_region_prepared(&mut world,&table,&mut EventQueues::default(),region,
+            None,false,None,false,256,&mut staging).unwrap();
+        assert_eq!(staging.idle_hits,hits,"changed gas incorrectly reused sleeping state");
+        assert!(world.write.mass[c+1]>before,"new gas did not spread after wake");
+    }
+
+    #[test]
+    fn species_storage_order_does_not_change_motion() {
+        let (mut a, table, region) = gas_fixture(8,8);
+        let (mut b, _, _) = gas_fixture(8,8);
+        for cell in 0..b.write.mass.len() {
+            if b.mixture_mass[cell] > 0.0 {
+                std::mem::swap(&mut b.write.element[cell], &mut b.mixture_element[cell]);
+                std::mem::swap(&mut b.write.mass[cell], &mut b.mixture_mass[cell]);
+            }
+        }
+        for _ in 0..20 {
+            step_region(&mut a,&table,&mut EventQueues::default(),region,None,false).unwrap();
+            step_region(&mut b,&table,&mut EventQueues::default(),region,None,false).unwrap();
+        }
+        for cell in 0..a.write.mass.len() {
+            for id in [3,4] {
+                let total = |w: &PhysicsWorld| { let mut m=0.0; w.for_each_cell_species(cell, |e,v| {if e==id {m+=v;}}); m };
+                assert!((total(&a)-total(&b)).abs()<1e-5,"storage order changed cell {cell} species {id}");
+            }
+        }
+    }
+
+    #[test]
+    fn pure_gas_spreads_into_vacuum_without_a_second_species() {
+        let (mut world, table, region) = gas_fixture(8,8);
+        world.write.element.fill(world.vacuum_element);
+        world.write.mass.fill(0.0); world.mixture_mass.fill(0.0); world.write.properties.fill(0);
+        let center=4*world.stride+4; world.write.element[center]=3; world.write.mass[center]=1.0;
+        for _ in 0..128 { step_region(&mut world,&table,&mut EventQueues::default(),region,None,false).unwrap(); }
+        assert!(world.write.mass[center+1]>0.0 && world.write.mass[center+world.stride]>0.0);
+        assert!(world.write.mass[center]<0.1,"isolated gas must spread rather than remain stuck");
+        assert!((world.write.mass.iter().sum::<f32>()-1.0).abs()<1e-4);
     }
 
     #[test]

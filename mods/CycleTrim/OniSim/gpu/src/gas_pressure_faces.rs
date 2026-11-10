@@ -21,9 +21,17 @@ struct Storage {
     faces_group: wgpu::BindGroup, apply_group: wgpu::BindGroup, seed_group: wgpu::BindGroup,
     unite_group: wgpu::BindGroup, accumulate_group: wgpu::BindGroup, finalize_group: wgpu::BindGroup,
 }
+// One settled region per scan direction. Full inputs (including halo,
+// temperature, material coefficients and wall flags) are the wake-up key.
+struct IdleGasPass {
+    shape: (u32, u32, u32),
+    cells: Vec<GasCell>,
+    result: Vec<GasResult>,
+}
 pub struct GasPressureFacesGpu { context: Arc<GpuContext>, faces: wgpu::ComputePipeline, apply: wgpu::ComputePipeline,
     head_seed: wgpu::ComputePipeline, head_unite: wgpu::ComputePipeline, head_accumulate: wgpu::ComputePipeline,
-    head_finalize: wgpu::ComputePipeline, storage: Option<Storage> }
+    head_finalize: wgpu::ComputePipeline, storage: Option<Storage>, idle: [Option<IdleGasPass>; 2],
+    #[cfg(test)] cache_hits: usize }
 
 impl GasPressureFacesGpu {
     pub fn new(context: Arc<GpuContext>) -> Self {
@@ -44,11 +52,24 @@ impl GasPressureFacesGpu {
         });
         let head_seed = head_pipeline("seed"); let head_unite = head_pipeline("unite");
         let head_accumulate = head_pipeline("accumulate"); let head_finalize = head_pipeline("finalize");
-        Self { context, faces, apply, head_seed, head_unite, head_accumulate, head_finalize, storage: None }
+        Self { context, faces, apply, head_seed, head_unite, head_accumulate, head_finalize, storage: None,
+            idle: [None, None], #[cfg(test)] cache_hits: 0 }
     }
     pub fn run(&mut self, width: u32, height: u32, vacuum: u32, phase: u32, direction: i32, head_enabled: bool, cells: &[GasCell], result: &mut [GasResult]) -> Result<(), String> {
         let count = (width as usize).checked_mul(height as usize).ok_or("pressure grid overflow")?;
         if width == 0 || height == 0 || cells.len() != count || result.len() != count { return Err("pressure dimensions mismatch".into()); }
+        let slot = usize::from(direction > 0);
+        if phase == 1 && !head_enabled {
+            if let Some(idle) = &self.idle[slot] {
+                if idle.shape == (width, height, vacuum)
+                    && bytemuck::cast_slice::<GasCell, u8>(&idle.cells) == bytemuck::cast_slice::<GasCell, u8>(cells) {
+                    result.copy_from_slice(&idle.result);
+                    #[cfg(test)] { self.cache_hits += 1; }
+                    return Ok(());
+                }
+            }
+            self.idle[slot] = None;
+        }
         let dispatch = u32::try_from(count).map_err(|_| "pressure grid too large")?.div_ceil(64);
         let device = &self.context.device;
         if dispatch > device.limits().max_compute_workgroups_per_dimension { return Err("pressure dispatch too large".into()); }
@@ -98,6 +119,50 @@ impl GasPressureFacesGpu {
         rx.recv_timeout(std::time::Duration::from_secs(5)).map_err(|e| e.to_string())?.map_err(|e| format!("pressure readback: {e:?}"))?;
         { let view = s.readback.get_mapped_range(0..(count * 40) as u64).map_err(|e| e.to_string())?; result.copy_from_slice(bytemuck::cast_slice(&view)); }
         s.readback.unmap();
+        if phase == 1 && !head_enabled && result.iter().all(|cell| cell.changed == 0) {
+            self.idle[slot] = Some(IdleGasPass { shape: (width, height, vacuum),
+                cells: cells.to_vec(), result: result.to_vec() });
+        }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytemuck::Zeroable;
+
+    #[test]
+    fn checkerboard_settles_sleeps_and_wakes_on_input_change() {
+        let context = Arc::new(pollster::block_on(GpuContext::new()).unwrap());
+        let mut gpu = GasPressureFacesGpu::new(context);
+        let width = 10usize;
+        let mut cells = vec![GasCell::zeroed(); width * width];
+        for y in 0..width { for x in 0..width {
+            let c = &mut cells[y * width + x];
+            c.blocked = u32::from(x == 0 || y == 0 || x + 1 == width || y + 1 == width);
+            c.element = 3; c.phase = 1; c.coefficient = 0.25;
+            c.mass = if (x + y) % 2 == 0 { 2.0 } else { 0.1 };
+            c.temperature = 300.0; c.phase_heat = 1.0; c.max_mass = 1.0;
+        }}
+        let mut result = vec![GasResult::zeroed(); cells.len()];
+        for tick in 0..512 {
+            gpu.run(width as u32, width as u32, 0, 1, if tick % 2 == 0 { 1 } else { -1 },
+                false, &cells, &mut result).unwrap();
+            for (c, r) in cells.iter_mut().zip(&result) {
+                if r.changed != 0 { c.mass = r.mass; c.temperature = r.temperature; c.element = r.element; }
+            }
+        }
+        let low = cells.iter().filter(|c| c.blocked == 0).map(|c| c.mass).fold(f32::MAX, f32::min);
+        let high = cells.iter().filter(|c| c.blocked == 0).map(|c| c.mass).fold(0.0, f32::max);
+        assert!(high - low < 0.001, "checkerboard persists: {low}..{high}");
+        assert!(gpu.cache_hits > 0, "settled gas never slept");
+        let hits = gpu.cache_hits;
+        let source = 4 * width + 4;
+        cells[source].mass += 1.0;
+        gpu.run(width as u32, width as u32, 0, 1, 1, false, &cells, &mut result).unwrap();
+        assert_eq!(gpu.cache_hits, hits, "new gas failed to wake solver");
+        assert!(result[source].mass < cells[source].mass);
+        assert!(result[source + 1].mass > cells[source + 1].mass);
     }
 }

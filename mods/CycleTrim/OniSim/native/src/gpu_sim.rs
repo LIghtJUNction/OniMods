@@ -6,7 +6,6 @@ use onisim_gpu::{
     disease_diffusion::{ActiveCell as DiffusionActive, Disease as DiffusionDisease, DiseaseDiffusionGpu, DiseaseElement as DiffusionElement, SnapshotCell as DiffusionSnapshot},
     disease_growth::{DiseaseCell, DiseaseElementMetadata, DiseaseGrowthGpu, DiseaseMetadata},
     gas_pressure_faces::{GasCell, GasPressureFacesGpu, GasResult},
-    inactive_decay::{Cell as DecayCell, InactiveDecayGpu, PendingDecay},
     bubble_settling::{Cell as BubbleCell, Material as BubbleMaterial, ResultCell as BubbleResult, BubbleSettlingGpu, PendingBubble},
     phase_transition::{PhaseCell, PhaseDecision, PhaseMaterial, PhaseTransitionGpu},
     radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult},
@@ -56,10 +55,6 @@ pub(crate) struct GpuSimulation {
     pressure_cells: Vec<GasCell>,
     pressure_result: Vec<GasResult>,
     pub(crate) gas_displacement_unneeded: bool,
-    inactive_decay: InactiveDecayGpu,
-    decay_cells: Vec<DecayCell>,
-    decay_results: Vec<f32>,
-    decay_indices: Vec<usize>,
     bubble_settling: BubbleSettlingGpu,
     bubble_columns: Vec<usize>,
     bubble_active: Vec<bool>,
@@ -83,7 +78,6 @@ pub(crate) struct PendingRadiationRegion {
     pending: PendingRadiation,
     bounds: (usize, usize, usize, usize),
 }
-pub(crate) struct PendingDecayRegion { pending: PendingDecay }
 
 impl GpuSimulation {
     fn liquid_pipeline(&mut self, width: usize, height: usize, channels: usize) -> Result<&mut MulticomponentGpu, String> {
@@ -124,7 +118,6 @@ impl GpuSimulation {
         let phase_transition = PhaseTransitionGpu::new(context.clone());
         let radiation_region = RadiationRegionGpu::new(context.clone());
         let gas_pressure_faces = GasPressureFacesGpu::new(context.clone());
-        let inactive_decay = InactiveDecayGpu::new(context.clone());
         let bubble_settling = BubbleSettlingGpu::new(context.clone());
         let pathfinder = onisim_gpu::gpu_pathfinder::GpuPathfinder::new(context.clone());
         let resident = onisim_gpu::resident_cells::ResidentCells::new(context.clone(), cells).ok();
@@ -166,10 +159,6 @@ impl GpuSimulation {
             pressure_cells: Vec::new(),
             pressure_result: Vec::new(),
             gas_displacement_unneeded: false,
-            inactive_decay,
-            decay_cells: Vec::new(),
-            decay_results: Vec::new(),
-            decay_indices: Vec::new(),
             bubble_settling,
             bubble_columns: Vec::new(),
             bubble_active: vec![false; width],
@@ -244,49 +233,6 @@ impl GpuSimulation {
             world.mixture_mass[i] = result.mixture_mass;
             crate::fluid_helpers::notify(world, events, i);
         }}
-        Ok(())
-    }
-
-    pub(crate) fn begin_inactive_decay(&mut self, world: &mut PhysicsWorld, elements: &ElementTable,
-        bounds: (usize, usize, usize, usize)) -> Result<Option<PendingDecayRegion>, String> {
-        let Some(mask) = world.inactive_mask.as_ref() else { return Ok(None); };
-        let (x0, x1, y0, y1) = bounds;
-        if x0 >= x1 || y0 >= y1 { return Ok(None); }
-        if x1 > world.stride || y1 > world.padded_height { return Err("inactive decay region out of bounds".into()); }
-        if (y0..y1).all(|y| mask[y * world.stride + x0..y * world.stride + x1].iter().all(|&v| v != u8::MAX)) { return Ok(None); }
-        self.decay_cells.clear();
-        self.decay_indices.clear();
-        for y in y0..y1 { for x in x0..x1 {
-            let i = y * world.stride + x;
-            if mask[i] != u8::MAX || world.backwall_element[i] != world.vacuum_element { continue; }
-            let phase = elements.elements[world.write.element[i] as usize].record.state & 3;
-            if phase == 3 { continue; }
-            self.decay_indices.push(i);
-            self.decay_cells.push(DecayCell { mass: world.write.mass[i], phase: u32::from(phase) });
-        }}
-        if self.decay_cells.is_empty() { return Ok(None); }
-        if self.decay_cells.len() < 8192 && !cfg!(test) {
-            let dt = crate::simulation_step::FIXED_DT;
-            let decay_gas = f32::from_bits(0x3ca3d70a);
-            for (&i, cell) in self.decay_indices.iter().zip(&self.decay_cells) {
-                let decay = if cell.phase == 1 { decay_gas } else if cell.phase == 2 { 20.0 } else { 0.0 };
-                world.write.mass[i] = (cell.mass - decay).max(0.0);
-                world.flow[i] = [-dt, dt, dt, -dt];
-            }
-            return Ok(None);
-        }
-        let pending = self.inactive_decay.begin(&self.decay_cells)?;
-        Ok(Some(PendingDecayRegion { pending }))
-    }
-
-    pub(crate) fn finish_inactive_decay(&mut self, world: &mut PhysicsWorld, work: PendingDecayRegion) -> Result<(), String> {
-        self.decay_results.resize(self.decay_indices.len(), 0.0);
-        work.pending.finish(&mut self.decay_results)?;
-        for (&i, &mass) in self.decay_indices.iter().zip(&self.decay_results) {
-            world.write.mass[i] = mass;
-            let dt = crate::simulation_step::FIXED_DT;
-            world.flow[i] = [-dt, dt, dt, -dt];
-        }
         Ok(())
     }
 
@@ -1297,7 +1243,7 @@ mod material_range_tests {
         let mut solid = Vec::new();
         assert!(multicomponent_flux::step_region_with_mask(&mut world,&elements,&mut events,region,Some(&mut gpu),true,Some(&mut solid)).unwrap());
         assert_eq!(gpu.gas.front().unwrap().transport.dimensions(), (5, 3, 3));
-        assert!(solid.contains(&0) && solid.contains(&1), "exercise GPU and CPU ownership");
+        assert!(solid.iter().all(|&blocked| blocked == 0), "three species must not become artificial walls");
         crate::gas::diffuse_region(&mut world,&elements,&mut events,region,Some(&solid),None);
         for (a,b) in before.iter().zip(totals(&world)) { assert!((a-b).abs()<1e-4); }
     }

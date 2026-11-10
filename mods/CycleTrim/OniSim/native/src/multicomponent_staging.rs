@@ -5,6 +5,8 @@ use super::*;
 
 #[derive(Default)]
 pub(crate) struct GasStaging {
+    pub(super) idle: std::collections::HashMap<(usize, usize, usize, usize), IdleGasRegion>,
+    pub(super) idle_hits: usize,
     pub(super) local_elements: Vec<u16>,
     pub(super) active_elements: Vec<u16>,
     pub(super) local_channel_of_element: Vec<usize>,
@@ -127,8 +129,10 @@ impl GasStaging {
         minimum_gpu_cells: usize,
     ) -> Option<GasRegion> {
         let Self {
+            idle: _,
+            idle_hits: _,
             local_elements,
-            active_elements,
+            active_elements: _,
             local_channel_of_element,
             sparse_cells,
             masks,
@@ -168,94 +172,25 @@ impl GasStaging {
         }
         let count = width * height;
 
-        // Map each region's active gases independently of the global table.
-        // Stencils that would exceed the two-slot cell representation are still
-        // isolated before transport.
-        reset(
-            local_channel_of_element,
-            elements.elements.len(),
-            usize::MAX,
-        );
+        // Inventory every species equally. Storage slots are only a Grid adapter.
+        reset(local_channel_of_element, elements.elements.len(), usize::MAX);
         local_elements.clear();
-        local_elements.extend_from_slice(&world.gas_element_of_channel[..world.gas_channel_count]);
-        let mut local_projection = false;
-        if gpu_available {
-            active_elements.clear();
-            let active = active_elements;
-            let mut first_active = u32::MAX;
-            'scan: for y in min_y..max_y {
-                for block_x in (min_x..max_x).step_by(64) {
-                    let end_x = (block_x + 64).min(max_x);
-                    let start = y * world.stride + block_x;
-                    let end = y * world.stride + end_x;
-                    // Empty spans need no element IDs or channel lookups.
-                    // Preserve the original per-cell order inside active spans.
-                    if world.write.mass[start..end]
-                        .iter()
-                        .zip(&world.mixture_mass[start..end])
-                        .all(|(&a, &b)| {
-                            (a <= 0.0 || !a.is_finite()) && (b <= 0.0 || !b.is_finite())
-                        })
-                    {
-                        continue;
-                    }
-                    for x in block_x..end_x {
-                        let cell = y * world.stride + x;
-                        for (id, mass) in [
-                            (world.write.element[cell], world.write.mass[cell]),
-                            (world.mixture_element[cell], world.mixture_mass[cell]),
-                        ] {
-                            if mass <= 0.0 || !mass.is_finite() {
-                                continue;
-                            }
-                            // A region often contains only one dominant gas. Its
-                            // metadata and channel were checked on the first visit.
-                            if u32::from(id) == first_active {
-                                continue;
-                            }
-                            if !elements
-                                .elements
-                                .get(id as usize)
-                                .is_some_and(|e| e.record.state & 3 == 1)
-                            {
-                                continue;
-                            }
-                            let slot = &mut local_channel_of_element[id as usize];
-                            if *slot == usize::MAX {
-                                if active.is_empty() {
-                                    first_active = u32::from(id);
-                                }
-                                *slot = active.len();
-                                active.push(id);
-                                if active.len() > MAX_REGION_GASES {
-                                    break 'scan;
-                                }
-                            }
-                        }
-                    }
+        for y in min_y..max_y { for x in min_x..max_x {
+            world.for_each_cell_species(y * world.stride + x, |id, mass| {
+                if mass > 0.0 && mass.is_finite() && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1)
+                    && local_channel_of_element[id as usize] == usize::MAX {
+                    local_channel_of_element[id as usize] = local_elements.len();
+                    local_elements.push(id);
                 }
-            }
-            if active.len() < 2 {
-                return None;
-            }
-            if active.len() <= MAX_REGION_GASES {
-                std::mem::swap(local_elements, active);
-                local_projection = true;
-            } else {
-                local_channel_of_element.fill(usize::MAX);
-            }
-        }
+            });
+        }}
         let channels = local_elements.len();
-        if !local_projection {
-            for (channel, &id) in local_elements.iter().enumerate() {
-                local_channel_of_element[id as usize] = channel;
-            }
-        }
-
+        if channels == 0 { return None; }
+        let local_projection = false;
         // Packed sparse cells use 16 bytes, equal to three dense channels plus
         // temperature, and avoid expanding the channel tensor on the CPU.
         let use_gpu = gpu_available && count >= minimum_gpu_cells;
-        let sparse = use_gpu && channels >= 3 && local_projection;
+        let sparse = false;
         sparse_cells.resize(if sparse { count } else { 0 }, Default::default());
         masks.resize(if sparse { count } else { 0 }, 0);
         let mut any_mixture = false;
@@ -320,33 +255,22 @@ impl GasStaging {
                     // The dense tensor cannot represent every element yet. Treat any
                     // cell with an unmapped phase/component as a wall for this pass;
                     // projecting a partial tensor would otherwise delete its mass.
-                    let primary_channel =
-                        local_channel_of_element[world.write.element[cell] as usize];
-                    let mixture_channel = local_channel_of_element
-                        .get(world.mixture_element[cell] as usize)
-                        .copied()
-                        .unwrap_or(usize::MAX);
-                    let primary_unsupported = world.write.mass[cell] > 0.0
-                        && (phase != 1 || primary_channel == usize::MAX);
-                    let mixture_unsupported =
-                        world.mixture_mass[cell] > 0.0 && mixture_channel == usize::MAX;
-                    let blocked = impermeable || primary_unsupported || mixture_unsupported;
+                    let mut blocked = impermeable || (phase != 1 && world.write.mass[cell] > 0.0);
+                    world.for_each_cell_species(cell, |id, amount| {
+                        if amount > 0.0 && local_channel_of_element.get(id as usize).copied().unwrap_or(usize::MAX) == usize::MAX { blocked = true; }
+                    });
                     solid[local] = u32::from(blocked);
                     if blocked {
-                        if !use_gpu {
-                            enthalpy[local * channels..(local + 1) * channels].fill(0.0);
-                        }
+                        if !use_gpu { enthalpy[local * channels..(local + 1) * channels].fill(0.0); }
                         continue;
                     }
                     let base = local * channels;
-                    if world.write.mass[cell] > 0.0 && phase == 1 {
-                        mass[base + primary_channel] = world.write.mass[cell];
-                        any_mixture = true;
-                    }
-                    if world.mixture_mass[cell] > 0.0 {
-                        mass[base + mixture_channel] += world.mixture_mass[cell];
-                        any_mixture = true;
-                    }
+                    world.for_each_cell_species(cell, |id, amount| {
+                        if amount > 0.0 {
+                            mass[base + local_channel_of_element[id as usize]] += amount;
+                            any_mixture = true;
+                        }
+                    });
                     if !use_gpu {
                         for channel in 0..channels {
                             let m = mass[base + channel].max(0.0);
@@ -358,24 +282,7 @@ impl GasStaging {
             }
         }
 
-        if sparse {
-            isolate_stencil_masks(masks, solid, width, height, 2);
-        } else {
-            isolate_unrepresentable_stencils_reusing_masks(
-                mass, enthalpy, solid, width, height, channels, 2, masks,
-            );
-        }
-        if sparse {
-            if !masks
-                .iter()
-                .zip(solid.iter())
-                .any(|(&mask, &blocked)| mask != 0 && blocked == 0)
-            {
-                return None;
-            }
-        } else if !mass.iter().any(|&value| value > 0.0) {
-            return None;
-        }
+        if !mass.iter().any(|&value| value > 0.0) { return None; }
         if !use_gpu {
             density_gradient_velocities(
                 mass, solid, width, height, channels, velocity_x, velocity_y,
@@ -388,7 +295,7 @@ impl GasStaging {
         }
         // Successful transport overwrites every output element before use.
         // Keep existing storage; newly grown elements alone need initialization.
-        let packed_gpu = use_gpu && channels >= 3;
+        let packed_gpu = false;
         next_mass.resize(if packed_gpu { 0 } else { mass.len() }, 0.0);
         projected.resize(if packed_gpu { count } else { 0 }, Default::default());
         next_enthalpy.resize(if use_gpu { 0 } else { mass.len() }, 0.0);

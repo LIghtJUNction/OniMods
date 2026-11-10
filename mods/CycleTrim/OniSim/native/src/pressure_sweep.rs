@@ -1,6 +1,6 @@
-//! Serial pressure traversal with storage borrowed once for the whole sweep.
-//! No field can resize while this view is alive. All arithmetic and notification
-//! ordering comes from the existing transfer and traversal implementations.
+//! Sequential gas-pressure relaxation with storage borrowed for the sweep.
+//! Traversal follows the native pressure pass, but live pressures and a small
+//! residual cutoff prevent repeated stale-gradient corrections at equilibrium.
 use crate::events::EventQueues;
 use crate::fluid_helpers::{cvtt, smax, smin};
 use crate::tables::{DiseaseTable, ElementTable};
@@ -160,7 +160,7 @@ fn pressure_cell(
     world.flow[cell][2] += vertical;
     world.flow[upper][3] -= vertical;
     let down = cell.wrapping_sub(world.stride);
-    if cell >= world.stride
+    let downward = if cell >= world.stride
         && world.write.element[cell] == element
         && pressure_target(world, elements, element, source_phase, down)
         && (old_phase(world, elements, down) == 0 || world.read.mass[down] < world.read.mass[cell])
@@ -175,9 +175,11 @@ fn pressure_cell(
             source_phase,
             coefficient,
             down,
-        );
-    }
-    if (old_phase(world, elements, upper) | old_phase(world, elements, side)) != 3
+        )
+    } else {
+        0.0
+    };
+    let diagonal = if (old_phase(world, elements, upper) | old_phase(world, elements, side)) != 3
         && world.write.element[cell] == element
         && pressure_target(world, elements, element, source_phase, side + world.stride)
     {
@@ -191,11 +193,11 @@ fn pressure_cell(
             source_phase,
             coefficient,
             side + world.stride,
-        );
-    }
-    // All cell-mutating pressure calls are below the early-return guard.
-    // Conservatively retain the copy even if no target accepted a transfer.
-    true
+        )
+    } else {
+        0.0
+    };
+    horizontal != 0.0 || vertical != 0.0 || downward != 0.0 || diagonal != 0.0
 }
 
 // ELF 0x6f120: the returned flow retains its original sign after source swapping.
@@ -212,8 +214,8 @@ fn update_pressure(
     b: usize,
 ) -> f32 {
     // Preflight already enforces equal CellSOA lengths. Reborrow every field
-    // with one common checked length so LLVM can share index proofs. No
-    // unchecked indexing, temporary cell copies or arithmetic changes.
+    // with one common checked length so LLVM can share index proofs without
+    // unchecked indexing or temporary cell copies.
     let count = world.read.element.len();
     assert!(
         a < count && b < count,
@@ -232,21 +234,48 @@ fn update_pressure(
 
     let element_b = read_element[b];
     let record_b = &tables.elements[element_b as usize].record;
-    let ma = read_mass[a];
-    let mb = read_mass[b];
+    // Earlier faces have already changed these cells. Reusing the old pressure
+    // on every face overcorrects alternating high/low cells indefinitely.
+    let ma = write_mass[a];
+    let mb = write_mass[b];
     let coefficient = if phase_a == 1 {
         coefficient
     } else {
         record_b.flow
     };
-    let flow = smax(smin(coefficient * (ma - mb), 0.125 * ma), -0.125 * mb);
+    // A tiny same-gas pressure residual is settled. Vacuum/sink boundaries
+    // remain live, including arbitrarily small positive donors.
+    if phase_a == 1 && element_a == element_b && (ma - mb).abs() <= 1e-7_f32.max(ma.max(mb) * 1e-5)
+    {
+        return 0.0;
+    }
+    let flow = smax(
+        smin(coefficient.min(0.5) * (ma - mb), 0.125 * ma),
+        -0.125 * mb,
+    );
+    // Equilibrium and exhausted gas must not recolour vacuum or refresh its
+    // disease/temperature state. In particular, avoid the 0/0 donor fraction.
+    if flow == 0.0 {
+        return 0.0;
+    }
     let (src, dst, old_mass, amount, source_element, dest_element, dest_phase) = if flow < 0.0 {
-        (b, a, mb, -flow, element_b, element_a, phase_a)
+        (b, a, read_mass[b], -flow, element_b, element_a, phase_a)
     } else {
-        (a, b, ma, flow, element_a, element_b, record_b.state & 3)
+        (
+            a,
+            b,
+            read_mass[a],
+            flow,
+            element_a,
+            element_b,
+            record_b.state & 3,
+        )
     };
-    let amount = smin(amount, old_mass);
-    let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
+    let fraction = if old_mass > 0.0 {
+        smax(smin(amount / old_mass, 1.0), 0.0)
+    } else {
+        0.0
+    };
     let germ_count = cvtt(read_disease_count[src] as f32 * fraction);
     let germ_id = write_disease_idx[src];
     let source_temperature = write_temperature[src];
@@ -333,6 +362,160 @@ pub(super) fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn gas_table() -> ElementTable {
+        let mut bytes = 4_i32.to_le_bytes().to_vec();
+        for (index, (hash, phase)) in [
+            (0x2d39_bf75_u32, 0),
+            (0xa936_0b34, 0),
+            (0x6d95_058c, 3),
+            (0x1234_5678, 1),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut raw = [0_u8; 164];
+            raw[..4].copy_from_slice(&hash.to_le_bytes());
+            raw[8..10].copy_from_slice(&(index as u16).to_le_bytes());
+            raw[10] = phase;
+            bytes.extend_from_slice(&raw);
+        }
+        bytes.extend_from_slice(&[0; 16]);
+        let mut table = ElementTable::parse(&bytes).unwrap();
+        table.elements[3].record.flow = 0.25;
+        table
+    }
+
+    #[test]
+    fn empty_gas_cannot_paint_vacuum_or_emit_substance_changes() {
+        let table = gas_table();
+        let mut w = PhysicsWorld::new(4, 4, 42, &table).unwrap();
+        w.write.element.fill(0);
+        let a = w.stride + 1;
+        let b = a + 1;
+        w.write.element[a] = 3;
+        w.write.temperature[a] = 300.0;
+        w.read.copy_from(&w.write);
+        let before = (w.write.element[b], w.write.temperature[b]);
+        let mut events = EventQueues::default();
+        let mut view = PressureSweep::new(&mut w);
+        assert_eq!(
+            update_pressure(
+                &mut view,
+                &table,
+                &DiseaseTable::default(),
+                &mut events,
+                a,
+                3,
+                1,
+                0.25,
+                b
+            ),
+            0.0
+        );
+        assert_eq!((w.write.element[b], w.write.temperature[b]), before);
+        assert!(events.substance_change_info.is_empty());
+        assert!(w.write.mass.iter().all(|m| m.is_finite()));
+    }
+
+    #[test]
+    fn settled_pressure_is_idle_and_new_gas_wakes_it() {
+        let table = gas_table();
+        let mut w = PhysicsWorld::new(8, 8, 42, &table).unwrap();
+        w.write.element.fill(2);
+        for y in 2..8 {
+            for x in 2..8 {
+                let i = y * w.stride + x;
+                w.write.element[i] = 3;
+                w.write.mass[i] = 1.0;
+                w.write.temperature[i] = 300.0;
+            }
+        }
+        w.read.copy_from(&w.write);
+        let region = Region {
+            min_x: 2,
+            min_y: 2,
+            max_x: 8,
+            max_y: 8,
+            ..Region::default()
+        };
+        let mut events = EventQueues::default();
+        for direction in [-1, 1] {
+            w.scan_direction = direction;
+            assert!(!run(
+                &mut w,
+                &table,
+                &DiseaseTable::default(),
+                &mut events,
+                region
+            ));
+        }
+        let source = 4 * w.stride + 4;
+        w.write.mass[source] = 2.0;
+        w.read.copy_from(&w.write);
+        assert!(run(
+            &mut w,
+            &table,
+            &DiseaseTable::default(),
+            &mut events,
+            region
+        ));
+        assert!(w.write.mass[source + 1] > 1.0);
+    }
+
+    #[test]
+    fn checkerboard_pressure_settles_instead_of_repeating() {
+        let table = gas_table();
+        let mut w = PhysicsWorld::new(8, 8, 42, &table).unwrap();
+        w.write.element.fill(2);
+        for y in 2..8 {
+            for x in 2..8 {
+                let i = y * w.stride + x;
+                w.write.element[i] = 3;
+                w.write.mass[i] = if (x + y) % 2 == 0 { 2.0 } else { 0.1 };
+                w.write.temperature[i] = 300.0;
+            }
+        }
+        let region = Region {
+            min_x: 2,
+            min_y: 2,
+            max_x: 8,
+            max_y: 8,
+            ..Region::default()
+        };
+        let mut events = EventQueues::default();
+        let mut idle = 0;
+        for _ in 0..512 {
+            w.read.copy_from(&w.write);
+            w.scan_direction = -w.scan_direction;
+            if !run(
+                &mut w,
+                &table,
+                &DiseaseTable::default(),
+                &mut events,
+                region,
+            ) {
+                idle += 1;
+            }
+        }
+        let mut low = f32::MAX;
+        let mut high = 0.0_f32;
+        for y in 2..8 {
+            for x in 2..8 {
+                let m = w.write.mass[y * w.stride + x];
+                low = low.min(m);
+                high = high.max(m);
+            }
+        }
+        assert!(
+            high - low < 0.001,
+            "pressure still oscillates: {low}..{high}"
+        );
+        assert!(
+            idle > 0,
+            "near equilibrium never became idle: {low}..{high}"
+        );
+    }
 
     fn world(width: usize, height: usize) -> PhysicsWorld {
         let mut bytes = 3_i32.to_le_bytes().to_vec();

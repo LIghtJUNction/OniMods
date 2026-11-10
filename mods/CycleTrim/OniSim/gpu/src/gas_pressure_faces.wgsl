@@ -63,7 +63,13 @@ fn flux(a: Cell, b: Cell, vertical: bool, a_can_donate: bool, b_can_donate: bool
     var coefficient = a.coefficient;
     if (a.phase == 0u) { coefficient = b.coefficient; }
     let difference = a.mass / volume_a - b.mass / volume_b;
-    return clamp(coefficient * difference * min(volume_a, volume_b), -0.125 * b.mass, 0.125 * a.mass);
+    if (a.phase == 1u && b.phase == 1u &&
+        abs(difference) <= max(0.0000001, max(a.mass / volume_a, b.mass / volume_b) * 0.00001)) {
+        return 0.0;
+    }
+    // Six simultaneous neighbours must retain a positive centre weight.
+    // Donor clipping alone does not damp a near-equilibrium checkerboard.
+    return clamp(min(coefficient, 0.125) * difference * min(volume_a, volume_b), -0.125 * b.mass, 0.125 * a.mass);
 }
 
 @compute @workgroup_size(64)

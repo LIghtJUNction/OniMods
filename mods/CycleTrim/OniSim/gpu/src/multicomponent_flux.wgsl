@@ -18,8 +18,10 @@ struct Params {
 @group(0) @binding(8) var<storage, read_write> next_enthalpy: array<f32>;
 
 fn face_flux(a: f32, b: f32, speed: f32, open_face: bool) -> f32 {
-    let donor = select(b, a, speed >= 0.0);
-    return select(0.0, speed * donor, open_face);
+    let v = clamp(speed, -min(1.0, 0.125 / params.dt), min(1.0, 0.125 / params.dt));
+    let donor = select(b, a, v >= 0.0);
+    let delta = select(a - b, 0.0, abs(a - b) <= max(0.0000001, max(a, b) * 0.00001));
+    return select(0.0, v * donor + min(2.0, 0.125 / params.dt) * delta, open_face);
 }
 
 @compute @workgroup_size(8, 8, 1)

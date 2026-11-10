@@ -249,16 +249,8 @@ impl<'a> PreparedStep<'a> {
                 region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
                 region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             let temperature_ms = lap();
-            let (gpu_pressure, skip_gas_displacement) = if let Some(gpu) = systems.gpu.as_deref_mut() {
-                let ran = gpu.pressure_region(world, elements, events, region, 1).map_err(|error|
-                    Error::new(Status::InternalFailure, format!("GPU gas pressure failed: {error}")))?;
-                (ran, ran && gpu.gas_displacement_unneeded)
-            } else { (false, false) };
-            if crate::simulation_step_fluid::gas_phase_with_pressure(world, elements, diseases, events, region, gpu_pressure, skip_gas_displacement) {
-                world.read.copy_fluid_region_from(&world.write, world.stride,
-                    region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
-                    region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
-            }
+            // Species transport owns gas motion. The legacy one-element
+            // pressure/displacement pass must not privilege Grid's display slot.
             let gas_phase_ms = lap();
             // Gas pressure can now introduce gas into a liquid cell. Snapshot
             // the liquid diffusion input only after that update is visible.
@@ -321,23 +313,13 @@ impl<'a> PreparedStep<'a> {
             } else { None };
             update_nonradiation_components(world, elements, diseases, events, systems, &region)?;
             let bounds = postprocess_bounds(world, region);
-            let pending_decay = if let Some(gpu) = systems.gpu.as_deref_mut() {
-                gpu.begin_inactive_decay(world, elements, bounds).map_err(|error|
-                    Error::new(Status::InternalFailure, format!("GPU inactive decay failed: {error}")))?
-            } else { None };
             if let Some(work) = pending_radiation {
                 let gpu = systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending radiation has no GPU"))?;
                 gpu.finish_radiation_region(world, work).map_err(|error|
                     Error::new(Status::InternalFailure, format!("GPU radiation readback failed: {error}")))?;
             }
             systems.radiation.update(FIXED_DT, world, elements, region)?;
-            if let Some(work) = pending_decay {
-                let gpu = systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending inactive decay has no GPU"))?;
-                gpu.finish_inactive_decay(world, work).map_err(|error|
-                    Error::new(Status::InternalFailure, format!("GPU inactive decay readback failed: {error}")))?;
-            } else if systems.gpu.is_none() {
-                decay_inactive(world, elements, bounds);
-            }
+            decay_inactive(world, elements, bounds);
             for y in bounds.2..bounds.3 {
                 for x in bounds.0..bounds.1 {
                     crate::postprocess::cell(
@@ -553,28 +535,94 @@ fn decay_inactive(
     elements: &ElementTable,
     bounds: (usize, usize, usize, usize),
 ) {
-    let Some(mask) = world.inactive_mask.as_ref() else {
+    if world.inactive_mask.is_none() {
         return;
-    };
+    }
     for y in bounds.2..bounds.3 {
         for x in bounds.0..bounds.1 {
             let cell = y * world.stride + x;
-            if mask[cell] != u8::MAX || world.backwall_element[cell] != world.vacuum_element {
+            if world.inactive_mask.as_ref().unwrap()[cell] != u8::MAX || world.backwall_element[cell] != world.vacuum_element {
                 continue;
             }
-            let decay = match elements.elements[world.write.element[cell] as usize]
-                .record
-                .state
-                & 3
-            {
-                3 => continue,
-                2 => 20.0,
-                1 => f32::from_bits(0x3ca3_d70a),
-                _ => 0.0,
-            };
-            let mass = world.write.mass[cell] - decay;
-            world.write.mass[cell] = if mass <= 0.0 { 0.0 } else { mass };
-            world.flow[cell] = [-FIXED_DT, FIXED_DT, FIXED_DT, -FIXED_DT];
+            apply_space_decay(world, elements, cell);
         }
+    }
+}
+
+/// Remove each phase's escaped mass proportionately across all its species.
+/// Storage order never affects the loss rate or which species survives.
+pub(crate) fn apply_space_decay(world: &mut PhysicsWorld, elements: &ElementTable, cell: usize) {
+    let mut totals = [0.0f32; 4];
+    world.for_each_cell_species(cell, |id, mass| {
+        totals[(elements.elements[id as usize].record.state & 3) as usize] += mass.max(0.0);
+    });
+    if totals[1] == 0.0 && totals[2] == 0.0 { return; }
+    let mut fraction = [1.0f32; 4];
+    for (phase, rate) in [(1, 0.02f32), (2, 20.0f32)] {
+        if totals[phase] > 0.0 { fraction[phase] = ((totals[phase] - rate) / totals[phase]).max(0.0); }
+    }
+    let scale = |id: u16| fraction[(elements.elements[id as usize].record.state & 3) as usize];
+    world.write.mass[cell] *= scale(world.write.element[cell]);
+    world.mixture_mass[cell] *= scale(world.mixture_element[cell]);
+    if let Some(extras) = world.extra_mixtures.get_mut(&cell) {
+        for (id, mass) in extras { *mass *= scale(*id); }
+    }
+    world.normalize_cell_mixtures(cell);
+    crate::multicomponent_flux::ingest_write_cell(world, elements, cell);
+    let old = totals.iter().sum::<f32>();
+    let remaining = totals.iter().zip(fraction).map(|(mass, scale)| mass * scale).sum::<f32>();
+    if old > 0.0 {
+        world.write.disease_count[cell] = (world.write.disease_count[cell] as f32 * remaining / old) as i32;
+    }
+    world.flow[cell] = [-FIXED_DT, FIXED_DT, FIXED_DT, -FIXED_DT];
+}
+
+#[cfg(test)]
+mod space_tests {
+    use super::*;
+
+    fn table() -> ElementTable {
+        let mut bytes = 7_i32.to_le_bytes().to_vec();
+        for (index, (hash, phase)) in [(0x2d39_bf75_u32,0), (0xa936_0b34,0),
+            (0x6d95_058c,3), (101,1), (102,1), (103,1), (104,2)].into_iter().enumerate() {
+            let mut raw = [0u8;164];
+            raw[..4].copy_from_slice(&hash.to_le_bytes());
+            raw[8..10].copy_from_slice(&(index as u16).to_le_bytes()); raw[10]=phase;
+            bytes.extend_from_slice(&raw);
+        }
+        bytes.extend_from_slice(&[0;28]);
+        ElementTable::parse(&bytes).unwrap()
+    }
+
+    #[test]
+    fn space_drains_every_component_without_resurrection_but_backwalls_seal() {
+        let table = table();
+        let mut w = PhysicsWorld::new(4,4,42,&table).unwrap();
+        w.write.element.fill(0);
+        w.inactive_mask = Some(vec![255;w.write.mass.len()]);
+        let a = w.stride+1; let sealed=a+1; let water=a+2;
+        for cell in [a,sealed] {
+            w.write.element[cell]=3; w.write.mass[cell]=0.04;
+            w.mixture_element[cell]=4; w.mixture_mass[cell]=0.03;
+            w.extra_mixtures.insert(cell,vec![(5,0.02)]);
+        }
+        w.backwall_element[sealed]=2;
+        w.write.element[water]=6; w.write.mass[water]=30.0;
+        crate::multicomponent_flux::rebuild_gas_channels(&mut w,&table);
+        let bounds=(1,5,1,5);
+        decay_inactive(&mut w,&table,bounds);
+        assert!(w.write.mass[a]<0.04 && w.mixture_mass[a]<0.03);
+        assert!(w.extra_mixtures[&a][0].1<0.02);
+        assert_eq!(w.write.mass[water],10.0);
+        for _ in 0..4 { decay_inactive(&mut w,&table,bounds); }
+        assert_eq!(w.write.mass[a],0.0);
+        assert_eq!(w.mixture_mass[a],0.0);
+        assert!(!w.extra_mixtures.contains_key(&a));
+        assert_eq!(w.write.mass[water],0.0);
+        let mut events=EventQueues::default();
+        crate::multicomponent_flux::project_cell_to_write(&mut w,&table,&mut events,a);
+        assert_eq!(w.write.mass[a],0.0,"publication cannot resurrect escaped gas");
+        assert_eq!(w.write.mass[sealed],0.04);
+        assert_eq!(w.mixture_mass[sealed],0.03);
     }
 }

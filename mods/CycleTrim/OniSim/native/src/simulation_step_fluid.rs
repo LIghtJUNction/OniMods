@@ -50,7 +50,6 @@ pub(crate) fn gas_phase_with_pressure(
             if old_phase(world, elements, cell) != 1 {
                 continue;
             }
-            changed = true;
             let element = world.read.element[cell];
             let direction = world.scan_direction as isize;
             for offset in [
@@ -66,6 +65,9 @@ pub(crate) fn gas_phase_with_pressure(
                 {
                     continue;
                 }
+                // Homogeneous settled gas has no displacement work. Only a
+                // reached mixed-gas helper can require the post-phase copy.
+                changed = true;
                 let amount = crate::gas::do_gas_pressure_displacement(
                     world,
                     elements,

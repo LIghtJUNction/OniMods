@@ -188,10 +188,10 @@ fn main(@builtin(global_invocation_id) id:vec3<u32>) {
  if solid[i]!=0u {vx[i]=0.0;vy[i]=0.0;return;}
  let center=total(i);
  var l=center; var r=center; var d=center; var u=center;
- if id.x>0u {l=total(i-1u);}
- if id.x+1u<params.width {r=total(i+1u);}
- if id.y>0u {d=total(i-params.width);}
- if id.y+1u<params.height {u=total(i+params.width);}
+ if id.x>0u && solid[i-1u]==0u {l=total(i-1u);}
+ if id.x+1u<params.width && solid[i+1u]==0u {r=total(i+1u);}
+ if id.y>0u && solid[i-params.width]==0u {d=total(i-params.width);}
+ if id.y+1u<params.height && solid[i+params.width]==0u {u=total(i+params.width);}
  vx[i]=0.04*(l-r); vy[i]=0.04*(d-u);
 }
 "#;
@@ -1454,6 +1454,12 @@ pub fn cpu_step(
     if !((dt * max_rate).is_finite()) || dt * max_rate > 1.0 {
         return Err("CPU step exceeds the validated CFL bound".into());
     }
+    let flux = |a: f32, b: f32, speed: f32| {
+        let cap = 1.0f32.min(0.125 / dt);
+        let v = speed.clamp(-cap, cap);
+        let delta = if (a-b).abs() <= 1e-7f32.max(a.max(b)*1e-5) { 0.0 } else { a-b };
+        v * if v >= 0.0 { a } else { b } + 2.0f32.min(0.125/dt) * delta
+    };
     let idx = |x: usize, y: usize, c: usize| (y * width + x) * channels + c;
     mass_output.copy_from_slice(state.mass);
     enthalpy_output.copy_from_slice(state.enthalpy);
@@ -1471,27 +1477,23 @@ pub fn cpu_step(
                 let drift = state.species[c].vertical_drift;
                 if x + 1 < width && state.solid[cell + 1] == 0 {
                     let v = 0.5 * (state.velocity_x[cell] + state.velocity_x[cell + 1]);
-                    let donor = if v >= 0.0 { idx(x, y, c) } else { idx(x + 1, y, c) };
-                    mass_div += v * state.mass[donor];
-                    enthalpy_div += v * state.enthalpy[donor];
+                    mass_div += flux(state.mass[idx(x, y, c)], state.mass[idx(x + 1, y, c)], v);
+                    enthalpy_div += flux(state.enthalpy[idx(x, y, c)], state.enthalpy[idx(x + 1, y, c)], v);
                 }
                 if x > 0 && state.solid[cell - 1] == 0 {
                     let v = 0.5 * (state.velocity_x[cell - 1] + state.velocity_x[cell]);
-                    let donor = if v >= 0.0 { idx(x - 1, y, c) } else { idx(x, y, c) };
-                    mass_div -= v * state.mass[donor];
-                    enthalpy_div -= v * state.enthalpy[donor];
+                    mass_div -= flux(state.mass[idx(x - 1, y, c)], state.mass[idx(x, y, c)], v);
+                    enthalpy_div -= flux(state.enthalpy[idx(x - 1, y, c)], state.enthalpy[idx(x, y, c)], v);
                 }
                 if y + 1 < height && state.solid[cell + width] == 0 {
                     let v = 0.5 * (state.velocity_y[cell] + state.velocity_y[cell + width]) + drift;
-                    let donor = if v >= 0.0 { idx(x, y, c) } else { idx(x, y + 1, c) };
-                    mass_div += v * state.mass[donor];
-                    enthalpy_div += v * state.enthalpy[donor];
+                    mass_div += flux(state.mass[idx(x, y, c)], state.mass[idx(x, y + 1, c)], v);
+                    enthalpy_div += flux(state.enthalpy[idx(x, y, c)], state.enthalpy[idx(x, y + 1, c)], v);
                 }
                 if y > 0 && state.solid[cell - width] == 0 {
                     let v = 0.5 * (state.velocity_y[cell - width] + state.velocity_y[cell]) + drift;
-                    let donor = if v >= 0.0 { idx(x, y - 1, c) } else { idx(x, y, c) };
-                    mass_div -= v * state.mass[donor];
-                    enthalpy_div -= v * state.enthalpy[donor];
+                    mass_div -= flux(state.mass[idx(x, y - 1, c)], state.mass[idx(x, y, c)], v);
+                    enthalpy_div -= flux(state.enthalpy[idx(x, y - 1, c)], state.enthalpy[idx(x, y, c)], v);
                 }
                 let slot = idx(x, y, c);
                 mass_output[slot] = state.mass[slot] - dt * mass_div;
@@ -1585,8 +1587,8 @@ mod tests {
             let i = y * 3 + x;
             let total = |j: usize| mass[j*2] + mass[j*2+1];
             let center = total(i);
-            let expected_x = if solid[i] != 0 { 0.0 } else { 0.04 * (if x>0 {total(i-1)} else {center} - if x<2 {total(i+1)} else {center}) };
-            let expected_y = if solid[i] != 0 { 0.0 } else { 0.04 * (if y>0 {total(i-3)} else {center} - if y<2 {total(i+3)} else {center}) };
+            let expected_x = if solid[i] != 0 { 0.0 } else { 0.04 * (if x>0 && solid[i-1]==0 {total(i-1)} else {center} - if x<2 && solid[i+1]==0 {total(i+1)} else {center}) };
+            let expected_y = if solid[i] != 0 { 0.0 } else { 0.04 * (if y>0 && solid[i-3]==0 {total(i-3)} else {center} - if y<2 && solid[i+3]==0 {total(i+3)} else {center}) };
             assert!((got[i]-expected_x).abs() < 1e-6 && (got[9+i]-expected_y).abs() < 1e-6);
         }}
     }
