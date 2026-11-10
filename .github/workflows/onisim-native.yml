@@ -42,6 +42,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Fetch Jlib loader dependency
+        run: git submodule update --init --depth 1 mods/Jlib
       - name: Install pinned Rust toolchain
         shell: bash
         run: rustup toolchain install 1.99.1 --profile minimal
