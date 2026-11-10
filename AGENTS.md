@@ -31,6 +31,8 @@
 
 ## ONI Control
 
+- 测试 Mod 实机行为时使用 `.agents/skills/oni-mod-mcp-test/`：调用 OniMcp；测试中发现 OniMcp 不好用，必须同步改进 OniMcp 并重新验证原测试场景。
+
 - Oxygen Not Included must be launched through Steam only.
 - Keep the game paused while reading state, planning, or issuing commands.
 - Use a strict loop: pause -> observe -> plan -> execute -> short resume -> pause -> verify.
