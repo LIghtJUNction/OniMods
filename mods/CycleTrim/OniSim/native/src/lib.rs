@@ -1,13 +1,13 @@
 mod pressure_sweep;
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void};
-use std::sync::MutexGuard;
+use std::sync::Arc;
+mod publication_lease;
+mod gas_region_snapshot;
 
 thread_local! {
-    // Pins State (and therefore the current GameData publication) while a
-    // managed caller copies one cell's records. Acquire and Release must run
-    // on the same OS thread.
-    static MULTICOMPONENT_READ_LEASE: RefCell<Option<MutexGuard<'static, state::State>>> =
+    // Pins only immutable buffers. Other readers and mutable State can progress.
+    static MULTICOMPONENT_READ_LEASE: RefCell<Option<Arc<publication_lease::Publication>>> =
         const { RefCell::new(None) };
 }
 
@@ -386,23 +386,17 @@ pub extern "C" fn ONISIM_AcquireMulticomponentUpdate(
                 ));
             }
 
-            let state = state::lock()?;
-            let _ = state.initialized_grid()?;
-            let update = state.multicomponent_update.as_ref().ok_or_else(|| {
-                Error::new(
-                    Status::InvalidState,
-                    "Start is required before reading multicomponent publication",
-                )
-            })?;
-            let descriptor = match update {
-                Ok(descriptor) => descriptor,
-                Err(error) => return Err(error.clone()),
-            };
-            let pointer = std::ptr::from_ref(descriptor);
-            *lease = Some(state);
+            let publication = publication_lease::acquire()?;
+            let pointer = std::ptr::from_ref(&publication.descriptor);
+            *lease = Some(publication);
             Ok(pointer)
         })
     })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ONISIM_GetMulticomponentRevision() -> u64 {
+    publication_lease::revision()
 }
 
 #[unsafe(no_mangle)]

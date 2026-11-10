@@ -24,7 +24,51 @@ namespace CycleTrim.PerformanceProbe.Tests
             ReleasesReferencesAndReusesWarmScratch();
             VisualPrefixMatchesSingleCellProvider();
             VisualPrefixCopiesConsecutiveRunsAndRechecksGrid();
+            VersionedColorsSkipUnchangedDecode();
             Console.WriteLine("PASS multicomponent batch boundaries, fallback, publication ownership, reentrancy, concurrency, allocation and production Prefix pixels");
+        }
+
+        private static void VersionedColorsSkipUnchangedDecode()
+        {
+            int oldWidth = Grid.WidthInCells, oldCount = Grid.CellCount;
+            Element[] oldElements = Grid.Element;
+            bool[] oldActive = Grid.Active;
+            try
+            {
+                using (var fixture = new MulticomponentBatchFixture(300, 2, true))
+                {
+                    ConfigureGrid(150, 2, fixture.Elements[0]);
+                    WithProvider(fixture.Provider, () =>
+                    {
+                        var first = new TextureRegion(150, 2);
+                        Check(!Render(first, 0, 0, 149, 1), "versioned cold render completes");
+                        int cold = fixture.Acquires;
+                        Check(cold == 4, "revision readiness avoids an extra native lease");
+                        var warm = new TextureRegion(150, 2);
+                        Render(warm, 0, 0, 149, 1);
+                        EqualPixels(first, warm);
+                        Check(fixture.Acquires == cold, "unchanged publication does not acquire or decode");
+                        fixture.Species[0].Mass = 9f;
+                        fixture.Cells[0].TotalMass = 10f;
+                        fixture.Header.Generation++;
+                        fixture.PublishHeader();
+                        var changed = new TextureRegion(150, 2);
+                        Render(changed, 0, 0, 149, 1);
+                        Check(fixture.Acquires > cold, "new publication invalidates decoded colors");
+                        var control = new TextureRegion(150, 2);
+                        Check(!FrozenMulticomponentVisualPrefix.Prefix(control, 0, 0, 149, 1), "control render completes");
+                        EqualPixels(control, changed);
+                        int before = fixture.Acquires;
+                        Grid.Element[0] = new Element { substance = fixture.Elements[0].substance };
+                        Grid.Active = Enumerable.Repeat(true, 300).ToArray();
+                        Grid.Active[1] = false;
+                        Render(warm, 0, 0, 149, 1);
+                        Check(fixture.Acquires == before, "solid and inactive changes need no decoding");
+                        Check(warm.Bytes.Take(8).All(value => value == 0), "cached colors cannot bypass active/solid checks");
+                    });
+                }
+            }
+            finally { Grid.WidthInCells = oldWidth; Grid.CellCount = oldCount; Grid.Element = oldElements; Grid.Active = oldActive; }
         }
 
         private static void BoundariesAndLegacyParity()

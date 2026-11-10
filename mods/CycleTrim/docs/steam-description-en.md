@@ -17,12 +17,13 @@ CycleTrim explores gas and liquid mixtures with GPU acceleration. The developmen
 Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
 
 [h2]Current progress[/h2]
+0.4.14 reduces repeated CPU work in fetching, navigation, settled gas and publication/rendering. Host and native tests passed; game performance is unverified. Requires Jlib 0.3.4.
 [list]
 [*]Version 0.4.13 transports all gas species without limiting a cell to two gas slots. Liquid species equality and complete mixture save/load remain unfinished.
-[*]The development timestep uses GPU thermal diffusion over the grid. Eligible gas regions use GPU concentration diffusion, density-gradient velocity, pressure projection, transport and heat; eligible liquid regions use GPU multicomponent diffusion. Some conditions still use CPU processing or exclude a region.
+[*]GPU thermal diffusion covers the grid. Eligible gas regions use diffusion, velocity, pressure, transport and heat kernels; eligible liquids use multicomponent diffusion. Other conditions still use CPU processing or exclude regions.
 [*]Host/operator tests and short game runs have been performed; full gameplay integration remains experimental.
-[*]Phase changes, bubbles, some liquid flow, disease, radiation, building interactions and publication still rely on the CPU. Gas transport now retains three or more species per cell; building interactions, liquids and persistence still need end-to-end validation.
-[*]Published pressure, partial pressure and liquid volume fractions are unfinished; breathing, plants, pipes and other interactions still need end-to-end validation.
+[*]Phase changes, bubbles, some liquid flow, disease, radiation, buildings and publication still use the CPU. Building interactions, liquids and persistence need end-to-end validation.
+[*]Pressure, partial pressure and liquid volume fractions are unfinished. Breathing, plants and pipes need end-to-end validation.
 [/list]
 Standalone tests, development builds and the Workshop release are different stages. An in-game frame-rate improvement has not yet been fully verified.
 
@@ -49,7 +50,7 @@ The experimental interface displays individual substances. Partial pressures are
 These are development goals, not promises that they are released or work in your save. GPU acceleration and frame rate depend on hardware, scene and build; no specific frame rate is guaranteed.
 
 [h2]Installation and feedback[/h2]
-Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]. Subscribe to and enable Jlib and CycleTrim, then restart the game. Settings are available in the mod options.
+Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url] 0.3.4 or newer. Subscribe to and enable Jlib and CycleTrim, then restart the game. Settings are available in the mod options.
 
 Report crashes, save problems or material anomalies on [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url], with your game version, reproduction steps and logs without private information.
 

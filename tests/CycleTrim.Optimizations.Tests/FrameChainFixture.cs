@@ -18,6 +18,11 @@ public sealed partial class Game
         Sim.HandleMessage(SimMessageHashes.PrepareGameData, 0, null);
         Sim.HandleMessage(SimMessageHashes.Other, 0, null);
         new JobManager().Run(new FrameChainWork());
+        new JobManager().Run(new FetchManager.UpdateOffsetTables());
+        new JobManager().Run(new FetchManager.UpdatePickupWorkItem());
+        new JobManager().Run(new ChoreProvider.Work());
+        new JobManager().Run(new PropertyTexturesJob());
+        new JobManager().Run(new SimDebugViewJob());
     }
 }
 public interface IWorkItemCollection { void Run(); }
@@ -77,3 +82,16 @@ public static class KFMOD
 {
     [MethodImpl(MethodImplOptions.NoInlining)] public static void RenderEveryTick(float dt) { }
 }
+
+public sealed class FetchManager
+{
+    public sealed class UpdateOffsetTables : IWorkItemCollection { public void Run() { } }
+    public sealed class UpdatePickupWorkItem : IWorkItemCollection { public void Run() { } }
+}
+public sealed class ChoreProvider
+{
+    public sealed class Work : IWorkItemCollection { public void Run() { } }
+}
+
+public sealed class PropertyTexturesJob : IWorkItemCollection { public void Run() { } }
+public sealed class SimDebugViewJob : IWorkItemCollection { public void Run() { } }

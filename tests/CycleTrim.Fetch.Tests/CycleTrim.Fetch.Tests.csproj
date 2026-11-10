@@ -21,4 +21,5 @@
     <Compile Include="../../mods/CycleTrim/Patches/FetchLayoutExperiment.cs" Link="FetchLayoutExperiment.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs" Link="FetchPickupCandidatePatch.cs" />
   </ItemGroup>
+  <ItemGroup><Compile Include="../../mods/Jlib/Jlib/Runtime/IndexedCandidates.cs" Link="Source/IndexedCandidates.cs" /></ItemGroup>
 </Project>

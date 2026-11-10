@@ -25,7 +25,7 @@ namespace CycleTrim.PerformanceProbe.Tests
         private readonly GCHandle cellsPin, speciesPin;
         private readonly IntPtr descriptor;
 
-        internal MulticomponentBatchFixture(int cells = 256, int speciesPerCell = 2)
+        internal MulticomponentBatchFixture(int cells = 256, int speciesPerCell = 2, bool versioned = false)
         {
             Cells = new NativeMulticomponentCellHeader[cells];
             Species = new NativeMulticomponentSpeciesRecord[cells * speciesPerCell];
@@ -56,7 +56,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 Cells = cellsPin.AddrOfPinnedObject(), Species = speciesPin.AddrOfPinnedObject()
             };
             PublishHeader();
-            Provider = new OniSimMulticomponentProvider(Acquire, Release, Resolve);
+            Provider = new OniSimMulticomponentProvider(Acquire, Release, Resolve,
+                versioned ? (Func<ulong>)(() => Header.Generation) : null);
         }
 
         internal void PublishHeader() { Marshal.StructureToPtr(Header, descriptor, false); }

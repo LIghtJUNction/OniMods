@@ -10,6 +10,7 @@
     <DefineConstants>$(DefineConstants);PERFORMANCE_PROBE_HOST_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../mods/Jlib/Jlib/Multicomponent/VersionedCellColors.cs" Link="Source/VersionedCellColors.cs" />
     <ProjectReference Include="../../mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj" />
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/ModInfo.cs" Link="ModInfo.cs" />
@@ -19,6 +20,7 @@
     <Compile Include="../../mods/CycleTrim/Core/FetchLayoutControl.cs" Link="FetchLayoutControl.cs" />
     <Compile Include="../../mods/CycleTrim/Core/ConduitVisualRefreshGate.cs" Link="ConduitVisualRefreshGate.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/WorldInvalidationVersions.cs" Link="WorldInvalidationVersions.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentTypes.cs" Link="Jlib/MulticomponentTypes.cs" />

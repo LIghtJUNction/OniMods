@@ -28,6 +28,8 @@ namespace OniSim.Compatibility
             return new OniSimPublicationReader(NativeApi.LoadExplicit(absoluteNativeLibraryPath));
         }
 
+        public ulong ContentRevision { get { return api.GetMulticomponentRevision == null ? 0 : api.GetMulticomponentRevision(); } }
+
         public IntPtr Acquire()
         {
             if (leaseHeld)

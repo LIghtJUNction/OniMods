@@ -255,7 +255,7 @@ fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() 
         if iteration == 224 { assert_eq!(output.grid.backwall_mass[5], 0.0); }
         let cached = snapshot(output);
         ok(output.presentation.update(&engine.world, &engine.elements));
-        output.multicomponent.update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {
+        std::sync::Arc::make_mut(&mut output.multicomponent).update_from_grid_with_mixture_at(&output.grid, &engine.elements, |public| {
             let internal = engine.world.internal_index(public);
             (engine.world.mixture_element[internal], engine.world.mixture_mass[internal])
         });

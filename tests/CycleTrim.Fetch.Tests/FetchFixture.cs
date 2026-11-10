@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using CycleTrim.Core;
 
 // These are synthetic API fixtures, not game implementation or game assemblies.
-internal sealed class Navigator { }
+internal sealed class Navigator { internal IReadOnlyList<int> Indices; }
 
 internal sealed class Pickupable
 {
@@ -155,6 +155,17 @@ internal sealed class FetchManager
             public bool Equals(Key other) { return tag == other.tag && priority == other.priority; }
             public override bool Equals(object other) { return other is Key value && Equals(value); }
             public override int GetHashCode() { return unchecked((tag * 397) ^ priority); }
+        }
+    }
+}
+
+namespace Jlib.Runtime
+{
+    internal static class FetchWorkIndex
+    {
+        internal static IndexedCandidates<FetchManager.Fetchable> GetCandidates(FetchManager.FetchablesByPrefabId group, Navigator navigator)
+        {
+            return new IndexedCandidates<FetchManager.Fetchable>(group.fetchables.GetDataList(), navigator?.Indices);
         }
     }
 }

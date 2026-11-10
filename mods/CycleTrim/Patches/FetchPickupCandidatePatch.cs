@@ -149,7 +149,7 @@ namespace CycleTrim.Patches
                 {
                     ___cellCosts.Clear();
                     __instance.finalPickups.Clear();
-                    foreach (var fetchable in __instance.fetchables.GetDataList())
+                    foreach (var fetchable in Jlib.Runtime.FetchWorkIndex.GetCandidates(__instance, worker_navigator))
                     {
                         var pickupable = fetchable.pickupable;
                         if (!pickupable.CouldBePickedUpByMinion(worker))
@@ -214,7 +214,7 @@ namespace CycleTrim.Patches
                 {
                     cellCosts.Clear();
                     instance.finalPickups.Clear();
-                    foreach (var fetchable in instance.fetchables.GetDataList())
+                    foreach (var fetchable in Jlib.Runtime.FetchWorkIndex.GetCandidates(instance, navigator))
                     {
                         var pickupable = fetchable.pickupable;
                         if (!pickupable.CouldBePickedUpByMinion(worker))

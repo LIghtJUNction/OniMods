@@ -235,9 +235,10 @@ impl State {
         let mut old = GameData::new(grid)?;
         output.grid.started = true;
         old.grid.started = true;
-        old.multicomponent
+        Arc::make_mut(&mut old.multicomponent)
             .update_from_grid(grid, self.elements.as_ref().unwrap());
         let initial_multicomponent = old.multicomponent.descriptor(self.generation);
+        let initial_buffers = Arc::clone(&old.multicomponent);
         let initial_pointers = old.presentation.pointers();
         let mut initial_ranges = Vec::new();
         initial_ranges.try_reserve_exact(36).map_err(|_| {
@@ -278,6 +279,7 @@ impl State {
                 self.worker = Some(worker);
                 self.borrowed_ranges = initial_ranges;
                 self.multicomponent_update = Some(initial_multicomponent);
+                crate::publication_lease::publish(&initial_buffers)?;
                 let grid = self.grid.as_mut().unwrap();
                 // FrameSync::initGameData initially copies CellSOA only. The
                 // GameData backwall vectors keep their constructor sentinels
@@ -351,6 +353,9 @@ impl State {
         }
         data.fill_borrowed_ranges(&mut self.borrowed_ranges);
         self.multicomponent_update = Some(data.multicomponent.descriptor(self.generation));
+        if !data.multicomponent_unchanged {
+            crate::publication_lease::publish(&data.multicomponent)?;
+        }
         let grid = self.grid.as_mut().unwrap();
         grid.copy_from(&data.grid);
         self.scheduler.free_slots.append(&mut data.retired_slots);
@@ -377,6 +382,7 @@ impl State {
     }
 
     fn clear_session(&mut self) -> Result<()> {
+        crate::publication_lease::clear()?;
         let changed = self.active
             || self.grid.is_some()
             || self.elements.is_some()

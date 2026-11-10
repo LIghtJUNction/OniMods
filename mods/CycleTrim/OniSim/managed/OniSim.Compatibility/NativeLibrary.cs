@@ -34,6 +34,7 @@ namespace OniSim.Compatibility
         public readonly VersionDelegate GetAbiVersion;
         public readonly StatusDelegate GetLastStatus;
         public readonly GenerationDelegate GetGeneration;
+        public readonly GenerationDelegate GetMulticomponentRevision;
         public readonly CopyImageDelegate CopyGridImage, CopyMulticomponentImage;
         public readonly GpuPathfinderInitGridDelegate GpuPathfinderInitGrid;
         public readonly GpuPathfinderEvaluateChoresDelegate GpuPathfinderEvaluateChores;
@@ -58,6 +59,7 @@ namespace OniSim.Compatibility
             GetLastStatus = Load<StatusDelegate>("ONISIM_GetLastStatus");
             GetLastError = Load<PointerDelegate>("ONISIM_GetLastError");
             GetGeneration = Load<GenerationDelegate>("ONISIM_GetGeneration");
+            GetMulticomponentRevision = TryLoad<GenerationDelegate>("ONISIM_GetMulticomponentRevision");
             GetCapabilities = Load<PointerDelegate>("ONISIM_GetCapabilities");
             GetGrid = Load<PointerDelegate>("ONISIM_GetGrid");
             CopyGridImage = Load<CopyImageDelegate>("ONISIM_CopyGridImage");

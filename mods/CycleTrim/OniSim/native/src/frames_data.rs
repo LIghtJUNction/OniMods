@@ -5,13 +5,15 @@ use crate::multicomponent_publication::MulticomponentBuffers;
 use crate::presentation::PresentationBuffers;
 use crate::status::Result;
 use crate::world_cells::filled;
+use std::sync::Arc;
 
 pub(crate) struct GameData {
     pub(crate) grid: Grid,
     pub(crate) events: EventQueues,
     pub(crate) visible: Vec<u8>,
     pub(crate) presentation: PresentationBuffers,
-    pub(crate) multicomponent: MulticomponentBuffers,
+    pub(crate) multicomponent: Arc<MulticomponentBuffers>,
+    pub(crate) multicomponent_unchanged: bool,
     pub(crate) retired_slots: Vec<EarlyCommands>,
 }
 
@@ -29,7 +31,8 @@ impl GameData {
             events: EventQueues::default(),
             visible: filled(previous.len(), 0)?,
             presentation: PresentationBuffers::new(previous.len())?,
-            multicomponent: MulticomponentBuffers::new(previous.len())?,
+            multicomponent: Arc::new(MulticomponentBuffers::new(previous.len())?),
+            multicomponent_unchanged: false,
             retired_slots: Vec::new(),
         })
     }

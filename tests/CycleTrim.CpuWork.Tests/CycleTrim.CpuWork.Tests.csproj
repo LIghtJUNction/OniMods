@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>disable</Nullable><NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/BoundedWorkSelection.cs" Link="Source/BoundedWorkSelection.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/OrderedCandidateIndex.cs" Link="Source/OrderedCandidateIndex.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/PartitionedWorkIndex.cs" Link="Source/PartitionedWorkIndex.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/IndexedCandidates.cs" Link="Source/IndexedCandidates.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/FetchWorkIndex.cs" Link="Source/FetchWorkIndex.cs" />
+    <Compile Include="../../mods/Jlib/Jlib/Runtime/CpuWorkOptimizations.cs" Link="Source/CpuWorkOptimizations.cs" />
+  </ItemGroup>
+</Project>

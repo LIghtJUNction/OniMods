@@ -180,6 +180,7 @@ namespace CycleTrim.Optimizations.Tests
                 typeof(FrameRateUnlockPatch.ProfileSimEveryTick),
                 typeof(FrameRateUnlockPatch.KeepUnlocked),
                 typeof(FrameStageProbe.MainStages),
+                typeof(FrameStageProbe.JobStages),
                 typeof(FrameStageProbe.NativePrepare)
             })
                 harmony.CreateClassProcessor(patch).Patch();
@@ -334,7 +335,7 @@ namespace CycleTrim.Optimizations.Tests
                 bool nativeChecked = false;
                 foreach (var phase in root.GetProperty("phases").EnumerateArray())
                 {
-                    Check(phase.GetProperty("resolved").GetBoolean(), "all fixture stage targets must resolve");
+                    Check(phase.GetProperty("resolved").GetBoolean(), "fixture stage must resolve: " + phase.GetProperty("name").GetString());
                     Check(phase.GetProperty("calls").GetInt64() == frames,
                         "every coarse fixture hook must execute once on each completed main-thread interval");
                     self += phase.GetProperty("selfTicks").GetInt64();

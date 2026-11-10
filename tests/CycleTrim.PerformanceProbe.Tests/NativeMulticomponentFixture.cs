@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using CycleTrim.Core;
 using OniSim.Compatibility;
 
@@ -11,7 +12,7 @@ namespace CycleTrim.PerformanceProbe.Tests
     /// <summary>
     /// Authors a native publication without loading game assemblies. Construct
     /// and dispose outside timed samples; reads use the production publication
-    /// reader, including its four native calls and the native State mutex.
+    /// reader and its native publication lease.
     /// Launch the host with CYCLETRIM_ONISIM_GPU=0 before loading the library.
     /// </summary>
     internal sealed class NativeMulticomponentFixture : IDisposable
@@ -105,6 +106,45 @@ namespace CycleTrim.PerformanceProbe.Tests
             // Do not add counters or the session facade's managed GlobalGate to
             // these delegates: this is the exact production native read path.
             return new OniSimMulticomponentProvider(reader.Acquire, reader.Release, resolver);
+        }
+
+        internal void VerifyLeaseDuringPublicationAndShutdown()
+        {
+            IntPtr pointer = reader.Acquire();
+            Task worker = null;
+            try
+            {
+                var old = Marshal.PtrToStructure<NativeMulticomponentUpdate>(pointer);
+                var oldCell = Marshal.PtrToStructure<NativeMulticomponentCellHeader>(old.Cells);
+                Require(reader.ContentRevision == old.Generation, "current revision matches acquired descriptor");
+                worker = Task.Run(() =>
+                {
+                    byte[] payload = new byte[28];
+                    WriteI32(payload, 4, -1);
+                    WriteF32(payload, 8, Temperature);
+                    WriteF32(payload, 12, SecondaryMass);
+                    WriteU16(payload, 20, SecondaryElementId);
+                    payload[23] = byte.MaxValue;
+                    session.SendMessage(new OfficialMessage(ModifyCellMessage, payload));
+                    Publish(new[] { new ActiveRegion(0, 0, Width, Height) }, new byte[CellCount]);
+                });
+                Require(worker.Wait(5000), "a held reader must not block worker publication");
+                Require(reader.ContentRevision > old.Generation, "mutation publishes a new content revision");
+                Require(Marshal.PtrToStructure<NativeMulticomponentCellHeader>(old.Cells).TotalMass == oldCell.TotalMass,
+                    "held old publication stays immutable after worker completes");
+                worker = Task.Run(() => session.Dispose());
+                Require(worker.Wait(5000), "a held reader must not block shutdown");
+                session = null;
+                Require(reader.ContentRevision == 0, "shutdown invalidates the revision");
+                Require(Marshal.PtrToStructure<NativeMulticomponentCellHeader>(old.Cells).TotalMass == oldCell.TotalMass,
+                    "reader retains its data after shutdown");
+            }
+            finally
+            {
+                reader.Release();
+                if (worker != null && !worker.IsCompleted)
+                    worker.Wait(5000);
+            }
         }
 
         private void AddMixturesAndPublish()

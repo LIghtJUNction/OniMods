@@ -11,6 +11,7 @@ namespace CycleTrim
         partial void ConfigureOniSim();
         partial void RegisterOniSimOptions();
         partial void InstallMulticomponentShims(Harmony harmony);
+        partial void InstallCpuWorkOptimizations(Harmony harmony);
 
         public override void OnLoad(Harmony harmony)
         {
@@ -38,6 +39,7 @@ namespace CycleTrim
         {
             base.OnAllModsLoaded(harmony, mods);
             FetchPickupCandidatePatch.InstallAfterAllModsLoaded(harmony);
+            InstallCpuWorkOptimizations(harmony);
         }
     }
 }

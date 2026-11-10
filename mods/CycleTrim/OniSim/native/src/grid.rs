@@ -122,15 +122,28 @@ impl Grid {
         self.descriptor[at..at + 8].copy_from_slice(&(pointer as u64).to_le_bytes());
     }
 
-    pub(crate) fn copy_from(&mut self, other: &Self) {
+    pub(crate) fn copy_from(&mut self, other: &Self) -> usize {
         assert_eq!((self.width, self.height), (other.width, other.height));
         self.seed = other.seed;
         self.initialized = other.initialized;
         self.started = other.started;
         self.radiation_enabled = other.radiation_enabled;
         self.headless = other.headless;
+        let mut copied_bytes = 0usize;
+        // Compare independent, bounded blocks of POD arrays. Stable FFI addresses
+        // remain unchanged, including when game-side consumers write a Grid field.
+        // Byte comparison preserves signed zero and exact floating-point payloads.
         macro_rules! copy { ($($field:ident),* $(,)?) => {
-            $(self.$field.copy_from_slice(&other.$field);)*
+            $(for (destination, source) in self.$field.chunks_mut(256).zip(other.$field.chunks(256)) {
+                let bytes = std::mem::size_of_val(source);
+                // Each listed field is an integer, float or byte array: no padding
+                // and no uninitialized bytes. The slices do not alias.
+                let same = unsafe {
+                    std::slice::from_raw_parts(destination.as_ptr().cast::<u8>(), bytes)
+                        == std::slice::from_raw_parts(source.as_ptr().cast::<u8>(), bytes)
+                };
+                if !same { destination.copy_from_slice(source); copied_bytes += bytes; }
+            })*
         }; }
         copy!(
             element,
@@ -155,6 +168,7 @@ impl Grid {
         self.descriptor[0..4].copy_from_slice(&other.descriptor[0..4]);
         self.descriptor[100..448].copy_from_slice(&other.descriptor[100..448]);
         self.descriptor[456..496].copy_from_slice(&other.descriptor[456..496]);
+        copied_bytes
     }
 
     pub(crate) fn disease_infestation(&self, index: usize) -> u8 {
@@ -267,5 +281,29 @@ impl Grid {
                 self.descriptor.as_ptr() as usize,
                 DESCRIPTOR_SIZE,
             )
+    }
+}
+
+#[cfg(test)]
+mod copy_tests {
+    use super::*;
+    #[test]
+    fn copies_only_changed_blocks_and_keeps_ffi_addresses() {
+        let mut source = Grid::new(600, 1, 0, 0).unwrap();
+        let mut target = Grid::new(600, 1, 0, 0).unwrap();
+        let mass = target.mass.as_ptr();
+        assert_eq!(target.copy_from(&source), 0);
+        source.mass[599] = -0.0;
+        source.element[1] = 42;
+        source.set_num_frames(3);
+        assert_eq!(target.copy_from(&source), (600 - 512) * 4 + 256 * 2);
+        assert_eq!(target.mass[599].to_bits(), (-0.0f32).to_bits());
+        assert_eq!(target.element[1], 42);
+        assert_eq!(target.mass.as_ptr(), mass);
+        assert_eq!(target.copy_from(&source), 0);
+        target.temperature[300] = 123.0;
+        assert_eq!(target.copy_from(&source), 256 * 4);
+        assert_eq!(target.temperature[300], 0.0);
+        assert_eq!(i32::from_le_bytes(target.descriptor[..4].try_into().unwrap()), 3);
     }
 }

@@ -62,6 +62,7 @@ namespace CycleTrim.Fetch.Tests
             WinnersTiesAndCollisions();
             LosingDuplicatesPreserveWinners();
             IntegerAndPathBoundaries();
+            IndexedWorldCandidates();
             RandomDifferential();
             CallbacksExceptionsAndReentry();
             ModeIsCapturedOnce();
@@ -174,6 +175,26 @@ namespace CycleTrim.Fetch.Tests
                 Execute(withLosers, route);
                 Equal(Picks(seedOnly), Picks(withLosers),
                     "losing duplicates leave identities, fields and order unchanged " + route);
+            }
+        }
+
+        private static void IndexedWorldCandidates()
+        {
+            var input = Enumerable.Range(0, 200).Select(i => new Input(i, i % 17,
+                cost: 200 - i, priority: i % 10, quality: i % 3)).ToArray();
+            var indices = Enumerable.Range(0, input.Length).Where(i => i % 3 == 1).ToArray();
+            var expected = Create(indices.Select(i => input[i]).ToArray());
+            expected.ReferenceUpdate(null, 0);
+            foreach (var route in new[] { Route.Baseline, Route.Compact })
+            {
+                var owner = Create(input);
+                foreach (var item in owner.fetchables.Items.Where((item, i) => i % 3 != 1))
+                    item.pickupable.OnEligibility = () => { throw new Exception("foreign world was scanned"); };
+                FetchTestControl.Compact = route == Route.Compact;
+                owner.UpdatePickups(new Navigator { Indices = indices }, 0);
+                Equal(Picks(expected), Picks(owner), "world index preserves eligibility and winning order " + route);
+                owner.UpdatePickups(new Navigator { Indices = new int[0] }, 0);
+                Equal(0, owner.finalPickups.Count, "empty world clears previous worker candidates");
             }
         }
 

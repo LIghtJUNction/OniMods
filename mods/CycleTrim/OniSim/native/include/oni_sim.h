@@ -162,12 +162,15 @@ typedef struct OniSimMulticomponentUpdate {
 } OniSimMulticomponentUpdate;
 #pragma pack(pop)
 
-/* Thread-affine read lease: Acquire pins the current GameData publication
- * and returns its descriptor. Copy the descriptor and requested records before
- * Release. Prepare/Shutdown block while a lease is held. Acquire/Release MUST
- * execute on the same thread; nested acquisition is rejected. */
+/* Thread-affine read lease: Acquire pins an immutable publication independently
+ * of the simulation lock. Its storage survives Prepare and Shutdown until
+ * Release. The descriptor's generation is a content revision (unlike the legacy
+ * Get view's session generation). Acquire/Release MUST execute on the same
+ * thread; nested acquisition is rejected. Copy records before Release. */
 const OniSimMulticomponentUpdate *ONISIM_AcquireMulticomponentUpdate(void);
 void ONISIM_ReleaseMulticomponentUpdate(void);
+/* Zero means no published session. Identical idle batches retain the revision. */
+uint64_t ONISIM_GetMulticomponentRevision(void);
 
 void ConduitTemperatureManager_Initialize(void);
 void ConduitTemperatureManager_Shutdown(void);

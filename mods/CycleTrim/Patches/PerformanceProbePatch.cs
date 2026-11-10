@@ -83,7 +83,7 @@ namespace CycleTrim.Patches
             asyncTickCounter = new PerformanceProbeGenerationCounter();
             asyncWorkCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true);
             navigatorProbeCounter = new PerformanceProbeGenerationCounter();
-            fetchCounter = new PerformanceProbeGenerationCounter();
+            fetchCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true);
             choreCounter = new PerformanceProbeGenerationCounter();
             brainSchedulerCounter = new PerformanceProbeGenerationCounter();
             roomProberCounter = new PerformanceProbeGenerationCounter();
@@ -196,14 +196,16 @@ namespace CycleTrim.Patches
 
         private readonly struct TimingState
         {
-            internal TimingState(PerformanceProbeCounter counter, long startedAt)
+            internal TimingState(PerformanceProbeCounter counter, long startedAt, bool mainThread = true)
             {
                 Counter = counter;
                 StartedAt = startedAt;
+                MainThread = mainThread;
             }
 
             internal PerformanceProbeCounter Counter { get; }
             internal long StartedAt { get; }
+            internal bool MainThread { get; }
         }
 
         private static void TryScheduleReport()
@@ -324,7 +326,7 @@ namespace CycleTrim.Patches
             AppendTarget(
                 summary,
                 "FetchManager.FetchablesByPrefabId.UpdatePickups",
-                "main",
+                "mixed",
                 fetchTarget,
                 fetchSnapshot,
                 startedNewCapture ? default(PerformanceProbeSnapshot) : lastFetchSnapshot);
@@ -678,11 +680,13 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming(fetchCounter);
+                __state = Game.IsOnMainThread() ? BeginMainTiming(fetchCounter)
+                    : new TimingState(fetchCounter.CaptureCurrent(), BeginTiming(), false);
             }
             private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(__state);
+                if (__state.MainThread) RecordMain(__state);
+                else RecordWorker(__state);
                 return __exception;
             }
         }

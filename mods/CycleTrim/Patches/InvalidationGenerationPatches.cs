@@ -23,14 +23,26 @@ namespace CycleTrim.Patches
                     "CycleTrim could not find " + type.Name + "." + name + ".");
         }
 
-        private static void BumpFetch()
+        private static void BumpFetch(int world = -1)
         {
-            InvalidationVersions.BumpFetch();
+            InvalidationVersions.BumpFetch(world);
         }
 
-        private static void BumpChore()
+        private static void BumpChore(int world = -1)
         {
-            InvalidationVersions.BumpChore();
+            InvalidationVersions.BumpChore(world);
+        }
+
+        private static int World(UnityEngine.GameObject obj)
+        {
+            return obj == null ? -1 : obj.GetMyParentWorldId();
+        }
+
+        private static int FetchWorld(FetchManager manager, Tag tag,
+            HandleVector<int>.Handle handle)
+        {
+            return manager.prefabIdToFetchables.TryGetValue(tag, out var group)
+                ? World(group.fetchables.GetData(handle).pickupable.gameObject) : -1;
         }
 
         [HarmonyPatch]
@@ -46,7 +58,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(Pickupable) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Postfix(Pickupable __0) { BumpFetch(World(__0.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -62,7 +74,13 @@ namespace CycleTrim.Patches
                     new[] { typeof(Tag), typeof(HandleVector<int>.Handle) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Prefix(FetchManager __instance, Tag __0,
+                HandleVector<int>.Handle __1, out int __state)
+            {
+                __state = FetchWorld(__instance, __0, __1);
+            }
+
+            private static void Postfix(int __state) { BumpFetch(__state); }
         }
 
         [HarmonyPatch]
@@ -83,7 +101,13 @@ namespace CycleTrim.Patches
                     });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Prefix(FetchManager __instance, Tag __0,
+                HandleVector<int>.Handle __1, out int __state)
+            {
+                __state = FetchWorld(__instance, __0, __1);
+            }
+
+            private static void Postfix(int __state) { BumpFetch(__state); }
         }
 
         [HarmonyPatch]
@@ -99,7 +123,13 @@ namespace CycleTrim.Patches
                     new[] { typeof(Tag), typeof(HandleVector<int>.Handle) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Prefix(FetchManager __instance, Tag __0,
+                HandleVector<int>.Handle __1, out int __state)
+            {
+                __state = FetchWorld(__instance, __0, __1);
+            }
+
+            private static void Postfix(int __state) { BumpFetch(__state); }
         }
 
         [HarmonyPatch]
@@ -131,7 +161,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(string), typeof(int), typeof(float) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Postfix(Pickupable __instance) { BumpFetch(World(__instance.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -147,7 +177,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(string), typeof(int) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Postfix(Pickupable __instance) { BumpFetch(World(__instance.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -163,7 +193,7 @@ namespace CycleTrim.Patches
                     Type.EmptyTypes);
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static void Postfix(Pickupable __instance) { BumpFetch(World(__instance.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -188,7 +218,7 @@ namespace CycleTrim.Patches
             {
                 if (__state != __instance.GetAutomationOnly())
                 {
-                    BumpChore();
+                    BumpChore(World(__instance.gameObject));
                 }
             }
         }
@@ -206,7 +236,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(ChoreGroup), typeof(int) });
             }
 
-            private static void Postfix() { BumpChore(); }
+            private static void Postfix(ChoreConsumer __instance) { BumpChore(World(__instance.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -401,7 +431,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(Chore) });
             }
 
-            private static void Postfix() { BumpChore(); }
+            private static void Prefix(Chore __0) { BumpChore(World(__0.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -417,7 +447,7 @@ namespace CycleTrim.Patches
                     new[] { typeof(Chore) });
             }
 
-            private static void Postfix() { BumpChore(); }
+            private static void Prefix(Chore __0) { BumpChore(World(__0.gameObject)); }
         }
 
         [HarmonyPatch]
@@ -433,11 +463,11 @@ namespace CycleTrim.Patches
                     new[] { typeof(Chore) });
             }
 
-            private static void Postfix(Chore __0)
+            private static void Prefix(Chore __0)
             {
                 if (__0 is FetchChore)
                 {
-                    BumpChore();
+                    BumpChore(World(__0.gameObject));
                 }
             }
         }
@@ -455,11 +485,11 @@ namespace CycleTrim.Patches
                     new[] { typeof(Chore) });
             }
 
-            private static void Postfix(Chore __0)
+            private static void Prefix(Chore __0)
             {
                 if (__0 is FetchChore)
                 {
-                    BumpChore();
+                    BumpChore(World(__0.gameObject));
                 }
             }
         }
@@ -486,7 +516,7 @@ namespace CycleTrim.Patches
             {
                 if (!__state.Equals(__instance.GetMasterPriority()))
                 {
-                    BumpChore();
+                    BumpChore(World(__instance.gameObject));
                 }
             }
         }

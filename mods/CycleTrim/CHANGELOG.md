@@ -1,3 +1,12 @@
+## 2026-11-10 — 0.4.14
+
+- Require Jlib 0.3.4 for parent-world pickup indexes, event-driven offset refresh, ordered tag candidates and bounded navigation selection. Retain native eligibility, reservation and priority checks; incompatible fetch owners retain their pipeline.
+- Scope fetch/chore invalidation to parent worlds, with global invalidation for unknown scopes and the periodic freshness hook.
+- Check settled gas inputs before dense staging; wake on species, temperature or geometry changes. Reuse unchanged publication records and grid blocks, and grow species storage instead of dropping records when the initial allocation fills.
+- Pin immutable native publications independently of mutable simulation state. Add monotonic content revisions and reuse gas colours when publication and rendering context are unchanged.
+- Distinguish fetch/offset/chore jobs and mixed-thread fetch timings in optional diagnostics.
+- Validation: 5,903 fetch assertions / 1,462 differential cases; 602 Jlib assertions; production Harmony hooks and native lease concurrency checks; 140 native tests passed, 9 ignored; optimization/render/loader regressions and Release builds passed. Full ONI performance acceptance was stopped at the user's request; no FPS improvement is claimed. See [validation record](../../docs/cycletrim-cpu-rewrite-20261110.md).
+
 ## 2026-11-10 — 0.4.13
 
 - Transport gas through equal species channels, including a single gas expanding into vacuum; preserve more than two gas components during transport.

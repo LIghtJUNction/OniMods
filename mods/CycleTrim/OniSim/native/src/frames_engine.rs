@@ -268,8 +268,9 @@ impl Engine {
             output.presentation.update(&self.world, &self.elements)?;
         }
         let textures_ms = lap();
+        output.multicomponent_unchanged = reuse_derived;
         if !reuse_derived {
-            output.multicomponent.update_from_world(
+            std::sync::Arc::make_mut(&mut output.multicomponent).update_from_world(
                 &output.grid,
                 &self.elements,
                 &self.world,
@@ -290,7 +291,8 @@ impl Engine {
             let finalize_ms = lap();
             let total_ms = simulation_ms + grid_ms + textures_ms + species_ms + finalize_ms;
             let gpu_active = self.gpu.is_some();
-            eprintln!("[CycleTrim OniSim] batch profile frames={frame_count} gpu_active={gpu_active} reuse_derived={reuse_derived} simulation_wall={simulation_ms:.3}ms grid_publish_wall={grid_ms:.3}ms textures_wall={textures_ms:.3}ms species_publish_wall={species_ms:.3}ms finalize_wall={finalize_ms:.3}ms measured_wall={total_ms:.3}ms");
+            let species_reused = if reuse_derived { output.grid.len() } else { output.multicomponent.reused_cells };
+            eprintln!("[CycleTrim OniSim] batch profile frames={frame_count} gpu_active={gpu_active} reuse_derived={reuse_derived} simulation_wall={simulation_ms:.3}ms grid_publish_wall={grid_ms:.3}ms textures_wall={textures_ms:.3}ms species_publish_wall={species_ms:.3}ms finalize_wall={finalize_ms:.3}ms measured_wall={total_ms:.3}ms species_reused_cells={species_reused}");
         }
         Ok(())
     }

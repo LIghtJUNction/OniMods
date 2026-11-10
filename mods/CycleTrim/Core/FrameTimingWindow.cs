@@ -7,7 +7,7 @@ namespace CycleTrim.Core
         Update, LateUpdate, SimEveryTick, StepTheSim, GlobalUpdate, GlobalLateUpdate,
         SimFrame, NativePrepare, Jobs, ObjectSimulation, ObjectRender, ObjectRenderEveryTick,
         PropertyTextures, AnimationUpdate, AnimationRender, Navigation, PathProbe,
-        UserInterface, Camera, Terrain, Audio, AppLateUpdate, PropertyTextureJobs, OverlayJobs, Count
+        UserInterface, Camera, Terrain, Audio, AppLateUpdate, PropertyTextureJobs, OverlayJobs, FetchOffsetJobs, FetchPickupJobs, ChoreJobs, Count
     }
 
     /// <summary>

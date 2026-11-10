@@ -4,27 +4,30 @@ namespace CycleTrim.Core
 {
     public static class InvalidationVersions
     {
-        private static long fetchVersion;
-        private static long choreVersion;
+        private static readonly WorldInvalidationVersions Fetch = new WorldInvalidationVersions();
+        private static readonly WorldInvalidationVersions Chore = new WorldInvalidationVersions();
 
         public static long FetchVersion
         {
-            get { return Interlocked.Read(ref fetchVersion); }
+            get { return Fetch.Total; }
         }
 
         public static long ChoreVersion
         {
-            get { return Interlocked.Read(ref choreVersion); }
+            get { return Chore.Total; }
         }
 
-        public static long BumpFetch()
+        public static long GetFetch(int world) { return Fetch.Get(world); }
+        public static long GetChore(int world) { return Chore.Get(world); }
+
+        public static long BumpFetch(int world = -1)
         {
-            return Interlocked.Increment(ref fetchVersion);
+            return Fetch.Bump(world);
         }
 
-        public static long BumpChore()
+        public static long BumpChore(int world = -1)
         {
-            return Interlocked.Increment(ref choreVersion);
+            return Chore.Bump(world);
         }
 
         public static RefreshStamp Capture(

@@ -47,7 +47,7 @@ namespace CycleTrim.Core
     /// flag, pointer, bounds, or thermodynamic invariant mismatch.
     /// </summary>
     public sealed class OniSimMulticomponentProvider : IMulticomponentCellProvider,
-        IMulticomponentCellBatchProvider
+        IMulticomponentCellBatchProvider, IMulticomponentRevisionProvider
     {
         public const uint CurrentVersion = 1;
         public const uint FlagLegacySingleElement = 1;
@@ -59,11 +59,14 @@ namespace CycleTrim.Core
         private readonly Func<IntPtr> acquireUpdate;
         private readonly System.Action releaseUpdate;
         private readonly Func<ushort, Element> resolveElement;
+        private readonly Func<ulong> contentRevision;
+        public ulong ContentRevision { get { return contentRevision == null ? 0 : contentRevision(); } }
 
         public OniSimMulticomponentProvider(
             Func<IntPtr> acquireUpdate,
             System.Action releaseUpdate,
-            Func<ushort, Element> resolveElement = null)
+            Func<ushort, Element> resolveElement = null,
+            Func<ulong> contentRevision = null)
         {
             if (acquireUpdate == null)
                 throw new ArgumentNullException("acquireUpdate");
@@ -72,12 +75,15 @@ namespace CycleTrim.Core
             this.acquireUpdate = acquireUpdate;
             this.releaseUpdate = releaseUpdate;
             this.resolveElement = resolveElement ?? ResolveCanonicalElement;
+            this.contentRevision = contentRevision;
         }
 
         public bool IsReady
         {
             get
             {
+                if (contentRevision != null)
+                    return ContentRevision != 0;
                 IntPtr pointer = acquireUpdate();
                 if (pointer == IntPtr.Zero)
                     return false;

@@ -19,7 +19,7 @@ COUNTERS = (
     "brainSchedulerCounter",
     "roomProberCounter",
 )
-MAIN_COUNTERS = tuple(name for name in COUNTERS if name != "asyncWorkCounter")
+MAIN_COUNTERS = tuple(name for name in COUNTERS if name not in ("asyncWorkCounter", "fetchCounter"))
 
 
 def require(text: str, needle: str, message: str, failures: list[str]) -> None:
@@ -67,9 +67,9 @@ def main() -> int:
         )
 
     if patch.count("new PerformanceProbeGenerationCounter()") != len(MAIN_COUNTERS):
-        failures.append("all six main-thread counters must use lock-free generation ownership")
-    if patch.count("new PerformanceProbeGenerationCounter(consistentSnapshots: true)") != 1:
-        failures.append("only the async worker counter should use coordinated snapshots")
+        failures.append("all five main-thread counters must use lock-free generation ownership")
+    if patch.count("new PerformanceProbeGenerationCounter(consistentSnapshots: true)") != 2:
+        failures.append("async path and mixed-thread fetch counters require coordinated snapshots")
 
     require(
         patch,
@@ -87,7 +87,7 @@ def main() -> int:
 
     require(
         patch,
-        "internal TimingState(PerformanceProbeCounter counter, long startedAt)",
+        "internal TimingState(PerformanceProbeCounter counter, long startedAt, bool mainThread = true)",
         "timing state does not retain generation-owned counter identity",
         failures,
     )
@@ -171,8 +171,17 @@ def main() -> int:
         "first report in a game session discards fresh worker timing",
         failures,
     )
-    if patch.count("__state = BeginMainTiming(") != 6:
-        failures.append("all six main-thread probes must capture generation ownership before target execution")
+    if patch.count("__state = BeginMainTiming(") != 5:
+        failures.append("all five main-thread probes must capture generation ownership before target execution")
+    require(patch, "Game.IsOnMainThread() ? BeginMainTiming(fetchCounter)",
+            "fetch worker must not mutate main-thread capture/report state", failures)
+    require(patch, "new TimingState(fetchCounter.CaptureCurrent(), BeginTiming(), false)",
+            "fetch worker must retain generation ownership", failures)
+    require(patch, "if (__state.MainThread) RecordMain(__state);",
+            "fetch completion must honor the thread captured at entry", failures)
+    require(patch, '"mixed"', "fetch thread attribution must include workers", failures)
+    require(patch, "fetchCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true)",
+            "mixed-thread fetch snapshots must be internally consistent", failures)
     if "private static TimingState BeginMainTiming(" in patch:
         begin_main = patch.split("private static TimingState BeginMainTiming(", 1)[1].split(
             "private static void ObserveGameBoundary()", 1

@@ -23,7 +23,8 @@ namespace CycleTrim.Patches
             "KAnimBatchManager.UpdateDirty", "KAnimBatchManager.Render", "Pathfinding.UpdateNavGrids",
             "AsyncPathProber.Manager.TickFrame", "KScreenManager.Update", "CameraController.Update",
             "GroundRenderer.Render", "KFMOD.RenderEveryTick", "App.LateUpdate",
-            "JobManager.PropertyTextures", "JobManager.SimDebugView"
+            "JobManager.PropertyTextures", "JobManager.SimDebugView",
+            "JobManager.FetchOffsets", "JobManager.FetchPickups", "JobManager.Chores"
         };
 
         internal static string Name(FrameTimingPhase phase) { return names[(int)phase]; }
@@ -103,6 +104,9 @@ namespace CycleTrim.Patches
                 resolved[(int)FrameTimingPhase.Jobs] = true;
                 resolved[(int)FrameTimingPhase.PropertyTextureJobs] = true;
                 resolved[(int)FrameTimingPhase.OverlayJobs] = true;
+                resolved[(int)FrameTimingPhase.FetchOffsetJobs] = true;
+                resolved[(int)FrameTimingPhase.FetchPickupJobs] = true;
+                resolved[(int)FrameTimingPhase.ChoreJobs] = true;
                 return CycleTrimPatchOptions.EnablePerformanceDiagnostics;
             }
 
@@ -115,7 +119,11 @@ namespace CycleTrim.Patches
                 {
                     string name = type.FullName ?? type.Name;
                     phase = name.Contains("PropertyTextures") ? FrameTimingPhase.PropertyTextureJobs
-                        : name.Contains("SimDebugView") ? FrameTimingPhase.OverlayJobs : FrameTimingPhase.Jobs;
+                        : name.Contains("SimDebugView") ? FrameTimingPhase.OverlayJobs
+                        : name.Contains("FetchManager+UpdateOffsetTables") ? FrameTimingPhase.FetchOffsetJobs
+                        : name.Contains("FetchManager+UpdatePickupWorkItem") || name.Contains("FetchWorkIndex+PickupJob")
+                            ? FrameTimingPhase.FetchPickupJobs
+                        : name.Contains("ChoreProvider") ? FrameTimingPhase.ChoreJobs : FrameTimingPhase.Jobs;
                     phases[type] = phase;
                 }
                 __state = FrameRateUnlockPatch.BeginTiming(phase);

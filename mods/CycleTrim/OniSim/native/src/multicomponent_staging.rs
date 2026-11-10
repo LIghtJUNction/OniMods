@@ -7,6 +7,7 @@ use super::*;
 pub(crate) struct GasStaging {
     pub(super) idle: std::collections::HashMap<(usize, usize, usize, usize), IdleGasRegion>,
     pub(super) idle_hits: usize,
+    pub(super) preparations: usize,
     pub(super) local_elements: Vec<u16>,
     pub(super) active_elements: Vec<u16>,
     pub(super) local_channel_of_element: Vec<usize>,
@@ -131,6 +132,7 @@ impl GasStaging {
         let Self {
             idle: _,
             idle_hits: _,
+            preparations: _,
             local_elements,
             active_elements: _,
             local_channel_of_element,

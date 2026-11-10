@@ -118,10 +118,11 @@ namespace CycleTrim.Patches
 
             var navigationContext = (int)navigator.CurrentNavType & 0xFF;
             navigationContext |= ((int)navigator.flags & 0xFF) << 8;
+            var world = navigator.gameObject.GetMyParentWorldId();
             return new RefreshStamp(
-                InvalidationVersions.FetchVersion,
+                InvalidationVersions.GetFetch(world),
                 NavigationInvalidationVersions.Get(navigator.NavGrid),
-                InvalidationVersions.ChoreVersion,
+                InvalidationVersions.GetChore(world),
                 navigator.cachedCell,
                 RuntimeHelpers.GetHashCode(currentChore),
                 scheduleBlock == null ? 0 : RuntimeHelpers.GetHashCode(scheduleBlock),

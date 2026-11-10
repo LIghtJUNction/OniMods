@@ -568,8 +568,8 @@ fn isolate_stencil_masks(masks:&[u16], solid:&mut [u32], width:usize, height:usi
 
 #[derive(Clone)]
 struct IdleGasRegion {
-    mass: Vec<f32>, temperature: Vec<f32>, solid: Vec<u32>,
-    elements: Vec<u16>, species: Vec<SpeciesInfo>, thermal: bool,
+    source: crate::gas_region_snapshot::GasRegionSnapshot,
+    solid: Vec<u32>, species: Vec<SpeciesInfo>, thermal: bool,
 }
 
 /// Run one multicomponent gas transport pass over the active region.
@@ -629,19 +629,30 @@ fn step_region_prepared(
     minimum_gpu_cells: usize,
     staging: &mut GasStaging,
 ) -> crate::status::Result<bool> {
+    let min_x = region.min_x.max(1) as usize;
+    let min_y = region.min_y.max(1) as usize;
+    let max_x = (region.max_x as usize).min(world.width);
+    let max_y = (region.max_y as usize).min(world.height);
+    if max_x <= min_x || max_y <= min_y { return Ok(false); }
+    let key = (min_x, min_y, max_x - min_x, max_y - min_y);
+    if let Some(old) = staging.idle.get(&key) {
+        let same_materials = old.species.iter().all(|species| {
+            elements.elements.get(species.element_id as usize).is_some_and(|element|
+                element.record.state & 3 == 1
+                && element.record.specific_heat_capacity == species.specific_heat
+                && element.record.thermal_conductivity == species.conductivity)
+        });
+        if old.thermal == gpu_diffusion && same_materials && old.source.matches(world, key) {
+            staging.idle_hits += 1;
+            if let Some(output) = diffusion_solid { output.clone_from(&old.solid); }
+            return Ok(true);
+        }
+    }
+    staging.idle.remove(&key);
+    staging.preparations += 1;
     let Some(staging::GasRegion { min_x, min_y, width, height, channels,
         use_gpu, sparse, local_projection: _ }) = staging.prepare(world, elements, region,
             gpu_available, minimum_gpu_cells) else { return Ok(false); };
-    let key = (min_x, min_y, width, height);
-    if staging.idle.get(&key).is_some_and(|old|
-        old.mass == staging.mass && old.temperature == staging.temperature
-        && old.solid == staging.solid && old.elements == staging.local_elements
-        && old.species == staging.species && old.thermal == gpu_diffusion) {
-        staging.idle_hits += 1;
-        if let Some(output) = diffusion_solid { *output = std::mem::take(&mut staging.solid); }
-        return Ok(true);
-    }
-    staging.idle.remove(&key);
     let GasStaging { idle, local_elements, sparse_cells, mass, enthalpy, temperature,
         solid, velocity_x, velocity_y, species, gpu_species, species_conductivity,
         next_mass, projected, next_enthalpy, next_temperature, .. } = staging;
@@ -744,8 +755,10 @@ fn step_region_prepared(
         }
     }
     if settled {
-        idle.insert(key, IdleGasRegion { mass: mass.clone(), temperature: temperature.clone(),
-            solid: solid.clone(), elements: local_elements.clone(), species: species.clone(), thermal: gpu_diffusion });
+        // Bound retained snapshots when camera/active region extents change.
+        if idle.len() >= 4 { idle.clear(); }
+        idle.insert(key, IdleGasRegion { source: crate::gas_region_snapshot::GasRegionSnapshot::capture(world, key),
+            solid: solid.clone(), species: species.clone(), thermal: gpu_diffusion });
     }
     if let Some(output) = diffusion_solid { *output = std::mem::take(solid); }
     Ok(true)
@@ -804,12 +817,34 @@ mod tests {
                 None,false,None,false,256,&mut staging).unwrap();
         }
         assert!(staging.idle_hits>0,"settled region did not sleep");
+        assert_eq!(staging.preparations, 1, "sleep must precede dense tensor preparation");
         let hits=staging.idle_hits; let c=3*world.stride+3;
         let before=world.write.mass[c+1]; world.write.mass[c]+=1.0;
         step_region_prepared(&mut world,&table,&mut EventQueues::default(),region,
             None,false,None,false,256,&mut staging).unwrap();
         assert_eq!(staging.idle_hits,hits,"changed gas incorrectly reused sleeping state");
         assert!(world.write.mass[c+1]>before,"new gas did not spread after wake");
+    }
+
+    #[test]
+    fn sleeping_source_checks_extra_species_geometry_and_temperature() {
+        let (mut world, _, _) = gas_fixture(8, 8);
+        let key = (1, 1, 8, 8);
+        let cell = 3 * world.stride + 3;
+        world.extra_mixtures.insert(cell, vec![(4, 0.25)]);
+        let old = crate::gas_region_snapshot::GasRegionSnapshot::capture(&world, key);
+        assert!(old.matches(&world, key));
+        world.extra_mixtures.get_mut(&cell).unwrap()[0].1 = 0.5;
+        assert!(!old.matches(&world, key), "third species must wake the solver");
+        world.extra_mixtures.get_mut(&cell).unwrap()[0].1 = 0.25;
+        world.write.temperature[cell] += 1.0;
+        assert!(!old.matches(&world, key), "heat source must wake the solver");
+        world.write.temperature[cell] -= 1.0;
+        world.write.properties[cell] ^= 1;
+        assert!(!old.matches(&world, key), "geometry must wake the solver");
+        world.write.properties[cell] ^= 1;
+        world.mixture_mass[cell] += 0.5;
+        assert!(!old.matches(&world, key), "second display slot is equally authoritative");
     }
 
     #[test]
