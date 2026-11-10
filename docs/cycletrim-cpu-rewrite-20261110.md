@@ -19,7 +19,7 @@ This release implements the CPU work identified in the [source audit](cycletrim-
 | `CycleTrim.Fetch.Tests` | 5,903 assertions; 1,462 differential cases passed | Production helpers and real Harmony with synthetic game APIs |
 | `CycleTrim.CpuWork.Tests` | Production hooks and foreign-owner case passed | Includes movement, rocket parent changes, compaction, offsets, tags, dynamic eligibility and exception cleanup |
 | `Jlib.Tests` | 602 assertions passed, including bounded selection and candidate index coverage | No game DLL execution |
-| OniSim native `cargo test --lib` | 140 passed; 0 failed; 9 ignored | Local CPU route; not hardware GPU acceptance |
+| OniSim native `cargo test --lib` | 140 passed; 0 failed; 9 ignored | Includes 11 isolated hardware Vulkan cases; not game-level GPU or FPS acceptance |
 | `CycleTrim.Optimizations.Tests` | All isolated host families passed | Includes 27 diagnostic phases; no game FPS claim |
 | `CycleTrim.PerformanceProbe.Tests --skip-synthetic-performance` | Passed | Publication/render cache, lifecycle, concurrent counters and scoped invalidation |
 | `--regression-native-lease <release library>` | Passed | Real native library: held reader does not block worker publication/shutdown, old data remains valid |
@@ -28,6 +28,13 @@ This release implements the CPU work identified in the [source audit](cycletrim-
 | `onim -m Jlib build --release`, `onim -m CycleTrim build --release` | Passed | Local production builds |
 
 Detailed local logs are in `.cache/cpu-rewrite-20261110/`. The frame diagnostic fixture initially omitted the job-stage hooks; it was corrected and the complete optimization suite passed afterward. That earlier failure is retained in the local logs.
+
+## Release CI
+
+- [Three-platform native build and loader checks](https://github.com/LIghtJUNction/OniMods/actions/runs/42813291812) passed for Windows, macOS and Linux from `bbbaa289`. All three source and binary fingerprints were validated before packaging.
+- [Mod quality](https://github.com/LIghtJUNction/OniMods/actions/runs/42813291983) passed for the release implementation.
+- Hosted proof workflows initially failed because they attempted hardware Vulkan tests without a hardware adapter. Their CPU filters now match the native release workflow; the GPU operator job explicitly excludes its 27 hardware cases while still compiling them. The [diamond](https://github.com/LIghtJUNction/OniMods/actions/runs/42814487279) and [transport](https://github.com/LIghtJUNction/OniMods/actions/runs/42814487140) workflows then passed. Hardware tests remain in the default local suite; excluded CI tests are not counted as passed.
+- Reference CI identified an omitted `JobManager` signature baseline for the diagnostic hook. The added `Run(IWorkItemCollection)` target was reviewed against the artifact from the same pinned assembly hashes. The full baseline comparison passed locally after adding only that target.
 
 ## Real-game boundary
 

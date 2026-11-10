@@ -85,6 +85,13 @@
       "signature_sha256": "98dfe9f935c194036e61d9f78a845e0e74c1e9fd5ff4e4387233417a1df4675e"
     },
     {
+      "assembly": "Assembly-CSharp-firstpass.dll",
+      "requested_type": "JobManager",
+      "resolved_type": "JobManager",
+      "signature_file": "Assembly-CSharp-firstpass__JobManager.signatures.txt",
+      "signature_sha256": "ed560f3723c754f9ff5590c9bb993eb4ba8912d603aad0ce1c3afb5cdc56f3de"
+    },
+    {
       "assembly": "Assembly-CSharp.dll",
       "requested_type": "LiquidShaderProperties",
       "resolved_type": "LiquidShaderProperties",

@@ -1,0 +1,19 @@
+type public class JobManager
+member private IWorkItemCollection workItems
+member private List < WorkerThread > threads
+member private ManualResetEvent manualResetEvent
+member private Semaphore semaphore
+member private int nextWorkIndex
+member private int workerThreadCount
+member private static bool runSingleThreaded
+member private void Initialize ( )
+member public JobManager ( )
+member public bool DoNextWorkItem ( int threadIndex )
+member public static bool errorOccured
+member public void Cleanup ( )
+member public void DebugRunSingleThreaded ( IWorkItemCollection work_items )
+member public void DecrementActiveWorkerThreadCount ( )
+member public void Run ( IWorkItemCollection work_items )
+nested private class WorkerThread
+property public bool isShuttingDown { get ; private set ; }
+property public int ThreadCount { get ; }
