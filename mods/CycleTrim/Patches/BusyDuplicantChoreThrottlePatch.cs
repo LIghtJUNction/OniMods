@@ -24,11 +24,13 @@ namespace CycleTrim.Patches
         private sealed class State
         {
             internal readonly CoupledRefreshGate RefreshGate =
-                new CoupledRefreshGate(4);
+                // Skip both stages while moving. A refresh always rebuilds current-cell costs.
+                new CoupledRefreshGate(4, allowMovementSkip: true);
             internal readonly ChoreConsumer Consumer;
             internal readonly bool IsDuplicant;
             internal readonly KPrefabID PrefabId;
             internal NavGrid NavGrid;
+            internal PickupableSensor Sensor;
 
             internal State(ChoreConsumer consumer, bool isDuplicant, KPrefabID prefabId)
             {
@@ -91,6 +93,7 @@ namespace CycleTrim.Patches
             }
 
             state = SensorStates.GetValue(sensor, SensorStateFactory);
+            state.Sensor = sensor;
             consumer = state.Consumer;
             return state.IsDuplicant && consumer != null;
         }
@@ -126,7 +129,9 @@ namespace CycleTrim.Patches
                 navigator.cachedCell,
                 RuntimeHelpers.GetHashCode(currentChore),
                 scheduleBlock == null ? 0 : RuntimeHelpers.GetHashCode(scheduleBlock),
-                navigationContext);
+                navigationContext,
+                world,
+                scheduleBlock == null ? null : scheduleBlock.GroupId);
         }
 
         [HarmonyPatch]
@@ -219,6 +224,14 @@ namespace CycleTrim.Patches
                 {
                     state.Reset();
                     return true;
+                }
+
+                if (!state.RefreshGate.HasPending)
+                {
+                    // A standalone caller must rebuild pickup costs before consuming
+                    // them. Reset forces the normal sensor entry point to run now.
+                    state.Reset();
+                    state.Sensor.Update();
                 }
 
                 if (state.RefreshGate.Complete(

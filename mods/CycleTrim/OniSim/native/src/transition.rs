@@ -1,7 +1,7 @@
 //! Phase transitions and their ordered official event side effects.
 
 use crate::events::EventQueues;
-use crate::fluid_helpers::{clear_cell, cvtt, game_index};
+use crate::fluid_helpers::{clear_primary, cvtt, game_index};
 use crate::tables::{ElementRecord, ElementTable};
 use crate::world::PhysicsWorld;
 
@@ -187,7 +187,7 @@ pub(crate) fn apply_selected_transition(
                 current_temperature,
                 disease_count,
             );
-            clear_cell(&mut world.write, world.vacuum_element, cell);
+            clear_primary(world, cell);
         }
     } else if !world.falling_disabled
         && let (Some(game), Some(below)) = (game_cell, below)
@@ -204,8 +204,11 @@ pub(crate) fn apply_selected_transition(
             current_temperature,
             disease_count,
         );
-        clear_cell(&mut world.write, world.vacuum_element, cell);
+        clear_primary(world, cell);
     }
+
+    // Full ore conversion can also exhaust the primary without an ejection.
+    world.restore_empty_primary(cell);
 
     // The native computes the public index after special ejection/clear; an
     // invalid padded cell still receives the transition and dirty bits.

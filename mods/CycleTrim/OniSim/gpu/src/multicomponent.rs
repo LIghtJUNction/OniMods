@@ -383,6 +383,7 @@ pub struct MulticomponentGpu {
     drift_y: wgpu::Buffer,
     species_heat: wgpu::Buffer,
     params: wgpu::Buffer,
+    shape_initialized: Cell<bool>,
     readback: wgpu::Buffer,
     width: usize,
     height: usize,
@@ -403,6 +404,13 @@ pub struct MulticomponentGpu {
     liquid_preparation: Option<LiquidPreparation>,
     liquid_sparse_preparation: Option<LiquidSparsePreparation>,
     pub adapter: wgpu::AdapterInfo,
+}
+
+pub struct MassTemperatureReadback<'a> {
+    pub operator: &'a mut MulticomponentGpu,
+    pub temperature: &'a wgpu::Buffer,
+    pub mass_output: &'a mut [f32],
+    pub temperature_output: &'a mut [f32],
 }
 
 impl MulticomponentGpu {
@@ -565,6 +573,7 @@ impl MulticomponentGpu {
             drift_y,
             species_heat,
             params,
+            shape_initialized: Cell::new(false),
             readback,
             width,
             height,
@@ -640,7 +649,7 @@ impl MulticomponentGpu {
         if groups_x > self.device.limits().max_compute_workgroups_per_dimension as usize || groups_y > self.device.limits().max_compute_workgroups_per_dimension as usize {
             return Err("diffusion grid exceeds device limits".into());
         }
-        self.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,0]));
+        self.write_shape_params();
         { let mut pass=encoder.begin_compute_pass(&Default::default()); pass.set_pipeline(&self.density_sum_pipeline);
           pass.set_bind_group(0,&self.density_sum_groups[if self.current_is_a {0} else {1}],&[]);
           pass.dispatch_workgroups((self.width as u32).div_ceil(8),groups_y as u32,1); }
@@ -667,9 +676,7 @@ impl MulticomponentGpu {
     pub fn encode_diffuse_and_generate_density_velocity(&mut self, encoder:&mut wgpu::CommandEncoder, diffuse:bool) -> Result<(), String> {
         if !self.uploaded { return Err("density gradient requires uploaded state".into()); }
         if diffuse { self.encode_diffusion(encoder)?; }
-        self.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[
-            self.width as u32, self.height as u32, self.channels as u32, 0,
-        ]));
+        self.write_shape_params();
         if self.channels > 1 {
             let mut pass = encoder.begin_compute_pass(&Default::default());
             pass.set_pipeline(&self.density_sum_pipeline);
@@ -744,7 +751,7 @@ impl MulticomponentGpu {
         }
         let prep=self.liquid_preparation.as_ref().ok_or("missing liquid preparation")?;
         self.queue.write_buffer(&prep.temperature,0,bytemuck::cast_slice(temperature));
-        self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,0]));
+        self.write_shape_params();
         {let mut pass=encoder.begin_compute_pass(&Default::default()); pass.set_pipeline(&prep.pipeline);
          pass.set_bind_group(0,&prep.group,&[]); pass.dispatch_workgroups(values.div_ceil(64) as u32,1,1);}
         Ok(())
@@ -878,7 +885,7 @@ impl MulticomponentGpu {
             self.queue.write_buffer(&self.drift_y,0,bytemuck::cast_slice(&self.uploaded_drift));
         }
         self.upload_solid(solid);
-        self.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[self.width as u32,self.height as u32,self.channels as u32,0]));
+        self.write_shape_params();
         let prep=self.liquid_sparse_preparation.as_mut().ok_or("missing sparse liquid preparation")?;
         let selected=if let Some(destination)=temperature {
             let index=if let Some(index)=prep.temperature_groups.iter().position(|(buffer,_)|buffer==destination) {index} else {
@@ -1146,7 +1153,17 @@ impl MulticomponentGpu {
         Ok(())
     }
 
+    fn write_shape_params(&self) {
+        if !self.shape_initialized.get() {
+            self.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[
+                self.width as u32, self.height as u32, self.channels as u32, 0,
+            ]));
+            self.shape_initialized.set(true);
+        }
+    }
+
     fn write_transport_params(&self, dt: f32) {
+        self.shape_initialized.set(true);
         self.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[
             self.width as u32, self.height as u32, self.channels as u32, dt.to_bits()
         ]));
@@ -1220,48 +1237,90 @@ impl MulticomponentGpu {
         self.readback_mass_and_temperature_after(encoder,temperature,mass_output,temperature_output)
     }
 
-    pub fn readback_mass_and_temperature_after(&mut self, mut encoder:wgpu::CommandEncoder, temperature:&wgpu::Buffer,
-        mass_output:&mut [f32], temperature_output:&mut [f32]) -> Result<(),String> {
-        let values = self.count * self.channels;
-        let mass_bytes = (values * 4) as u64;
-        let temperature_bytes = (self.count * 4) as u64;
-        if !self.uploaded || mass_output.len() != values || temperature_output.len() != self.count
-            || temperature.size() < temperature_bytes {
-            return Err("readback requires uploaded state and matching mass/temperature buffers".into());
-        }
-        encoder.copy_buffer_to_buffer(self.current_mass_buffer(), 0, &self.readback, 0, mass_bytes);
-        encoder.copy_buffer_to_buffer(temperature, 0, &self.readback, mass_bytes, temperature_bytes);
-        if self.pending_velocity_validation.is_some() {
-            encoder.copy_buffer_to_buffer(&self.cfl_maximum, 0, &self.readback, mass_bytes + temperature_bytes, 4);
-        }
-        let submission = self.queue.submit([encoder.finish()]);
-        let (send, receive) = mpsc::sync_channel(1);
-        self.readback.map_async(wgpu::MapMode::Read, .., move |r| { let _ = send.send(r); });
-        self.device.poll(wgpu::PollType::Wait { submission_index: Some(submission),
-            timeout: Some(Duration::from_secs(30)) }).map_err(|e| e.to_string())?;
-        receive.recv_timeout(Duration::from_secs(2)).map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
-        let mut invalid_cfl = false;
-        let mut checked_rate = None;
-        {
-            let view = self.readback.get_mapped_range(..).map_err(|e| e.to_string())?;
-            let result: &[f32] = bytemuck::cast_slice(&view);
-            if let Some(validation) = self.pending_velocity_validation {
-                let rate = result[values+self.count];
-                checked_rate = Some(rate);
-                invalid_cfl = !validation.accepts(rate);
+    pub fn readback_mass_and_temperature_after(&mut self, encoder: wgpu::CommandEncoder,
+        temperature: &wgpu::Buffer, mass_output: &mut [f32], temperature_output: &mut [f32]) -> Result<(), String> {
+        Self::readback_mass_and_temperature_batch_after(encoder, &mut [
+            MassTemperatureReadback { operator: self, temperature, mass_output, temperature_output },
+        ])
+    }
+
+    /// Submit independent resident chains together. Each chain owns its buffers,
+    /// including uniforms and readback storage. Validate the entire batch before
+    /// publishing any host output, and release every mapping on error.
+    pub fn readback_mass_and_temperature_batch_after(encoder: wgpu::CommandEncoder,
+        jobs: &mut [MassTemperatureReadback<'_>]) -> Result<(), String> {
+        Self::readback_mass_and_temperature_commands_after(Vec::new(), encoder, jobs)
+    }
+
+    /// Submit independently recorded world commands followed by the batch copies.
+    pub fn readback_mass_and_temperature_commands_after(commands: Vec<wgpu::CommandBuffer>,
+        mut encoder: wgpu::CommandEncoder, jobs: &mut [MassTemperatureReadback<'_>]) -> Result<(), String> {
+        let Some(first) = jobs.first() else { return Ok(()); };
+        let device = first.operator.device.clone();
+        let queue = first.operator.queue.clone();
+        for job in jobs.iter() {
+            let op = &job.operator;
+            let values = op.count * op.channels;
+            if !op.uploaded || job.mass_output.len() != values
+                || job.temperature_output.len() != op.count
+                || job.temperature.size() < (op.count * 4) as u64
+                || !std::sync::Arc::ptr_eq(&device, &op.device)
+                || !std::sync::Arc::ptr_eq(&queue, &op.queue) {
+                return Err("batch readback requires matching outputs and one shared device/queue".into());
             }
-            if !invalid_cfl {
-                mass_output.copy_from_slice(&result[..values]);
-                temperature_output.copy_from_slice(&result[values..values+self.count]);
+            encoder.copy_buffer_to_buffer(op.current_mass_buffer(), 0, &op.readback, 0, (values * 4) as u64);
+            encoder.copy_buffer_to_buffer(job.temperature, 0, &op.readback, (values * 4) as u64, (op.count * 4) as u64);
+            if op.pending_velocity_validation.is_some() {
+                encoder.copy_buffer_to_buffer(&op.cfl_maximum, 0, &op.readback, ((values + op.count) * 4) as u64, 4);
             }
         }
-        self.readback.unmap();
-        if invalid_cfl { self.uploaded = false; self.pending_velocity_validation = None; return Err("projected velocity exceeds CFL bound or is non-finite".into()); }
-        if self.pending_velocity_validation.take().is_some() {
-            self.max_cfl_rate = checked_rate.ok_or("missing CFL result")?;
-            self.velocity_externally_exposed.set(false);
+        let submission = queue.submit(commands.into_iter().chain(std::iter::once(encoder.finish())));
+        let receivers: Vec<_> = jobs.iter().map(|job| {
+            let (send, receive) = mpsc::sync_channel(1);
+            job.operator.readback.map_async(wgpu::MapMode::Read, .., move |r| { let _ = send.send(r); });
+            receive
+        }).collect();
+        let result = (|| {
+            device.poll(wgpu::PollType::Wait { submission_index: Some(submission),
+                timeout: Some(Duration::from_secs(30)) }).map_err(|e| e.to_string())?;
+            for receive in receivers {
+                receive.recv_timeout(Duration::from_secs(2)).map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
+            }
+            // Keep views alive until all validation succeeds, so a mapping error
+            // in a later world cannot partially overwrite caller outputs.
+            let buffers: Vec<_> = jobs.iter().map(|job| job.operator.readback.clone()).collect();
+            let views = buffers.iter().map(|buffer| buffer.get_mapped_range(..)
+                .map_err(|e| e.to_string())).collect::<Result<Vec<_>, _>>()?;
+            for (job, view) in jobs.iter().zip(&views) {
+                let op = &job.operator;
+                let data: &[f32] = bytemuck::cast_slice(view);
+                if let Some(validation) = op.pending_velocity_validation {
+                    if !validation.accepts(data[op.count * op.channels + op.count]) {
+                        return Err("projected velocity exceeds CFL bound or is non-finite".into());
+                    }
+                }
+            }
+            for (job, view) in jobs.iter_mut().zip(&views) {
+                let op = &mut job.operator;
+                let data: &[f32] = bytemuck::cast_slice(view);
+                let values = op.count * op.channels;
+                job.mass_output.copy_from_slice(&data[..values]);
+                job.temperature_output.copy_from_slice(&data[values..values + op.count]);
+                if op.pending_velocity_validation.take().is_some() {
+                    op.max_cfl_rate = data[values + op.count];
+                    op.velocity_externally_exposed.set(false);
+                }
+            }
+            Ok(())
+        })();
+        for job in jobs {
+            job.operator.readback.unmap();
+            if result.is_err() {
+                job.operator.uploaded = false;
+                job.operator.pending_velocity_validation = None;
+            }
         }
-        Ok(())
+        result
     }
 
     /// Project mass on device and include temperature and deferred CFL in the
@@ -1379,6 +1438,12 @@ fn validate_state(state: &State<'_>, count: usize, channels: usize) -> Result<f3
 
 fn validate_state_with_temperature(state: &State<'_>, count: usize, channels: usize, temperature: Option<&[f32]>) -> Result<f32, String> {
     validate_state_for_phase::<true>(state, count, channels, temperature, 1)
+}
+
+/// Validate host material state whose velocities will be generated by a backend.
+pub fn validate_temperature_state(state: &State<'_>, count: usize, channels: usize,
+    temperature: &[f32]) -> Result<(), String> {
+    validate_state_for_phase::<false>(state, count, channels, Some(temperature), 1).map(|_| ())
 }
 
 fn validate_state_for_phase<const HOST_VELOCITY: bool>(state: &State<'_>, count: usize, channels: usize, temperature: Option<&[f32]>, phase: u8) -> Result<f32, String> {
@@ -2092,6 +2157,45 @@ fn main(@builtin(global_invocation_id) id:vec3<u32>) {{
         assert!(gpu.readback_mass_and_temperature_after(encoder, &temp, &mut result, &mut temperatures).is_err());
         assert!(result.iter().all(|&value| value == 7.0));
         assert!(temperatures.iter().all(|&value| value == 8.0));
+    }
+
+    #[test]
+    fn batch_readback_rejects_one_invalid_world_without_publishing_any_world() {
+        let context = std::sync::Arc::new(pollster::block_on(crate::gpu_context::GpuContext::new()).unwrap());
+        let mut operators: Vec<_> = (0..3).map(|_| pollster::block_on(
+            MulticomponentGpu::new_with_context(context.clone(), 2, 2, 1)).unwrap()).collect();
+        let species = [SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0 }];
+        let state = State { mass: &[1.0; 4], enthalpy: &[300.0; 4], velocity_x: &[0.0; 4],
+            velocity_y: &[0.0; 4], solid: &[0; 4], species: &species };
+        let temp = context.device.create_buffer(&wgpu::BufferDescriptor { label: None, size: 16,
+            usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+        context.queue.write_buffer(&temp, 0, bytemuck::cast_slice(&[300.0f32; 4]));
+        for invalid in [true, false] {
+            let mut encoder = context.command_encoder();
+            for (index, op) in operators.iter_mut().enumerate() {
+                op.upload(&state).unwrap();
+                let (vx, _) = op.velocity_buffers();
+                if invalid && index == 2 { context.queue.write_buffer(vx, 0, bytemuck::bytes_of(&f32::NAN)); }
+                op.encode_bounded_resident(&mut encoder, 0.05).unwrap();
+            }
+            let mut masses = [[7.0; 4]; 3];
+            let mut temperatures = [[8.0; 4]; 3];
+            let mut jobs: Vec<_> = operators.iter_mut().zip(&mut masses).zip(&mut temperatures)
+                .map(|((operator, mass_output), temperature_output)| MassTemperatureReadback {
+                    operator, temperature: &temp, mass_output, temperature_output,
+                }).collect();
+            let result = MulticomponentGpu::readback_mass_and_temperature_batch_after(encoder, &mut jobs);
+            drop(jobs);
+            if invalid {
+                assert!(result.is_err());
+                assert_eq!(masses, [[7.0; 4]; 3]);
+                assert_eq!(temperatures, [[8.0; 4]; 3]);
+            } else {
+                result.unwrap();
+                assert_eq!(masses, [[1.0; 4]; 3]);
+                assert_eq!(temperatures, [[300.0; 4]; 3]);
+            }
+        }
     }
 
     #[test]

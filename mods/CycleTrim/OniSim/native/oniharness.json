@@ -1,0 +1,34 @@
+{
+  "suites": {
+    "liquid-unit": {
+      "filters": [
+        "liquid_transport::"
+      ],
+      "skip": [
+        "gpu_diffusion"
+      ],
+      "paths": [
+        "src/liquid_transport*.rs"
+      ]
+    },
+    "liquid-regression": {
+      "filters": [
+        "hydraulic_",
+        "fluid_helpers::residual_tests::"
+      ],
+      "paths": [
+        "src/liquid_transport*.rs",
+        "src/fluid*.rs",
+        "src/simulation_step_fluid.rs"
+      ]
+    },
+    "liquid-gpu": {
+      "filters": [
+        "liquid_transport::tests::gpu_diffusion"
+      ],
+      "paths": [
+        "src/multicomponent_flux.rs"
+      ]
+    }
+  }
+}

@@ -216,6 +216,10 @@ namespace CycleTrim.Patches
                 summary.MeanMillisecondsOf(summary.StepTicks), gc0 - lastGc0, gc1 - lastGc1, gc2 - lastGc2,
                 (double)GC.GetTotalMemory(false) / (1024d * 1024d)));
             ReportChain(summary, gc0 - lastGc0, gc1 - lastGc1, gc2 - lastGc2);
+#if !PERFORMANCE_PROBE_HOST_TESTS
+            ReportBuckets();
+            DetailedFrameProbe.Report();
+#endif
             lastGc0 = gc0;
             lastGc1 = gc1;
             lastGc2 = gc2;
@@ -258,6 +262,32 @@ namespace CycleTrim.Patches
             json.Append("]}");
             Debug.Log("[CycleTrim][FrameChain] " + json);
         }
+
+#if !PERFORMANCE_PROBE_HOST_TESTS
+        private static void ReportBuckets()
+        {
+            var samples = Jlib.Runtime.StateMachineBucketTelemetry.SnapshotAndReset();
+            if (samples.Length == 0) return;
+            Array.Sort(samples, (left, right) => right.Ticks.CompareTo(left.Ticks));
+            var json = new StringBuilder(2048);
+            json.Append("{\"frequency\":").Append(Stopwatch.Frequency)
+                .Append(",\"buckets\":[");
+            for (int i = 0; i < Math.Min(20, samples.Length); i++)
+            {
+                if (i != 0) json.Append(',');
+                var sample = samples[i];
+                json.Append("{\"name\":\"").Append(sample.Name.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                    .Replace("\r", "\\r").Replace("\n", "\\n")).Append('"');
+                Number(json, "calls", sample.Calls);
+                Number(json, "ticks", sample.Ticks);
+                Number(json, "maxTicks", sample.MaxTicks);
+                Number(json, "allocatedBytes", sample.AllocatedBytes);
+                json.Append('}');
+            }
+            json.Append("]}");
+            Debug.Log("[CycleTrim][StateMachineBuckets] " + json);
+        }
+#endif
 
         private static void Number(StringBuilder json, string name, long value)
         {

@@ -8,6 +8,7 @@
 //!    native session lock.
 
 use crate::grid::Grid;
+use rayon::prelude::*;
 use crate::status::{Error, Result, Status};
 use crate::tables::ElementTable;
 use crate::world_cells::filled;
@@ -76,7 +77,7 @@ pub(crate) struct MulticomponentBuffers {
     validation_error: Option<Error>,
 }
 
-const INITIAL_SPECIES_PER_CELL: usize = 8;
+const INITIAL_SPECIES_PER_CELL: usize = 2;
 
 impl MulticomponentBuffers {
     pub(crate) fn new(count: usize) -> Result<Self> {
@@ -121,13 +122,26 @@ impl MulticomponentBuffers {
         elements: &ElementTable,
         world: &crate::world::PhysicsWorld,
     ) {
+        self.update_from_world_source(grid.len(), elements, world,
+            &|public, _| (grid.mass[public], grid.temperature[public]));
+    }
+
+    pub(crate) fn update_from_simulation(&mut self, elements: &ElementTable,
+        world: &crate::world::PhysicsWorld) {
+        self.update_from_world_source(world.width * world.height, elements, world,
+            &|_, internal| (world.write.mass[internal], world.write.temperature[internal]));
+    }
+
+    fn update_from_world_source(&mut self, count: usize, elements: &ElementTable,
+        world: &crate::world::PhysicsWorld,
+        state: &(impl Fn(usize, usize) -> (f32, f32) + Sync)) {
         self.species_len = 0;
         self.reused_cells = 0;
         self.flags = FLAG_MULTICOMPONENT_COEXISTENCE;
         self.validation_error = None;
 
         let species_cap = self.cells.len().saturating_mul(INITIAL_SPECIES_PER_CELL);
-        if self.cells.len() != grid.len() || self.species.len() < species_cap {
+        if self.cells.len() != count || self.species.len() < species_cap {
             self.validation_error = Some(Error::new(
                 Status::InvalidState,
                 "multicomponent buffers do not match grid cell count",
@@ -135,11 +149,20 @@ impl MulticomponentBuffers {
             return;
         }
 
+        if let Some(pool) = crate::parallel::pool(count) {
+            self.update_world_parallel(count, elements, world, pool, state);
+        } else {
+            self.update_world_serial(count, elements, world, state);
+        }
+    }
+
+    fn update_world_serial(&mut self, count: usize, elements: &ElementTable,
+        world: &crate::world::PhysicsWorld,
+        state: &(impl Fn(usize, usize) -> (f32, f32) + Sync)) {
         let mut next_species = 0usize;
-        for cell in 0..grid.len() {
+        for cell in 0..count {
             let internal = world.internal_index(cell);
-            let mass = grid.mass[cell];
-            let temperature = grid.temperature[cell];
+            let (mass, temperature) = state(cell, internal);
             if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
                 self.validation_error = Some(Error::new(
                     Status::InvalidState,
@@ -148,12 +171,8 @@ impl MulticomponentBuffers {
                 return;
             }
 
-            if self.matches_world_cell(cell, internal, next_species, temperature, world, elements) {
-                next_species += self.cells[cell].species_count as usize;
-                self.reused_cells += 1;
-                continue;
-            }
-
+            let previous = self.cells[cell];
+            let mut unchanged = previous.species_offset as usize == next_species;
             let species_offset = next_species;
             let mut species_count = 0u16;
             let mut total_mass = 0.0f32;
@@ -176,8 +195,8 @@ impl MulticomponentBuffers {
                     return;
                 }
                 if next_species >= self.species.len() {
-                    // Eight records per cell is an initial allocation estimate,
-                    // never a reason to drop equally authoritative species.
+                    // Initial capacity estimates storage, while every species
+                    // remains equally authoritative and grows it as needed.
                     let additional = 4096;
                     if self.species.try_reserve(additional).is_err() {
                         self.validation_error = Some(Error::new(Status::ResourceLimit, "could not grow species publication"));
@@ -185,6 +204,11 @@ impl MulticomponentBuffers {
                     }
                     self.species.resize(self.species.len() + additional, OniSimMulticomponentSpeciesRecord::default());
                 }
+                let old = &self.species[next_species];
+                unchanged &= species_count < previous.species_count
+                    && old.element_id == elem_id && old.phase == phase
+                    && old.mass.to_bits() == elem_mass.to_bits()
+                    && old.temperature.to_bits() == temperature.to_bits();
                 self.species[next_species] = OniSimMulticomponentSpeciesRecord {
                     element_id: elem_id,
                     phase,
@@ -200,6 +224,9 @@ impl MulticomponentBuffers {
             });
 
             if self.validation_error.is_some() { return; }
+            if unchanged && species_count == previous.species_count {
+                self.reused_cells += 1;
+            }
             self.cells[cell] = OniSimMulticomponentCellHeader {
                 species_offset: species_offset as u32,
                 species_count,
@@ -217,25 +244,100 @@ impl MulticomponentBuffers {
         self.species_len = next_species;
     }
 
-    fn matches_world_cell(&self, cell: usize, internal: usize, offset: usize, temperature: f32,
-        world: &crate::world::PhysicsWorld, elements: &ElementTable) -> bool {
-        let header = self.cells[cell];
-        if header.species_offset as usize != offset { return false; }
-        let end = offset + header.species_count as usize;
-        let mut at = offset;
-        let mut equal = true;
-        world.for_each_cell_species(internal, |id, mass| {
-            if mass <= 0.0 || !mass.is_finite() { return; }
-            let Some(element) = elements.elements.get(id as usize) else { return; };
-            let phase = element.record.state & 3;
-            if phase == 0 { return; }
-            if at >= end || !self.species.get(at).is_some_and(|record|
-                record.element_id == id && record.phase == phase
-                && record.mass.to_bits() == mass.to_bits()
-                && record.temperature.to_bits() == temperature.to_bits()) { equal = false; }
-            at += 1;
-        });
-        equal && at == end
+    fn update_world_parallel(&mut self, count: usize, elements: &ElementTable,
+        world: &crate::world::PhysicsWorld, pool: &rayon::ThreadPool,
+        state: &(impl Fn(usize, usize) -> (f32, f32) + Sync)) {
+        const BLOCK: usize = 1024;
+        let environment = crate::float_env::FloatEnv::capture();
+        let counts: Vec<Result<usize>> = pool.install(|| (0..count.div_ceil(BLOCK)).into_par_iter()
+            .map(|block| {
+                let _environment = environment.install();
+                let mut total = 0;
+                for cell in block * BLOCK..((block + 1) * BLOCK).min(count) {
+                    let internal = world.internal_index(cell);
+                    let (mass, temperature) = state(cell, internal);
+                    if !mass.is_finite() || mass < 0.0 || !temperature.is_finite() {
+                        return Err(Error::new(Status::InvalidState,
+                            format!("cell {cell} contains invalid mass or temperature")));
+                    }
+                    let mut count = 0usize;
+                    world.for_each_cell_species(internal, |id, mass| {
+                        if mass > 0.0 && mass.is_finite()
+                            && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 != 0) {
+                            count += 1;
+                        }
+                    });
+                    if count > u16::MAX as usize {
+                        return Err(Error::new(Status::ResourceLimit, "too many species in one publication cell"));
+                    }
+                    total += count;
+                }
+                Ok(total)
+            }).collect());
+        let counts = match counts.into_iter().collect::<Result<Vec<_>>>() {
+            Ok(counts) => counts,
+            Err(error) => { self.validation_error = Some(error); return; }
+        };
+        let mut offsets = Vec::with_capacity(counts.len());
+        let mut total = 0;
+        for &count in &counts { offsets.push(total); total += count; }
+        if total > self.species.len() {
+            let additional = (total - self.species.len()).div_ceil(4096) * 4096;
+            if self.species.try_reserve(additional).is_err() {
+                self.validation_error = Some(Error::new(Status::ResourceLimit, "could not grow species publication"));
+                return;
+            }
+            self.species.resize(self.species.len() + additional, OniSimMulticomponentSpeciesRecord::default());
+        }
+        let mut remaining = self.species.as_mut_slice();
+        let mut chunks = Vec::with_capacity(counts.len());
+        for count in counts {
+            let (chunk, rest) = remaining.split_at_mut(count);
+            chunks.push(chunk);
+            remaining = rest;
+        }
+        let environment = crate::float_env::FloatEnv::capture();
+        self.reused_cells = pool.install(|| self.cells.par_chunks_mut(BLOCK)
+            .zip(chunks.into_par_iter()).enumerate().map(|(block, (headers, records))| {
+                let _environment = environment.install();
+                let mut at = 0usize;
+                let mut reused = 0usize;
+                for (local, header) in headers.iter_mut().enumerate() {
+                    let cell = block * BLOCK + local;
+                    let internal = world.internal_index(cell);
+                    let temperature = state(cell, internal).1;
+                    let offset = offsets[block] + at;
+                    let previous = *header;
+                    let mut unchanged = previous.species_offset as usize == offset;
+                    let mut count = 0u16;
+                    let mut total_mass = 0.0f32;
+                    world.for_each_cell_species(internal, |id, mass| {
+                        if mass <= 0.0 || !mass.is_finite() { return; }
+                        let Some(element) = elements.elements.get(id as usize) else { return; };
+                        let phase = element.record.state & 3;
+                        if phase == 0 { return; }
+                        let old = &records[at];
+                        unchanged &= count < previous.species_count && old.element_id == id
+                            && old.phase == phase && old.mass.to_bits() == mass.to_bits()
+                            && old.temperature.to_bits() == temperature.to_bits();
+                        records[at] = OniSimMulticomponentSpeciesRecord {
+                            element_id: id, phase, reserved: 0, mass, temperature,
+                            volume_fraction: 0.0, partial_pressure_kpa: 0.0,
+                        };
+                        at += 1;
+                        count += 1;
+                        total_mass += mass;
+                    });
+                    reused += usize::from(unchanged && count == previous.species_count);
+                    *header = OniSimMulticomponentCellHeader {
+                        species_offset: offset as u32, species_count: count,
+                        reserved: if count == 0 { 0 } else { CELL_FLAG_HAS_SPECIES },
+                        total_mass, gas_pressure_kpa: 0.0, liquid_pressure_kpa: 0.0, liquid_volume_fraction: 0.0,
+                    };
+                }
+                reused
+            }).sum());
+        self.species_len = total;
     }
 
     pub(crate) fn update_from_grid_with_mixture_at(
@@ -566,6 +668,31 @@ fn put_f32(bytes: &mut [u8], at: usize, value: f32) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn world_source_matches_grid_source_publication_and_reuse() {
+        for (width, height) in [(16, 16), (128, 96)] {
+            let (mut state, _) = crate::native_chain_tests::fixture::create(width, height, "mixed");
+            let mut world = state.world.take().unwrap();
+            let elements = state.elements.take().unwrap();
+            let cell = 3 * world.stride + 3;
+            world.extra_mixtures.insert(cell, vec![(world.write.element[cell], 0.015625)]);
+            let mut grid = crate::grid::Grid::new(width as i32, height as i32, 0, 1).unwrap();
+            world.publish_to(&mut grid);
+            let mut from_grid = super::MulticomponentBuffers::new(grid.len()).unwrap();
+            let mut from_world = super::MulticomponentBuffers::new(grid.len()).unwrap();
+            for _ in 0..2 {
+                from_grid.update_from_world(&grid, &elements, &world);
+                from_world.update_from_simulation(&elements, &world);
+                assert!(from_grid.validation_error.is_none());
+                assert!(from_world.validation_error.is_none());
+                assert_eq!(from_grid.cells, from_world.cells);
+                assert_eq!(from_grid.species_len, from_world.species_len);
+                assert_eq!(from_grid.species[..from_grid.species_len], from_world.species[..from_world.species_len]);
+                assert_eq!(from_grid.reused_cells, from_world.reused_cells);
+            }
+        }
+    }
+
     use super::*;
 
     fn elements() -> ElementTable {
@@ -613,34 +740,36 @@ mod tests {
         }
         bytes.resize(bytes.len() + 13 * 4, 0);
         let elements = ElementTable::parse(&bytes).unwrap();
-        let mut grid = Grid::new(2, 1, 0, 0).unwrap();
+        for count in [2, 2048] {
+        let mut grid = Grid::new(count as i32, 1, 0, 0).unwrap();
         grid.element.fill(3); grid.mass.fill(1.0); grid.temperature.fill(300.0);
         let mut world = crate::world::PhysicsWorld::from_grid(&grid, &elements).unwrap();
-        for cell in 0..2 {
+        for cell in 0..count {
             let c = world.internal_index(cell);
             world.mixture_element[c] = 4; world.mixture_mass[c] = 2.0;
             world.extra_mixtures.insert(c, (5..13).map(|id| (id, id as f32 * 0.1)).collect());
         }
-        let mut buffers = MulticomponentBuffers::new(2).unwrap();
+        let mut buffers = MulticomponentBuffers::new(count).unwrap();
         buffers.update_from_world(&grid, &elements, &world);
         assert!(buffers.descriptor(1).is_ok());
-        assert_eq!(buffers.species_len, 20, "initial capacity must not truncate later cells");
+        assert_eq!(buffers.species_len, count * 10, "initial capacity must not truncate later cells");
         assert_eq!(buffers.cells[1].species_count, 10);
         let records = buffers.species.clone();
         buffers.update_from_world(&grid, &elements, &world);
-        assert_eq!(buffers.reused_cells, 2);
+        assert_eq!(buffers.reused_cells, count);
         assert_eq!(buffers.species, records);
         grid.temperature[1] += 1.0;
         buffers.update_from_world(&grid, &elements, &world);
-        assert_eq!(buffers.reused_cells, 1);
+        assert_eq!(buffers.reused_cells, count - 1);
         assert_eq!(buffers.species[10].temperature, 301.0);
         world.extra_mixtures.remove(&world.internal_index(0));
         buffers.update_from_world(&grid, &elements, &world);
         assert_eq!(buffers.cells[0].species_count, 2);
         assert_eq!(buffers.cells[1].species_offset, 2);
         assert_eq!(buffers.cells[1].species_count, 10);
-        assert_eq!(buffers.species_len, 12);
+        assert_eq!(buffers.species_len, count * 10 - 8);
         assert_eq!(buffers.cells[0].total_mass, 3.0);
+        }
     }
 
     #[test]

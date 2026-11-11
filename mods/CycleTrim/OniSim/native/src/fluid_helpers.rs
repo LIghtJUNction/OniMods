@@ -22,6 +22,7 @@ pub(crate) fn game_index_for_shape(
 }
 
 pub(crate) fn notify(world: &mut PhysicsWorld, events: &mut EventQueues, cell: usize) {
+    world.restore_empty_primary(cell);
     if let Some(index) = game_index(world, cell) {
         events.substance_change(index);
     }
@@ -40,6 +41,17 @@ pub(crate) fn clear_cell(cells: &mut Cells, vacuum: u16, cell: usize) {
     cells.mass[cell] = 0.0;
     cells.temperature[cell] = 0.0;
     clear_disease(cells, cell);
+}
+
+/// Remove the transferred primary inventory while retaining all residual species
+/// and their shared temperature. Pure cells retain the legacy vacuum state.
+pub(crate) fn clear_primary(world: &mut PhysicsWorld, cell: usize) {
+    let temperature = world.write.temperature[cell];
+    clear_cell(&mut world.write, world.vacuum_element, cell);
+    world.write.temperature[cell] = temperature;
+    if !world.restore_empty_primary(cell) {
+        world.write.temperature[cell] = 0.0;
+    }
 }
 
 pub(crate) fn calculate_disease(
@@ -173,7 +185,7 @@ pub(crate) fn do_displacement(
         count,
     );
     world.write.element[destination] = world.write.element[source];
-    clear_cell(&mut world.write, world.vacuum_element, source);
+    clear_primary(world, source);
     notify(world, events, source);
     notify(world, events, destination);
 }
@@ -237,3 +249,7 @@ pub(crate) fn are_liquids_miscible(a: &crate::tables::ElementRecord, b: &crate::
 
     (is_water_family(a.id) && is_water_family(b.id)) || (is_oil_family(a.id) && is_oil_family(b.id))
 }
+
+#[cfg(test)]
+#[path = "fluid_residual_tests.rs"]
+mod residual_tests;

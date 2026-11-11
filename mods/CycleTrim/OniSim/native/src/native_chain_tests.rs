@@ -9,6 +9,9 @@ pub(crate) mod fixture;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use std::time::Instant;
+
+pub(crate) static BENCHMARK_REFERENCE_KERNELS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 use crate::frames::{NewFrame, QueuedFrame};
 use crate::frames_data::GameData;
 use crate::state::State;
@@ -52,15 +55,25 @@ fn grid_addresses(state: &State) -> Vec<usize> {
 
 impl Runner {
     fn new(width: usize, height: usize, scene: &str, elapsed: f32) -> Self {
-        assert_eq!(std::env::var("CYCLETRIM_ONISIM_GPU").as_deref(), Ok("0"),
-            "manual CPU chain run must explicitly disable unavailable GPU initialization");
-        assert_eq!(std::env::var("CYCLETRIM_ONISIM_WORKERS").as_deref(), Ok("1"));
+        let gpu_mode = std::env::var("CYCLETRIM_ONISIM_GPU").expect("select GPU mode explicitly");
+        assert!(matches!(gpu_mode.as_str(), "0" | "1"));
+        let gpu_requested = gpu_mode == "1";
+        if !gpu_requested {
+            assert_eq!(std::env::var("CYCLETRIM_ONISIM_WORKERS").as_deref(), Ok("1"));
+        }
         let (mut state, regions) = fixture::create(width, height, scene);
+        state.game_publication_views = std::env::var("ONISIM_CHAIN_PUBLICATION_VIEWS").as_deref() == Ok("1");
+        println!("NATIVE_CHAIN_VIEW_MODE,{}", if state.game_publication_views { "publication" } else { "stable" });
+        let runner = Self::start(state, regions, scene, elapsed);
+        assert_eq!(runner.state.engine.as_ref().unwrap().lock().unwrap().gpu.is_some(), gpu_requested);
+        runner
+    }
+
+    fn start(mut state: State, regions: Vec<Region>, scene: &str, elapsed: f32) -> Self {
         ok(state.start_worker(None));
         let worker = state.worker.as_ref().unwrap().handle();
         let mut ready = ok(worker.wait_ready());
         ok(state.finish_prepare(ready.data_mut()));
-        assert!(state.engine.as_ref().unwrap().lock().unwrap().gpu.is_none());
         let stable_addresses = grid_addresses(&state);
         Self { state, ready: Some(ready), regions, scene: scene.into(), elapsed, step: 0, stable_addresses }
     }
@@ -100,7 +113,11 @@ impl Runner {
         ok(self.state.finish_prepare(ready.data_mut()));
         let elapsed_us = start.elapsed().as_secs_f64() * 1e6;
         // Address assertions and all content observations are outside timing.
-        assert_eq!(grid_addresses(&self.state), self.stable_addresses);
+        if self.state.game_publication_views {
+            assert_eq!(self.state.grid().unwrap().descriptor(), ready.data().grid.descriptor());
+        } else {
+            assert_eq!(grid_addresses(&self.state), self.stable_addresses);
+        }
         self.ready = Some(ready);
         self.step += 1;
         elapsed_us
@@ -232,5 +249,117 @@ fn benchmark_radiation_backends() {
             println!("RADIATION_BACKENDS,{width},{height},{label},cpu_ms={:.6},gpu_ms={:.6}",
                 (cpu_times[4] + cpu_times[5]) * 0.5, (gpu_times[4] + gpu_times[5]) * 0.5);
         }
+    }
+}
+
+#[test]
+fn game_event_filter_preserves_physics_and_real_changes() {
+    // The benchmark runner selects its backend explicitly, including CPU-only
+    // host test runs. The filtered path shares every input with the legacy path.
+    let (state, regions) = fixture::create(32, 32, "command");
+    let mut legacy = Runner::start(state, regions, "command", 0.0);
+    let (state, regions) = fixture::create(32, 32, "command");
+    let mut game = Runner::start(state, regions, "command", 0.0);
+    game.state.engine.as_ref().unwrap().lock().unwrap().game_element_events_only = true;
+    for runner in [&mut legacy, &mut game] {
+        let mut bytes = [0_u8; 28];
+        bytes[..4].copy_from_slice(&532_i32.to_le_bytes());
+        bytes[8..12].copy_from_slice(&300.0_f32.to_le_bytes());
+        bytes[12..16].copy_from_slice(&1.0_f32.to_le_bytes());
+        bytes[20..22].copy_from_slice(&4_u16.to_le_bytes());
+        bytes[22] = 1;
+        bytes[23] = 255;
+        bytes[24] = 1;
+        ok(crate::messages::execute(&mut runner.state, crate::cell_material::MODIFY, 28, 1, &bytes));
+    }
+    legacy.advance(false);
+    game.advance(false);
+    let legacy_events = &legacy.ready.as_ref().unwrap().data().events.substance_change_info;
+    assert!(!legacy_events.is_empty());
+    assert!(legacy_events.iter().any(|event| event.old_elem_idx == event.new_elem_idx));
+    let expected: Vec<_> = legacy_events.iter()
+        .filter(|event| event.old_elem_idx != event.new_elem_idx)
+        .map(|event| (event.cell_idx, event.old_elem_idx, event.new_elem_idx)).collect();
+    let actual: Vec<_> = game.ready.as_ref().unwrap().data().events.substance_change_info.iter()
+        .map(|event| (event.cell_idx, event.old_elem_idx, event.new_elem_idx)).collect();
+    assert!(!expected.is_empty());
+    assert_eq!(actual, expected);
+    let legacy_engine = legacy.state.engine.as_ref().unwrap().lock().unwrap();
+    let game_engine = game.state.engine.as_ref().unwrap().lock().unwrap();
+    assert_eq!(snapshot::world(&legacy_engine.world).0, snapshot::world(&game_engine.world).0);
+}
+
+#[test]
+fn game_event_filter_requires_game_views_and_non_headless_grid() {
+    for (views, headless, expected) in [(false, 0, false), (false, 1, false),
+                                       (true, 1, false), (true, 0, true)] {
+        let (mut state, _) = fixture::create(16, 16, "zero");
+        state.game_publication_views = views;
+        state.grid.as_mut().unwrap().headless = headless;
+        ok(state.start_worker(None));
+        assert_eq!(state.engine.as_ref().unwrap().lock().unwrap().game_element_events_only, expected);
+    }
+}
+
+#[test]
+fn worker_start_repairs_old_vacuum_slots_with_residual_liquid() {
+    let (mut state, _) = fixture::create(16, 16, "zero");
+    let cell = 5 * state.world.as_ref().unwrap().stride + 5;
+    let world = state.world.as_mut().unwrap();
+    world.write.element[cell] = world.vacuum_element;
+    world.write.mass[cell] = 0.0;
+    world.write.temperature[cell] = 0.0;
+    world.read.temperature[cell] = 0.0;
+    world.mixture_element[cell] = 5;
+    world.mixture_mass[cell] = 0.107484758;
+    ok(state.start_worker(None));
+    let engine = state.engine.as_ref().unwrap().lock().unwrap();
+    assert_eq!(engine.world.write.element[cell], 5);
+    assert_eq!(engine.world.write.mass[cell], 0.107484758);
+    assert_eq!(engine.world.write.temperature[cell], 293.15);
+    assert_eq!(engine.world.read.temperature[cell], 293.15);
+    assert_eq!(engine.world.mixture_mass[cell], 0.0);
+}
+
+
+#[test]
+#[ignore = "manual same-process complete native-loop presentation comparison"]
+fn benchmark_optimized_native_chain() {
+    use std::sync::atomic::Ordering;
+    let selected = &BENCHMARK_REFERENCE_KERNELS;
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            BENCHMARK_REFERENCE_KERNELS.store(false, Ordering::SeqCst);
+        }
+    }
+    let _reset = Reset;
+    let width = integer("ONISIM_CHAIN_WIDTH", 512);
+    let height = integer("ONISIM_CHAIN_HEIGHT", 448);
+    let warmup = integer("ONISIM_CHAIN_WARMUP", 17);
+    let groups = integer("ONISIM_CHAIN_PAIR_GROUPS", 34);
+    let mut runner = Runner::new(width, height, "mixed", 0.2);
+    for step in 0..warmup {
+        selected.store(step % 2 == 0, Ordering::SeqCst);
+        runner.advance(false);
+    }
+    let mut samples = [Vec::new(), Vec::new()];
+    let mut faults = [0_u64; 2];
+    for group in 0..groups {
+        for serial in [true, false, false, true].map(|mode| mode ^ (group % 2 != 0)) {
+            selected.store(serial, Ordering::SeqCst);
+            let index = usize::from(!serial);
+            let before = process_counters();
+            let elapsed = runner.advance(false);
+            let after = process_counters();
+            faults[index] += after.1 - before.1;
+            samples[index].push(elapsed);
+        }
+    }
+    for (index, samples) in samples.iter().enumerate() {
+        let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+        let values = samples.iter().map(|value| format!("{value:.6}")).collect::<Vec<_>>().join(";");
+        println!("PRESENTATION_CHAIN_SAMPLE,serial={},samples={},mean_us={mean:.6},major_faults={},values={values}",
+            index == 0, samples.len(), faults[index]);
     }
 }

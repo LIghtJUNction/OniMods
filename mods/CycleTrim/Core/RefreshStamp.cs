@@ -28,7 +28,9 @@ namespace CycleTrim.Core
             int cell,
             int context,
             int secondaryContext,
-            int tertiaryContext)
+            int tertiaryContext,
+            int world = -1,
+            string scheduleGroup = null)
         {
             SourceVersion = sourceVersion;
             NavigationVersion = navigationVersion;
@@ -37,6 +39,8 @@ namespace CycleTrim.Core
             Context = context;
             SecondaryContext = secondaryContext;
             TertiaryContext = tertiaryContext;
+            World = world;
+            ScheduleGroup = scheduleGroup;
         }
 
         public long SourceVersion { get; }
@@ -53,15 +57,25 @@ namespace CycleTrim.Core
 
         public int TertiaryContext { get; }
 
-        public bool Equals(RefreshStamp other)
+        public int World { get; }
+
+        public string ScheduleGroup { get; }
+
+        public bool EqualsExceptCell(RefreshStamp other)
         {
             return SourceVersion == other.SourceVersion
                 && NavigationVersion == other.NavigationVersion
                 && ChoreVersion == other.ChoreVersion
-                && Cell == other.Cell
                 && Context == other.Context
                 && SecondaryContext == other.SecondaryContext
-                && TertiaryContext == other.TertiaryContext;
+                && TertiaryContext == other.TertiaryContext
+                && World == other.World
+                && string.Equals(ScheduleGroup, other.ScheduleGroup, StringComparison.Ordinal);
+        }
+
+        public bool Equals(RefreshStamp other)
+        {
+            return Cell == other.Cell && EqualsExceptCell(other);
         }
 
         public override bool Equals(object obj)
@@ -79,7 +93,9 @@ namespace CycleTrim.Core
                 hash = (hash * 397) ^ Cell;
                 hash = (hash * 397) ^ Context;
                 hash = (hash * 397) ^ SecondaryContext;
-                return (hash * 397) ^ TertiaryContext;
+                hash = (hash * 397) ^ TertiaryContext;
+                hash = (hash * 397) ^ World;
+                return (hash * 397) ^ (ScheduleGroup == null ? 0 : ScheduleGroup.GetHashCode());
             }
         }
 
@@ -112,9 +128,11 @@ namespace CycleTrim.Core
             this.maxSkippedRefreshes = maxSkippedRefreshes;
         }
 
-        public bool ShouldRefresh(RefreshStamp currentStamp)
+        public bool ShouldRefresh(RefreshStamp currentStamp, bool allowMovementSkip = false)
         {
-            if (!hasStamp || invalidated || stamp != currentStamp)
+            var unchanged = allowMovementSkip
+                ? stamp.EqualsExceptCell(currentStamp) : stamp == currentStamp;
+            if (!hasStamp || invalidated || !unchanged)
             {
                 stamp = currentStamp;
                 skippedRefreshes = 0;
@@ -150,16 +168,20 @@ namespace CycleTrim.Core
     public sealed class CoupledRefreshGate
     {
         private readonly VersionedRefreshGate gate;
+        private readonly bool allowMovementSkip;
         private RefreshStamp pendingStamp;
         private bool hasPending;
         private bool pendingRefresh;
         private bool pendingInvalidated;
         private bool requirePairedRefresh;
 
-        public CoupledRefreshGate(int maxSkippedRefreshes)
+        public CoupledRefreshGate(int maxSkippedRefreshes, bool allowMovementSkip = false)
         {
             gate = new VersionedRefreshGate(maxSkippedRefreshes);
+            this.allowMovementSkip = allowMovementSkip;
         }
+
+        public bool HasPending { get { return hasPending; } }
 
         public bool Begin(RefreshStamp currentStamp)
         {
@@ -171,7 +193,7 @@ namespace CycleTrim.Core
             }
 
             requirePairedRefresh = false;
-            pendingRefresh = gate.ShouldRefresh(currentStamp);
+            pendingRefresh = gate.ShouldRefresh(currentStamp, allowMovementSkip);
             pendingStamp = currentStamp;
             pendingInvalidated = false;
             hasPending = true;
@@ -185,7 +207,7 @@ namespace CycleTrim.Core
             // that known state, but force a fresh producer before the first
             // future consumer-visible cycle resumes.
             ClearPending();
-            var refresh = gate.ShouldRefresh(currentStamp);
+            var refresh = gate.ShouldRefresh(currentStamp, allowMovementSkip);
             requirePairedRefresh = true;
             return refresh;
         }
@@ -207,14 +229,14 @@ namespace CycleTrim.Core
 
             if (stale)
             {
-                // If the producer was skipped, the consumer must not become a
-                // one-sided refresh after its inputs changed. If the producer
-                // already ran, preserve that paired consumer run but still
-                // force the next pair to rebuild under the new stamp.
+                // Always rebuild the next pair after an intervening event.
+                // Strict legacy callers retain their paired consumer decision.
                 gate.Invalidate();
             }
 
-            return refresh;
+            // An opted-in moving pair must never consume costs after any input
+            // changed between stages. The next pair rebuilds from its new origin.
+            return refresh && !(allowMovementSkip && stale);
         }
 
         public void Invalidate()

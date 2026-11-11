@@ -87,6 +87,11 @@ namespace OniSim.CycleTrim
                     frameState = targetModule.Bind<FrameStateDelegate>("ONISIM_GetFrameState");
                     nativeError = targetModule.Bind<ErrorDelegate>("ONISIM_GetLastError");
 
+                    // Game.PrepareSimulationData rebinds every array on publication.
+                    // The standalone session API continues to request stable arrays.
+                    if (targetModule.Bind<ReadyDelegate>("ONISIM_UseGamePublicationViews")() != 0)
+                        throw new InvalidOperationException(Marshal.PtrToStringAnsi(nativeError()));
+
                     var replacement = Jlib.Runtime.JlibApi.ReplaceSimDll(gameAssembly, path);
                     if (!replacement.Succeeded)
                     {

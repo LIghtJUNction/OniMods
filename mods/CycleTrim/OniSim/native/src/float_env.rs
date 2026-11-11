@@ -58,6 +58,19 @@ impl FloatEnv {
             && (self.0 & after.0 & 0x3f) == after.0 & 0x3f
     }
 
+    /// Merge masked sticky effects from independent arithmetic tasks without
+    /// changing the submitting thread's rounding, DAZ, FTZ or exception masks.
+    pub(crate) fn merge_masked_statuses(statuses: &[Self]) {
+        let current = Self::capture();
+        assert!(current.masks_all_exceptions());
+        let merged = statuses.iter().fold(current.0, |flags, status| flags | (status.0 & 0x3f));
+        #[cfg(target_arch = "x86_64")]
+        unsafe {
+            std::arch::asm!("ldmxcsr [{pointer}]", pointer = in(reg) &merged,
+                options(nostack, preserves_flags));
+        }
+    }
+
     pub(crate) fn install(self) -> FloatEnvGuard {
         let saved = Self::capture().0;
         #[cfg(target_arch = "x86_64")]

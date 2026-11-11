@@ -4,7 +4,7 @@ use crate::cell_material_add_liquid::add_liquid;
 use crate::cell_material_add_solid::add_solid;
 use crate::events::{CallbackInfo, EventQueues};
 use crate::fluid_displacement::displace_liquid;
-use crate::fluid_helpers::{clear_cell, notify, phase};
+use crate::fluid_helpers::{clear_cell, clear_primary, notify, phase};
 use crate::gas::displace_gas;
 use crate::numeric::{smax, smin};
 use crate::status::Result;
@@ -22,8 +22,13 @@ pub(crate) fn replace_element(
     disease: u8,
     count: i32,
 ) {
-    world.write.element[cell] = element;
+    // ReplaceElement replaces the entire cell inventory, including mixtures.
+    world.clear_cell_mixtures(cell);
     let empty = phase(elements, element) == 0;
+    if empty {
+        clear_cell(&mut world.write, world.vacuum_element, cell);
+    }
+    world.write.element[cell] = element;
     world.write.mass[cell] = if empty { 0.0 } else { mass };
     world.write.temperature[cell] = if empty { 0.0 } else { temperature };
     notify(world, events, cell);
@@ -93,7 +98,7 @@ pub(crate) fn remove_phase(
     } else {
         world.write.mass[cell] = 0.0;
     }
-    clear_cell(&mut world.write, world.vacuum_element, cell);
+    clear_primary(world, cell);
     notify(world, events, cell);
 }
 

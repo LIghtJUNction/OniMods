@@ -152,7 +152,11 @@ pub(crate) fn apply_immediate(command: ImmediateCommand, world: &mut PhysicsWorl
     match command {
         ImmediateCommand::Clear => cells_kernel::clear_all_primary(world),
         ImmediateCommand::DefineOffsets(offsets) => world.world_offsets = offsets,
-        ImmediateCommand::SetZones(zones) => world.inactive_mask = Some(zones),
+        ImmediateCommand::SetZones(zones) => {
+            let space = zones.iter().filter(|&&zone| zone == u8::MAX).count();
+            eprintln!("[CycleTrim OniSim] world zones installed space_cells={space}");
+            world.inactive_mask = Some(zones);
+        }
         ImmediateCommand::InitializeVacuum(rect) => {
             rect.validate(world)?;
             world

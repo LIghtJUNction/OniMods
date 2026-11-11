@@ -29,7 +29,9 @@ pub(crate) struct State {
     pub(crate) closing: bool,
     pub(crate) callback: Callback,
     pub(crate) diagnostic_reported: bool,
-    pub(crate) grid: Option<Grid>,
+    pub(crate) grid: Option<crate::session_grid::SessionGrid>,
+    pub(crate) game_publication_views: bool,
+    stable_grid_requested: bool,
     pub(crate) elements: Option<Arc<ElementTable>>,
     pub(crate) diseases: Option<Arc<DiseaseTable>>,
     pub(crate) interactions: Vec<crate::gas::GasObliteration>,
@@ -181,12 +183,19 @@ impl State {
 
     pub(crate) fn grid(&self) -> Result<&Grid> {
         self.require_active()?;
-        self.grid.as_ref().ok_or_else(|| {
+        self.grid.as_deref().ok_or_else(|| {
             Error::new(
                 Status::InvalidState,
                 "Allocate or Initialize grid message is required",
             )
         })
+    }
+
+    pub(crate) fn request_stable_grid(&mut self) -> Result<()> {
+        self.grid()?;
+        self.grid.as_mut().unwrap().detach();
+        self.stable_grid_requested = true;
+        Ok(())
     }
 
     pub(crate) fn initialized_grid(&self) -> Result<&Grid> {
@@ -228,34 +237,49 @@ impl State {
             world.settle_thermal_boundaries(boundary);
         }
         world.initialize_boundary();
+        // Migrate old snapshots whose primary slot was exhausted while their
+        // secondary inventories remained. This scan runs once per worker start.
+        let mut repaired = 0;
+        for y in 1..=world.height {
+            for x in 1..=world.width {
+                let cell = y * world.stride + x;
+                repaired += usize::from(world.restore_empty_primary(cell));
+            }
+        }
+        if repaired != 0 {
+            eprintln!("[CycleTrim OniSim] repaired {repaired} empty display slots with residual species");
+        }
         world.sync_read_from_write();
         let grid = self.grid.as_mut().unwrap();
         world.publish_to(grid);
         let mut output = GameData::new(grid)?;
         let mut old = GameData::new(grid)?;
-        output.grid.started = true;
-        old.grid.started = true;
+        Arc::make_mut(&mut output.grid).started = true;
+        Arc::make_mut(&mut old.grid).started = true;
         Arc::make_mut(&mut old.multicomponent)
             .update_from_grid(grid, self.elements.as_ref().unwrap());
         let initial_multicomponent = old.multicomponent.descriptor(self.generation);
         let initial_buffers = Arc::clone(&old.multicomponent);
         let initial_pointers = old.presentation.pointers();
         let mut initial_ranges = Vec::new();
-        initial_ranges.try_reserve_exact(36).map_err(|_| {
+        initial_ranges.try_reserve_exact(GameData::BORROWED_RANGE_COUNT).map_err(|_| {
             Error::new(
                 Status::ResourceLimit,
                 "could not reserve borrowed buffer ranges",
             )
         })?;
         old.fill_borrowed_ranges(&mut initial_ranges);
-        let engine = Arc::new(Mutex::new(Engine::new(
+        let game_element_events_only = self.game_publication_views && grid.headless == 0;
+        let mut engine = Engine::new(
             self.world.take().unwrap(),
             Arc::clone(self.elements.as_ref().unwrap()),
             self.diseases.clone(),
             self.thermal.take_engine_state(),
             self.mass.take_engine_state(),
             self.radiation_emitters.take_engine_state(),
-        )));
+        );
+        engine.game_element_events_only = game_element_events_only;
+        let engine = Arc::new(Mutex::new(engine));
         let engine_for_worker = Arc::clone(&engine);
         let worker = SimulationWorker::spawn_notified(
             output,
@@ -348,9 +372,12 @@ impl State {
                     "could not recycle frame command slots",
                 )
             })?;
-        data.events.publish_to(&mut data.grid)?;
-        for (index, pointer) in data.presentation.pointers().into_iter().enumerate() {
-            data.grid.set_texture_pointer(index, pointer);
+        {
+            let grid = Arc::make_mut(&mut data.grid);
+            data.events.publish_to(grid)?;
+            for (index, pointer) in data.presentation.pointers().into_iter().enumerate() {
+                grid.set_texture_pointer(index, pointer);
+            }
         }
         data.fill_borrowed_ranges(&mut self.borrowed_ranges);
         self.multicomponent_update = Some(data.multicomponent.descriptor(self.generation));
@@ -358,7 +385,7 @@ impl State {
             crate::publication_lease::publish(&data.multicomponent)?;
         }
         let grid = self.grid.as_mut().unwrap();
-        grid.copy_from(&data.grid);
+        grid.publish(&data.grid, self.game_publication_views && !self.stable_grid_requested);
         self.scheduler.free_slots.append(&mut data.retired_slots);
         Ok(grid.descriptor() as *mut c_void)
     }
@@ -389,6 +416,8 @@ impl State {
             || self.elements.is_some()
             || self.diseases.is_some();
         self.grid = None;
+        self.game_publication_views = false;
+        self.stable_grid_requested = false;
         self.elements = None;
         self.diseases = None;
         self.interactions.clear();
@@ -422,5 +451,52 @@ impl State {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod publication_view_tests {
+    use super::*;
+
+    #[test]
+    fn shared_publications_rotate_and_stable_requests_detach() {
+        for shared in [false, true] {
+            let mut state = State::default();
+            state.initialize(None).unwrap();
+            let grid = Grid::new(16, 16, 0, 1).unwrap();
+            let mut first = GameData::new(&grid).unwrap();
+            let mut second = GameData::new(&grid).unwrap();
+            first.multicomponent_unchanged = true;
+            second.multicomponent_unchanged = true;
+            state.grid = Some(grid.into());
+            state.game_publication_views = shared;
+            state.borrowed_ranges.reserve(GameData::BORROWED_RANGE_COUNT);
+            let initial = state.grid().unwrap().descriptor();
+            state.publish_ready(&mut first).unwrap();
+            let first_pointer = state.grid().unwrap().descriptor();
+            assert_eq!(first_pointer == first.grid.descriptor(), shared);
+            if !shared { assert_eq!(first_pointer, initial); }
+            assert_eq!(state.borrowed_ranges.len(), GameData::BORROWED_RANGE_COUNT);
+            assert!(state.overlaps_native_storage(first.grid.mass.as_ptr() as usize, 4));
+            Arc::make_mut(&mut second.grid).mass[0] = 2.0;
+            state.publish_ready(&mut second).unwrap();
+            assert_eq!(state.grid().unwrap().mass[0], 2.0);
+            if shared { assert_ne!(state.grid().unwrap().descriptor(), first_pointer); }
+            else { assert_eq!(state.grid().unwrap().descriptor(), initial); }
+            assert_eq!(first.grid.mass[0], 0.0);
+            state.request_stable_grid().unwrap();
+            let stable = state.grid().unwrap().descriptor();
+            assert_ne!(stable, second.grid.descriptor());
+            // A cloned descriptor must refer to its own field allocations.
+            let pointer = u64::from_le_bytes(unsafe {
+                std::slice::from_raw_parts(stable.add(20), 8)
+            }.try_into().unwrap());
+            assert_eq!(pointer as usize, state.grid().unwrap().mass.as_ptr() as usize);
+            Arc::make_mut(&mut first.grid).mass[0] = 3.0;
+            state.publish_ready(&mut first).unwrap();
+            assert_eq!(state.grid().unwrap().descriptor(), stable);
+            assert_eq!(state.grid().unwrap().mass[0], 3.0);
+            assert_eq!(second.grid.mass[0], 2.0);
+        }
     }
 }

@@ -115,9 +115,10 @@ fn empty_batches_reuse_both_derived_buffers_and_invalidate_after_world_change() 
     for (slot, data) in buffers.iter_mut().enumerate() {
         // Distinct initial cells catch one-slot warmup; distinct reserved bytes
         // must survive every publication, including cache invalidation.
-        data.grid.load_image(&vec![0xa0 + slot as u8; data.grid.image_len()]);
-        data.grid.radiation.fill(-999.0 - slot as f32);
-        data.grid.accumulated_flow.fill(-888.0 - slot as f32);
+        let grid = std::sync::Arc::make_mut(&mut data.grid);
+        grid.load_image(&vec![0xa0 + slot as u8; grid.image_len()]);
+        grid.radiation.fill(-999.0 - slot as f32);
+        grid.accumulated_flow.fill(-888.0 - slot as f32);
     }
     let engine = Arc::new(Mutex::new(Engine::new(world,
         Arc::clone(state.elements.as_ref().unwrap()), state.diseases.clone(),

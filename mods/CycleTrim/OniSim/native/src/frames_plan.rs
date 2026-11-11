@@ -47,7 +47,7 @@ impl Preview {
             generation: state.generation,
             width: grid.map_or(0, |grid| grid.width),
             height: grid.map_or(0, |grid| grid.height),
-            count: grid.map_or(0, Grid::len),
+            count: grid.map_or(0, |grid| grid.len()),
             allocated: grid.is_some(),
             initialized: grid.is_some_and(|grid| grid.initialized),
             started: grid.is_some_and(|grid| grid.started),

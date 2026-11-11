@@ -17,7 +17,7 @@ CycleTrim explores gas and liquid mixtures with GPU acceleration. The developmen
 Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
 
 [h2]Current progress[/h2]
-0.4.15 lets rendering continue while native simulation is busy, retains settled gas work across active worlds, removes intermediate gas readbacks, uses the faster measured CPU radiation traversal, and fixes gradual leakage through exposed space without backwalls. Requires Jlib 0.3.5. Host and native tests passed; game performance is verified separately.
+0.4.16 batches gas work across worlds into one submission and wait, prepares inputs in parallel, and retains settled-world sleep and existing event ordering. All gas species participate; equal-sized worlds own separate buffers, and changed inputs trigger recomputation. Requires Jlib 0.3.5. Local tests and paired benchmarks passed; game performance is verified separately.
 [list]
 [*]Version 0.4.13 transports all gas species without limiting a cell to two gas slots. Liquid species equality and complete mixture save/load remain unfinished.
 [*]GPU thermal diffusion covers the grid. Eligible gas regions use diffusion, velocity, bounded transport and heat kernels in one submission; eligible liquids use multicomponent diffusion. Other conditions still use CPU processing or exclude regions.

@@ -110,7 +110,7 @@ pub(crate) fn create(width: usize, height: usize, scene: &str) -> (State, Vec<Re
     let mut grid = super::ok(Grid::new(width as i32, height as i32, 0, 1));
     grid.initialized = true;
     grid.seed = 42;
-    state.grid = Some(grid);
+    state.grid = Some(grid.into());
     state.diseases = Some(Arc::new(DiseaseTable { diseases: Vec::new(), element_count: elements.len() }));
     state.elements = Some(elements);
     state.world = Some(world);

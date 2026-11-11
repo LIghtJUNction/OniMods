@@ -1,10 +1,13 @@
 //! Ordered pressure/liquid traversal from official UpdateData, ELF 0x69730.
 
 use crate::events::EventQueues;
+use rayon::prelude::*;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{PhysicsWorld, Region};
 
 thread_local! {
+    static LIQUID_TRANSPORT: std::cell::RefCell<crate::liquid_transport::LiquidTransport> =
+        std::cell::RefCell::new(crate::liquid_transport::LiquidTransport::default());
     static LIQUID_PRESSURE: std::cell::RefCell<crate::fluid_pressure::PressureScratch> =
         std::cell::RefCell::new(crate::fluid_pressure::PressureScratch::default());
 }
@@ -123,100 +126,48 @@ pub(crate) fn liquid_phase_with_flow(
     region: Region,
     flow_already_applied: bool,
 ) -> bool {
+    let width = (region.max_x - region.min_x).max(0) as usize;
+    let height = (region.max_y - region.min_y).max(0) as usize;
+    let empty = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+    let merge = |a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)|
+        (a.0.min(b.0), a.1.min(b.1), a.2.max(b.2), a.3.max(b.3));
+    let row_bounds = |y: i32| {
+        let mut bounds = empty;
+        for x in region.min_x..region.max_x {
+            let cell = y as usize * world.stride + x as usize;
+            let liquid = (world.write.mass[cell] > 0.0
+                && world.element_phase[world.write.element[cell] as usize] == 2)
+                || (world.mixture_mass[cell] > 0.0
+                    && world.element_phase[world.mixture_element[cell] as usize] == 2)
+                || world.extra_mixtures.get(&cell).is_some_and(|species|
+                    species.iter().any(|&(id, mass)| mass > 0.0 && world.element_phase[id as usize] == 2));
+            if liquid { bounds = merge(bounds, (x, y, x + 1, y + 1)); }
+        }
+        bounds
+    };
+    let bounds = if let Some(pool) = crate::parallel::pool(width.saturating_mul(height)) {
+        pool.install(|| (region.min_y..region.max_y).into_par_iter().with_min_len(8)
+            .map(row_bounds).reduce(|| empty, merge))
+    } else {
+        (region.min_y..region.max_y).map(row_bounds).fold(empty, merge)
+    };
+    if bounds.0 == i32::MAX { return flow_already_applied; }
+    // One-cell halo owns the free surface and region-boundary faces. Gas-only
+    // rows outside this active rectangle need no pressure or transport sweeps.
+    let region = Region {
+        min_x: (bounds.0 - 1).max(region.min_x),
+        min_y: (bounds.1 - 1).max(region.min_y),
+        max_x: (bounds.2 + 1).min(region.max_x),
+        max_y: (bounds.3 + 1).min(region.max_y),
+        ..region
+    };
     LIQUID_PRESSURE.with(|scratch| {
         let mut scratch = scratch.borrow_mut();
         let pressure_changed = scratch.run(world, elements, diseases, events, region);
-        liquid_phase_after_pressure(world, elements, diseases, events, region,
-            flow_already_applied || pressure_changed, &scratch.covered)
+        let transport_changed = LIQUID_TRANSPORT.with(|transport| transport.borrow_mut()
+            .run(world, elements, diseases, events, region, &scratch.covered));
+        flow_already_applied || pressure_changed || transport_changed
     })
-}
-
-fn liquid_phase_after_pressure(
-    world: &mut PhysicsWorld,
-    elements: &ElementTable,
-    diseases: &DiseaseTable,
-    events: &mut EventQueues,
-    region: Region,
-    flow_already_applied: bool,
-    pressure_faces: &[u8],
-) -> bool {
-    let mut changed = flow_already_applied;
-    if region.min_x == region.max_x {
-        return false;
-    }
-    for y in region.min_y..region.max_y {
-        for x in region.min_x..region.max_x {
-            let cell = y as usize * world.stride + x as usize;
-            if old_phase(world, elements, cell) == 2 && world.read.mass[cell] > 0.0 {
-                changed = true;
-                crate::fluid::update_liquid(world, elements, diseases, events, cell, pressure_faces[cell]);
-            }
-        }
-    }
-    let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
-    for y in min_y..max_y {
-        for x in min_x..max_x {
-            let cell = y as usize * world.stride + x as usize;
-            if old_phase(world, elements, cell) != 2 {
-                continue;
-            }
-            changed = true;
-            let element = world.read.element[cell];
-            let direction = world.scan_direction as isize;
-            let first = cell.wrapping_add_signed(-direction);
-            if world.read.element[first] != element {
-                let amount = crate::fluid::do_liquid_pressure_displacement(
-                    world,
-                    elements,
-                    diseases,
-                    events,
-                    element,
-                    cell,
-                    first,
-                    first.wrapping_add_signed(-direction),
-                );
-                world.flow[cell][0] += amount;
-                world.flow[cell - 1][1] -= amount;
-            }
-            let second = cell.wrapping_add_signed(direction);
-            if world.read.element[second] != element {
-                let amount = crate::fluid::do_liquid_pressure_displacement(
-                    world,
-                    elements,
-                    diseases,
-                    events,
-                    element,
-                    cell,
-                    second,
-                    second.wrapping_add_signed(direction),
-                );
-                // The destination flow slot is literally cell-1 in both
-                // horizontal branches (ELF 0x6a857 and 0x6a8bd).
-                world.flow[cell][0] -= amount;
-                world.flow[cell - 1][1] += amount;
-            }
-            let upper = cell + world.stride;
-            let active_element = world.write.element[cell];
-            if world.read.element[upper] != element
-                && elements.elements[active_element as usize].record.max_mass
-                    <= world.write.mass[cell]
-            {
-                let amount = crate::fluid::do_liquid_pressure_displacement(
-                    world,
-                    elements,
-                    diseases,
-                    events,
-                    element,
-                    cell,
-                    upper,
-                    upper + world.stride,
-                );
-                world.flow[cell][3] += amount;
-                world.flow[upper][2] -= amount;
-            }
-        }
-    }
-    changed
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 //! Independent liquid-image equations from official ELF 0x646f0..0x64dd0.
 
+use rayon::prelude::*;
 use crate::numeric::{cvtt_f32_i32, smax, smin};
 use crate::status::Result;
 use crate::tables::{ElementRecord, ElementTable};
@@ -38,6 +39,20 @@ pub(super) fn update(
         cache.next_row = filled(world.width, None)?;
     } else {
         cache.next_row.fill(None);
+    }
+    if let Some(pool) = crate::parallel::pool(world.width * world.height) {
+        let empty = pool.install(|| (0..world.height - 1).into_par_iter().with_min_len(8).all(|y| {
+            let start = (y + 1) * world.stride + 1;
+            world.write.element[start..start + world.width].iter()
+                .all(|&id| elements.elements[id as usize].record.state & 3 != 2)
+        }));
+        if empty {
+            let count = world.width * (world.height - 1);
+            for image in [&mut liquid[..count], &mut liquid_data[..count], &mut material[..count]] {
+                if image.iter().any(|&pixel| pixel != 0) { image.fill(0); }
+            }
+            return Ok(());
+        }
     }
     // There are no callbacks or floating-point environment changes within an
     // update. Masked exception flags are sticky, so a repeated bounded powf has

@@ -47,7 +47,7 @@ namespace CycleTrim.Core
     /// flag, pointer, bounds, or thermodynamic invariant mismatch.
     /// </summary>
     public sealed class OniSimMulticomponentProvider : IMulticomponentCellProvider,
-        IMulticomponentCellBatchProvider, IMulticomponentRevisionProvider
+        IMulticomponentCellBatchProvider, IMulticomponentRevisionProvider, IMulticomponentGridRevisionProvider
     {
         public const uint CurrentVersion = 1;
         public const uint FlagLegacySingleElement = 1;
@@ -61,6 +61,14 @@ namespace CycleTrim.Core
         private readonly Func<ushort, Element> resolveElement;
         private readonly Func<ulong> contentRevision;
         public ulong ContentRevision { get { return contentRevision == null ? 0 : contentRevision(); } }
+
+        // Engine.run_batch reuses derived publication only after both buffers
+        // stabilize, for empty batches or zero-time frames containing only debug
+        // settings. Every material/world/thermal/mass/radiation command, and every
+        // non-debug early command, forces a fresh publication revision. Reuse writes
+        // accumulated flow only. Game.StepTheSim binds that publication's mass and
+        // refreshes Element from its substance events before texture updates run.
+        public ulong GridRevision { get { return ContentRevision; } }
 
         public OniSimMulticomponentProvider(
             Func<IntPtr> acquireUpdate,

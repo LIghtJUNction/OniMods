@@ -2,6 +2,7 @@ mod pressure_sweep;
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void};
 use std::sync::Arc;
+static GAME_PUBLICATION_VIEWS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 mod publication_lease;
 mod gas_region_snapshot;
 
@@ -37,6 +38,7 @@ mod fluid;
 mod fluid_displacement;
 mod fluid_helpers;
 mod fluid_pressure;
+mod liquid_transport;
 #[cfg(test)]
 mod hydraulic_regression_tests;
 mod frames;
@@ -71,6 +73,7 @@ mod radiation_region;
 mod save;
 mod simulation_step;
 mod simulation_step_fluid;
+mod session_grid;
 mod state;
 mod status;
 mod sublimation;
@@ -143,11 +146,29 @@ pub extern "C" fn ONISIM_GetCapabilities() -> *const c_char {
     boundary(std::ptr::null(), || Ok(CAPABILITIES.as_ptr().cast()))
 }
 
+/// Opts the official game session into publication-scoped grid views.
+/// Must be called before initialization. Standalone TryInitialize stays stable.
+#[unsafe(no_mangle)]
+pub extern "C" fn ONISIM_UseGamePublicationViews() -> i32 {
+    boundary(-1, || {
+        let state = state::lock()?;
+        if state.active {
+            return Err(Error::new(Status::InvalidState, "Configure publication views before initialization"));
+        }
+        GAME_PUBLICATION_VIEWS.store(true, std::sync::atomic::Ordering::Release);
+        Ok(0)
+    })
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn SIM_Initialize(callback: state::Callback) {
     // The inspected game load path calls Initialize again when replacing an
     // existing simulation; its semantics reset the old session.
-    boundary((), || state::reset_initialize(callback))
+    boundary((), || {
+        state::reset_initialize(callback)?;
+        state::lock()?.game_publication_views = GAME_PUBLICATION_VIEWS.load(std::sync::atomic::Ordering::Acquire);
+        Ok(())
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -298,7 +319,11 @@ pub unsafe extern "C" fn SIM_HandleMessages(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ONISIM_GetGrid() -> *const u8 {
-    boundary(std::ptr::null(), || Ok(state::lock()?.grid()?.descriptor()))
+    boundary(std::ptr::null(), || {
+        let mut state = state::lock()?;
+        state.request_stable_grid()?;
+        Ok(state.grid()?.descriptor())
+    })
 }
 
 #[unsafe(no_mangle)]

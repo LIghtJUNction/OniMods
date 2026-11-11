@@ -213,7 +213,9 @@ impl<'a> PreparedStep<'a> {
             crate::gas::rise_bubbles(world, elements, events);
         }
         world.sync_read_from_write();
-        crate::multicomponent_flux::refresh_active_gas_channels(world, elements);
+        if world.gas_channel_count == 0 {
+            crate::multicomponent_flux::rebuild_gas_channels(world, elements);
+        }
 
         let gpu_thermal_active = if let Some(ref mut gpu) = systems.gpu {
             gpu.step_thermal(world, elements, FIXED_DT).map_err(|error| {
@@ -234,6 +236,16 @@ impl<'a> PreparedStep<'a> {
             eprintln!("[CycleTrim OniSim] step profile tick={} global_setup+thermal={:.3}ms",
                 world.tick_seed, started.elapsed().as_secs_f64() * 1000.0);
         }
+        let gpu_diffusion = gpu_thermal_active && world.gas_channel_count > 0;
+        let mut gas_batch = if world.regions.len() > 1 && gpu_diffusion {
+            if let Some(gpu) = systems.gpu.as_deref_mut().filter(|gpu| !gpu.gas_cpu_regions_preferred) {
+                Some(crate::multicomponent_flux::GasBatch::prepare(world, elements, gpu, gpu_diffusion)?)
+            } else { None }
+        } else { None };
+        if let Some(started) = step_started {
+            eprintln!("[CycleTrim OniSim] step profile tick={} through_gas_batch={:.3}ms",
+                world.tick_seed, started.elapsed().as_secs_f64() * 1000.0);
+        }
         for index in 0..world.regions.len() {
             let region = world.regions[index];
             let mut mark = profiling.then(std::time::Instant::now);
@@ -242,17 +254,20 @@ impl<'a> PreparedStep<'a> {
                 None => 0.0,
             };
             let mut temperature_events = EventQueues::default();
-            if gpu_thermal_active {
+            let temperature_changed = if gpu_thermal_active {
                 if let Some(gpu) = systems.gpu.as_deref_mut() {
                     gpu.transition_region(world, elements, &mut temperature_events, region).map_err(|error|
-                        Error::new(Status::InternalFailure, format!("GPU phase transition failed: {error}")))?;
-                }
+                        Error::new(Status::InternalFailure, format!("GPU phase transition failed: {error}")))?
+                } else { false }
             } else {
                 temperature_phase(world, elements, &mut temperature_events, region);
+                true
+            };
+            if temperature_changed {
+                world.read.copy_region_from(&world.write, world.stride,
+                    region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
+                    region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             }
-            world.read.copy_region_from(&world.write, world.stride,
-                region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
-                region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             let temperature_ms = lap();
             // Species transport owns gas motion. The legacy one-element
             // pressure/displacement pass must not privilege Grid's display slot.
@@ -262,11 +277,19 @@ impl<'a> PreparedStep<'a> {
             let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
                 crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
             } else { None };
-            let gpu_diffusion = gpu_thermal_active && world.gas_channel_count > 0;
             let mut diffusion_solid = Vec::new();
-            let gpu_transport_ran = crate::multicomponent_flux::step_region_with_mask(
-                world, elements, events, region, systems.gpu.as_deref_mut(), gpu_diffusion, Some(&mut diffusion_solid),
-            )?;
+            let gpu_transport_ran = if let (Some(batch), Some(gpu)) = (gas_batch.as_mut(), systems.gpu.as_deref_mut()) {
+                batch.apply(index, world, elements, events, gpu, gpu_diffusion, &mut diffusion_solid)?
+            } else {
+                let gpu_available = systems.gpu.is_some();
+                // CPU-immediate execution preserves the batched path's small
+                // region policy, including in host tests with tiny worlds.
+                let minimum_gpu_cells = if world.regions.len() > 1 || !cfg!(test) { 256 } else { 0 };
+                crate::multicomponent_flux::step_region_with_dispatch(
+                    world, elements, events, region, systems.gpu.as_deref_mut(), gpu_diffusion,
+                    Some(&mut diffusion_solid), gpu_available, minimum_gpu_cells,
+                )?
+            };
             let transport_ms = lap();
             let mut liquid_solid = Vec::new();
             // The gas pass treats liquid and liquid-containing cells as walls,
@@ -280,7 +303,7 @@ impl<'a> PreparedStep<'a> {
             // Both GPU projections and diffuse_region write only inside this
             // rectangle. The snapshots were equal immediately before them.
             // Avoid copying all eleven full-world arrays for every region.
-            world.read.copy_region_from(&world.write, world.stride,
+            world.read.copy_fluid_region_from(&world.write, world.stride,
                 region.min_x.max(1) as usize, (region.max_x as usize).min(world.width + 1),
                 region.min_y.max(1) as usize, (region.max_y as usize).min(world.height + 1));
             let diffusion_ms = lap();
@@ -316,17 +339,7 @@ impl<'a> PreparedStep<'a> {
             systems.radiation.update(FIXED_DT, world, elements, region)?;
             let emitters_ms = lap();
             decay_inactive(world, elements, bounds);
-            for y in bounds.2..bounds.3 {
-                for x in bounds.0..bounds.1 {
-                    crate::postprocess::cell(
-                        world,
-                        elements,
-                        diseases,
-                        events,
-                        y * world.stride + x,
-                    )?;
-                }
-            }
+            crate::postprocess::region(world, elements, diseases, events, bounds)?;
             let postprocess_ms = lap();
             if let Some(gpu) = systems.gpu.as_deref_mut() {
                 gpu.grow_diseases(world, diseases, bounds).map_err(|error|
@@ -340,6 +353,13 @@ impl<'a> PreparedStep<'a> {
             if profiling {
                 eprintln!("[CycleTrim OniSim] region profile index={index} temperature+sync={temperature_ms:.3}ms gas+sync={gas_phase_ms:.3}ms transport={transport_ms:.3}ms diffusion+sync={diffusion_ms:.3}ms liquid_flow_and_sync_wall={liquid_flow_ms:.3}ms disease_diffusion={disease_diffusion_ms:.3}ms radiation={radiation_ms:.3}ms components={components_ms:.3}ms emitters={emitters_ms:.3}ms postprocess={postprocess_ms:.3}ms disease_growth={disease_growth_ms:.3}ms");
             }
+        }
+        if let (Some(batch), Some(gpu)) = (gas_batch, systems.gpu.as_deref_mut()) {
+            batch.retain(gpu);
+        }
+        if let Some(started) = step_started {
+            eprintln!("[CycleTrim OniSim] step total tick={} wall={:.3}ms",
+                world.tick_seed, started.elapsed().as_secs_f64() * 1000.0);
         }
         world.tick_seed = world.tick_seed.wrapping_add(1);
         Ok(())

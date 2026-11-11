@@ -52,6 +52,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 RejectsUnrelatedFetchCompatibilityTypes();
                 ModLoadRegression.Run();
                 BusyRefreshGateRegression.Run();
+                TaskInvalidationRegression.Run();
                 WorldInvalidationRegression.Run();
                 OptionsRegression.Run();
                 FetchLayoutControlRegression.Run();

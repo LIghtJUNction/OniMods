@@ -1,5 +1,6 @@
 //! Sunlight bytes from official ELF 0x64dd0; table setup at 0x37750.
 
+use rayon::prelude::*;
 use crate::numeric::{cvtt_f32_i32, smax, smin};
 use crate::tables::ElementTable;
 use crate::world::PhysicsWorld;
@@ -13,45 +14,81 @@ struct Material {
     absorption: f32,
 }
 
+#[derive(Default)]
+pub(super) struct SunCache {
+    tiles: Vec<Vec<u8>>,
+}
+
+#[cfg(test)]
 pub(super) fn update(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable) {
-    // Columns have independent accumulators. Read a short contiguous row span
-    // before moving down, instead of striding through the entire world for
-    // each pixel column. A bounded stack tile needs no per-frame allocation.
-    // With unmasked exceptions, retain the original global arithmetic order.
+    update_cached(exposed, world, elements, &mut SunCache::default());
+}
+
+pub(super) fn update_cached(exposed: &mut [u8], world: &PhysicsWorld,
+    elements: &ElementTable, cache: &mut SunCache) {
     if !crate::float_env::FloatEnv::capture().masks_all_exceptions() {
         update_columns(exposed, world, elements);
         return;
     }
+    const COLUMNS: usize = 16;
+    let pool = crate::parallel::pool(world.width * world.height);
+    let override_index = elements.elements.iter()
+        .rposition(|element| element.record.id as u32 == OVERRIDE_HASH);
+    // Rectangles remain ordered, including overlaps. Their column tiles have
+    // independent accumulators and private retained output storage.
+    for &[x, y, width, height] in &world.world_offsets {
+        if width <= 0 { continue; }
+        let top = (y as i64 + height as i64 - 1) as usize;
+        let (x, y, width) = (x as usize, y as usize, width as usize);
+        if height <= 1 {
+            exposed[top * world.width + x..top * world.width + x + width].fill(255);
+            continue;
+        }
+        let count = width.div_ceil(COLUMNS);
+        cache.tiles.resize_with(count, Vec::new);
+        for (index, tile) in cache.tiles.iter_mut().enumerate() {
+            tile.resize((width - index * COLUMNS).min(COLUMNS) * (top - y + 1), 0);
+        }
+        let environment = crate::float_env::FloatEnv::capture();
+        let render = |(index, tile): (usize, &mut Vec<u8>)| {
+            let _environment = environment.install();
+            render_tile(tile, world, elements, override_index,
+                x + index * COLUMNS, (width - index * COLUMNS).min(COLUMNS), y, top)
+        };
+        let statuses: Vec<_> = if let Some(pool) = pool {
+            pool.install(|| cache.tiles.par_iter_mut().enumerate().map(render).collect())
+        } else { cache.tiles.iter_mut().enumerate().map(render).collect() };
+        crate::float_env::FloatEnv::merge_masked_statuses(&statuses);
+        let copy = |(row, output): (usize, &mut [u8])| {
+            for (index, tile) in cache.tiles.iter().enumerate() {
+                let columns = (width - index * COLUMNS).min(COLUMNS);
+                let first = x + index * COLUMNS;
+                output[first..first + columns].copy_from_slice(&tile[row * columns..(row + 1) * columns]);
+            }
+        };
+        let output = &mut exposed[y * world.width..(top + 1) * world.width];
+        if let Some(pool) = pool {
+            pool.install(|| output.par_chunks_exact_mut(world.width).enumerate().with_min_len(8).for_each(copy));
+        } else { output.chunks_exact_mut(world.width).enumerate().for_each(copy); }
+    }
+}
+
+fn render_tile(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable,
+    override_index: Option<usize>, first: usize, columns: usize, y: usize, top: usize)
+    -> crate::float_env::FloatEnv {
     const COLUMNS: usize = 64;
-    // Lazy entries execute the reciprocal only when a material is actually
-    // used. Its masked sticky exception effects then persist for this update.
-    // A direct-mapped stack cache remains bounded for arbitrary element tables.
     let mut materials = [Material {
         index: usize::MAX,
         mass_scale: 0.0,
         absorption: 0.0,
     }; 64];
-    let override_index = elements
-        .elements
-        .iter()
-        .rposition(|element| element.record.id as u32 == OVERRIDE_HASH);
-    for &[x, y, width, height] in &world.world_offsets {
-        if width <= 0 {
-            continue;
-        }
-        let top = (y as i64 + height as i64 - 1) as usize;
-        let (x, y, width) = (x as usize, y as usize, width as usize);
-        for first in (x..x + width).step_by(COLUMNS) {
-            let columns = (x + width - first).min(COLUMNS);
+    let mut completed = 0.0;
             // Zero/negative-height rectangles still write their top row.
-            let top_start = top * world.width + first;
+            let top_start = (top - y) * columns;
             exposed[top_start..top_start + columns].fill(255);
-            if height <= 1 {
-                continue;
-            }
             let mut remaining = [1.0; COLUMNS];
             for row in (y..top).rev() {
-                let public_start = row * world.width + first;
+                let public_start = (row - y) * columns;
                 let internal_start = (row + 1) * world.stride + first + 1;
                 let properties = &world.write.properties[internal_start..internal_start + columns];
                 let above_start = internal_start + world.stride;
@@ -75,7 +112,8 @@ pub(super) fn update(exposed: &mut [u8], world: &PhysicsWorld, elements: &Elemen
                         let absorption = record.light_absorption * smin(mass * scale, 1.0);
                         let value = smax(*remaining - absorption, 0.0);
                         *remaining = value;
-                        *pixel = cvtt_f32_i32(value * 255.0) as u8;
+                        completed = value * 255.0;
+                        *pixel = cvtt_f32_i32(completed) as u8;
                     }
                     continue;
                 }
@@ -115,11 +153,11 @@ pub(super) fn update(exposed: &mut [u8], world: &PhysicsWorld, elements: &Elemen
                     } else {
                         value
                     };
-                    pixels[offset] = cvtt_f32_i32(value * 255.0) as u8;
+                    completed = value * 255.0;
+                    pixels[offset] = cvtt_f32_i32(completed) as u8;
                 }
             }
-        }
-    }
+    crate::float_env::FloatEnv::capture_after(completed)
 }
 
 fn update_columns(exposed: &mut [u8], world: &PhysicsWorld, elements: &ElementTable) {

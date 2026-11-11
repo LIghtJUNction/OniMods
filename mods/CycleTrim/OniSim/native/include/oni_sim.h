@@ -24,6 +24,16 @@ typedef int32_t (*OniSimMessageHandler)(int32_t message_id, const void *data);
  * game's load path. Use ONISIM_TryInitialize for exclusive session acquisition.
  * Successful shutdown and generation-exhaustion status 4 both release storage;
  * internal failure status 5 does not prove cleanup. */
+
+/* Optional game-owner configuration, before SIM_Initialize. Start/Prepare grid
+ * arrays then remain borrowed until the next publication or lifecycle change.
+ * Consumers must rebind every array each publication. Non-headless game sessions
+ * publish SubstanceChangeInfo only for final element changes. Worldgen and
+ * standalone sessions retain mass-only notifications. ONISIM_GetGrid detaches a
+ * stable view for the rest of the session. ONISIM_TryInitialize retains stable
+ * grid arrays regardless of this official-game configuration. Returns 0 or -1. */
+int32_t ONISIM_UseGamePublicationViews(void);
+
 void SIM_Initialize(OniSimMessageHandler callback);
 void SIM_Shutdown(void);
 void *SIM_HandleMessage(int32_t id, int32_t length, const uint8_t *message);
@@ -77,8 +87,9 @@ int32_t ONISIM_CopyGridImage(uint8_t *destination, int32_t capacity);
  * caller-owned bytes; it does not claim GPU/production multicomponent support. */
 int32_t ONISIM_CopyMulticomponentImage(uint8_t *destination, int32_t capacity);
 
-/* Pack=4, Linux x64 GameDataUpdate. Array pointers are native-owned, borrowed
- * only while the session is alive and its grid generation remains current.
+/* Pack=4, Linux x64 GameDataUpdate. By default array pointers are native-owned,
+ * borrowed while the session is alive and its grid generation remains current.
+ * ONISIM_UseGamePublicationViews explicitly opts into the shorter lifetime above.
  * Event and texture pointers belong to one publication and must be consumed
  * before the next Prepare. External reads must not overlap mutating calls.
  * No caller may write through these pointers. */

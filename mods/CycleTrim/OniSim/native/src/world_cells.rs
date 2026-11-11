@@ -114,40 +114,44 @@ impl Cells {
     /// Copy a rectangular portion of the padded grid after a region-local pass.
     pub(crate) fn copy_region_from(&mut self, other: &Self, stride: usize,
         min_x: usize, max_x: usize, min_y: usize, max_y: usize) {
-        for y in min_y..max_y {
-            let range = y * stride + min_x..y * stride + max_x;
-            macro_rules! copy_field {
-                ($field:ident) => { self.$field[range.clone()].copy_from_slice(&other.$field[range.clone()]); };
-            }
-            copy_field!(element);
-            copy_field!(temperature);
-            copy_field!(mass);
-            copy_field!(properties);
-            copy_field!(insulation);
-            copy_field!(strength);
-            copy_field!(disease_idx);
-            copy_field!(disease_count);
-            copy_field!(disease_infestation);
-            copy_field!(disease_growth);
-            copy_field!(radiation);
+        macro_rules! copy_field {
+            ($field:ident) => {
+                for y in min_y..max_y {
+                    let range = y * stride + min_x..y * stride + max_x;
+                    self.$field[range.clone()].copy_from_slice(&other.$field[range]);
+                }
+            };
         }
+        copy_field!(element);
+        copy_field!(temperature);
+        copy_field!(mass);
+        copy_field!(properties);
+        copy_field!(insulation);
+        copy_field!(strength);
+        copy_field!(disease_idx);
+        copy_field!(disease_count);
+        copy_field!(disease_infestation);
+        copy_field!(disease_growth);
+        copy_field!(radiation);
     }
 
     /// Copy fluid fields for a rectangular region.
     pub(crate) fn copy_fluid_region_from(&mut self, other: &Self, stride: usize,
         min_x: usize, max_x: usize, min_y: usize, max_y: usize) {
-        for y in min_y..max_y {
-            let range = y * stride + min_x..y * stride + max_x;
-            macro_rules! copy_field {
-                ($field:ident) => { self.$field[range.clone()].copy_from_slice(&other.$field[range.clone()]); };
-            }
-            copy_field!(element);
-            copy_field!(temperature);
-            copy_field!(mass);
-            copy_field!(disease_idx);
-            copy_field!(disease_count);
-            copy_field!(disease_infestation);
-            copy_field!(disease_growth);
+        macro_rules! copy_field {
+            ($field:ident) => {
+                for y in min_y..max_y {
+                    let range = y * stride + min_x..y * stride + max_x;
+                    self.$field[range.clone()].copy_from_slice(&other.$field[range]);
+                }
+            };
         }
+        copy_field!(element);
+        copy_field!(temperature);
+        copy_field!(mass);
+        copy_field!(disease_idx);
+        copy_field!(disease_count);
+        copy_field!(disease_infestation);
+        copy_field!(disease_growth);
     }
 }

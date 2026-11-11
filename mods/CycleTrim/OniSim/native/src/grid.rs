@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use crate::bytes::{f32at, i32at, overlaps, u16at, u32at};
 use crate::status::{Error, Result, Status};
 
@@ -42,6 +43,40 @@ fn filled<T: Clone>(count: usize, value: T) -> Result<Box<[T]>> {
     Ok(values.into_boxed_slice())
 }
 
+impl Clone for Grid {
+    fn clone(&self) -> Self {
+        let mut grid = Self {
+            width: self.width,
+            height: self.height,
+            seed: self.seed,
+            radiation_enabled: self.radiation_enabled,
+            headless: self.headless,
+            initialized: self.initialized,
+            started: self.started,
+            element: self.element.clone(),
+            temperature: self.temperature.clone(),
+            mass: self.mass.clone(),
+            properties: self.properties.clone(),
+            insulation: self.insulation.clone(),
+            strength: self.strength.clone(),
+            radiation: self.radiation.clone(),
+            disease_idx: self.disease_idx.clone(),
+            disease_count: self.disease_count.clone(),
+            backwall_element: self.backwall_element.clone(),
+            backwall_mass: self.backwall_mass.clone(),
+            backwall_temperature: self.backwall_temperature.clone(),
+            accumulated_flow: self.accumulated_flow.clone(),
+            cell_padding: self.cell_padding.clone(),
+            disease_reserved: self.disease_reserved.clone(),
+            backwall_padding: self.backwall_padding.clone(),
+            descriptor: self.descriptor.clone(),
+        };
+        // The descriptor contains self-relative native backing pointers.
+        grid.refresh_descriptor();
+        grid
+    }
+}
+
 impl Grid {
     pub(crate) fn new(width: i32, height: i32, radiation: u8, headless: u8) -> Result<Self> {
         let count = crate::bytes::dimensions(width, height)?;
@@ -77,7 +112,7 @@ impl Grid {
 
     fn refresh_descriptor(&mut self) {
         // Linux x86_64, official Pack=4: i32 then twelve unaligned pointers.
-        // All event (29 count/pointer pairs), flow and texture fields stay zero.
+        // Event spans, texture pointers and frame metadata remain unchanged.
         let pointers = [
             self.element.as_ptr() as usize,
             self.temperature.as_ptr() as usize,
@@ -129,21 +164,42 @@ impl Grid {
         self.started = other.started;
         self.radiation_enabled = other.radiation_enabled;
         self.headless = other.headless;
+        // Each task owns a cell tile across all independent POD streams.
+        // One scope balances large fields without a separate barrier per field.
+        macro_rules! copy_blocks {
+            ($destination:expr, $source:expr) => {
+                $destination.chunks_mut(256).zip($source.chunks(256))
+                    .map(|(destination, source)| {
+                        let bytes = std::mem::size_of_val(source);
+                        // All listed fields contain initialized POD values.
+                        // Byte comparison preserves NaN payloads and signed zero.
+                        let same = unsafe {
+                            std::slice::from_raw_parts(destination.as_ptr() as *const u8, bytes)
+                                == std::slice::from_raw_parts(source.as_ptr() as *const u8, bytes)
+                        };
+                        if same { 0 } else { destination.copy_from_slice(source); bytes }
+                    }).sum::<usize>()
+            };
+        }
+        let count = self.len();
         let mut copied_bytes = 0usize;
-        // Compare independent, bounded blocks of POD arrays. Stable FFI addresses
-        // remain unchanged, including when game-side consumers write a Grid field.
-        // Byte comparison preserves signed zero and exact floating-point payloads.
         macro_rules! copy { ($($field:ident),* $(,)?) => {
-            $(for (destination, source) in self.$field.chunks_mut(256).zip(other.$field.chunks(256)) {
-                let bytes = std::mem::size_of_val(source);
-                // Each listed field is an integer, float or byte array: no padding
-                // and no uninitialized bytes. The slices do not alias.
-                let same = unsafe {
-                    std::slice::from_raw_parts(destination.as_ptr().cast::<u8>(), bytes)
-                        == std::slice::from_raw_parts(source.as_ptr().cast::<u8>(), bytes)
-                };
-                if !same { destination.copy_from_slice(source); copied_bytes += bytes; }
-            })*
+            if let Some(pool) = crate::parallel::pool(count) {
+                let mut totals = vec![0usize; count.div_ceil(4096)];
+                $(let mut $field = self.$field.chunks_mut(4096);)*
+                pool.scope(|scope| {
+                    for (index, total) in totals.iter_mut().enumerate() {
+                        $(let $field = $field.next().unwrap();)*
+                        scope.spawn(move |_| {
+                            let range = index * 4096..((index + 1) * 4096).min(count);
+                            *total = 0usize $(+ copy_blocks!($field, other.$field[range.clone()]))*;
+                        });
+                    }
+                });
+                copied_bytes = totals.iter().sum();
+            } else {
+                $(copied_bytes += copy_blocks!(self.$field, other.$field);)*
+            }
         }; }
         copy!(
             element,
@@ -182,6 +238,28 @@ impl Grid {
     pub(crate) fn set_disease_runtime(&mut self, index: usize, infestation: u8, growth: f32) {
         self.disease_reserved[index][0] = infestation;
         self.disease_reserved[index][3..].copy_from_slice(&growth.to_le_bytes());
+    }
+
+    pub(crate) fn copy_padded_disease_runtime(&mut self, infestation: &[u8], growth: &[f32], stride: usize) {
+        let width = self.width as usize;
+        let height = self.height as usize;
+        assert_eq!(infestation.len(), stride * (height + 2));
+        assert_eq!(growth.len(), infestation.len());
+        assert!(stride >= width + 1);
+        let copy = |(y, destination): (usize, &mut [[u8; 7]])| {
+            let start = (y + 1) * stride + 1;
+            for ((record, &infestation), &growth) in destination.iter_mut()
+                .zip(&infestation[start..start + width]).zip(&growth[start..start + width]) {
+                record[0] = infestation;
+                record[3..].copy_from_slice(&growth.to_le_bytes());
+            }
+        };
+        if let Some(pool) = crate::parallel::pool(width * height) {
+            pool.install(|| self.disease_reserved.par_chunks_exact_mut(width)
+                .enumerate().with_min_len(16).for_each(copy));
+        } else {
+            self.disease_reserved.chunks_exact_mut(width).enumerate().for_each(copy);
+        }
     }
 
     pub(crate) fn load_image(&mut self, bytes: &[u8]) {
@@ -248,45 +326,52 @@ impl Grid {
         }
     }
 
-    pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
-        macro_rules! overlap {
-            ($field:ident) => {
-                overlaps(
-                    start,
-                    length,
-                    self.$field.as_ptr() as usize,
-                    std::mem::size_of_val(&*self.$field),
-                )
-            };
-        }
-        overlap!(element)
-            || overlap!(temperature)
-            || overlap!(mass)
-            || overlap!(properties)
-            || overlap!(insulation)
-            || overlap!(strength)
-            || overlap!(radiation)
-            || overlap!(disease_idx)
-            || overlap!(disease_count)
-            || overlap!(backwall_element)
-            || overlap!(backwall_mass)
-            || overlap!(backwall_temperature)
-            || overlap!(accumulated_flow)
-            || overlap!(cell_padding)
-            || overlap!(disease_reserved)
-            || overlap!(backwall_padding)
-            || overlaps(
-                start,
-                length,
-                self.descriptor.as_ptr() as usize,
-                DESCRIPTOR_SIZE,
-            )
+    pub(crate) const STORAGE_RANGE_COUNT: usize = 17;
+
+    pub(crate) fn storage_ranges(&self) -> [(usize, usize); Self::STORAGE_RANGE_COUNT] {
+        macro_rules! ranges { ($($field:ident),* $(,)?) => { [
+            $((self.$field.as_ptr() as usize, std::mem::size_of_val(&*self.$field)),)*
+            (self.descriptor.as_ptr() as usize, DESCRIPTOR_SIZE),
+        ] }; }
+        ranges!(element, temperature, mass, properties, insulation, strength,
+            radiation, disease_idx, disease_count, backwall_element, backwall_mass,
+            backwall_temperature, accumulated_flow, cell_padding, disease_reserved, backwall_padding)
     }
+
+    pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+        self.storage_ranges().into_iter().any(|(pointer, bytes)|
+            overlaps(start, length, pointer, bytes))
+    }
+
 }
 
 #[cfg(test)]
 mod copy_tests {
     use super::*;
+    #[test]
+    fn large_copy_preserves_bits_and_counts_changed_blocks_across_streams() {
+        let (width, height) = (513, 257);
+        let mut source = Grid::new(width, height, 0, 0).unwrap();
+        let mut target = Grid::new(width, height, 0, 0).unwrap();
+        let mass = target.mass.as_ptr();
+        let last = source.len() - 1;
+        source.mass[last] = -0.0;
+        source.element[1] = 42;
+        source.temperature[512] = f32::from_bits(0x7fc01234);
+        source.disease_reserved[900][1] = 123;
+        source.accumulated_flow[4096] = -0.0;
+        source.backwall_mass[4096] = f32::from_bits(1);
+        source.disease_idx[last] = 5;
+        assert_eq!(target.copy_from(&source), 4 + 256 * (2 + 4 + 7 + 4 + 4) + 1);
+        assert_eq!(target.mass.as_ptr(), mass);
+        assert_eq!(target.mass[last].to_bits(), (-0.0f32).to_bits());
+        assert_eq!(target.temperature[512].to_bits(), 0x7fc01234);
+        assert_eq!(target.disease_reserved[900][1], 123);
+        assert_eq!(target.accumulated_flow[4096].to_bits(), (-0.0f32).to_bits());
+        assert_eq!(target.backwall_mass[4096].to_bits(), 1);
+        assert_eq!(target.copy_from(&source), 0);
+    }
+
     #[test]
     fn copies_only_changed_blocks_and_keeps_ffi_addresses() {
         let mut source = Grid::new(600, 1, 0, 0).unwrap();

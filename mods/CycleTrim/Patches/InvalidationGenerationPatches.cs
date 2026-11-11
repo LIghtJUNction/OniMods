@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using CycleTrim.Core;
 using HarmonyLib;
 
@@ -33,6 +34,13 @@ namespace CycleTrim.Patches
             InvalidationVersions.BumpChore(world);
         }
 
+        private static int PickupWorld(Pickupable pickup)
+        {
+            if (ReferenceEquals(pickup, null) || !Grid.IsValidCell(pickup.cachedCell)) return -1;
+            var world = ClusterManager.Instance?.GetWorld(Grid.WorldIdx[pickup.cachedCell]);
+            return world == null ? -1 : world.ParentWorldId;
+        }
+
         private static int World(UnityEngine.GameObject obj)
         {
             return obj == null ? -1 : obj.GetMyParentWorldId();
@@ -43,6 +51,35 @@ namespace CycleTrim.Patches
         {
             return manager.prefabIdToFetchables.TryGetValue(tag, out var group)
                 ? World(group.fetchables.GetData(handle).pickupable.gameObject) : -1;
+        }
+
+        private struct FetchChangeState
+        {
+            internal int World;
+            internal FetchManager.Fetchable Entry;
+        }
+
+        private static FetchChangeState CaptureFetch(FetchManager manager, Tag tag,
+            HandleVector<int>.Handle handle)
+        {
+            if (!manager.prefabIdToFetchables.TryGetValue(tag, out var group))
+                return new FetchChangeState { World = -1 };
+            var entry = group.fetchables.GetData(handle);
+            return new FetchChangeState { World = PickupWorld(entry.pickupable), Entry = entry };
+        }
+
+        private static void PublishFetchChange(FetchManager manager, Tag tag,
+            HandleVector<int>.Handle handle, FetchChangeState before)
+        {
+            var after = CaptureFetch(manager, tag, handle);
+            if (!ReferenceEquals(before.Entry.pickupable, after.Entry.pickupable)
+                || before.World != after.World
+                || before.Entry.tagBitsHash != after.Entry.tagBitsHash
+                || before.Entry.masterPriority != after.Entry.masterPriority)
+            {
+                BumpFetch(before.World);
+                if (before.World != after.World) BumpFetch(after.World);
+            }
         }
 
         [HarmonyPatch]
@@ -107,6 +144,8 @@ namespace CycleTrim.Patches
                 __state = FetchWorld(__instance, __0, __1);
             }
 
+            // Storage ownership is already changed by callers before this method.
+            // Equal cached priority does not imply equal fetch eligibility.
             private static void Postfix(int __state) { BumpFetch(__state); }
         }
 
@@ -124,12 +163,16 @@ namespace CycleTrim.Patches
             }
 
             private static void Prefix(FetchManager __instance, Tag __0,
-                HandleVector<int>.Handle __1, out int __state)
+                HandleVector<int>.Handle __1, out FetchChangeState __state)
             {
-                __state = FetchWorld(__instance, __0, __1);
+                __state = CaptureFetch(__instance, __0, __1);
             }
 
-            private static void Postfix(int __state) { BumpFetch(__state); }
+            private static void Postfix(FetchManager __instance, Tag __0,
+                HandleVector<int>.Handle __1, FetchChangeState __state)
+            {
+                PublishFetchChange(__instance, __0, __1, __state);
+            }
         }
 
         [HarmonyPatch]
@@ -145,7 +188,51 @@ namespace CycleTrim.Patches
                     new[] { typeof(float) });
             }
 
-            private static void Postfix() { BumpFetch(); }
+            private static readonly ConditionalWeakTable<FetchManager, Stack<FetchFreshnessChanges>>
+                Pools = new ConditionalWeakTable<FetchManager, Stack<FetchFreshnessChanges>>();
+            private static readonly Action<int> InvalidateWorld = BumpFetch;
+
+            private static void Prefix(FetchManager __instance, out FetchFreshnessChanges __state)
+            {
+                var pool = Pools.GetOrCreateValue(__instance);
+                __state = pool.Count == 0 ? new FetchFreshnessChanges() : pool.Pop();
+                // Vanilla only writes quantized freshness here. Snapshot actual values,
+                // so stopped rot updaters and quantization boundaries match the game.
+                foreach (var group in __instance.prefabIdToFetchables.Values)
+                {
+                    foreach (var entry in group.fetchables.GetDataList())
+                    {
+                        __state.Capture(entry.pickupable, PickupWorld(entry.pickupable),
+                            entry.freshness);
+                    }
+                }
+            }
+
+            private static void Postfix(FetchManager __instance, FetchFreshnessChanges __state)
+            {
+                foreach (var group in __instance.prefabIdToFetchables.Values)
+                {
+                    foreach (var entry in group.fetchables.GetDataList())
+                    {
+                        __state.Compare(entry.pickupable, PickupWorld(entry.pickupable),
+                            entry.freshness);
+                    }
+                }
+                __state.Publish(InvalidateWorld);
+            }
+
+            private static Exception Finalizer(FetchManager __instance,
+                FetchFreshnessChanges __state, Exception __exception)
+            {
+                if (__state != null)
+                {
+                    // Partial writes after an exception have unknown scope.
+                    if (__exception != null) BumpFetch();
+                    __state.Reset();
+                    Pools.GetOrCreateValue(__instance).Push(__state);
+                }
+                return __exception;
+            }
         }
 
         [HarmonyPatch]

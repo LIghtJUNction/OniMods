@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use crate::grid::Grid;
 use crate::radiation::RadiationParams;
 use crate::status::{Error, Result, Status};
@@ -251,13 +252,56 @@ impl PhysicsWorld {
         }
     }
 
+    /// Repair only an exhausted display slot. Species slots are inventories,
+    /// independent of phase and without a fixed species-count limit.
+    pub(crate) fn restore_empty_primary(&mut self, cell: usize) -> bool {
+        if self.write.mass[cell] > 0.0 && self.write.element[cell] != self.vacuum_element {
+            return false;
+        }
+        let mut best = (self.vacuum_element, 0.0);
+        let mut extra_index = None;
+        if self.mixture_mass[cell] > 0.0 {
+            best = (self.mixture_element[cell], self.mixture_mass[cell]);
+        }
+        if let Some(extras) = self.extra_mixtures.get(&cell) {
+            for (index, &(element, mass)) in extras.iter().enumerate() {
+                if mass > best.1 || (mass > 0.0 && mass == best.1 && element < best.0) {
+                    best = (element, mass);
+                    extra_index = Some(index);
+                }
+            }
+        }
+        if best.1 <= 0.0 {
+            return false;
+        }
+        if let Some(index) = extra_index {
+            self.extra_mixtures.get_mut(&cell).unwrap().swap_remove(index);
+        } else {
+            self.mixture_element[cell] = self.vacuum_element;
+            self.mixture_mass[cell] = 0.0;
+        }
+        self.write.element[cell] = best.0;
+        self.write.mass[cell] = best.1;
+        // Old Vacuum/0K snapshots have lost their original thermal state.
+        // Prefer a valid read image, otherwise use an explicit ambient estimate.
+        if !self.write.temperature[cell].is_finite() || self.write.temperature[cell] <= 0.0 {
+            let previous = self.read.temperature[cell];
+            self.write.temperature[cell] = if previous.is_finite() && previous > 0.0 {
+                previous
+            } else {
+                293.15
+            };
+        }
+        true
+    }
+
     pub(crate) fn clear_cell_mixtures(&mut self, cell: usize) {
         self.mixture_mass[cell] = 0.0;
         self.mixture_element[cell] = self.vacuum_element;
         self.extra_mixtures.remove(&cell);
     }
 
-    pub(crate) fn add_species_mass(&mut self, tables: &ElementTable, cell: usize, element: u16, mass: f32) {
+    pub(crate) fn add_species_mass(&mut self, _tables: &ElementTable, cell: usize, element: u16, mass: f32) {
         if mass <= 0.0 || !mass.is_finite() {
             return;
         }
@@ -266,19 +310,12 @@ impl PhysicsWorld {
             self.write.mass[cell] = mass;
             return;
         }
-        let cur_elem = self.write.element[cell];
-        let p_cur = self.element_phase.get(cur_elem as usize).copied().unwrap_or(0);
-        let p_new = self.element_phase.get(element as usize).copied().unwrap_or(0);
-        // 严格物态隔离：气体仅能与气体共存，液体仅能与液体共存；绝不允许气液在单格混合
-        if p_cur != p_new || (p_cur != 1 && p_cur != 2) {
+        // Storage accepts every fluid species. Phase separation and miscibility
+        // belong to the transport model, not inventory insertion.
+        let current_phase = self.element_phase[self.write.element[cell] as usize];
+        let incoming_phase = self.element_phase[element as usize];
+        if current_phase & 3 == 3 || incoming_phase & 3 == 3 {
             return;
-        }
-        if p_cur == 2 {
-            let r_cur = &tables.elements[cur_elem as usize].record;
-            let r_new = &tables.elements[element as usize].record;
-            if !crate::fluid_helpers::are_liquids_miscible(r_cur, r_new) {
-                return;
-            }
         }
         if self.write.element[cell] == element {
             self.write.mass[cell] += mass;
@@ -287,7 +324,11 @@ impl PhysicsWorld {
         if self.mixture_mass[cell] <= 0.0 || self.mixture_element[cell] == self.vacuum_element {
             self.mixture_element[cell] = element;
             self.mixture_mass[cell] = mass;
-            if self.mixture_mass[cell] > self.write.mass[cell] {
+            if (self.element_phase[self.mixture_element[cell] as usize] & 3 == 2
+                && self.element_phase[self.write.element[cell] as usize] & 3 != 2)
+                || (self.element_phase[self.mixture_element[cell] as usize] & 3
+                    == self.element_phase[self.write.element[cell] as usize] & 3
+                    && self.mixture_mass[cell] > self.write.mass[cell]) {
                 let dom_elem = self.mixture_element[cell];
                 let dom_mass = self.mixture_mass[cell];
                 self.mixture_element[cell] = self.write.element[cell];
@@ -299,7 +340,11 @@ impl PhysicsWorld {
         }
         if self.mixture_element[cell] == element {
             self.mixture_mass[cell] += mass;
-            if self.mixture_mass[cell] > self.write.mass[cell] {
+            if (self.element_phase[self.mixture_element[cell] as usize] & 3 == 2
+                && self.element_phase[self.write.element[cell] as usize] & 3 != 2)
+                || (self.element_phase[self.mixture_element[cell] as usize] & 3
+                    == self.element_phase[self.write.element[cell] as usize] & 3
+                    && self.mixture_mass[cell] > self.write.mass[cell]) {
                 let dom_elem = self.mixture_element[cell];
                 let dom_mass = self.mixture_mass[cell];
                 self.mixture_element[cell] = self.write.element[cell];
@@ -319,56 +364,67 @@ impl PhysicsWorld {
     }
 
     pub(crate) fn normalize_cell_mixtures(&mut self, cell: usize) {
-        let mut components = [(0u16, 0.0f32); 16];
-        let mut count = 0;
-        let cur_elem = self.write.element[cell];
-        let cur_phase = self.element_phase.get(cur_elem as usize).copied().unwrap_or(0);
-        if self.write.mass[cell] > 0.0 {
-            components[count] = (cur_elem, self.write.mass[cell]);
-            count += 1;
-        }
-        if self.mixture_mass[cell] > 0.0 && self.mixture_element[cell] != cur_elem {
-            let m_phase = self.element_phase.get(self.mixture_element[cell] as usize).copied().unwrap_or(0);
-            if m_phase == cur_phase {
-                components[count] = (self.mixture_element[cell], self.mixture_mass[cell]);
-                count += 1;
+        // Pure and two-species cells need no scratch allocation or sorting.
+        if !self.extra_mixtures.contains_key(&cell) {
+            if self.write.mass[cell] <= 0.0 {
+                self.restore_empty_primary(cell);
+                return;
             }
+            if self.mixture_mass[cell] <= 0.0 { return; }
+            if self.write.element[cell] == self.mixture_element[cell] {
+                self.write.mass[cell] += self.mixture_mass[cell];
+                self.mixture_mass[cell] = 0.0;
+                self.mixture_element[cell] = self.vacuum_element;
+                return;
+            }
+            let primary_phase = self.element_phase[self.write.element[cell] as usize] & 3;
+            let other_phase = self.element_phase[self.mixture_element[cell] as usize] & 3;
+            if (other_phase == 2 && primary_phase != 2)
+                || (other_phase == primary_phase && self.mixture_mass[cell] > self.write.mass[cell]) {
+                std::mem::swap(&mut self.write.element[cell], &mut self.mixture_element[cell]);
+                std::mem::swap(&mut self.write.mass[cell], &mut self.mixture_mass[cell]);
+            }
+            return;
         }
-        if let Some(extras) = self.extra_mixtures.get(&cell) {
-            for &(elem, mass) in extras {
-                let e_phase = self.element_phase.get(elem as usize).copied().unwrap_or(0);
-                if mass > 0.0 && e_phase == cur_phase && count < 16 && !components[..count].iter().any(|(e, _)| *e == elem) {
-                    components[count] = (elem, mass);
-                    count += 1;
+        let mut components = self.extra_mixtures.remove(&cell).unwrap_or_default();
+        for (element, mass) in [
+            (self.write.element[cell], self.write.mass[cell]),
+            (self.mixture_element[cell], self.mixture_mass[cell]),
+        ] {
+            if mass > 0.0 {
+                if let Some(entry) = components.iter_mut().find(|entry| entry.0 == element) {
+                    entry.1 += mass;
+                } else {
+                    components.push((element, mass));
                 }
             }
         }
-        components[..count].sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        if count == 0 {
-            self.mixture_mass[cell] = 0.0;
-            self.mixture_element[cell] = self.vacuum_element;
-            self.extra_mixtures.remove(&cell);
-        } else if count == 1 {
-            self.write.element[cell] = components[0].0;
-            self.write.mass[cell] = components[0].1;
-            self.mixture_mass[cell] = 0.0;
-            self.mixture_element[cell] = self.vacuum_element;
-            self.extra_mixtures.remove(&cell);
-        } else if count == 2 {
-            self.write.element[cell] = components[0].0;
-            self.write.mass[cell] = components[0].1;
-            self.mixture_element[cell] = components[1].0;
-            self.mixture_mass[cell] = components[1].1;
-            self.extra_mixtures.remove(&cell);
-        } else {
-            self.write.element[cell] = components[0].0;
-            self.write.mass[cell] = components[0].1;
-            self.mixture_element[cell] = components[1].0;
-            self.mixture_mass[cell] = components[1].1;
-            let extras = self.extra_mixtures.entry(cell).or_default();
-            extras.clear();
-            for &(e, m) in &components[2..count] {
-                extras.push((e, m));
+        components.retain(|entry| entry.1 > 0.0);
+        components.sort_unstable_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        self.replace_cell_species(cell, &components);
+    }
+
+    /// Project inventories for the legacy Grid view without dropping a phase
+    /// or imposing a species-count limit. Liquid selects the rendered surface.
+    pub(crate) fn replace_cell_species(&mut self, cell: usize, species: &[(u16, f32)]) {
+        self.clear_cell_mixtures(cell);
+        let display = species.iter().position(|&(id, mass)|
+            mass > 0.0 && self.element_phase[id as usize] & 3 == 2)
+            .or_else(|| species.iter().position(|entry| entry.1 > 0.0));
+        let Some(display) = display else {
+            self.write.element[cell] = self.vacuum_element;
+            self.write.mass[cell] = 0.0;
+            return;
+        };
+        self.write.element[cell] = species[display].0;
+        self.write.mass[cell] = species[display].1;
+        for (index, &(element, mass)) in species.iter().enumerate() {
+            if index == display || mass <= 0.0 { continue; }
+            if self.mixture_mass[cell] <= 0.0 {
+                self.mixture_element[cell] = element;
+                self.mixture_mass[cell] = mass;
+            } else {
+                self.extra_mixtures.entry(cell).or_default().push((element, mass));
             }
         }
     }
@@ -454,51 +510,61 @@ impl PhysicsWorld {
             (grid.width as usize, grid.height as usize),
             (self.width, self.height)
         );
+        if let Some(pool) = crate::parallel::pool(self.width * self.height) {
+            pool.scope(|scope| self.copy_public_fields(grid, Some(scope)));
+        } else {
+            self.copy_public_fields(grid, None);
+        }
+        grid.copy_padded_disease_runtime(&self.write.disease_infestation,
+            &self.write.disease_growth, self.stride);
+    }
+
+    fn copy_public_fields<'scope>(&'scope self, grid: &'scope mut Grid,
+        scope: Option<&rayon::Scope<'scope>>) {
         let public_count = self.width * self.height;
         let padded_count = self.stride * self.padded_height;
-        // GameData owns unpublished, stable destination arrays. Copy one SoA
-        // stream at a time, skipping padded side cells without per-cell /% or
-        // simultaneously interleaving thirteen independent destination streams.
+        // Each task owns an entire SoA destination stream. One scope schedules
+        // all streams together, avoiding a worker wakeup per field.
         macro_rules! copy_rows {
-            ($target:ident, $source:expr) => {
+            ($target:ident, $source:expr) => { copy_rows!($target, $source, true); };
+            ($target:ident, $source:expr, $compare:expr) => {
                 assert_eq!(grid.$target.len(), public_count);
                 assert_eq!($source.len(), padded_count);
-                for (destination, source) in grid
-                    .$target
-                    .chunks_exact_mut(self.width)
-                    .zip($source.chunks_exact(self.stride).skip(1))
-                {
-                    destination.copy_from_slice(&source[1..1 + self.width]);
-                }
+                let destination = &mut grid.$target;
+                let source = &$source;
+                let width = self.width;
+                let stride = self.stride;
+                let mut copy = move || {
+                    for (destination, source) in destination.chunks_exact_mut(width)
+                        .zip(source.chunks_exact(stride).skip(1)) {
+                        let source = &source[1..1 + width];
+                        let bytes = std::mem::size_of_val(source);
+                        // These fields contain initialized POD primitives.
+                        // Compare bytes to preserve NaN payloads and signed zero.
+                        let same = $compare && unsafe {
+                            std::slice::from_raw_parts(destination.as_ptr() as *const u8, bytes)
+                                == std::slice::from_raw_parts(source.as_ptr() as *const u8, bytes)
+                        };
+                        if !same { destination.copy_from_slice(source); }
+                    }
+                };
+                if let Some(scope) = scope { scope.spawn(move |_| copy()); }
+                else { copy(); }
             };
         }
         copy_rows!(element, self.write.element);
-        copy_rows!(temperature, self.write.temperature);
-        copy_rows!(mass, self.write.mass);
+        copy_rows!(temperature, self.write.temperature, false);
+        copy_rows!(mass, self.write.mass, false);
         copy_rows!(properties, self.write.properties);
         copy_rows!(insulation, self.write.insulation);
         copy_rows!(strength, self.write.strength);
         copy_rows!(radiation, self.write.radiation);
-        self.publish_accumulated_flow_to(grid);
+        copy_rows!(accumulated_flow, self.accumulated_flow);
         copy_rows!(disease_idx, self.write.disease_idx);
         copy_rows!(disease_count, self.write.disease_count);
         copy_rows!(backwall_element, self.backwall_element);
         copy_rows!(backwall_mass, self.backwall_mass);
         copy_rows!(backwall_temperature, self.backwall_temperature);
-
-        // Only infestation and growth are published into the packed disease
-        // record. Its other reserved bytes, and both padding arrays, stay intact.
-        for y in 0..self.height {
-            let source = (y + 1) * self.stride + 1;
-            let destination = y * self.width;
-            for x in 0..self.width {
-                grid.set_disease_runtime(
-                    destination + x,
-                    self.write.disease_infestation[source + x],
-                    self.write.disease_growth[source + x],
-                );
-            }
-        }
     }
 
     pub(crate) fn publish_accumulated_flow_to(&self, grid: &mut Grid) {

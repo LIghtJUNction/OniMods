@@ -1,6 +1,6 @@
 use crate::events::EventQueues;
 use crate::fluid_helpers::{
-    add_disease, add_mass, are_liquids_miscible, clear_cell, clear_disease, cvtt, game_index,
+    add_disease, add_mass, are_liquids_miscible, clear_primary, clear_disease, cvtt, game_index,
     liquid_density, notify, phase, smax, smin, swap_material,
 };
 use crate::gas::displace_gas;
@@ -115,7 +115,7 @@ pub(crate) fn displace_liquid_directional(
             disease,
             count,
         );
-        clear_cell(&mut world.write, world.vacuum_element, source);
+        clear_primary(world, source);
         notify(world, events, source);
         return true;
     }
@@ -188,6 +188,11 @@ pub(crate) fn do_liquid_pressure_displacement(
     let temperature = world.write.temperature[a];
     let disease = world.write.disease_idx[a];
     let count = world.write.disease_count[a].max(0) / 8;
+    if world.write.mass[b] > 0.0 && world.write.element[b] != element {
+        let residual = (world.write.element[b], world.write.mass[b]);
+        world.extra_mixtures.entry(b).or_default().push(residual);
+        world.write.mass[b] = 0.0;
+    }
     world.write.mass[b] += amount;
     world.write.temperature[b] = temperature;
     world.write.element[b] = element;
@@ -203,6 +208,9 @@ pub(crate) fn do_liquid_pressure_displacement(
     world.write.disease_count[a] = world.write.disease_count[a].wrapping_sub(count);
     if world.write.disease_count[a] <= 0 {
         clear_disease(&mut world.write, a);
+    }
+    if world.restore_empty_primary(a) {
+        notify(world, events, a);
     }
     amount
 }
@@ -261,7 +269,7 @@ fn spawn_falling(
     true
 }
 
-pub(crate) fn update_liquid(
+fn update_liquid_inner(
     world: &mut PhysicsWorld,
     tables: &ElementTable,
     diseases: &DiseaseTable,
@@ -310,7 +318,7 @@ pub(crate) fn update_liquid(
             }
         } else if tables.elements[down_element as usize].record.state & 2 == 0 {
             if down_element == world.sink_element {
-                clear_cell(&mut world.write, world.vacuum_element, cell);
+                clear_primary(world, cell);
                 notify(world, events, cell);
                 return;
             }
@@ -321,7 +329,7 @@ pub(crate) fn update_liquid(
             if !left_shelf && !right_shelf {
                 swap_material(world, events, cell, down);
             } else if spawn_falling(world, tables, events, cell, cell, remaining, germs) {
-                clear_cell(&mut world.write, world.vacuum_element, cell);
+                clear_primary(world, cell);
                 notify(world, events, cell);
             }
             return;
@@ -437,5 +445,21 @@ pub(crate) fn update_liquid(
             swap_material(world, events, cell, diagonal);
             return;
         }
+    }
+}
+
+// Keep the repair outside the transfer loop so a newly promoted species is not
+// spent using the old primary's read-image flow budget.
+pub(crate) fn update_liquid(
+    world: &mut PhysicsWorld,
+    tables: &ElementTable,
+    diseases: &DiseaseTable,
+    events: &mut EventQueues,
+    cell: usize,
+    pressure_faces: u8,
+) {
+    update_liquid_inner(world, tables, diseases, events, cell, pressure_faces);
+    if world.restore_empty_primary(cell) {
+        notify(world, events, cell);
     }
 }

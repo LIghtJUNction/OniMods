@@ -26,6 +26,7 @@ pub(crate) struct PresentationBuffers {
     material: Box<[u32]>,
     exposed: Box<[u8]>,
     liquid_gradients: liquid::GradientCache,
+    sun_cache: sun::SunCache,
 }
 
 impl PresentationBuffers {
@@ -37,6 +38,7 @@ impl PresentationBuffers {
             material: filled(count, 0)?.into_boxed_slice(),
             exposed: filled(count, 0)?.into_boxed_slice(),
             liquid_gradients: liquid::GradientCache::default(),
+            sun_cache: sun::SunCache::default(),
         })
     }
 
@@ -44,6 +46,39 @@ impl PresentationBuffers {
     /// This never reallocates the arrays whose addresses managed code retains.
     pub(crate) fn update(&mut self, world: &PhysicsWorld, elements: &ElementTable) -> Result<()> {
         self.validate(world, elements)?;
+        #[cfg(test)]
+        if crate::native_chain_tests::BENCHMARK_REFERENCE_KERNELS.load(std::sync::atomic::Ordering::SeqCst) {
+            return self.update_serial(world, elements);
+        }
+        let environment = crate::float_env::FloatEnv::capture();
+        if !environment.masks_all_exceptions() {
+            return self.update_serial(world, elements);
+        }
+        let Some(pool) = crate::parallel::pool(world.width * world.height) else {
+            return self.update_serial(world, elements);
+        };
+        let flow_status = std::sync::OnceLock::new();
+        let flow_image = &mut self.flow;
+        // Keep sunlight/liquid work on the calling thread so libm errno and
+        // its ordering stay local. Only the independent flow image is spawned.
+        let result = pool.in_place_scope(|scope| {
+            let status = &flow_status;
+            scope.spawn(move |_| {
+                let _environment = environment.install();
+                flow::update(flow_image, world.width, world.height,
+                    &world.read.element, &world.write.element,
+                    &world.write.mass, &world.flow);
+                let _ = status.set(crate::float_env::FloatEnv::capture());
+            });
+            sun::update_cached(&mut self.exposed, world, elements, &mut self.sun_cache);
+            liquid::update(&mut self.liquid, &mut self.liquid_data, &mut self.material,
+                &self.exposed, world, elements, &mut self.liquid_gradients)
+        });
+        crate::float_env::FloatEnv::merge_masked_statuses(&[*flow_status.get().unwrap()]);
+        result
+    }
+
+    fn update_serial(&mut self, world: &PhysicsWorld, elements: &ElementTable) -> Result<()> {
         flow::update(
             &mut self.flow,
             world.width,
@@ -53,7 +88,7 @@ impl PresentationBuffers {
             &world.write.mass,
             &world.flow,
         );
-        sun::update(&mut self.exposed, world, elements);
+        sun::update_cached(&mut self.exposed, world, elements, &mut self.sun_cache);
         liquid::update(
             &mut self.liquid,
             &mut self.liquid_data,

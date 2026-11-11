@@ -17,7 +17,7 @@ rtk git submodule update --init tools/OniHarness
 ## 核心测试能力
 
 ### 1. 连通器与任意几何流体模拟测试
-支持测试连通器原理（U形管/连通水槽双室液面高度均化），验证质量严格守恒：
+支持测试连通器原理，验证液面高度和资源变化。
 ```sh
 cd tools/OniHarness
 python3 scripts/u_tube_experiment.py
@@ -30,16 +30,18 @@ dotnet run --project src/OniHarness.Cli -c Release --no-build -- \
   test examples/scenarios/u-tube-communicating-vessels.json
 ```
 
-### 2. 安装 Mod 后测试 Mod
-使用统一的 Mod 测试闭环工具：
-```sh
-cd tools/OniHarness
-# 托管层 C# 逻辑测试（支持动态载入 Mod 程序集）
-python3 scripts/test_mod.py --mod /path/to/MyMod --assembly /path/to/MyMod.Tests.dll
+### 2. Mod 局部迭代
 
-# 无头游戏模式端到端测试
-python3 scripts/test_mod.py --mod /path/to/MyMod --headless
+优先运行相关局部用例并复用构建产物。以下命令在 `tools/OniHarness` 下执行。
+
+```sh
+rtk proxy python3 scripts/test_mod.py --native-project ../../mods/CycleTrim/OniSim/native --suite liquid-unit
+rtk proxy python3 scripts/test_mod.py --native-project ../../mods/CycleTrim/OniSim/native --changed-file src/liquid_transport.rs
+rtk proxy python3 scripts/test_mod.py --mod /path/to/MyMod.dll --assembly /path/to/MyMod.Tests.dll --filter RelevantCase --skip-build
+rtk proxy python3 scripts/verify.py --only local
 ```
+
+原生入口使用 Cargo 增量构建，分别报告构建与用例执行时间。测试组由项目的 `oniharness.json` 定义。`test_mod.py --headless` 当前明确报告未实现实机执行。用户要求仅局部测试时持续保持游戏关闭。
 
 ### 3. 任意形状与建筑地图
 - 支持 `polygonRegions`（多边形区域）、`pointsRegions`（离散点集）、`asciiMap` & `legend`（字符画二维网格矩阵）。

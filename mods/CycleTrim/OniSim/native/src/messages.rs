@@ -206,7 +206,7 @@ pub(crate) fn execute(
         match action {
             Action::Allocate(grid, world, generation)
             | Action::Initialize(grid, world, generation) => {
-                state.grid = Some(grid);
+                state.grid = Some(grid.into());
                 state.world = Some(world);
                 state.shape = state
                     .world

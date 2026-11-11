@@ -441,12 +441,13 @@ fn hydraulic_tests_new_production_liquid_phase_preserves_gas_and_immiscible_inve
         let mut mass = [0.0_f64; 6];
         let mut heat = 0.0;
         for cell in 0..world.write.mass.len() {
-            let element = world.write.element[cell] as usize;
-            let m = f64::from(world.write.mass[cell]);
-            mass[element] += m;
-            heat += m
-                * f64::from(world.write.temperature[cell])
-                * f64::from(table.elements[element].record.specific_heat_capacity);
+            world.for_each_cell_species(cell, |element, amount| {
+                let element = element as usize;
+                let m = f64::from(amount);
+                mass[element] += m;
+                heat += m * f64::from(world.write.temperature[cell])
+                    * f64::from(table.elements[element].record.specific_heat_capacity);
+            });
         }
         (mass, heat)
     };
@@ -814,7 +815,7 @@ fn hydraulic_tests_new_fully_drained_cell_becomes_vacuum() {
 }
 
 #[test]
-fn hydraulic_tests_new_mixed_cell_keeps_legacy_minimum_flow() {
+fn hydraulic_tests_new_mixed_cell_uses_all_species_volume_for_flow() {
     let mut table = elements();
     table.elements[LIQUID as usize].record.id = 1836671383; // Water family for this boundary test.
     let mut dirty = table.elements[LIQUID as usize].clone();
@@ -827,7 +828,18 @@ fn hydraulic_tests_new_mixed_cell_keeps_legacy_minimum_flow() {
     world.mixture_element[mixed] = 4;
     world.mixture_mass[mixed] = 1.0;
     advance(&mut world, &table, 1);
-    assert_eq!(world.write.mass[mixed], 100.05);
-    assert_eq!(world.write.mass[mixed + 1], 100.0);
-    assert_eq!(world.mixture_mass[mixed], 1.0);
+    let mut moved_water = 0.0;
+    let mut moved_dirty = 0.0;
+    world.for_each_cell_species(mixed + 1, |id, amount| {
+        if id == LIQUID { moved_water += amount - 100.0; }
+        if id == 4 { moved_dirty += amount; }
+    });
+    assert!(moved_water > 0.0 && moved_dirty > 0.0);
+    assert!((moved_water / moved_dirty - 100.05).abs() < 0.01,
+        "all liquid species must use one face fraction");
+    let mut total = 0.0;
+    for cell in [mixed, mixed + 1] {
+        world.for_each_cell_species(cell, |_, amount| total += amount);
+    }
+    assert!((total - 201.05).abs() < 0.001);
 }

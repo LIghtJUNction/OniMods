@@ -1,6 +1,6 @@
 //! Official flood traversal: breadth first, down/left/right/up, depth < radius.
 use crate::events::{ConsumedMassInfo, EventQueues};
-use crate::fluid_helpers::{calculate_disease, clear_cell, clear_disease, notify, phase};
+use crate::fluid_helpers::{calculate_disease, clear_primary, clear_disease, notify, phase};
 use crate::numeric::{cvtt_f32_i32, smax, smin};
 use crate::status::Result;
 use crate::tables::{DiseaseTable, ElementTable};
@@ -183,7 +183,7 @@ impl FloodScratch {
                 }
                 // ELF 0xa5980 is 0x00800000, the smallest normal f32.
                 if world.write.mass[cell] <= f32::MIN_POSITIVE {
-                    clear_cell(&mut world.write, world.vacuum_element, cell);
+                    clear_primary(world, cell);
                     notify(world, events, cell);
                 }
             }

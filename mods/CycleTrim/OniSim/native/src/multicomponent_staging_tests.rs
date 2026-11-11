@@ -502,3 +502,42 @@ fn benchmark_gas_staging() {
         );
     }
 }
+
+#[test]
+fn later_liquid_component_clears_partially_packed_gas() {
+    for gpu_available in [false, true] {
+        let (mut world, elements, region) = fixture(8, 8, 2, "bands");
+        let cell = 4 * world.stride + 4;
+        world.extra_mixtures.insert(cell, vec![(5, 0.2), (21, 1.0)]);
+        let mut staging = GasStaging::default();
+        let info = staging.prepare(&mut world, &elements, region, gpu_available, 0).unwrap();
+        let local = (4 - info.min_y) * info.width + 4 - info.min_x;
+        assert_eq!(staging.solid[local], 1);
+        let range = local * info.channels..(local + 1) * info.channels;
+        assert!(staging.mass[range.clone()].iter().all(|&mass| mass == 0.0));
+        if !gpu_available {
+            assert!(staging.enthalpy[range].iter().all(|&energy| energy == 0.0));
+        }
+    }
+}
+
+#[test]
+fn parallel_packing_matches_serial_species_order_and_every_tensor_bit() {
+    for channels in [1, 2, 3, 16] {
+        for pattern in ["mixed", "edge", "walls", "empty"] {
+            let (mut world, elements, region) = fixture(96, 64, channels, pattern);
+            let cell = world.stride * 17 + 23;
+            world.extra_mixtures.insert(cell, vec![(20, 0.25), (19, 0.125), (20, 0.0625)]);
+            let mut serial = GasStaging::default();
+            let mut parallel = GasStaging::default();
+            let a = serial.prepare(&mut world, &elements, region, false, 256);
+            let b = parallel.prepare(&mut world, &elements, region, true, 256);
+            assert_eq!(a.is_some(), b.is_some(), "{channels} {pattern}");
+            assert_eq!(serial.local_elements, parallel.local_elements);
+            assert_eq!(serial.local_channel_of_element, parallel.local_channel_of_element);
+            assert_eq!(serial.solid, parallel.solid);
+            same_floats(&serial.mass, &parallel.mass, "parallel mass");
+            same_floats(&serial.temperature, &parallel.temperature, "parallel temperature");
+        }
+    }
+}

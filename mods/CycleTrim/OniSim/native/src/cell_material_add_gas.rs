@@ -1,6 +1,6 @@
 use crate::events::EventQueues;
 use crate::fluid_displacement::displace_liquid;
-use crate::fluid_helpers::{add_mass, clear_cell, cvtt, notify, phase};
+use crate::fluid_helpers::{add_mass, clear_primary, cvtt, notify, phase};
 use crate::gas::displace_gas;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
@@ -105,6 +105,7 @@ pub(crate) fn add_gas(
         }
     }
     let previous_mass = world.write.mass[cell];
+    let previous_temperature = world.write.temperature[cell];
     // COMISS incoming,previous / JAE: unordered follows subtraction too.
     if !(mass >= previous_mass) {
         world.write.mass[cell] = previous_mass - mass;
@@ -127,7 +128,10 @@ pub(crate) fn add_gas(
     let result = world.write.mass[cell];
     // The zero/unordered diagnostic branch also leads to ClearCell.
     if result.is_nan() || result <= f32::from_bits(0x00800000) {
-        clear_cell(&mut world.write, world.vacuum_element, cell);
+        // Cancellation exhausted the replaced primary. Its residual species
+        // retain the pre-command shared temperature, not the zeroed accumulator.
+        world.write.temperature[cell] = previous_temperature;
+        clear_primary(world, cell);
     }
     notify(world, events, cell);
 }

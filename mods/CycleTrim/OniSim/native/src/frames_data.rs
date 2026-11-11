@@ -8,7 +8,7 @@ use crate::world_cells::filled;
 use std::sync::Arc;
 
 pub(crate) struct GameData {
-    pub(crate) grid: Grid,
+    pub(crate) grid: Arc<Grid>,
     pub(crate) events: EventQueues,
     pub(crate) visible: Vec<u8>,
     pub(crate) presentation: PresentationBuffers,
@@ -27,7 +27,7 @@ impl GameData {
         )?;
         grid.copy_from(previous);
         Ok(Self {
-            grid,
+            grid: Arc::new(grid),
             events: EventQueues::default(),
             visible: filled(previous.len(), 0)?,
             presentation: PresentationBuffers::new(previous.len())?,
@@ -37,11 +37,13 @@ impl GameData {
         })
     }
 
+    pub(crate) const BORROWED_RANGE_COUNT: usize = 31 + 5 + 2 + Grid::STORAGE_RANGE_COUNT;
+
     pub(crate) fn fill_borrowed_ranges(&self, ranges: &mut Vec<(usize, usize)>) {
-        // State reserves all 36 entries at grid allocation, before any worker
-        // starts. Prepare performs no allocation after publishing pointers.
-        assert!(ranges.capacity() >= 36);
+        // State reserves all ranges before the worker starts.
+        assert!(ranges.capacity() >= Self::BORROWED_RANGE_COUNT);
         ranges.clear();
+        ranges.extend_from_slice(&self.grid.storage_ranges());
         ranges.extend_from_slice(&self.events.storage_ranges());
         let lengths = [8, 4, 4, 4, 1];
         for (pointer, size) in self.presentation.pointers().into_iter().zip(lengths) {

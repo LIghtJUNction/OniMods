@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use crate::events::{EventQueues, SpawnFXInfo};
 use crate::fluid_helpers::{clear_disease, cvtt, game_index, notify, phase};
 use crate::status::Result;
@@ -240,4 +241,114 @@ pub(crate) fn cell(
         _ => {}
     }
     Ok(())
+}
+
+fn inert_gas_row(world: &PhysicsWorld, elements: &ElementTable,
+    min_x: usize, max_x: usize, y: usize) -> bool {
+    let start = y * world.stride + min_x;
+    world.write.element[start..start + max_x - min_x].iter()
+        .zip(&world.write.mass[start..start + max_x - min_x])
+        .all(|(&id, &mass)| id == world.vacuum_element
+            || (mass > 1e-6 && elements.elements[id as usize].record.state & 3 == 1))
+}
+
+/// A gas/vacuum rectangle with no reactive solid neighbors has no postprocess
+/// side effects. Confirm this against current cells after components and space
+/// decay, so later changes and adjacent sublimators retain ordered processing.
+pub(crate) fn region(world: &mut PhysicsWorld, elements: &ElementTable,
+    diseases: &DiseaseTable, events: &mut EventQueues, bounds: (usize, usize, usize, usize)) -> Result<()> {
+    let (min_x, max_x, min_y, max_y) = bounds;
+    if min_x >= max_x || min_y >= max_y { return Ok(()); }
+    let vacuum = world.vacuum_element;
+    let environment = crate::float_env::FloatEnv::capture();
+    let inert_row = |y: usize| {
+        let _environment = environment.install();
+        let start = y * world.stride + min_x;
+        world.write.element[start..start + max_x - min_x].iter()
+            .zip(&world.write.mass[start..start + max_x - min_x])
+            .all(|(&id, &mass)| id == vacuum || (mass > 1e-6 && elements.elements[id as usize].record.state & 3 == 1))
+    };
+    let inert = if let Some(pool) = crate::parallel::pool((max_x - min_x) * (max_y - min_y)) {
+        pool.install(|| (min_y..max_y).into_par_iter().with_min_len(8).all(inert_row))
+    } else { (min_y..max_y).all(inert_row) };
+    if inert {
+        let donor = |cell: usize| {
+            let record = &elements.elements[world.write.element[cell] as usize].record;
+            record.state & 3 == 3 && record.sublimate_index != u16::MAX
+        };
+        let horizontal = (min_x..max_x).any(|x|
+            donor((min_y - 1) * world.stride + x) || donor(max_y * world.stride + x));
+        let vertical = (min_y..max_y).any(|y|
+            donor(y * world.stride + min_x - 1) || donor(y * world.stride + max_x));
+        if !horizontal && !vertical { return Ok(()); }
+    }
+    for y in min_y..max_y {
+        // Earlier rows can change this row. Inspect the current state directly
+        // before skipping it, preserving ordered liquid and sublimation work.
+        if inert_gas_row(world, elements, min_x, max_x, y) {
+            let donor = |cell: usize| {
+                let record = &elements.elements[world.write.element[cell] as usize].record;
+                record.state & 3 == 3 && record.sublimate_index != u16::MAX
+            };
+            let adjacent = (min_x..max_x).any(|x|
+                donor((y - 1) * world.stride + x) || donor((y + 1) * world.stride + x)
+                    || donor(y * world.stride + x));
+            if !adjacent && !donor(y * world.stride + min_x - 1)
+                && !donor(y * world.stride + max_x) {
+                continue;
+            }
+        }
+        for x in min_x..max_x {
+            cell(world, elements, diseases, events, y * world.stride + x)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inert_region_skip_preserves_cells_events_rng_and_reactive_halo() {
+        for case in ["gas", "vacuum", "trace", "halo", "mixed"] {
+            let make = || {
+                let (mut state, _) = crate::native_chain_tests::fixture::create(96, 64,
+                    if case == "mixed" { "mixed" } else { "pure" });
+                let mut world = state.world.take().unwrap();
+                world.initialize_boundary();
+                let mut elements = (*state.elements.take().unwrap()).clone();
+                elements.elements[6].record.sublimate_index = 3;
+                elements.elements[6].record.sublimate_probability = 1.0;
+                elements.elements[6].record.sublimate_rate = 0.1;
+                elements.elements[6].record.sublimate_efficiency = 1.0;
+                let source = world.stride * 20 + 20;
+                if case == "vacuum" { world.write.element[source] = world.vacuum_element; }
+                if case == "trace" { world.write.mass[source] = 1e-7; }
+                if case == "halo" {
+                    let source = world.stride * 3 + 20;
+                    world.write.element[source] = 6;
+                    world.write.mass[source] = 5.0;
+                }
+                world.sync_read_from_write();
+                (world, elements, state.diseases.take().unwrap())
+            };
+            let (mut actual, elements, diseases) = make();
+            let (mut expected, _, _) = make();
+            let bounds = (4, 90, 4, 60);
+            let mut actual_events = EventQueues::default();
+            let mut expected_events = EventQueues::default();
+            region(&mut actual, &elements, &diseases, &mut actual_events, bounds).unwrap();
+            for y in bounds.2..bounds.3 { for x in bounds.0..bounds.1 {
+                let cell_index = y * expected.stride + x;
+                cell(&mut expected, &elements, &diseases, &mut expected_events, cell_index).unwrap();
+            }}
+            crate::native_chain_tests::snapshot::assert_equal(case,
+                &crate::native_chain_tests::snapshot::world(&actual),
+                &crate::native_chain_tests::snapshot::world(&expected));
+            crate::native_chain_tests::snapshot::assert_equal(case,
+                &crate::native_chain_tests::snapshot::events(&actual_events),
+                &crate::native_chain_tests::snapshot::events(&expected_events));
+        }
+    }
 }

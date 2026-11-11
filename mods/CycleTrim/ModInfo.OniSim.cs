@@ -29,10 +29,11 @@ namespace CycleTrim
             // the launching shell's environment, so expose the native probe as
             // an explicit diagnostic-only launch argument as well.
             var arguments = Environment.GetCommandLineArgs();
-            bool performanceDiagnostics = CycleTrimPatchOptions.DiagnosticsRequested(
+            bool managedDiagnostics = Array.IndexOf(arguments, "--cycletrim-managed-profile") >= 0;
+            bool performanceDiagnostics = managedDiagnostics || CycleTrimPatchOptions.DiagnosticsRequested(
                 options.EnablePerformanceDiagnostics, arguments,
                 Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));
-            if (performanceDiagnostics || Array.IndexOf(arguments, "--cycletrim-gpu-profile") >= 0)
+            if ((!managedDiagnostics && performanceDiagnostics) || Array.IndexOf(arguments, "--cycletrim-gpu-profile") >= 0)
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
             // Preserve an explicit native diagnostic environment setting.
             // --cycletrim-perf-probe now enables both ends of the frame chain.
@@ -100,6 +101,23 @@ namespace CycleTrim
             {
                 SimulationFrameScheduler.Install(harmony, OniSimLoader.IsFrameReady);
                 Console.WriteLine("[CycleTrim] Native simulation readiness scheduler installed.");
+            }
+            if (!Jlib.Runtime.AnimationBatchCullingCache.Install(harmony))
+                Debug.LogWarning("[CycleTrim] Animation culling cache unavailable: " +
+                    Jlib.Runtime.AnimationBatchCullingCache.LastFailure);
+            else
+                Debug.Log("[CycleTrim] Animation culling cache installed.");
+            if (!Jlib.Runtime.PropertyTextureRevisionCache.Install(harmony))
+                Debug.LogWarning("[CycleTrim] Pressure texture revision cache unavailable: " +
+                    Jlib.Runtime.PropertyTextureRevisionCache.LastFailure);
+            else
+                Debug.Log("[CycleTrim] Pressure texture revision cache installed.");
+            if (CycleTrim.Core.CycleTrimPatchOptions.EnablePerformanceDiagnostics)
+            {
+                Jlib.Runtime.StateMachineBucketTelemetry.Install(harmony);
+                Jlib.Runtime.StateMachineBucketTelemetry.Enabled = true;
+                CycleTrim.Patches.DetailedFrameProbe.Install(harmony);
+                Console.WriteLine("[CycleTrim] State machine bucket diagnostics installed.");
             }
             try
             {

@@ -88,6 +88,7 @@ pub struct ThermalDiffusionGpu {
     temperature_out: wgpu::Buffer,
     current: usize,
     params: wgpu::Buffer,
+    params_value: Cell<Option<[u32; 4]>>,
     readback: wgpu::Buffer,
     width: usize,
     height: usize,
@@ -225,6 +226,7 @@ impl ThermalDiffusionGpu {
             temperature_out,
             current: 0,
             params,
+            params_value: Cell::new(None),
             readback,
             width,
             height,
@@ -514,8 +516,11 @@ impl ThermalDiffusionGpu {
             dt,
             max_transfer_fraction,
         };
-        self.queue
-            .write_buffer(&self.params, 0, bytemuck::bytes_of(&uniform));
+        let value = [uniform.width, uniform.height, uniform.dt.to_bits(), uniform.max_transfer_fraction.to_bits()];
+        if self.params_value.get() != Some(value) {
+            self.queue.write_buffer(&self.params, 0, bytemuck::bytes_of(&uniform));
+            self.params_value.set(Some(value));
+        }
 
         if let Some(expansion)=self.deferred_expansion.as_mut().filter(|p|p.pending) {
             let mut pass=encoder.begin_compute_pass(&Default::default());

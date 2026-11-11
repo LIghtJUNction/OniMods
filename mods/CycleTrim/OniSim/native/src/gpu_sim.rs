@@ -1,6 +1,7 @@
 //! Experimental GPU simulation for the worker. Most operators still pack
 //! CPU-owned state and read results back between stages.
 
+use rayon::prelude::*;
 use std::{collections::VecDeque, sync::Arc};
 use onisim_gpu::{
     disease_diffusion::{ActiveCell as DiffusionActive, Disease as DiffusionDisease, DiseaseDiffusionGpu, DiseaseElement as DiffusionElement, SnapshotCell as DiffusionSnapshot},
@@ -15,6 +16,15 @@ use onisim_gpu::{
 };
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
+#[path = "gpu_gas_cpu.rs"]
+mod gas_cpu;
+
+#[cfg(test)]
+#[path = "gpu_bubble_tests.rs"]
+mod bubble_tests;
+
+#[path = "gpu_thermal_cpu.rs"]
+mod thermal_cpu;
 #[cfg(test)]
 use onisim_gpu::radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult};
 
@@ -22,12 +32,21 @@ pub(crate) struct GpuSimulation {
     pub(crate) context: Arc<GpuContext>,
     pub(crate) thermal: ThermalDiffusionGpu,
     region_map: Vec<u32>,
+    thermal_cpu_groups: Vec<u32>,
+    gas_cpu: Vec<gas_cpu::Workspace>,
+    pub(crate) gas_cpu_regions_preferred: bool,
+    gas_cpu_seen: bool,
+    gas_gpu_seen: bool,
+    #[cfg(test)]
+    thermal_reference: bool,
     region_bounds: Vec<(i32,i32,i32,i32)>,
     thermal_properties: Vec<[u32; 2]>,
     thermal_flags: Vec<u32>,
     region_map_initialized: bool,
     pub(crate) total_steps: u64,
     gas: VecDeque<GasPipeline>,
+    pub(crate) gas_batch_sources: Vec<crate::gas_region_snapshot::GasRegionSnapshot>,
+    pub(crate) gas_batch_staging: Vec<crate::multicomponent_flux::GasStaging>,
     pub(crate) gas_staging: crate::multicomponent_flux::GasStaging,
     liquid_diffusion: VecDeque<MulticomponentGpu>,
     disease_growth: DiseaseGrowthGpu,
@@ -67,6 +86,15 @@ pub(crate) struct GpuSimulation {
     pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
 }
 
+pub(crate) struct GasBatchJob<'a> {
+    pub dimensions: (usize, usize, usize),
+    pub state: State<'a>,
+    pub temperature: &'a [f32],
+    pub conductivity: &'a [f32],
+    pub mass_output: &'a mut [f32],
+    pub temperature_output: &'a mut [f32],
+}
+
 struct GasPipeline {
     transport: MulticomponentGpu,
     thermal: ThermalDiffusionGpu,
@@ -77,6 +105,25 @@ struct GasPipeline {
 pub(crate) struct PendingRadiationRegion {
     pending: PendingRadiation,
     bounds: (usize, usize, usize, usize),
+}
+
+#[inline]
+fn phase_cell(world: &PhysicsWorld, materials: &[PhaseMaterial], i: usize) -> Option<PhaseCell> {
+            let cell = world.read.element[i]; let wall = world.backwall_element[i];
+            let enabled = world.read.mass[i] > 0.0 && world.backwall_mass[i] > 0.0
+                && wall != u16::MAX && wall != world.vacuum_element && cell != world.vacuum_element
+                && wall != world.boundary_element && cell != world.boundary_element;
+            let material = &materials[cell as usize];
+            let temp = world.write.temperature[i];
+            let transition_possible = !(world.write.mass[i] <= 0.0)
+                && ((material.low_target != u16::MAX as u32 && !(material.low_temperature - 3.0 <= temp))
+                    || (material.high_target != u16::MAX as u32 && !(temp <= material.high_temperature + 3.0)));
+            if !enabled && !transition_possible { return None; }
+            Some(PhaseCell { element: u32::from(cell), mass: world.write.mass[i],
+                temperature: world.write.temperature[i], wall_element: u32::from(wall),
+                old_temperature: world.read.temperature[i], old_mass: world.read.mass[i],
+                wall_temperature: world.backwall_temperature[i], wall_mass: world.backwall_mass[i],
+                insulation: u32::from(world.read.insulation[i]), enabled: u32::from(enabled), padding: [0; 2] })
 }
 
 impl GpuSimulation {
@@ -127,6 +174,13 @@ impl GpuSimulation {
             thermal,
             resident,
             region_map: vec![0; cells],
+            thermal_cpu_groups: Vec::new(),
+            gas_cpu: Vec::new(),
+            gas_cpu_regions_preferred: false,
+            gas_cpu_seen: false,
+            gas_gpu_seen: false,
+            #[cfg(test)]
+            thermal_reference: false,
             region_bounds: Vec::new(),
             thermal_properties: Vec::new(),
             thermal_flags: Vec::new(),
@@ -134,6 +188,8 @@ impl GpuSimulation {
             total_steps: 0,
             gas: VecDeque::new(),
             gas_staging: Default::default(),
+            gas_batch_staging: Vec::new(),
+            gas_batch_sources: Vec::new(),
             liquid_diffusion: VecDeque::new(),
             disease_growth,
             disease_cells: Vec::new(),
@@ -184,9 +240,23 @@ impl GpuSimulation {
                 // Match the original unordered comparison: NaNs must not be
                 // treated as empty, even though they are not positive.
                 if masses.iter().all(|&mass| mass <= 0.0) { continue; }
-                lowest = lowest.min(y); highest = highest.max(y);
                 for (offset, &mass) in masses.iter().enumerate() {
-                    if !(mass <= 0.0) { self.bubble_active[block * 64 + offset] = true; }
+                    if mass <= 0.0 { continue; }
+                    let x = block * 64 + offset;
+                    let cell = base + x + 1;
+                    let secondary = table.elements.get(world.mixture_element[cell] as usize)
+                        .ok_or("bubble cell has an invalid secondary element")?.record.state & 3;
+                    let primary = table.elements.get(world.write.element[cell] as usize)
+                        .ok_or("bubble cell has an invalid primary element")?.record.state & 3;
+                    // Match the shader's two passes. Same-phase mixtures can never
+                    // move here and must not trigger full-column GPU transfers.
+                    let rises = primary == 2 && secondary == 1 && y < world.height;
+                    let falls = primary == 1 && secondary == 2 && y > 1
+                        && mass > 0.0 && mass.is_finite();
+                    if rises || falls {
+                        lowest = lowest.min(y); highest = highest.max(y);
+                        self.bubble_active[x] = true;
+                    }
                 }
             }
         }
@@ -240,6 +310,17 @@ impl GpuSimulation {
     /// Reuse transition metadata across steps unless a relevant element field
     /// changes. Comparing actual values also handles tables replaced in place.
     pub(crate) fn begin_step(&mut self, table: &ElementTable) {
+        if self.gas_cpu_seen || self.gas_gpu_seen {
+            let prefer_cpu = self.gas_cpu_seen && !self.gas_gpu_seen;
+            if prefer_cpu && !self.gas_cpu_regions_preferred {
+                // Immediate host work needs no speculative source snapshots.
+                self.gas_batch_sources.clear();
+                self.gas_batch_staging.clear();
+            }
+            self.gas_cpu_regions_preferred = prefer_cpu;
+        }
+        self.gas_cpu_seen = false;
+        self.gas_gpu_seen = false;
         self.disease_metadata_ready = false;
         let key = |r: &crate::tables::ElementRecord| [
             r.id as u32, u32::from(r.low_transition), u32::from(r.high_transition),
@@ -526,29 +607,30 @@ impl GpuSimulation {
     }
 
     pub(crate) fn transition_region(&mut self, world: &mut PhysicsWorld, table: &ElementTable,
-        events: &mut crate::events::EventQueues, region: crate::world::Region) -> Result<(), String> {
+        events: &mut crate::events::EventQueues, region: crate::world::Region) -> Result<bool, String> {
         self.phase_cells.clear();
         self.phase_indices.clear();
+        let work = ((region.max_x - region.min_x).max(0) as usize)
+            .saturating_mul((region.max_y - region.min_y).max(0) as usize);
+        if let Some(pool) = crate::parallel::pool(work) {
+            let environment = crate::float_env::FloatEnv::capture();
+            let materials = &self.phase_materials;
+            let possible = pool.install(|| (region.min_y..region.max_y).into_par_iter()
+                .with_min_len(8).any(|y| {
+                    let _environment = environment.install();
+                    (region.min_x..region.max_x).any(|x|
+                        phase_cell(world, materials, y as usize * world.stride + x as usize).is_some())
+                }));
+            if !possible { return Ok(false); }
+        }
         for y in region.min_y..region.max_y { for x in region.min_x..region.max_x {
             let i = y as usize * world.stride + x as usize;
-            let cell = world.read.element[i]; let wall = world.backwall_element[i];
-            let enabled = world.read.mass[i] > 0.0 && world.backwall_mass[i] > 0.0
-                && wall != u16::MAX && wall != world.vacuum_element && cell != world.vacuum_element
-                && wall != world.boundary_element && cell != world.boundary_element;
-            let material = &self.phase_materials[cell as usize];
-            let temp = world.write.temperature[i];
-            let transition_possible = !(world.write.mass[i] <= 0.0)
-                && ((material.low_target != u16::MAX as u32 && !(material.low_temperature - 3.0 <= temp))
-                    || (material.high_target != u16::MAX as u32 && !(temp <= material.high_temperature + 3.0)));
-            if !enabled && !transition_possible { continue; }
-            self.phase_indices.push(i);
-            self.phase_cells.push(PhaseCell { element: u32::from(cell), mass: world.write.mass[i],
-                temperature: world.write.temperature[i], wall_element: u32::from(wall),
-                old_temperature: world.read.temperature[i], old_mass: world.read.mass[i],
-                wall_temperature: world.backwall_temperature[i], wall_mass: world.backwall_mass[i],
-                insulation: u32::from(world.read.insulation[i]), enabled: u32::from(enabled), padding: [0; 2] });
+            if let Some(cell) = phase_cell(world, &self.phase_materials, i) {
+                self.phase_indices.push(i);
+                self.phase_cells.push(cell);
+            }
         }}
-        if self.phase_cells.is_empty() { return Ok(()); }
+        if self.phase_cells.is_empty() { return Ok(false); }
         self.phase_decisions.resize(self.phase_cells.len(), PhaseDecision { target_id: 65535, ore: 65535, conversion: 0.0, temperature: 0.0,
             wall_temperature: 0.0, wall_changed: 0, wall_transition: 0, cell_temperature: 0.0 });
         self.phase_transition.select(&self.phase_cells, &self.phase_materials, &mut self.phase_decisions)?;
@@ -567,7 +649,8 @@ impl GpuSimulation {
                     result.ore as u16, result.conversion, result.temperature);
             }
         }
-        Ok(())
+        Ok(self.phase_decisions.iter().any(|result|
+            result.wall_changed != 0 || result.target_id != u16::MAX as u32))
     }
 
     pub(crate) fn diffuse_diseases(&mut self, world: &mut PhysicsWorld, elements: &ElementTable,
@@ -625,6 +708,34 @@ impl GpuSimulation {
         }
         self.disease_cells.clear();
         self.disease_growth_indices.clear();
+        let work = (max_x - min_x).saturating_mul(max_y - min_y);
+        if let Some(pool) = crate::parallel::pool(work) {
+            let clean = pool.install(|| (min_y..max_y).into_par_iter().with_min_len(8).all(|y| {
+                let range = y * world.stride + min_x..y * world.stride + max_x;
+                world.write.disease_idx[range.clone()].iter().all(|&id| id == u8::MAX)
+                    && world.write.disease_count[range.clone()].iter().all(|&count| count == 0)
+                    && world.write.disease_infestation[range.clone()].iter().all(|&value| value == 1)
+                    && world.write.disease_growth[range].iter().all(|value| value.to_bits() == 0)
+            }));
+            if clean { return Ok(()); }
+        }
+        // Gas projection can reset clean cells' infestation to zero. Their
+        // growth result is still just cleanup, even with nonzero stale growth.
+        // Avoid packing and dispatching the whole rectangle for that cleanup.
+        let inactive_row = |y: usize| {
+            let range = y * world.stride + min_x..y * world.stride + max_x;
+            world.write.disease_idx[range.clone()].iter().all(|&id| id == u8::MAX)
+                && world.write.disease_count[range].iter().all(|&count| count < 1)
+        };
+        let inactive = if let Some(pool) = crate::parallel::pool(work) {
+            pool.install(|| (min_y..max_y).into_par_iter().with_min_len(8).all(inactive_row))
+        } else {
+            (min_y..max_y).all(inactive_row)
+        };
+        if inactive {
+            return crate::disease::post_process_bounds(world, table, min_x, max_x, min_y, max_y)
+                .map_err(|error| error.message);
+        }
         for y in min_y..max_y {
             let range = y * world.stride + min_x..y * world.stride + max_x;
             if world.write.disease_idx[range.clone()].iter().all(|&id| id == u8::MAX)
@@ -716,6 +827,87 @@ impl GpuSimulation {
         Ok(pending)
     }
 
+    /// Independent worlds retain separate uniforms and ping-pong buffers even
+    /// when their dimensions match. All kernels and copies share one submission.
+    pub(crate) fn step_gas_batch(&mut self, jobs: &mut [GasBatchJob<'_>], diffuse: bool, dt: f32) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        if self.try_cpu_gas(jobs, diffuse, dt)? { return Ok(()); }
+        self.gas_gpu_seen = true;
+        let mut pipelines = Vec::with_capacity(jobs.len());
+        for job in jobs.iter() {
+            let (width, height, channels) = job.dimensions;
+            let pipeline = if let Some(index) = self.gas.iter().position(|p| p.transport.dimensions() == job.dimensions) {
+                self.gas.remove(index).ok_or("GPU gas cache entry disappeared")?
+            } else {
+                GasPipeline {
+                    transport: onisim_gpu::pollster::block_on(MulticomponentGpu::new_with_context(self.context.clone(), width, height, channels))?,
+                    thermal: onisim_gpu::pollster::block_on(ThermalDiffusionGpu::new_with_context(self.context.clone(), width, height))?,
+                    enthalpy: ThermalEnthalpyGpu::new(self.context.clone()),
+                }
+            };
+            pipelines.push(pipeline);
+        }
+        let started = std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some().then(std::time::Instant::now);
+        let result = (|| {
+            let context = &self.context;
+            let environment = crate::float_env::FloatEnv::capture();
+            let encode = |(job, pipeline): (&GasBatchJob<'_>, &mut GasPipeline)| {
+                let _environment = environment.install();
+                let mut encoder = context.command_encoder();
+                let (width, height, channels) = job.dimensions;
+                let cells = width * height;
+                pipeline.transport.upload_for_temperature(&job.state, job.temperature)?;
+                pipeline.thermal.upload_temperature(job.temperature)?;
+                pipeline.enthalpy.encode(&mut encoder, cells, channels, pipeline.thermal.temperature_buffer(),
+                    pipeline.transport.current_mass_buffer(), pipeline.transport.species_heat_buffer(),
+                    pipeline.transport.current_enthalpy_buffer())?;
+                pipeline.transport.encode_diffuse_and_generate_density_velocity(&mut encoder, diffuse && channels > 1)?;
+                pipeline.enthalpy.encode_conductivity(&mut encoder, cells, channels, pipeline.transport.current_mass_buffer(),
+                    job.conductivity, pipeline.thermal.conductivity_buffer())?;
+                pipeline.transport.encode_bounded_resident(&mut encoder, dt)?;
+                let (temperature, total_mass, heat_capacity) = pipeline.thermal.state_buffers();
+                pipeline.enthalpy.encode_prepare(&mut encoder, cells, channels, pipeline.transport.current_mass_buffer(),
+                    pipeline.transport.current_enthalpy_buffer(), pipeline.transport.species_heat_buffer(),
+                    temperature, total_mass, heat_capacity)?;
+                pipeline.thermal.encode_resident(&mut encoder, dt * 4.0, 0.25)?;
+                Ok::<_, String>(encoder.finish())
+            };
+            let work = jobs.iter().map(|job| job.dimensions.0 * job.dimensions.1).sum();
+            let commands = if let Some(pool) = crate::parallel::pool(work) {
+                pool.install(|| jobs.par_iter().zip(pipelines.par_iter_mut()).map(encode).collect::<Result<Vec<_>, _>>())?
+            } else {
+                jobs.iter().zip(pipelines.iter_mut()).map(encode).collect::<Result<Vec<_>, _>>()?
+            };
+            let encoder = context.command_encoder();
+            let encoded = started.map(|t| t.elapsed().as_secs_f64() * 1000.0);
+            let mut readbacks: Vec<_> = jobs.iter_mut().zip(&mut pipelines).map(|(job, pipeline)|
+                onisim_gpu::multicomponent::MassTemperatureReadback {
+                    operator: &mut pipeline.transport,
+                    temperature: pipeline.thermal.temperature_buffer(),
+                    mass_output: job.mass_output,
+                    temperature_output: job.temperature_output,
+                }).collect();
+            let result = MulticomponentGpu::readback_mass_and_temperature_commands_after(commands, encoder, &mut readbacks);
+            if let (Some(started), Some(encoded)) = (started, encoded) {
+                eprintln!("[CycleTrim OniSim] gas chain encode={encoded:.3}ms submit_wait_readback={:.3}ms",
+                    started.elapsed().as_secs_f64() * 1000.0 - encoded);
+            }
+            result
+        })();
+        // Never retain an incomplete encoded chain after an upload/submit error.
+        if result.is_ok() {
+            for pipeline in pipelines.into_iter().rev() { self.gas.push_front(pipeline); }
+            let estimate = |p: &GasPipeline| {
+                let (w,h,c) = p.transport.dimensions();
+                w.saturating_mul(h).saturating_mul(c.saturating_mul(24).saturating_add(128))
+            };
+            while self.gas.len() > 1 && (self.gas.len() > 8 || self.gas.iter().map(estimate).sum::<usize>() > 96 * 1024 * 1024) {
+                self.gas.pop_back();
+            }
+        }
+        result
+    }
+
     /// Project and transport a gas region using shared device buffers. The
     /// surrounding simulation still needs the final tensors on the CPU.
     pub(crate) fn step_gas(
@@ -762,6 +954,18 @@ impl GpuSimulation {
         let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
             && SAMPLE.fetch_add(1,std::sync::atomic::Ordering::Relaxed) % 61 == 0;
         let started = std::time::Instant::now();
+        if sparse.is_none() && projected_output.is_none() {
+            let mut jobs = [GasBatchJob {
+                dimensions: (width, height, channels),
+                state: State { mass: state.mass, enthalpy: state.enthalpy,
+                    velocity_x: state.velocity_x, velocity_y: state.velocity_y,
+                    solid: state.solid, species: state.species },
+                temperature, conductivity: species_conductivity,
+                mass_output, temperature_output,
+            }];
+            if self.try_cpu_gas(&mut jobs, diffuse, dt)? { return Ok(true); }
+        }
+        self.gas_gpu_seen = true;
         if let Some(index) = self.gas.iter().position(|p| p.transport.dimensions() == (width, height, channels)) {
             let pipeline = self.gas.remove(index).ok_or("GPU gas cache entry disappeared")?;
             self.gas.push_front(pipeline);
@@ -858,14 +1062,6 @@ impl GpuSimulation {
             return Err("grid dimension mismatch".into());
         }
 
-        self.thermal_properties.clear();
-        self.thermal_properties.extend(elements.elements.iter().map(|element| {
-            [element.record.thermal_conductivity.to_bits(), element.record.specific_heat_capacity.to_bits()]
-        }));
-        self.thermal.prepare_materials_by_element(&world.read.element, &self.thermal_properties)?;
-        static LOG_MATERIAL:std::sync::Once=std::sync::Once::new();
-        LOG_MATERIAL.call_once(||eprintln!("[CycleTrim OniSim] GPU thermal material lookup enabled ({count} cells)"));
-        self.thermal.upload_state(&world.read.temperature, &world.read.mass)?;
         let bounds_changed = self.region_bounds.len() != world.regions.len()
             || self.region_bounds.iter().zip(&world.regions).any(|(old, r)| *old != (r.min_x,r.min_y,r.max_x,r.max_y));
         if !self.region_map_initialized || bounds_changed {
@@ -884,11 +1080,30 @@ impl GpuSimulation {
         self.region_bounds.extend(world.regions.iter().map(|r|(r.min_x,r.min_y,r.max_x,r.max_y)));
         self.region_map_initialized=true;
         }
+        #[cfg(test)]
+        let use_cpu_thermal = !self.thermal_reference;
+        #[cfg(not(test))]
+        let use_cpu_thermal = true;
+        if use_cpu_thermal && thermal_cpu::try_step(world, elements, &self.region_map, &mut self.thermal_cpu_groups, dt) {
+            if profiling {
+                eprintln!("[CycleTrim OniSim] CPU sparse-face thermal profile cells={count} wall={:.3}ms",
+                    started.elapsed().as_secs_f64() * 1000.0);
+            }
+            self.total_steps += 1;
+            return Ok(());
+        }
+        self.thermal_properties.clear();
+        self.thermal_properties.extend(elements.elements.iter().map(|element| {
+            [element.record.thermal_conductivity.to_bits(), element.record.specific_heat_capacity.to_bits()]
+        }));
+        self.thermal.prepare_materials_by_element(&world.read.element, &self.thermal_properties)?;
+        static LOG_MATERIAL:std::sync::Once=std::sync::Once::new();
+        LOG_MATERIAL.call_once(||eprintln!("[CycleTrim OniSim] GPU thermal material lookup enabled ({count} cells)"));
+        self.thermal.upload_state(&world.read.temperature, &world.read.mass)?;
         self.thermal_flags.clear();
         self.thermal_flags.extend((0..elements.len().max(world.gas_channel_of_element.len())).map(|id| {
-            let mapped=world.gas_channel_of_element.get(id).is_some_and(|&c|c!=u8::MAX);
-            let primary=mapped && elements.elements.get(id).is_some_and(|e|e.record.state&3==1);
-            u32::from(primary) | (u32::from(mapped)<<1)
+            let gas = elements.elements.get(id).is_some_and(|e| e.record.state & 3 == 1);
+            u32::from(gas) * 3
         }));
         self.thermal.prepare_deferred_groups_on_gpu(&world.mixture_element,&world.mixture_mass,&world.read.properties,&self.region_map,&self.thermal_flags)?;
         let prepared = started.elapsed();
@@ -1182,6 +1397,7 @@ mod material_range_tests {
         assert_eq!(world.gas_channel_count,8);
         assert_eq!(multicomponent_flux::region_gas_species_up_to_three(&world,&elements,region),2);
         let mut gpu=GpuSimulation::new(world.stride,world.padded_height).unwrap();
+        gpu.thermal_reference = true;
         let mut events=EventQueues::default();
         assert!(multicomponent_flux::step_region(&mut world,&elements,&mut events,region,Some(&mut gpu),true).unwrap());
         assert_eq!(gpu.gas.front().unwrap().transport.dimensions(), (5, 3, 2));
@@ -1429,6 +1645,7 @@ mod material_range_tests {
         use super::GpuSimulation;
         use onisim_gpu::multicomponent::{SpeciesInfo, State};
         let mut gpu = GpuSimulation::new(5, 4).unwrap();
+        gpu.thermal_reference = true;
         let species = [SpeciesInfo { element_id: 1, phase: 1, specific_heat_capacity: 1.0, vertical_drift: 0.0 }];
         for (width, height) in [(4, 3), (5, 4), (6, 5), (7, 6), (4, 3), (5, 4), (6, 5), (7, 6)] {
             let cells = width * height;
@@ -1447,6 +1664,68 @@ mod material_range_tests {
             assert!(out_temperature.iter().all(|t| (*t - 300.0).abs() < 1e-4));
         }
         assert_eq!(gpu.gas.len(), 4);
+    }
+
+    #[test]
+    #[ignore = "manual paired eight-world GPU timing"]
+    fn profile_eight_world_gas_batch() {
+        use super::{GpuSimulation, GasBatchJob};
+        use onisim_gpu::multicomponent::{SpeciesInfo, State};
+        struct Input {
+            shape: (usize, usize, usize), mass: Vec<f32>, temperature: Vec<f32>,
+            solid: Vec<u32>, species: Vec<SpeciesInfo>, conductivity: Vec<f32>,
+        }
+        let inputs: Vec<_> = [(32,32,1), (64,96,5), (80,174,2), (128,153,7),
+            (160,274,6), (32,32,1), (64,127,2), (32,32,1)].into_iter().enumerate().map(|(index, shape)| {
+            let (w,h,c) = shape;
+            let mut mass = vec![0.0; w*h*c];
+            for cell in 0..w*h {
+                if cell % 97 != 0 { mass[cell*c + cell%c] = if cell%w < w/2 { 2.0 + index as f32 } else { 0.1 }; }
+            }
+            Input { shape, mass, temperature: vec![280.0 + index as f32 * 10.0; w*h],
+                solid: (0..w*h).map(|cell| u32::from(cell % 97 == 0)).collect(),
+                species: (0..c).map(|i| SpeciesInfo { element_id: i as u16 + 1, phase: 1,
+                    specific_heat_capacity: 1.0 + i as f32 * 0.1, vertical_drift: 0.0 }).collect(),
+                conductivity: vec![1.0; c] }
+        }).collect();
+        let mut gpu = GpuSimulation::new(160, 274).unwrap();
+        let mut serial: Vec<_> = inputs.iter().map(|i| (vec![0.0; i.mass.len()], vec![0.0; i.temperature.len()])).collect();
+        let mut batched = serial.clone();
+        let mut serial_times = Vec::new();
+        let mut batch_times = Vec::new();
+        for iteration in 0..110 {
+            for batch in if iteration % 2 == 0 { [false, true] } else { [true, false] } {
+                let started = std::time::Instant::now();
+                if batch {
+                    let mut jobs: Vec<_> = inputs.iter().zip(&mut batched).map(|(input, (mass_output, temperature_output))| GasBatchJob {
+                        dimensions: input.shape,
+                        state: State { mass: &input.mass, enthalpy: &[], velocity_x: &[], velocity_y: &[], solid: &input.solid, species: &input.species },
+                        temperature: &input.temperature, conductivity: &input.conductivity, mass_output, temperature_output,
+                    }).collect();
+                    gpu.step_gas_batch(&mut jobs, true, 0.05).unwrap();
+                } else {
+                    for (input, (mass, temperature)) in inputs.iter().zip(&mut serial) {
+                        let (w,h,c) = input.shape;
+                        let state = State { mass: &input.mass, enthalpy: &[], velocity_x: &[], velocity_y: &[], solid: &input.solid, species: &input.species };
+                        gpu.step_gas(w,h,c,&state,&input.temperature,&input.conductivity,true,0.05,mass,temperature).unwrap();
+                    }
+                }
+                if iteration >= 10 {
+                    if batch { batch_times.push(started.elapsed().as_secs_f64()*1000.0); }
+                    else { serial_times.push(started.elapsed().as_secs_f64()*1000.0); }
+                }
+            }
+            for (index, (a,b)) in serial.iter().zip(&batched).enumerate() {
+                assert!(a.0 == b.0 && a.1 == b.1, "batch output mismatch in world {index}");
+            }
+        }
+        let wins = serial_times.iter().zip(&batch_times).filter(|(a,b)| b < a).count();
+        println!("EIGHT_WORLD_GAS_PAIRS,batch_faster={wins}/100");
+        for (label, mut times) in [("serial", serial_times), ("batch", batch_times)] {
+            times.sort_by(f64::total_cmp);
+            println!("EIGHT_WORLD_GAS,{label},median_ms={:.6},min_ms={:.6},max_ms={:.6}",
+                (times[49]+times[50])*0.5,times[0],times[99]);
+        }
     }
 
     #[test]
@@ -1515,6 +1794,7 @@ mod material_range_tests {
         if gas_count > 8 { assert_eq!(world.gas_channel_of_element[11], u8::MAX); }
         let region = Region { min_x:1, min_y:1, max_x:52, max_y:3, ..Default::default() };
         let mut gpu = GpuSimulation::new(world.stride, world.padded_height).unwrap();
+        gpu.thermal_reference = true;
         let mut events = EventQueues::default();
         assert!(multicomponent_flux::step_region(&mut world, &elements, &mut events, region, Some(&mut gpu), false).unwrap());
         assert_eq!(gpu.gas.front().unwrap().transport.dimensions(), (51, 2, gas_count));

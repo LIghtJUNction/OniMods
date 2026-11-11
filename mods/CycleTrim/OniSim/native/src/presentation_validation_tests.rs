@@ -200,3 +200,79 @@ fn benchmark_validation() {
         );
     }
 }
+
+
+
+#[test]
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+fn parallel_images_preserve_pixels_float_status_and_caller_errno() {
+    fn csr() -> u32 {
+        let mut value = 0;
+        unsafe {
+            std::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut value, options(nostack, preserves_flags));
+        }
+        value
+    }
+    fn install(value: u32) {
+        unsafe {
+            std::arch::asm!("ldmxcsr [{p}]", p = in(reg) &value, options(nostack, preserves_flags));
+        }
+    }
+    unsafe extern "C" {
+        fn __errno_location() -> *mut i32;
+    }
+    let _restore = crate::float_env::FloatEnv::capture().install();
+    let saved = csr();
+    let (mut state, _) = crate::native_chain_tests::fixture::create(96, 97, "mixed");
+    let mut world = state.world.take().unwrap();
+    let elements = state.elements.take().unwrap();
+    world.initialize_boundary();
+    // Pool discovery performs one-time filesystem queries. Compare rendering
+    // effects with the same already initialized pool on both paths.
+    assert!(crate::parallel::pool(world.width * world.height).is_some());
+    for (index, flow) in world.flow.iter_mut().enumerate() {
+        *flow = [index as f32 * 0.1, 0.3, 0.7, 0.2];
+    }
+    world.flow[world.stride * 40 + 20][0] = f32::from_bits(0x7f80_0123);
+    for rounding in 0..4 {
+        let mode = ((saved | 0x1f80) & !(0x6000 | 0x3f)) | (rounding << 13);
+        let mut expected = PresentationBuffers::new(world.width * world.height).unwrap();
+        let mut actual = PresentationBuffers::new(world.width * world.height).unwrap();
+        for _ in 0..3 {
+            install(mode);
+            unsafe {
+                *__errno_location() = 37;
+            }
+            expected.update_serial(&world, &elements).unwrap();
+            let expected_csr = csr();
+            let expected_errno = unsafe { *__errno_location() };
+            install(mode);
+            unsafe {
+                *__errno_location() = 37;
+            }
+            actual.update(&world, &elements).unwrap();
+            let actual_csr = csr();
+            let actual_errno = unsafe { *__errno_location() };
+            assert_eq!(actual_csr, expected_csr);
+            assert_eq!(actual_errno, expected_errno);
+            assert_eq!(
+                actual
+                    .flow
+                    .iter()
+                    .flatten()
+                    .map(|v| v.to_bits())
+                    .collect::<Vec<_>>(),
+                expected
+                    .flow
+                    .iter()
+                    .flatten()
+                    .map(|v| v.to_bits())
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(actual.liquid, expected.liquid);
+            assert_eq!(actual.liquid_data, expected.liquid_data);
+            assert_eq!(actual.material, expected.material);
+            assert_eq!(actual.exposed, expected.exposed);
+        }
+    }
+}

@@ -2,6 +2,7 @@
 //! each region; only allocation capacity survives a timestep.
 
 use super::*;
+use rayon::prelude::*;
 
 #[derive(Default)]
 pub(crate) struct GasStaging {
@@ -120,10 +121,47 @@ fn pack_sparse_region(
     any_mixture
 }
 
+fn pack_dense_gpu_cell(world: &PhysicsWorld, elements: &ElementTable, channels: &[usize],
+    cell: usize, mass: &mut [f32], temperature: &mut f32, solid: &mut u32) -> bool {
+    mass.fill(0.0);
+    *temperature = world.write.temperature[cell].max(1.0);
+    let phase = elements.elements[world.write.element[cell] as usize].record.state & 3;
+    let mut blocked = world.write.properties[cell] & 1 != 0 || (phase != 1 && world.write.mass[cell] > 0.0);
+    let mut present = false;
+    if !blocked {
+        world.for_each_cell_species(cell, |id, amount| {
+            if amount > 0.0 {
+                let channel = channels.get(id as usize).copied().unwrap_or(usize::MAX);
+                if channel == usize::MAX { blocked = true; }
+                else { mass[channel] += amount; present = true; }
+            }
+        });
+    }
+    *solid = u32::from(blocked);
+    if blocked { mass.fill(0.0); }
+    present && !blocked
+}
+
 impl GasStaging {
     pub(super) fn prepare(
         &mut self,
         world: &mut PhysicsWorld,
+        elements: &ElementTable,
+        region: Region,
+        gpu_available: bool,
+        minimum_gpu_cells: usize,
+    ) -> Option<GasRegion> {
+        if world.gas_channel_count == 0 {
+            rebuild_gas_channels(world, elements);
+        }
+        self.prepare_snapshot(world, elements, region, gpu_available, minimum_gpu_cells)
+    }
+
+    /// Pack an immutable world snapshot. Independent regions can be prepared
+    /// concurrently, with each task owning its staging vectors exclusively.
+    pub(super) fn prepare_snapshot(
+        &mut self,
+        world: &PhysicsWorld,
         elements: &ElementTable,
         region: Region,
         gpu_available: bool,
@@ -152,9 +190,6 @@ impl GasStaging {
             next_temperature,
             projected,
         } = self;
-        if world.gas_channel_count == 0 {
-            rebuild_gas_channels(world, elements);
-        }
         let channels = world.gas_channel_count;
         if channels == 0 {
             return None;
@@ -177,15 +212,48 @@ impl GasStaging {
         // Inventory every species equally. Storage slots are only a Grid adapter.
         reset(local_channel_of_element, elements.elements.len(), usize::MAX);
         local_elements.clear();
-        for y in min_y..max_y { for x in min_x..max_x {
-            world.for_each_cell_species(y * world.stride + x, |id, mass| {
-                if mass > 0.0 && mass.is_finite() && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1)
-                    && local_channel_of_element[id as usize] == usize::MAX {
-                    local_channel_of_element[id as usize] = local_elements.len();
-                    local_elements.push(id);
-                }
-            });
-        }}
+        let pool = gpu_available.then(|| crate::parallel::pool(count)).flatten();
+        if let Some(pool) = pool {
+            let environment = crate::float_env::FloatEnv::capture();
+            let absent = (usize::MAX, usize::MAX);
+            let first = pool.install(|| (0..height.div_ceil(8)).into_par_iter()
+                .fold(|| vec![absent; elements.len()], |mut first, chunk| {
+                    let _environment = environment.install();
+                    for y in chunk * 8..((chunk + 1) * 8).min(height) {
+                        for x in 0..width {
+                            let mut component = 0;
+                            world.for_each_cell_species((min_y + y) * world.stride + min_x + x, |id, amount| {
+                                if amount > 0.0 && amount.is_finite()
+                                    && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1) {
+                                    first[id as usize] = first[id as usize].min((y * width + x, component));
+                                }
+                                component += 1;
+                            });
+                        }
+                    }
+                    first
+                }).reduce(|| vec![absent; elements.len()], |mut a, b| {
+                    for (a, b) in a.iter_mut().zip(b) { *a = (*a).min(b); }
+                    a
+                }));
+            let mut present: Vec<_> = first.into_iter().enumerate()
+                .filter(|&(_, position)| position != absent).collect();
+            present.sort_unstable_by_key(|&(_, position)| position);
+            local_elements.extend(present.into_iter().map(|(id, _)| id as u16));
+            for (channel, &id) in local_elements.iter().enumerate() {
+                local_channel_of_element[id as usize] = channel;
+            }
+        } else {
+            for y in min_y..max_y { for x in min_x..max_x {
+                world.for_each_cell_species(y * world.stride + x, |id, mass| {
+                    if mass > 0.0 && mass.is_finite() && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1)
+                        && local_channel_of_element[id as usize] == usize::MAX {
+                        local_channel_of_element[id as usize] = local_elements.len();
+                        local_elements.push(id);
+                    }
+                });
+            }}
+        }
         let channels = local_elements.len();
         if channels == 0 { return None; }
         let local_projection = false;
@@ -196,7 +264,8 @@ impl GasStaging {
         sparse_cells.resize(if sparse { count } else { 0 }, Default::default());
         masks.resize(if sparse { count } else { 0 }, 0);
         let mut any_mixture = false;
-        reset(mass, if sparse { 0 } else { count * channels }, 0.0);
+        if use_gpu && pool.is_some() { mass.resize(count * channels, 0.0); }
+        else { reset(mass, if sparse { 0 } else { count * channels }, 0.0); }
         enthalpy.resize(if use_gpu { 0 } else { count * channels }, 0.0);
         temperature.resize(if sparse { 0 } else { count }, 1.0);
         solid.resize(count, 0);
@@ -240,6 +309,23 @@ impl GasStaging {
                 masks,
                 solid,
             );
+        } else if let Some(pool) = pool.filter(|_| use_gpu) {
+            let rows = width * 8;
+            let environment = crate::float_env::FloatEnv::capture();
+            any_mixture = pool.install(|| mass.par_chunks_mut(rows * channels)
+                .zip(temperature.par_chunks_mut(rows)).zip(solid.par_chunks_mut(rows))
+                .enumerate().map(|(chunk, ((packed_mass, temperature), solid))| {
+                    let _environment = environment.install();
+                    let mut any = false;
+                    for (local, ((mass, temperature), solid)) in packed_mass.chunks_mut(channels)
+                        .zip(temperature).zip(solid).enumerate() {
+                        let index = chunk * rows + local;
+                        let cell = (min_y + index / width) * world.stride + min_x + index % width;
+                        any |= pack_dense_gpu_cell(world, elements, local_channel_of_element,
+                            cell, mass, temperature, solid);
+                    }
+                    any
+                }).reduce(|| false, |a, b| a || b));
         } else {
             for y in 0..height {
                 for x in 0..width {
@@ -258,21 +344,30 @@ impl GasStaging {
                     // cell with an unmapped phase/component as a wall for this pass;
                     // projecting a partial tensor would otherwise delete its mass.
                     let mut blocked = impermeable || (phase != 1 && world.write.mass[cell] > 0.0);
-                    world.for_each_cell_species(cell, |id, amount| {
-                        if amount > 0.0 && local_channel_of_element.get(id as usize).copied().unwrap_or(usize::MAX) == usize::MAX { blocked = true; }
-                    });
+                    let base = local * channels;
+                    let mut has_mass = false;
+                    if !blocked {
+                        world.for_each_cell_species(cell, |id, amount| {
+                            if amount > 0.0 {
+                                let channel = local_channel_of_element.get(id as usize)
+                                    .copied().unwrap_or(usize::MAX);
+                                if channel == usize::MAX {
+                                    blocked = true;
+                                } else {
+                                    mass[base + channel] += amount;
+                                    has_mass = true;
+                                }
+                            }
+                        });
+                    }
                     solid[local] = u32::from(blocked);
                     if blocked {
-                        if !use_gpu { enthalpy[local * channels..(local + 1) * channels].fill(0.0); }
+                        // A later component may make the whole cell impermeable.
+                        mass[base..base + channels].fill(0.0);
+                        if !use_gpu { enthalpy[base..base + channels].fill(0.0); }
                         continue;
                     }
-                    let base = local * channels;
-                    world.for_each_cell_species(cell, |id, amount| {
-                        if amount > 0.0 {
-                            mass[base + local_channel_of_element[id as usize]] += amount;
-                            any_mixture = true;
-                        }
-                    });
+                    any_mixture |= has_mass;
                     if !use_gpu {
                         for channel in 0..channels {
                             let m = mass[base + channel].max(0.0);
@@ -284,17 +379,16 @@ impl GasStaging {
             }
         }
 
-        if !mass.iter().any(|&value| value > 0.0) { return None; }
+        // Even a pure gas region needs its deferred gas-to-gas thermal faces.
+        if !any_mixture {
+            return None;
+        }
         if !use_gpu {
             density_gradient_velocities(
                 mass, solid, width, height, channels, velocity_x, velocity_y,
             );
         }
 
-        // Even a pure gas region needs its deferred gas-to-gas thermal faces.
-        if !any_mixture {
-            return None;
-        }
         // Successful transport overwrites every output element before use.
         // Keep existing storage; newly grown elements alone need initialization.
         let packed_gpu = false;

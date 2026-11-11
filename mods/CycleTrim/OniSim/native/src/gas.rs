@@ -133,8 +133,24 @@ pub(crate) fn diffuse_region(world: &mut PhysicsWorld, tables: &ElementTable, ev
         }
         return;
     }
+    let row_open = |y: usize| gpu_solid.is_some_and(|mask| {
+        gpu_width >= 2 && gpu_height >= 2 && y < gpu_max_y
+            && mask.len() == gpu_width * gpu_height
+            && mask[(y - min_y) * gpu_width..(y - min_y + 1) * gpu_width]
+                .iter().all(|&value| value == 0)
+    });
+    #[cfg(test)]
+    let skip_rows = !crate::native_chain_tests::BENCHMARK_REFERENCE_KERNELS
+        .load(std::sync::atomic::Ordering::SeqCst);
+    #[cfg(not(test))]
+    let skip_rows = true;
     for y in min_y..max_y {
-        for x in min_x..max_x {
+        // Open adjacent rows have no unhandled interior gas edges. Preserve
+        // the existing ordered fallback along the right and bottom strips.
+        let start_x = if skip_rows && row_open(y) && row_open(y + 1) {
+            gpu_max_x.saturating_sub(1).max(min_x)
+        } else { min_x };
+        for x in start_x..max_x {
             let cell = y * world.stride + x;
             let eligible = |ax: usize, ay: usize, bx: usize, by: usize| {
                 let phase = phase(tables, world.write.element[ay * world.stride + ax]);

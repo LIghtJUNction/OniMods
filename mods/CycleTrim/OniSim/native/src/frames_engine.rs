@@ -26,6 +26,7 @@ pub(crate) struct Engine {
     pub(crate) radiation: RadiationEmitters,
     pub(crate) residual_time: f32,
     pub(crate) gpu: Option<crate::gpu_sim::GpuSimulation>,
+    pub(crate) game_element_events_only: bool,
     // Both GameData buffers must have seen the same unchanged world before
     // their derived presentation can be reused on alternating idle batches.
     empty_publication_streak: u8,
@@ -65,6 +66,7 @@ impl Engine {
             radiation,
             residual_time: 0.0,
             gpu,
+            game_element_events_only: false,
             empty_publication_streak: 0,
             idle_frames_previous: false,
             publication_profile: [0; 4],
@@ -135,7 +137,8 @@ impl Engine {
         }
         // Only sampled diagnostic batches read the clock. Simulation wall time
         // includes GPU waits; publication stages below operate on CPU storage.
-        let mut profile_mark = profile_batch.then(std::time::Instant::now);
+        let batch_started = profile_batch.then(std::time::Instant::now);
+        let mut profile_mark = batch_started;
         let mut lap = || match profile_mark.as_mut() {
             Some(start) => {
                 let now = std::time::Instant::now();
@@ -185,7 +188,7 @@ impl Engine {
         output.events.clear();
         output
             .events
-            .track_grid_changes(self.world.width * self.world.height);
+            .defer_grid_changes(self.world.width * self.world.height);
         // Step clears flow once before all ProcessNextFrame calls, including
         // when no game frames are available. Substeps never clear these flows.
         self.world.flow.fill([0.0; 4]);
@@ -243,44 +246,97 @@ impl Engine {
         self.mass
             .publish_emitted_mass(&mut output.events, self.world.vacuum_element)?;
         output.events.consolidate_spawn_ore();
-        output
-            .events
-            .resolve_grid_changes(&old.grid, &self.world, &self.elements)?;
-        if reuse_derived {
-            // Both alternating buffers already contain the unchanged world.
-            // Accumulated flow still follows the publication-count reset below.
-            self.world.publish_accumulated_flow_to(&mut output.grid);
-        } else {
-            self.world.publish_to(&mut output.grid);
-        }
-        // +0x58 is copied to GameData before its global periodic reset. Empty
-        // and zero-elapsed batches advance this counter exactly like Step.
+        output.multicomponent_unchanged = reuse_derived;
+        let world = &self.world;
+        let events = &mut output.events;
+        let grid = Arc::make_mut(&mut output.grid);
+        let elements = &self.elements;
+        let presentation = &mut output.presentation;
+        let multicomponent = &mut output.multicomponent;
+        let pool = crate::parallel::pool(world.width * world.height);
+        let environment = crate::float_env::FloatEnv::capture();
+        let game_element_events_only = self.game_element_events_only;
+        let publish_grid = || {
+            let started = profile_batch.then(std::time::Instant::now);
+            let resolve = || -> Result<()> {
+                events.resolve_grid_changes(&old.grid, world, elements)?;
+                if game_element_events_only {
+                    let before = events.substance_change_info.len();
+                    // Game.StepTheSim uses this list only to refresh Grid.Element.
+                    // Mass/temperature are already exposed through the bound arrays.
+                    events.substance_change_info.retain(|event|
+                        event.old_elem_idx != event.new_elem_idx);
+                    if profile_batch {
+                        eprintln!("[CycleTrim OniSim] game element events before={before} after={}",
+                            events.substance_change_info.len());
+                    }
+                }
+                Ok(())
+            };
+            let publish = || {
+                if reuse_derived { world.publish_accumulated_flow_to(grid); }
+                else { world.publish_to(grid); }
+            };
+            let result = if let Some(pool) = pool {
+                pool.install(|| rayon::join(resolve, publish)).0
+            } else {
+                let mut resolve = resolve;
+                let mut publish = publish;
+                let result = resolve();
+                if result.is_ok() { publish(); }
+                result
+            };
+            (result, started.map_or(0.0, |t| t.elapsed().as_secs_f64() * 1000.0))
+        };
+        let publish_derived = || {
+            if reuse_derived { return (Ok(()), 0.0, 0.0, 0.0); }
+            let started = profile_batch.then(std::time::Instant::now);
+            let textures = || {
+                let _environment = environment.install();
+                let started = profile_batch.then(std::time::Instant::now);
+                let result = presentation.update(world, elements);
+                (result, started.map_or(0.0, |t| t.elapsed().as_secs_f64() * 1000.0))
+            };
+            let species = || {
+                let _environment = environment.install();
+                let started = profile_batch.then(std::time::Instant::now);
+                // The authoritative world is frozen for this publication.
+                // Species records need no intermediate Grid copy.
+                Arc::make_mut(multicomponent).update_from_simulation(elements, world);
+                started.map_or(0.0, |t| t.elapsed().as_secs_f64() * 1000.0)
+            };
+            let ((result, textures_ms), species_ms) = if let Some(pool) = pool {
+                pool.install(|| rayon::join(textures, species))
+            } else {
+                let mut textures = textures;
+                let mut species = species;
+                (textures(), species())
+            };
+            (result, textures_ms, species_ms,
+                started.map_or(0.0, |t| t.elapsed().as_secs_f64() * 1000.0))
+        };
+        let ((grid_result, grid_ms), (derived_result, textures_ms, species_ms, derived_ms)) =
+            if let Some(pool) = pool {
+                pool.install(|| rayon::join(publish_grid, publish_derived))
+            } else {
+                let mut publish_grid = publish_grid;
+                let mut publish_derived = publish_derived;
+                (publish_grid(), publish_derived())
+            };
+        grid_result?;
+        derived_result?;
+        let publication_ms = lap();
+        // The accumulated-flow view is copied before its process-global reset.
         if ACCUMULATED_FLOW_PUBLICATIONS
-            .try_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
-                Some((count + 1) % 15)
-            })
-            .is_ok_and(|previous| previous == 14)
-        {
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |count| Some((count + 1) % 15))
+            .is_ok_and(|previous| previous == 14) {
             self.world.accumulated_flow.fill(0.0);
         }
-        let grid_ms = lap();
-        if !reuse_derived {
-            output.presentation.update(&self.world, &self.elements)?;
-        }
-        let textures_ms = lap();
-        output.multicomponent_unchanged = reuse_derived;
-        if !reuse_derived {
-            std::sync::Arc::make_mut(&mut output.multicomponent).update_from_world(
-                &output.grid,
-                &self.elements,
-                &self.world,
-            );
-        }
-        let species_ms = lap();
-        output.grid.set_num_frames(frame_count);
-        output.events.publish_to(&mut output.grid)?;
+        let grid = Arc::make_mut(&mut output.grid);
+        grid.set_num_frames(frame_count);
+        output.events.publish_to(grid)?;
         for (index, pointer) in output.presentation.pointers().into_iter().enumerate() {
-            output.grid.set_texture_pointer(index, pointer);
+            grid.set_texture_pointer(index, pointer);
         }
         // Prepare writes incoming visibility into the other, old GameData via
         // ReadyLease::release_with. The native Step swaps output's existing
@@ -289,10 +345,10 @@ impl Engine {
         if unchanged_batch { self.empty_publication_streak = self.empty_publication_streak.saturating_add(1); }
         if profile_batch {
             let finalize_ms = lap();
-            let total_ms = simulation_ms + grid_ms + textures_ms + species_ms + finalize_ms;
+            let total_ms = batch_started.unwrap().elapsed().as_secs_f64() * 1000.0;
             let gpu_active = self.gpu.is_some();
             let species_reused = if reuse_derived { output.grid.len() } else { output.multicomponent.reused_cells };
-            eprintln!("[CycleTrim OniSim] batch profile frames={frame_count} gpu_active={gpu_active} reuse_derived={reuse_derived} simulation_wall={simulation_ms:.3}ms grid_publish_wall={grid_ms:.3}ms textures_wall={textures_ms:.3}ms species_publish_wall={species_ms:.3}ms finalize_wall={finalize_ms:.3}ms measured_wall={total_ms:.3}ms species_reused_cells={species_reused}");
+            eprintln!("[CycleTrim OniSim] batch profile frames={frame_count} gpu_active={gpu_active} reuse_derived={reuse_derived} simulation_wall={simulation_ms:.3}ms grid_publish_wall={grid_ms:.3}ms textures_wall={textures_ms:.3}ms species_publish_wall={species_ms:.3}ms derived_wall={derived_ms:.3}ms publication_wall={publication_ms:.3}ms finalize_wall={finalize_ms:.3}ms measured_wall={total_ms:.3}ms species_reused_cells={species_reused}");
         }
         Ok(())
     }

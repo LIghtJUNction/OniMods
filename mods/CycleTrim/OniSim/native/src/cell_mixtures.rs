@@ -68,6 +68,19 @@ impl CellMixtures {
         Some(value)
     }
 
+    pub(crate) fn retain(&mut self, mut keep: impl FnMut(&usize, &mut Components) -> bool) {
+        let mut index = 0;
+        while index < self.entries.len() {
+            let (cell, components) = &mut self.entries[index];
+            if keep(cell, components) {
+                index += 1;
+            } else {
+                let cell = *cell;
+                self.remove(&cell);
+            }
+        }
+    }
+
     pub(crate) fn entry(&mut self, cell: usize) -> Entry<'_> {
         Entry { map: self, cell }
     }
@@ -156,6 +169,9 @@ mod tests {
                 }
             }
         }
+        indexed.retain(|&cell, values| { values.push((77, 0.5)); cell % 3 != 0 });
+        reference.retain(|&cell, values| { values.push((77, 0.5)); cell % 3 != 0 });
+        for cell in 0..257 { assert_eq!(indexed.get(&cell), reference.get(&cell)); }
         let mut keys = indexed.keys().copied().collect::<Vec<_>>();
         keys.sort_unstable();
         let mut expected = reference.keys().copied().collect::<Vec<_>>();

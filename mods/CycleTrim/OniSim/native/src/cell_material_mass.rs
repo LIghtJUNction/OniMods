@@ -5,7 +5,7 @@ use crate::events::{
     MassEmittedCallback, SpawnOreInfo,
 };
 use crate::fluid_displacement::displace_liquid;
-use crate::fluid_helpers::{add_disease, clear_cell, game_index, notify, phase};
+use crate::fluid_helpers::{add_disease, clear_primary, game_index, notify, phase};
 use crate::gas::displace_gas;
 use crate::mass_components::FloodScratch;
 use crate::numeric::smin;
@@ -216,7 +216,7 @@ impl PendingCommands {
                         .push(BackwallElementChangedInfo { game_cell });
                 }
             } else {
-                clear_cell(&mut world.write, world.vacuum_element, cell);
+                clear_primary(world, cell);
             }
             notify(world, events, cell);
         }

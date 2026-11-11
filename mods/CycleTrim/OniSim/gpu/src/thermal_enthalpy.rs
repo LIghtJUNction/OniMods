@@ -2,7 +2,7 @@
 //! Caller must supply a thermally equilibrated cell temperature and matching
 //! species masses/capacities; this does not implement phase transitions.
 use crate::gpu_context::GpuContext;
-use std::sync::Arc;
+use std::{cell::Cell, sync::Arc};
 
 const SHADER: &str = r#"
 struct Params { cells:u32, channels:u32, pad0:u32, pad1:u32 };
@@ -85,7 +85,7 @@ fn cached_group<'a>(cache: &'a mut Vec<CachedGroup>, device: &wgpu::Device,
     &cache[index].group
 }
 
-pub struct ThermalEnthalpyGpu { context: Arc<GpuContext>, pipeline: wgpu::ComputePipeline, prepare_pipeline: wgpu::ComputePipeline, conductivity_pipeline: wgpu::ComputePipeline, params: wgpu::Buffer, conductivity_species: Option<wgpu::Buffer>, conductivity_bits: Vec<u32>, conductivity_groups: Vec<CachedGroup>, prepare_groups: Vec<CachedGroup>, enthalpy_groups: Vec<CachedGroup> }
+pub struct ThermalEnthalpyGpu { context: Arc<GpuContext>, pipeline: wgpu::ComputePipeline, prepare_pipeline: wgpu::ComputePipeline, conductivity_pipeline: wgpu::ComputePipeline, params: wgpu::Buffer, params_value: Cell<Option<[u32; 4]>>, conductivity_species: Option<wgpu::Buffer>, conductivity_bits: Vec<u32>, conductivity_groups: Vec<CachedGroup>, prepare_groups: Vec<CachedGroup>, enthalpy_groups: Vec<CachedGroup> }
 impl ThermalEnthalpyGpu {
     pub fn new(context: Arc<GpuContext>) -> Self {
         let shader = context.device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -106,8 +106,16 @@ impl ThermalEnthalpyGpu {
         let params = context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("thermal mixture parameters"), size: 16,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
-        Self { context, pipeline, prepare_pipeline, conductivity_pipeline, params, conductivity_species: None, conductivity_bits: Vec::new(), conductivity_groups:Vec::new(), prepare_groups:Vec::new(), enthalpy_groups:Vec::new() }
+        Self { context, pipeline, prepare_pipeline, conductivity_pipeline, params, params_value: Cell::new(None), conductivity_species: None, conductivity_bits: Vec::new(), conductivity_groups:Vec::new(), prepare_groups:Vec::new(), enthalpy_groups:Vec::new() }
     }
+    fn prepare_params(&self, cells: usize, channels: usize) {
+        let value = [cells as u32, channels as u32, 0, 0];
+        if self.params_value.get() != Some(value) {
+            self.context.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&value));
+            self.params_value.set(Some(value));
+        }
+    }
+
     pub fn conductivity(&mut self, cells: usize, channels: usize, mass: &wgpu::Buffer,
                         species: &[f32], output: &wgpu::Buffer) -> Result<(), String> {
         let mut encoder=self.context.device.create_command_encoder(&Default::default());
@@ -137,7 +145,7 @@ impl ThermalEnthalpyGpu {
             self.conductivity_bits = species.iter().map(|value| value.to_bits()).collect();
             self.context.queue.write_buffer(species_buffer, 0, bytemuck::cast_slice(&self.conductivity_bits));
         }
-        self.context.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[cells as u32, channels as u32, 0, 0]));
+        self.prepare_params(cells, channels);
         let buffers = [mass, species_buffer, output, &self.params];
         let group=cached_group(&mut self.conductivity_groups,device,&self.conductivity_pipeline,&buffers);
         { let mut pass=encoder.begin_compute_pass(&Default::default()); pass.set_pipeline(&self.conductivity_pipeline);
@@ -165,7 +173,7 @@ impl ThermalEnthalpyGpu {
             cells.div_ceil(64) > self.context.device.limits().max_compute_workgroups_per_dimension as usize {
             return Err("invalid thermal mixture dimensions or buffers".into());
         }
-        self.context.queue.write_buffer(&self.params,0,bytemuck::cast_slice(&[cells as u32,channels as u32,0,0]));
+        self.prepare_params(cells, channels);
         let buffers=[species_mass,species_enthalpy,species_heat,temperature,mass,heat,&self.params];
         let group=cached_group(&mut self.prepare_groups,&self.context.device,&self.prepare_pipeline,&buffers);
         { let mut pass=encoder.begin_compute_pass(&Default::default());
@@ -190,7 +198,7 @@ impl ThermalEnthalpyGpu {
            values.div_ceil(64) > self.context.device.limits().max_compute_workgroups_per_dimension as usize {
             return Err("invalid thermal enthalpy dimensions or buffers".into());
         }
-        self.context.queue.write_buffer(&self.params, 0, bytemuck::cast_slice(&[cells as u32, channels as u32, 0, 0]));
+        self.prepare_params(cells, channels);
         let resources = [temperature, mass, heat, enthalpy, &self.params];
         let group=cached_group(&mut self.enthalpy_groups,&self.context.device,&self.pipeline,&resources);
         { let mut pass = encoder.begin_compute_pass(&Default::default());

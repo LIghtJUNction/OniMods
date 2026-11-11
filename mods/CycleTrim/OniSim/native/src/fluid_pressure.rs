@@ -7,7 +7,7 @@
 //! fluid.rs. Covered internal faces must not also run the explicit flow rule.
 
 use crate::events::EventQueues;
-use crate::fluid_helpers::{add_disease, clear_cell, clear_disease, notify};
+use crate::fluid_helpers::{add_disease, clear_primary, clear_disease, notify};
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{PhysicsWorld, Region};
 
@@ -303,7 +303,8 @@ impl PressureScratch {
                 clear_disease(&mut world.write, node.cell);
             }
             if world.write.mass[node.cell] == 0.0 {
-                clear_cell(&mut world.write, world.vacuum_element, node.cell);
+                world.write.temperature[node.cell] = node.temperature as f32;
+                clear_primary(world, node.cell);
             }
         }
         for face in &self.faces {

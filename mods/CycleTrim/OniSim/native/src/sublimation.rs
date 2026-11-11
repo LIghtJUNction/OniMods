@@ -40,13 +40,9 @@ fn consume_neighbor(
     cell: usize,
     neighbor: usize,
     source_element: u16,
+    neighbor_record: &ElementRecord,
 ) -> bool {
     let current_id = world.write.element[cell];
-    let neighbor_id = world.write.element[neighbor];
-    let neighbor_record = rec(elements, neighbor_id);
-    if neighbor_record.state & 3 != 3 || neighbor_record.sublimate_index == u16::MAX {
-        return false;
-    }
     let random = f32::from(world.next_random()) * RANDOM_SCALE;
     if !(random <= neighbor_record.sublimate_probability) {
         return false;
@@ -186,6 +182,8 @@ pub(crate) fn apply_with_source(
     ];
     let mut changed = false;
     for neighbor in neighbors {
+        let record = rec(elements, world.write.element[neighbor]);
+        if record.state & 3 != 3 || record.sublimate_index == u16::MAX { continue; }
         changed |= consume_neighbor(
             world,
             elements,
@@ -194,6 +192,7 @@ pub(crate) fn apply_with_source(
             cell,
             neighbor,
             source_element,
+            record,
         );
     }
     changed

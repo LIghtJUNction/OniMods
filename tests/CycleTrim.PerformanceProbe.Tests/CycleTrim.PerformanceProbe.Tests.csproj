@@ -22,6 +22,7 @@
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
     <Compile Include="../../mods/CycleTrim/Core/WorldInvalidationVersions.cs" Link="WorldInvalidationVersions.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/FetchFreshnessChanges.cs" Link="FetchFreshnessChanges.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentTypes.cs" Link="Jlib/MulticomponentTypes.cs" />
     <Compile Include="../../mods/Jlib/Jlib/Multicomponent/MulticomponentCellAccess.cs" Link="Jlib/MulticomponentCellAccess.cs" />
