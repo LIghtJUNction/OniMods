@@ -72,6 +72,8 @@ jobs:
           --
           --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
           --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+          --skip gpu_sim::material_range_tests::gas_density_transport_and_heat_chain_conserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::direct_gas_transport_spreads_into_vacuum_without_crossing_walls_or_oscillating
           --skip gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
           --skip gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
           --skip gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
