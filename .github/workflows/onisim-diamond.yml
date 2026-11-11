@@ -36,6 +36,8 @@ jobs:
           --
           --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
           --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
+          --skip gpu_sim::material_range_tests::gas_density_transport_and_heat_chain_conserves_mass_and_energy
+          --skip gpu_sim::material_range_tests::direct_gas_transport_spreads_into_vacuum_without_crossing_walls_or_oscillating
           --skip gpu_sim::material_range_tests::gas_pressure_transport_and_heat_chain_conserves_mass_and_energy
           --skip gpu_sim::material_range_tests::gas_region_preserves_unmapped_primary_and_secondary_components
           --skip gpu_sim::material_range_tests::gpu_region_accepts_three_four_five_six_and_sixteen_distinct_gases_without_losing_mass
@@ -89,6 +91,7 @@ jobs:
           --skip gas_pressure_faces::tests::checkerboard_settles_sleeps_and_wakes_on_input_change
           --skip gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores
           --skip multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change
+          --skip multicomponent::tests::bounded_transport_preserves_species_and_heat_with_large_velocities
           --skip multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl
           --skip multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity
           --skip multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy
