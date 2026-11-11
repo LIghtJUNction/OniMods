@@ -89,3 +89,40 @@ Local timing evidence is in `async-test/gas-chain-{before,bounded,direct}.log`, 
 ## Next acceptance step
 
 Keep the game closed until the user resumes testing. Load `throughput-0415-acceptance-20261110.sav`, whose input SHA-256 is `a58963ba5195996e701f2123a2f84bdda874f18a92071c4b66aefc3ce3c38067`, through Steam/OniMcp. Repeat the previous normal/full-map 1x and full-map 3x windows with the same warm-up, camera, normal rendering and bounded pause/resume loop. Measure complete native batches and simulation seconds per wall second alongside rendered FPS. Inspect the new same-step region breakdown to identify the next dominant phase. The previous 125.259 ms simulation / 131.614 ms batch and 1.27x actual advancement are the relevant initial-candidate comparison; local gas/radiation gains alone do not establish the complete result.
+
+## 2026-11-11 runtime acceptance
+
+The user resumed testing. Installed CycleTrim files matched the previous deployment receipt, and the loaded Jlib logged version 0.3.5. Steam launched the graphical client with normal every-frame rendering at 1220x1521. OniMcp loaded the unchanged input copy, verified fifteen duplicants and pause, and set the previous world/camera coordinates. Eight wall seconds at 1x preceded the measurement sequence. Each running window used the harness deadline and OniMcp pause/resume controls.
+
+| Scene | Running telemetry window, seconds | Render FPS | Simulation seconds / wall second |
+|---|---:|---:|---:|
+| Normal view, 1x | 9.209 | 28.78 | 1.004 |
+| Full map, 1x | 9.571 | 14.42 | 0.980 |
+| Full map, 3x | 9.067 | 12.57 | 1.096 |
+| Full map, paused | 6.139 | 29.65 | 0 |
+| Full map, 3x repeat | 9.301 | 16.56 | 1.411 |
+| Full map, 3x during attempted CPU sampling | 11.172 | 12.17 | 1.248 |
+
+Performance acceptance remains failed. Requested 3x operation advanced around 1.10–1.41 simulation seconds per wall second. The first full-map 3x window included a 798 ms state-machine sub-tick call and increments in all three GC counters. The repeat recorded no GC collections. Host paging continued, including 5,432 main-thread major faults in the repeat control interval, and much heavier faults during the last window. These conditions limit comparison with the previous day's measurements.
+
+One active full-map 3x native batch measured 116.301 ms simulation and 127.502 ms total, including 2.154 ms grid publication, 3.490 ms textures and 5.555 ms species publication. Four fully captured steps, each containing all eight region profiles, gave these mean phase times:
+
+| Phase | Mean ms per fixed step |
+|---|---:|
+| Regional gas transport, including staging, GPU work/readback and CPU application | 50.794 |
+| Global preparation and thermal work | 20.467 |
+| Liquid flow and synchronization | 13.762 |
+| Disease diffusion | 9.667 |
+| Regional diffusion and synchronization | 3.678 |
+| Disease growth | 3.117 |
+| Temperature/phase processing and synchronization | 2.164 |
+| Cell postprocessing | 2.112 |
+| Building/component updates | 2.029 |
+| Environmental radiation | 1.947 |
+| Radiation emitters | 0.718 |
+
+These are wall-clock stage timings. The global preparation figure includes bubble handling, snapshot synchronization and gas-channel refresh as well as thermal work. In the repeat's approximately twelve-second control interval, the main thread accumulated 10.32 CPU seconds, the native physics thread 5.98, and Unity's graphics-device thread 5.37. Function-level recording failed with performance-event access errors for both hardware cycles and software `cpu-clock:u`. Task-clock counting succeeded. No function-level sample report was obtained.
+
+The gas pipeline already encodes a region's diffusion, velocity, bounded transport and heat in one submission. Regions still run through a serial host loop with individual readbacks. Cross-region batching remains an implementation task. Independent regions can share a submission/readback batch, with per-region offsets and species metadata. Thermal, phase, transport and disease stages require their data dependencies to be represented inside that GPU computation graph. CPU-owned liquid/building operations and publication currently introduce additional host boundaries.
+
+Evidence is under `.cache/cycletrim-acceptance-20261111/`, including live tool schemas, launch/load receipts, telemetry, frame-chain windows, the complete-region phase summary, thread counters and failed perf logs. The paused screenshot was inspected. OniMcp then quit the test client without saving, and the process was verified absent. The input save hash remained unchanged. The resource guard did not trigger. Source implementation was unchanged during this acceptance run.
