@@ -5,6 +5,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>7.3</LangVersion>
+    <DefineConstants>$(DefineConstants);PERFORMANCE_PROBE_HOST_TESTS</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NuGetAudit>false</NuGetAudit>
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>

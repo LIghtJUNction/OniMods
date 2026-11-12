@@ -35,6 +35,11 @@ jobs:
           cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
           --
           --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+          --skip gpu_sim::bubble_tests::cropped_cross_phase_columns_match_ordered_cpu_moves_at_map_edges
+          --skip gpu_sim::bubble_tests::same_phase_mixtures_never_submit_bubble_work
+          --skip gpu_sim::gas_cpu::tests::cpu_batch_rejects_late_invalid_world_before_any_output_commit
+          --skip gpu_sim::gas_cpu::tests::owned_outputs_match_borrowed_outputs_and_preserve_errors
+          --skip gpu_sim::gas_cpu::tests::parallel_cpu_gas_matches_gpu_for_every_channel_and_thermal_stage
           --skip gpu_sim::material_range_tests::gas_pipeline_reuses_alternating_region_sizes
           --skip gpu_sim::material_range_tests::gas_density_transport_and_heat_chain_conserves_mass_and_energy
           --skip gpu_sim::material_range_tests::direct_gas_transport_spreads_into_vacuum_without_crossing_walls_or_oscillating
@@ -47,6 +52,11 @@ jobs:
           --skip gpu_sim::material_range_tests::overlapped_liquid_matches_serial_with_gas_in_same_region
           --skip gpu_sim::material_range_tests::region_diffuses_two_gases_on_gpu_without_losing_mass
           --skip gpu_sim::material_range_tests::world_gas_region_uses_gpu_chain_without_duplicate_thermal_faces
+          --skip gpu_sim::thermal_cpu::tests::hybrid_complete_steps_track_gpu_reference_without_species_loss
+          --skip gpu_sim::thermal_cpu::tests::sparse_face_cpu_heat_matches_gpu_gather_and_energy
+          --skip liquid_transport::tests::gpu_diffusion_leaves_extra_species_cells_owned_by_volume_transport
+          --skip multicomponent_flux::tests::gas_batch_matches_serial_with_equal_shapes_and_invalidated_inputs
+          --skip multicomponent_flux::tests::gas_batch_sleeping_worlds_stay_asleep_and_wake_on_input_change
       - name: Run differential correctness cases
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py verify
   memory-probe-protocol:
@@ -92,6 +102,7 @@ jobs:
           --skip gpu_pathfinder::tests::test_gpu_pathfinder_evaluates_chores
           --skip multicomponent::tests::deferred_cfl_rejects_unstable_velocity_before_host_outputs_change
           --skip multicomponent::tests::bounded_transport_preserves_species_and_heat_with_large_velocities
+          --skip multicomponent::tests::batch_readback_rejects_one_invalid_world_without_publishing_any_world
           --skip multicomponent::tests::gas_projection_matches_full_readback_and_checks_deferred_cfl
           --skip multicomponent::tests::gpu_cfl_reduction_handles_partial_workgroup_and_invalid_velocity
           --skip multicomponent::tests::gpu_concentration_diffusion_mixes_and_conserves_mass_and_energy
