@@ -96,7 +96,7 @@ jobs:
         run: >-
           dotnet run --project tests/OniSim.Loader.Tests -c Release
           -p:ImportDirectoryBuildProps=false -- artifacts/OniSim
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: onisim-${{ matrix.platform }}
           path: artifacts/OniSim/
@@ -109,7 +109,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: onisim-*
           path: artifacts/OniSim
@@ -118,7 +118,7 @@ jobs:
         run: python3 scripts/build_onisim_native.py --validate-bundle artifacts/OniSim
       - name: Reject incomplete, stale and tampered native bundles
         run: python3 -m unittest discover -s tests/OniSim.Loader.Tests -p 'test_*.py' -v
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: onisim-all-platforms
           path: artifacts/OniSim/
