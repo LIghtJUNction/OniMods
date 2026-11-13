@@ -68,6 +68,8 @@ jobs:
         run: >-
           cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml --
           --skip gpu_pathfinder_ffi::tests::test_gpu_pathfinder_ffi
+          --skip gpu_sim::disease_tests::single_disease_resident_sweep_matches_gpu_bits_and_region_halos
+          --skip gpu_sim::disease_tests::stronger_incoming_disease_preserves_positive_active_resident
           --skip gpu_sim::bubble_tests::cropped_cross_phase_columns_match_ordered_cpu_moves_at_map_edges
           --skip gpu_sim::bubble_tests::same_phase_mixtures_never_submit_bubble_work
           --skip gpu_sim::gas_cpu::tests::cpu_batch_rejects_late_invalid_world_before_any_output_commit

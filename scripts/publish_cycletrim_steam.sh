@@ -154,6 +154,10 @@ run_tests() {
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
     (cd "$ROOT" && dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true)
   elif [[ "$MOD_KEY" == "Jlib" ]]; then
+    # The host contract inspects the packaged DLLs as well as source. Build the
+    # new release before checking them; old artifacts cannot validate a version bump.
+    (cd "$ROOT" && cargo run --bin onim --quiet --release -- \
+      --config "$ROOT/onim.toml" --mod Jlib build --release)
     (cd "$ROOT" && dotnet run --project mods/Jlib/Jlib.Tests/Jlib.Tests.csproj -c Release)
   else
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
