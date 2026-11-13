@@ -179,8 +179,7 @@ pub(crate) fn project_cell_to_write(
     ch_masses[..count].sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
     if count == 0 {
-        if world.write.mass[cell] > 0.0
-            && elements.elements[world.write.element[cell] as usize].record.state & 3 == 1
+        if elements.elements[world.write.element[cell] as usize].record.state & 3 == 1
         {
             world.write.mass[cell] = 0.0;
             world.write.element[cell] = world.vacuum_element;
@@ -222,6 +221,17 @@ fn project_gases(world: &mut PhysicsWorld, events: &mut EventQueues, cell: usize
 
 fn project_gases_at(world: &mut PhysicsWorld, events: &mut EventQueues, cell: usize,
     public_cell: Option<i32>, primary_element: u16, primary_mass: f32, mix_element: u16, mix_mass: f32) {
+    // A depleted primary must not leave a zero-mass element in Grid. Promote
+    // a surviving secondary instead of losing it or publishing ghost gas.
+    let (primary_element, primary_mass, mix_element, mix_mass) = if primary_mass == 0.0 {
+        if mix_mass > 0.0 {
+            (mix_element, mix_mass, world.vacuum_element, 0.0)
+        } else {
+            (world.vacuum_element, 0.0, world.vacuum_element, 0.0)
+        }
+    } else {
+        (primary_element, primary_mass, mix_element, mix_mass)
+    };
     let mix_element = if mix_mass > 0.0 { mix_element } else { world.vacuum_element };
     let changed = world.write.element[cell] != primary_element
         || (world.write.mass[cell] - primary_mass).abs() > 1e-4
@@ -244,9 +254,18 @@ fn project_gases_at(world: &mut PhysicsWorld, events: &mut EventQueues, cell: us
 
 /// Diffuse local liquid species on GPU without applying the gas flow model.
 /// Cells containing other phases remain CPU-owned.
+/// One reusable host workspace per GPU device; no per-region cache is retained.
+#[derive(Default)]
+pub(crate) struct LiquidStaging {
+    cells: Vec<onisim_gpu::multicomponent::PackedSparseCell>,
+    masks: Vec<u16>,
+    solid: Vec<u32>,
+    projected: Vec<onisim_gpu::multicomponent::ProjectedLiquidCell>,
+}
+
 pub(crate) struct PendingLiquidRegion {
     min_x:usize, min_y:usize, width:usize, height:usize,
-    ids:Vec<u16>, species:Vec<onisim_gpu::multicomponent::SpeciesInfo>, solid:Vec<u32>,
+    ids:Vec<u16>, species:Vec<onisim_gpu::multicomponent::SpeciesInfo>, staging:LiquidStaging,
     pending:onisim_gpu::multicomponent::PendingLiquidProjection,
 }
 
@@ -267,8 +286,12 @@ pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementT
     }).collect();
     if species.iter().any(|s|!s.specific_heat_capacity.is_finite() || s.specific_heat_capacity<=0.0) {return Ok(None);}
     let count=width*height;
-    let mut cells=vec![onisim_gpu::multicomponent::PackedSparseCell::default();count];
-    let mut masks=vec![0u16;count]; let mut solid=vec![1u32;count];
+    let mut staging = std::mem::take(&mut gpu.liquid_staging);
+    let LiquidStaging { cells, masks, solid, .. } = &mut staging;
+    cells.resize(count, onisim_gpu::multicomponent::PackedSparseCell::default());
+    cells.fill(onisim_gpu::multicomponent::PackedSparseCell::default());
+    masks.resize(count, 0); masks.fill(0);
+    solid.resize(count, 1); solid.fill(1);
     for y in 0..height {for x in 0..width {
         let local=y*width+x; let cell=(min_y+y)*world.stride+min_x+x;
         // The two-slot GPU projection cannot own arbitrary inventories.
@@ -285,27 +308,39 @@ pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementT
             first_mass:world.write.mass[cell],second_mass:if mix.is_some() {world.mixture_mass[cell]} else {0.0},temperature:world.write.temperature[cell]};
         masks[local]=(1u16<<primary)|if mix.is_some() {1u16<<second} else {0};
     }}
-    isolate_stencil_masks(&masks,&mut solid,width,height,1);
-    if !solid.contains(&0) {return Ok(None);}
-    let pending=gpu.begin_sparse_liquid(width,height,ids.len(),&cells,&solid,&species)
-        .map_err(|error|crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU liquid diffusion failed: {error}")))?;
-    Ok(Some(PendingLiquidRegion {min_x,min_y,width,height,ids,species,solid,pending}))
+    isolate_stencil_masks(masks, solid, width, height, 1);
+    if !solid.contains(&0) { gpu.liquid_staging = staging; return Ok(None); }
+    let pending = match gpu.begin_sparse_liquid(width, height, ids.len(), cells, solid, &species) {
+        Ok(pending) => pending,
+        Err(error) => {
+            gpu.liquid_staging = staging;
+            return Err(crate::status::Error::new(crate::status::Status::InternalFailure,
+                format!("GPU liquid diffusion failed: {error}")));
+        }
+    };
+    Ok(Some(PendingLiquidRegion {min_x,min_y,width,height,ids,species,staging,pending}))
 }
 
 pub(crate) fn finish_sparse_liquid_region(work:PendingLiquidRegion,world:&mut PhysicsWorld,
-    events:&mut EventQueues,solid_out:&mut Vec<u32>) -> crate::status::Result<bool> {
-    let PendingLiquidRegion {min_x,min_y,width,height,ids,species,solid,pending}=work;
-    let mut projected=vec![onisim_gpu::multicomponent::ProjectedLiquidCell::default();width*height];
-    if !pending.finish(&mut projected).map_err(|error|crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU liquid diffusion failed: {error}")))? {return Ok(false);}
-    for y in 0..height {for x in 0..width {
-        let local=y*width+x; if solid[local]!=0 {continue;}
-        let cell=(min_y+y)*world.stride+min_x+x; let result=projected[local];
-        let first=result.first as usize; let second=result.second as usize;
-        let capacity=result.first_mass*species[first].specific_heat_capacity+result.second_mass*species[second].specific_heat_capacity;
-        if capacity>0.0 {world.write.temperature[cell]=result.enthalpy/capacity;}
-        project_gases(world,events,cell,ids[first],result.first_mass,ids[second],result.second_mass);
-    }}
-    *solid_out=solid; Ok(true)
+    events:&mut EventQueues,solid_out:&mut Vec<u32>,gpu:&mut crate::gpu_sim::GpuSimulation) -> crate::status::Result<bool> {
+    let PendingLiquidRegion {min_x,min_y,width,height,ids,species,mut staging,pending}=work;
+    let result = (|| {
+        let LiquidStaging { solid, projected, .. } = &mut staging;
+        projected.resize(width*height, onisim_gpu::multicomponent::ProjectedLiquidCell::default());
+        if !pending.finish(projected).map_err(|error|crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU liquid diffusion failed: {error}")))? {return Ok(false);}
+        for y in 0..height {for x in 0..width {
+            let local=y*width+x; if solid[local]!=0 {continue;}
+            let cell=(min_y+y)*world.stride+min_x+x; let result=projected[local];
+            let first=result.first as usize; let second=result.second as usize;
+            let capacity=result.first_mass*species[first].specific_heat_capacity+result.second_mass*species[second].specific_heat_capacity;
+            if capacity>0.0 {world.write.temperature[cell]=result.enthalpy/capacity;}
+            project_gases(world,events,cell,ids[first],result.first_mass,ids[second],result.second_mass);
+        }}
+        std::mem::swap(solid_out, solid);
+        Ok(true)
+    })();
+    gpu.liquid_staging = staging;
+    result
 }
 
 #[cfg(test)]
@@ -580,6 +615,7 @@ struct IdleGasRegion {
 }
 
 /// Run one multicomponent gas transport pass over the active region.
+#[cfg(test)]
 pub(crate) fn step_region(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
@@ -591,6 +627,7 @@ pub(crate) fn step_region(
     step_region_with_mask(world, elements, events, region, gpu, gpu_diffusion, None)
 }
 
+#[cfg(test)]
 pub(crate) fn step_region_with_mask(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
@@ -749,7 +786,7 @@ fn step_region_prepared_with_result(
         idle.insert(key, IdleGasRegion { source: crate::gas_region_snapshot::GasRegionSnapshot::capture(world, key),
             solid: solid.clone(), species: species.clone(), thermal: gpu_diffusion });
     }
-    if let Some(output) = diffusion_solid { *output = std::mem::take(solid); }
+    if let Some(output) = diffusion_solid { std::mem::swap(output, solid); }
     if let Some(start) = started {
         let prepared = prepared_at.unwrap();
         let computed = computed_at.unwrap();
@@ -797,6 +834,45 @@ mod tests {
             ..Region::default()
         };
         (world, elements, region)
+    }
+
+    #[test]
+    fn liquid_workspace_reuses_storage_after_warmup_and_resets_obstacles() {
+        let (mut world, mut elements, region) = gas_fixture(16, 16);
+        elements.elements[3].record.state = 2;
+        elements.elements[4].record.state = 2;
+        let mut gpu = crate::gpu_sim::GpuSimulation::new(world.stride, world.padded_height).unwrap();
+        let mut mask = Vec::new();
+        let mut storage = None;
+        for iteration in 0..5 {
+            let cell = 5 * world.stride + 5;
+            world.write.properties[cell] = if iteration % 2 == 0 { 1 } else { 0 };
+            let pending = begin_sparse_liquid_region(&world, &elements, region, &mut gpu).unwrap().unwrap();
+            assert!(finish_sparse_liquid_region(pending, &mut world, &mut EventQueues::default(), &mut mask, &mut gpu).unwrap());
+            let local = (5 - region.min_y as usize) * 16 + 5 - region.min_x as usize;
+            assert_eq!(mask[local] != 0, iteration % 2 == 0, "old obstacle must not survive workspace reuse");
+            let scratch = &gpu.liquid_staging;
+            let identity = (scratch.cells.as_ptr(), scratch.masks.as_ptr(), scratch.projected.as_ptr());
+            if iteration == 1 { storage = Some(identity); }
+            if iteration > 1 { assert_eq!(storage.unwrap(), identity, "warm staging buffers must not be reallocated"); }
+        }
+    }
+
+    #[test]
+    fn depleted_display_slot_becomes_vacuum_or_promotes_surviving_species() {
+        for (primary_mass, second_mass, expected_element, expected_mass) in [
+            (0.0_f32, 0.0_f32, 0_u16, 0.0_f32),
+            (0.0, 3e-12, 4, 3e-12),
+            (1e-12, 0.0, 3, 1e-12),
+        ] {
+            let (mut world, _, _) = gas_fixture(4, 4);
+            let cell = world.stride + 1;
+            let expected_element = if expected_element == 0 { world.vacuum_element } else { expected_element };
+            project_gases(&mut world, &mut EventQueues::default(), cell, 3, primary_mass, 4, second_mass);
+            assert_eq!(world.write.element[cell], expected_element);
+            assert_eq!(world.write.mass[cell].to_bits(), expected_mass.to_bits());
+            assert_eq!(world.mixture_mass[cell], 0.0);
+        }
     }
 
     #[test]

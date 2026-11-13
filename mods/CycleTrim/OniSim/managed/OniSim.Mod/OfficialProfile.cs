@@ -1,3 +1,4 @@
+using NativeModule = Jlib.Runtime.NativeModule;
 using System;
 using System.IO;
 using System.Reflection;

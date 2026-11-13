@@ -107,7 +107,8 @@ fn apply_serial(
                 let slot = local * channels + channel;
                 let previous = mass[slot];
                 let candidate = next_mass[slot].max(0.0);
-                let m = if (candidate - previous).abs() <= 1e-7f32.max(previous * 1e-5) {
+                // Relative tolerance must not freeze trace gas or resurrect a zero result.
+                let m = if (candidate - previous).abs() <= previous * 1e-5 {
                     previous
                 } else {
                     settled = false;
@@ -289,7 +290,7 @@ fn apply_two_channels(
                             let previous = mass[local * channels + channel];
                             let candidate = next[slot].max(0.0);
                             let amount =
-                                if (candidate - previous).abs() <= 1e-7f32.max(previous * 1e-5) {
+                                if (candidate - previous).abs() <= previous * 1e-5 {
                                     previous
                                 } else {
                                     settled = false;
@@ -369,6 +370,39 @@ fn apply_two_channels(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trace_gas_changes_and_depletion_survive_serial_and_parallel_projection() {
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(2).build().unwrap();
+        for (previous, candidate) in [(1e-12_f32, 0.0_f32), (0.0, 1e-12), (1e-12, 5e-13)] {
+            for parallel in [false, true] {
+                let (mut state, regions) = crate::native_chain_tests::fixture::create(96, 96, "mixed");
+                let mut world = state.world.take().unwrap();
+                let elements = state.elements.take().unwrap();
+                let mut staging = GasStaging::default();
+                let info = staging.prepare(&mut world, &elements, regions[0], true, 0).unwrap();
+                assert_eq!(info.channels, 2);
+                let local = staging.solid.iter().position(|&solid| solid == 0).unwrap();
+                let cell = (info.min_y + local / info.width) * world.stride + info.min_x + local % info.width;
+                staging.mass.fill(previous);
+                staging.next_mass.resize(staging.mass.len(), candidate);
+                staging.next_mass.fill(candidate);
+                staging.next_temperature.clone_from(&staging.temperature);
+                let mut events = EventQueues::default();
+                if parallel {
+                    apply_two_channels(&mut world, &mut events, &mut staging, &info, &pool);
+                } else {
+                    apply_serial(&mut world, &elements, &mut events, &mut staging, &info);
+                }
+                assert_eq!(staging.next_mass[local * info.channels].to_bits(), candidate.to_bits());
+                assert_eq!(world.write.mass[cell].to_bits(), candidate.to_bits());
+                if candidate == 0.0 {
+                    assert_eq!(world.write.element[cell], world.vacuum_element);
+                    assert_eq!(world.mixture_mass[cell], 0.0);
+                }
+            }
+        }
+    }
 
     #[test]
     fn parallel_projection_matches_serial_rows_events_and_blocked_mixtures() {

@@ -353,6 +353,7 @@ fn gpu_diffusion_leaves_extra_species_cells_owned_by_volume_transport() {
             &mut world,
             &mut EventQueues::default(),
             &mut Vec::new(),
+            &mut gpu,
         )
         .unwrap();
     }

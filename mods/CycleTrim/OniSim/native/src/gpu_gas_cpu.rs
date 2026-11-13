@@ -3,6 +3,10 @@
 //! transfers and the GPU completion barrier without dropping any species.
 use super::*;
 
+#[cfg(test)]
+#[path = "reference/gas_transport.rs"]
+mod transport_reference;
+
 #[derive(Clone, Copy, Default)]
 struct ThermalCell {
     mass: f32,
@@ -22,6 +26,8 @@ pub(super) struct Workspace {
     mass_output: Vec<f32>,
     temperature_output: Vec<f32>,
     sparse_transport: bool,
+    #[cfg(test)]
+    reference_transport: bool,
 }
 
 // Chunk boundaries are complete rows. Advance x/y explicitly so the hot
@@ -227,7 +233,20 @@ fn transport<const SPARSE: bool>(
                 for ((output, thermal), (cell, x, y)) in
                     output.chunks_mut(channels).zip(thermal).zip(coordinates)
                 {
-                    let adjacent = neighbors_at(cell, x, y, width, height);
+                    if solid[cell] != 0 {
+                        output.fill(0.0);
+                        *thermal = ThermalCell { mass: 0.0, heat: 1.0, temperature: 0.0 };
+                        continue;
+                    }
+                    // Geometry and face velocities are shared by every species.
+                    let adjacent = neighbors_at(cell, x, y, width, height)
+                        .map(|other| other.filter(|&other| solid[other] == 0));
+                    let faces: [Option<(usize, f32)>; 4] = std::array::from_fn(|face| {
+                        adjacent[face].map(|other| {
+                            let axis = usize::from(face >= 2);
+                            (other * channels, 0.5 * (velocity[cell][axis] + velocity[other][axis]))
+                        })
+                    });
                     let mut total_mass = 0.0;
                     let mut capacity = 0.0;
                     let mut energy = 0.0;
@@ -239,11 +258,10 @@ fn transport<const SPARSE: bool>(
                         if SPARSE
                             && mass[slot].to_bits() == 0
                             && enthalpy[slot].to_bits() == 0
-                            && adjacent.iter().flatten().all(|&other| {
-                                let other_slot = other * channels + channel;
-                                solid[other] != 0
-                                    || (mass[other_slot].to_bits() == 0
-                                        && enthalpy[other_slot].to_bits() == 0)
+                            && faces.iter().flatten().all(|&(base, _)| {
+                                let other_slot = base + channel;
+                                mass[other_slot].to_bits() == 0
+                                    && enthalpy[other_slot].to_bits() == 0
                             })
                         {
                             output[channel] = 0.0;
@@ -251,40 +269,31 @@ fn transport<const SPARSE: bool>(
                         }
                         let mut mass_flux = [0.0; 4];
                         let mut heat_flux = [0.0; 4];
-                        if solid[cell] == 0 {
-                            for (face, other) in adjacent.iter().enumerate() {
-                                let Some(other) = other.filter(|&other| solid[other] == 0) else {
-                                    continue;
-                                };
-                                let other_slot = other * channels + channel;
-                                let axis = usize::from(face >= 2);
-                                let speed = 0.5 * (velocity[cell][axis] + velocity[other][axis])
-                                    + if axis == 1 {
-                                        job.state.species[channel].vertical_drift
-                                    } else {
-                                        0.0
-                                    };
-                                let (a, b) = if face == 0 || face == 2 {
-                                    (other_slot, slot)
+                        for (face, data) in faces.iter().enumerate() {
+                            let Some((base, base_speed)) = *data else {
+                                continue;
+                            };
+                            let other_slot = base + channel;
+                            let speed = base_speed
+                                + if face >= 2 {
+                                    job.state.species[channel].vertical_drift
                                 } else {
-                                    (slot, other_slot)
+                                    0.0
                                 };
-                                mass_flux[face] = flux(mass[a], mass[b], speed);
-                                heat_flux[face] = flux(enthalpy[a], enthalpy[b], speed);
-                            }
-                            output[channel] = mass[slot]
-                                - dt * ((mass_flux[1] - mass_flux[0])
-                                    + (mass_flux[3] - mass_flux[2]));
-                        } else {
-                            output[channel] = 0.0;
+                            let (a, b) = if face == 0 || face == 2 {
+                                (other_slot, slot)
+                            } else {
+                                (slot, other_slot)
+                            };
+                            mass_flux[face] = flux(mass[a], mass[b], speed);
+                            heat_flux[face] = flux(enthalpy[a], enthalpy[b], speed);
                         }
-                        let next_energy = if solid[cell] == 0 {
-                            enthalpy[slot]
-                                - dt * ((heat_flux[1] - heat_flux[0])
-                                    + (heat_flux[3] - heat_flux[2]))
-                        } else {
-                            0.0
-                        };
+                        output[channel] = mass[slot]
+                            - dt * ((mass_flux[1] - mass_flux[0])
+                                + (mass_flux[3] - mass_flux[2]));
+                        let next_energy = enthalpy[slot]
+                            - dt * ((heat_flux[1] - heat_flux[0])
+                                + (heat_flux[3] - heat_flux[2]));
                         total_mass += output[channel];
                         capacity +=
                             output[channel] * job.state.species[channel].specific_heat_capacity;
@@ -554,6 +563,17 @@ impl Workspace {
         // sparse face checks pay off. Dense mixtures keep their original
         // branch-free species loop through a separate monomorphization.
         self.sparse_transport = present_species.saturating_mul(4) < open_slots;
+        #[cfg(test)]
+        if self.reference_transport {
+            if self.sparse_transport {
+                transport_reference::transport::<true>(&mut self.mass_output, &mut self.thermal, job,
+                    (mass, enthalpy), &self.velocity, dt, pool);
+            } else {
+                transport_reference::transport::<false>(&mut self.mass_output, &mut self.thermal, job,
+                    (mass, enthalpy), &self.velocity, dt, pool);
+            }
+            return self.finish_thermal(width, height, dt, pool);
+        }
         if self.sparse_transport {
             transport::<true>(&mut self.mass_output, &mut self.thermal, job,
                 (mass, enthalpy), &self.velocity, dt, pool);
@@ -1129,7 +1149,11 @@ mod tests {
         let mut workspace = Workspace::default();
         for diffuse in [false, true] {
             let mut samples = Vec::new();
-            for sample in 0..25 {
+            let mut reference_samples = Vec::new();
+            let mut paired_reductions = Vec::new();
+            let mut pair = [0.0; 2];
+            let mut reference_bits = Vec::new();
+            for sample in 0..140 {
                 let job = GasBatchJob {
                     dimensions: (width, height, channels),
                     state: State {
@@ -1145,10 +1169,23 @@ mod tests {
                     mass_output: &mut output_mass,
                     temperature_output: &mut output_temperature,
                 };
+                let reference = sample % 4 == 0 || sample % 4 == 3;
+                workspace.reference_transport = reference;
                 let started = std::time::Instant::now();
                 workspace.step(&job, diffuse, 0.05, &pool).unwrap();
-                if sample >= 5 {
-                    samples.push(started.elapsed().as_secs_f64() * 1000.0);
+                let elapsed = started.elapsed().as_secs_f64() * 1000.0;
+                pair[usize::from(!reference)] = elapsed;
+                if sample >= 20 {
+                    if reference { reference_samples.push(elapsed); } else { samples.push(elapsed); }
+                    if sample % 2 == 1 { paired_reductions.push(1.0 - pair[1] / pair[0]); }
+                }
+                if sample == 0 {
+                    reference_bits = workspace.mass_output.iter().chain(&workspace.temperature_output)
+                        .map(|v| v.to_bits()).collect();
+                } else if sample == 1 {
+                    assert!(workspace.mass_output.iter().chain(&workspace.temperature_output)
+                        .zip(&reference_bits).all(|(v, bits)| v.to_bits() == *bits),
+                        "paired gas benchmark outputs differ from frozen CPU reference");
                 }
                 std::hint::black_box(&workspace.mass_output);
             }
@@ -1162,11 +1199,16 @@ mod tests {
                 .fold(0_u64, |hash, value| {
                     hash.rotate_left(7) ^ u64::from(value.to_bits())
                 });
+            eprintln!("CPU gas paired samples sparse={sparse} diffuse={diffuse} reference={reference_samples:?} candidate={samples:?} reductions={paired_reductions:?}");
             samples.sort_by(f64::total_cmp);
+            reference_samples.sort_by(f64::total_cmp);
+            paired_reductions.sort_by(f64::total_cmp);
             eprintln!(
-                "CPU gas chain 160x96x16 sparse={sparse} diffuse={diffuse} 8 threads 5 warmups + 20 samples median={:.6}ms p95={:.6}ms checksum={checksum:016x}; not whole-game FPS",
-                (samples[9] + samples[10]) * 0.5,
-                samples[18]
+                "CPU gas chain 160x96x16 sparse={sparse} diffuse={diffuse} 8 threads 10 warmup pairs + 60 measured pairs median={:.6}ms p95={:.6}ms checksum={checksum:016x} reference_median={:.6}ms paired_reduction_median={:.3}%; not whole-game FPS",
+                (samples[29] + samples[30]) * 0.5,
+                samples[56],
+                (reference_samples[29] + reference_samples[30]) * 0.5,
+                (paired_reductions[29] + paired_reductions[30]) * 50.0
             );
         }
     }
@@ -1182,7 +1224,7 @@ mod tests {
         let mut gpu = GpuSimulation::new(width, height).unwrap();
         gpu.thermal_reference = true;
         let mut workspace = Workspace::default();
-        for (channels, sparse) in [1, 2, 3, 16].into_iter()
+        for (channels, sparse) in [1, 2, 3, 9, 16].into_iter()
             .flat_map(|channels| [false, true].map(move |sparse| (channels, sparse))) {
             let solid: Vec<_> = (0..count).map(|cell| u32::from(cell % 31 == 0)).collect();
             let mass: Vec<_> = (0..count * channels)
@@ -1220,6 +1262,7 @@ mod tests {
                     solid: &solid,
                     species: &species,
                 };
+                workspace.reference_transport = true;
                 workspace
                     .step(
                         &GasBatchJob {
@@ -1235,6 +1278,21 @@ mod tests {
                         &pool,
                     )
                     .unwrap();
+                let cpu_reference: Vec<_> = workspace.mass_output.iter()
+                    .chain(&workspace.temperature_output).map(|v| v.to_bits()).collect();
+                workspace.reference_transport = false;
+                workspace.step(&GasBatchJob {
+                    dimensions: (width, height, channels),
+                    state: State { mass: &mass, enthalpy: &[], velocity_x: &[], velocity_y: &[],
+                        solid: &solid, species: &species },
+                    temperature: &temperature, conductivity: &conductivity,
+                    mass_output: &mut actual_mass, temperature_output: &mut actual_temperature,
+                }, diffuse, 0.05, &pool).unwrap();
+                for (index, (actual, expected)) in workspace.mass_output.iter()
+                    .chain(&workspace.temperature_output).zip(cpu_reference).enumerate() {
+                    assert_eq!(actual.to_bits(), expected,
+                        "CPU reference bits: channels={channels}, sparse={sparse}, diffuse={diffuse}, output={index}");
+                }
                 let state = State {
                     mass: &mass,
                     enthalpy: &[],

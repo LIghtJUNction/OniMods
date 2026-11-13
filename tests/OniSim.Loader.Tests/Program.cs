@@ -1,3 +1,4 @@
+using NativeModule = Jlib.Runtime.NativeModule;
 using System.Runtime.InteropServices;
 using OniSim.CycleTrim;
 

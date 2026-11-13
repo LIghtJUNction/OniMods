@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import statistics
 import subprocess
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,6 +59,10 @@ def analyze(raw, steps):
     warmups = steps["warmups"]
     measured = windows[warmups:]
     issues = []
+    if not isinstance(raw.get("viewBefore"), dict) or "position" not in raw["viewBefore"]:
+        issues.append("Camera view was not captured as structured data")
+    elif raw["viewBefore"] != raw.get("viewAfter"):
+        issues.append("Camera view, viewport or active world changed during measurement")
     if raw["returncode"] or not steps.get("complete"):
         issues.append("Guarded step collection failed")
     if steps.get("headless") is not False:
@@ -101,7 +106,19 @@ def collect(args):
     initial = json.loads((args.output / "status.json").read_text())
     if initial.get("headless") is not False or initial.get("paused") is not True or not initial.get("duplicants", 0):
         raise ValueError("A loaded, paused graphical test save is required")
-    data = {"schema": 1, "label": args.label, "hostBefore": host_state(), "rows": []}
+    sys.path.insert(0, str(ROOT / "tools/OniHarness/scripts"))
+    from runtime_mcp import Client
+    client = Client()
+
+    def camera_view():
+        view = client.read("navigation_control", {"domain": "camera", "action": "get_view",
+            "task": "记录性能测试前后的视角和视口，保持对照条件一致。"})
+        if not isinstance(view, dict) or "position" not in view:
+            raise ValueError("Camera view was not returned as structured data")
+        return view
+
+    data = {"schema": 2, "label": args.label, "hostBefore": host_state(),
+            "viewBefore": camera_view(), "rows": []}
     python = ROOT / "tools/OniHarness/.venv-runtime/bin/python"
     measure = ROOT / "tools/OniHarness/scripts/measure_steps.py"
     command = [str(python), str(measure), "--output", str(args.output.resolve()), "--label", args.label,
@@ -128,6 +145,10 @@ def collect(args):
                     child.kill()
                     child.wait()
             data.update(returncode=child.returncode, hostAfter=host_state())
+            try:
+                data["viewAfter"] = camera_view()
+            except (OSError, RuntimeError, ValueError) as error:
+                data["viewAfterError"] = str(error)
             raw_path.write_text(json.dumps(data, indent=2) + "\n")
 
 

@@ -18,24 +18,27 @@ GPU multicomponent state
   -> fail-closed Harmony shims
 ```
 
-The current source does not yet implement this path end to end.
+## Current implementation status (2026-11-13)
 
-## Implementation status (2026-11-07)
+The native production crate directly depends on `onisim-gpu`. The worker uses
+multicomponent gas transport, liquid transport and publication, combining
+resident CPU operators with GPU batches; operator selection is not equivalent
+to moving the entire simulation onto the GPU.
 
-The repository now has a **publication bridge prototype**, not a production multicomponent solver:
+- Completed publication advertises `MULTICOMPONENT_COEXISTENCE` and the capability
+  string `multicomponent-coexistence-v1`.
+- `ONISIM_AcquireMulticomponentUpdate` / `ONISIM_ReleaseMulticomponentUpdate` keep
+  the native State mutex as a thread-affine read lease while managed code copies
+  the records. Acquire and release must run on the same thread.
+- Legacy Grid fields remain a dominant-element display adapter. The species
+  records carry coexistence; the old single-element pressure/gas reference
+  algorithms are test-only under `native/src/reference/`.
+- These source facts do not by themselves satisfy every acceptance gate below
+  or establish a whole-game performance improvement.
 
-- Each `GameData` allocation owns fixed-capacity cell/species publication buffers and publishes them from the completed `Prepare` batch.
-- `ONISIM_AcquireMulticomponentUpdate` / `ONISIM_ReleaseMulticomponentUpdate` hold the native `State` mutex as a thread-affine read lease. This prevents `Prepare` from returning that buffer to the worker while managed code copies one cell's records. Acquire and release must run on the same thread.
-- The managed provider copies records into a reusable thread-local buffer while the lease is held. The buffer is valid only until the next provider lookup on that thread.
-- The current producer still projects the legacy one-element `Grid` into one record per cell and advertises only `LEGACY_SINGLE_ELEMENT`. It never advertises `MULTICOMPONENT_COEXISTENCE`; the provider therefore rejects it and every gameplay shim continues to call original game logic.
-- EOS, pressure, liquid volume fraction and phase-change values are unavailable in this projection and are published as zero rather than fabricated.
-- The GPU crate remains separate from `oni-sim-core`; the production Engine still executes the legacy CPU simulation.
+## Superseded design assumptions
 
-This bridge work closes part of the publication-lifetime plumbing only. It does not satisfy Gates A, B, D or E, and does not make Gate C complete.
-
-## Verified source facts
-
-The following are source-level facts from the repository revision inspected for this design:
+The following assumptions belong to the original design draft and do not describe the current production path. They are retained as context for the acceptance gates; use the current status above and source for implementation details.
 
 1. `OniSim/native` is a separate `oni-sim-core` crate. Its dependencies currently contain Rayon, not wgpu.
 2. `OniSim/gpu` is a separate `onisim-gpu` crate with its own Cargo workspace. It is not currently linked into the native production core.

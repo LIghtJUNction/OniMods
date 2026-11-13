@@ -1,4 +1,7 @@
-mod pressure_sweep;
+#[cfg(test)]
+mod reference;
+#[cfg(test)]
+use reference::{fluid, pressure_sweep};
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void};
 use std::sync::Arc;
@@ -34,7 +37,6 @@ mod event_records;
 mod event_sort;
 mod events;
 mod float_env;
-mod fluid;
 mod fluid_displacement;
 mod fluid_helpers;
 mod fluid_pressure;
@@ -114,7 +116,7 @@ const CAPABILITIES: &[u8] = concat!(
     "\"ignoredMessages\":[-563057023,-409964931,-727746602],",
     "\"callbacks\":false,\"callbackRecords\":true,\"saveLoad\":true,\"events\":true,",
     "\"flow\":true,\"textures\":false,\"radiationSimulation\":true,\"radiationStorage\":\"native\",",
-    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",\"multicomponentPublication\":\"legacy-single-element-v1\",",
+    "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",\"multicomponentPublication\":\"multicomponent-coexistence-v1\",",
     "\"storageMutationTiming\":\"frame-command-stage\",\"officialCommandScheduling\":false,",
     "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable\",\"runtimeValidated\":false,",
     "\"batchPrevalidation\":true,\"readyObservation\":true,\"externalPointerSynchronization\":\"caller-required\"}\0"

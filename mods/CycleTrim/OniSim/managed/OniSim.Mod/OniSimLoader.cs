@@ -1,3 +1,4 @@
+using NativeModule = Jlib.Runtime.NativeModule;
 using System;
 using System.IO;
 using System.Reflection;
@@ -78,7 +79,7 @@ namespace OniSim.CycleTrim
                     if (Type.GetType("Mono.Runtime") == null)
                         throw new PlatformNotSupportedException("OniSim takeover requires Unity Mono.");
                     OfficialProfile.ValidateAssembly(gameAssembly);
-                    string monoPath = NativePlatform.MonoPath(gameAssembly.Location);
+                    string monoPath = Jlib.Runtime.NativePlatform.MonoPath(gameAssembly.Location);
                     OfficialProfile.ValidateMono(monoPath);
                     // Validate the native Sim target prior to invoking Jlib's native component replacement.
                     targetModule = NativeModule.OpenTarget(path);

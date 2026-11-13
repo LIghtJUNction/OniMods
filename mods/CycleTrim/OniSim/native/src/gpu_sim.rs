@@ -55,6 +55,9 @@ pub(crate) struct GpuSimulation {
     pub(crate) gas_batch_sources: Vec<crate::gas_region_snapshot::GasRegionSnapshot>,
     pub(crate) gas_batch_staging: Vec<crate::multicomponent_flux::GasStaging>,
     pub(crate) gas_staging: crate::multicomponent_flux::GasStaging,
+    pub(crate) liquid_staging: crate::multicomponent_flux::LiquidStaging,
+    pub(crate) diffusion_solid: Vec<u32>,
+    pub(crate) liquid_solid: Vec<u32>,
     liquid_diffusion: VecDeque<MulticomponentGpu>,
     disease_growth: DiseaseGrowthGpu,
     disease_cells: Vec<DiseaseCell>,
@@ -199,6 +202,9 @@ impl GpuSimulation {
             gas_staging: Default::default(),
             gas_batch_staging: Vec::new(),
             gas_batch_sources: Vec::new(),
+            liquid_staging: Default::default(),
+            diffusion_solid: Vec::new(),
+            liquid_solid: Vec::new(),
             liquid_diffusion: VecDeque::new(),
             disease_growth,
             disease_cells: Vec::new(),
@@ -1227,11 +1233,11 @@ mod material_range_tests {
         assert_ne!(before_gas,serial.write.mass, "fixture must exercise an actual gas transfer");
         let serial_pending=flux::begin_sparse_liquid_region(&serial,&elements,region,&mut gpu).unwrap().unwrap();
         let mut serial_mask=Vec::new();
-        assert!(flux::finish_sparse_liquid_region(serial_pending,&mut serial,&mut a,&mut serial_mask).unwrap());
+        assert!(flux::finish_sparse_liquid_region(serial_pending,&mut serial,&mut a,&mut serial_mask,&mut gpu).unwrap());
         let pending=flux::begin_sparse_liquid_region(&overlap,&elements,region,&mut gpu).unwrap().unwrap();
         assert!(crate::simulation_step_fluid::gas_phase(&mut overlap,&elements,&diseases,&mut b,region));
         let mut overlap_mask=Vec::new();
-        assert!(flux::finish_sparse_liquid_region(pending,&mut overlap,&mut b,&mut overlap_mask).unwrap());
+        assert!(flux::finish_sparse_liquid_region(pending,&mut overlap,&mut b,&mut overlap_mask,&mut gpu).unwrap());
         assert_eq!(serial_mask,overlap_mask);
         assert_eq!(serial.write.element,overlap.write.element);
         assert_eq!(serial.write.mass,overlap.write.mass);
@@ -1273,7 +1279,7 @@ mod material_range_tests {
         overlap.write.element[b]=4; overlap.write.mass[b]=1.0; overlap.write.temperature[b]=200.0;
         let pending=multicomponent_flux::begin_sparse_liquid_region(&overlap,&elements,region,&mut gpu).unwrap().unwrap();
         let mut overlap_solid=Vec::new();
-        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut overlap,&mut events,&mut overlap_solid).unwrap());
+        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut overlap,&mut events,&mut overlap_solid,&mut gpu).unwrap());
         assert_eq!(solid,overlap_solid);
         for cell in [a,b] {
             assert_eq!(world.write.element[cell],overlap.write.element[cell]);
@@ -1302,7 +1308,7 @@ mod material_range_tests {
         }
         let pending=multicomponent_flux::begin_sparse_liquid_region(&overlap,&elements,region,&mut gpu).unwrap().unwrap();
         let mut overlap_solid=Vec::new();
-        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut overlap,&mut events,&mut overlap_solid).unwrap());
+        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut overlap,&mut events,&mut overlap_solid,&mut gpu).unwrap());
         assert_eq!(solid,overlap_solid);
         for x in 1..8 {
             let cell=world.stride+x;
@@ -1323,7 +1329,7 @@ mod material_range_tests {
         let fourth=world.stride+7;
         world.write.element[fourth]=6; world.write.mass[fourth]=1.0;
         let pending=multicomponent_flux::begin_sparse_liquid_region(&world,&elements,region,&mut gpu).unwrap().unwrap();
-        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut world,&mut events,&mut solid).unwrap());
+        assert!(multicomponent_flux::finish_sparse_liquid_region(pending,&mut world,&mut events,&mut solid,&mut gpu).unwrap());
         assert_eq!(gpu.liquid_diffusion.front().unwrap().dimensions(), (7,3,4));
         for id in 3..7 {
             let total:f32=(1..4).flat_map(|y|(1..8).map(move |x|(x,y))).map(|(x,y)| {
@@ -1385,7 +1391,7 @@ mod material_range_tests {
         assert!(flux::diffuse_liquid_region(&mut serial,&elements,&mut serial_events,region,&mut gpu,&mut serial_solid).unwrap());
         let pending=flux::begin_sparse_liquid_region(&overlap,&elements,region,&mut gpu).unwrap().unwrap();
         assert!(flux::step_region(&mut overlap,&elements,&mut overlap_events,region,Some(&mut gpu),true).unwrap());
-        assert!(flux::finish_sparse_liquid_region(pending,&mut overlap,&mut overlap_events,&mut overlap_solid).unwrap());
+        assert!(flux::finish_sparse_liquid_region(pending,&mut overlap,&mut overlap_events,&mut overlap_solid,&mut gpu).unwrap());
         assert_eq!(serial_solid,overlap_solid);
         for y in 1..6 {for x in 1..10 {
             let cell=y*serial.stride+x;

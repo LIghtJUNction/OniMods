@@ -22,30 +22,6 @@ namespace OniSim.CycleTrim
         internal static string BundledLibrary(string directory)
         { return Path.Combine(directory, "OniSim", Id, LibraryName); }
 
-        internal static string MonoPath(string assemblyPath)
-        {
-            RequireSupported();
-            string data = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(assemblyPath)));
-            string root = Path.GetDirectoryName(data);
-            if (IsMac)
-            {
-                var ancestor = new DirectoryInfo(data);
-                while (ancestor != null && ancestor.Name != "Contents") ancestor = ancestor.Parent;
-                if (ancestor == null) throw new InvalidOperationException("The game assembly is outside a macOS app bundle.");
-                root = ancestor.FullName;
-            }
-            string[] candidates = IsWindows ? new[] {
-                Path.Combine(root, "MonoBleedingEdge", "EmbedRuntime", "mono-2.0-bdwgc.dll"),
-                Path.Combine(data, "MonoBleedingEdge", "EmbedRuntime", "mono-2.0-bdwgc.dll")
-            } : IsMac ? new[] {
-                Path.Combine(root, "Frameworks", "MonoBleedingEdge", "MonoEmbedRuntime", "osx", "libmonobdwgc-2.0.dylib"),
-                Path.Combine(root, "Frameworks", "MonoBleedingEdge", "EmbedRuntime", "libmonobdwgc-2.0.dylib"),
-                Path.Combine(data, "MonoBleedingEdge", "EmbedRuntime", "libmonobdwgc-2.0.dylib")
-            } : new[] {
-                Path.Combine(data, "MonoBleedingEdge", "x86_64", "libmonobdwgc-2.0.so")
-            };
-            foreach (string path in candidates) if (File.Exists(path)) return path;
-            throw new FileNotFoundException("The game's Unity Mono runtime was not found in its platform layout.");
-        }
+
     }
 }

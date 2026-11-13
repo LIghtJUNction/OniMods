@@ -246,6 +246,9 @@ impl<'a> PreparedStep<'a> {
             eprintln!("[CycleTrim OniSim] step profile tick={} through_gas_batch={:.3}ms",
                 world.tick_seed, started.elapsed().as_secs_f64() * 1000.0);
         }
+        let (mut diffusion_solid, mut liquid_solid) = if let Some(gpu) = systems.gpu.as_deref_mut() {
+            (std::mem::take(&mut gpu.diffusion_solid), std::mem::take(&mut gpu.liquid_solid))
+        } else { (Vec::new(), Vec::new()) };
         for index in 0..world.regions.len() {
             let region = world.regions[index];
             let mut mark = profiling.then(std::time::Instant::now);
@@ -277,7 +280,7 @@ impl<'a> PreparedStep<'a> {
             let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
                 crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
             } else { None };
-            let mut diffusion_solid = Vec::new();
+            diffusion_solid.clear();
             let gpu_transport_ran = if let (Some(batch), Some(gpu)) = (gas_batch.as_mut(), systems.gpu.as_deref_mut()) {
                 batch.apply(index, world, elements, events, gpu, gpu_diffusion, &mut diffusion_solid)?
             } else {
@@ -291,11 +294,12 @@ impl<'a> PreparedStep<'a> {
                 )?
             };
             let transport_ms = lap();
-            let mut liquid_solid = Vec::new();
+            liquid_solid.clear();
             // The gas pass treats liquid and liquid-containing cells as walls,
             // so it cannot create an eligible liquid region after preparation.
             let liquid_gpu_ran = if let Some(work) = pending_liquid {
-                crate::multicomponent_flux::finish_sparse_liquid_region(work, world, events, &mut liquid_solid)?
+                crate::multicomponent_flux::finish_sparse_liquid_region(work, world, events, &mut liquid_solid,
+                    systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending liquid work lost its GPU device"))?)?
             } else { false };
             crate::gas::diffuse_region(world, elements, events, region,
                 if gpu_diffusion && gpu_transport_ran { Some(&diffusion_solid) } else { None },
@@ -360,6 +364,10 @@ impl<'a> PreparedStep<'a> {
         if let Some(started) = step_started {
             eprintln!("[CycleTrim OniSim] step total tick={} wall={:.3}ms",
                 world.tick_seed, started.elapsed().as_secs_f64() * 1000.0);
+        }
+        if let Some(gpu) = systems.gpu.as_deref_mut() {
+            gpu.diffusion_solid = diffusion_solid;
+            gpu.liquid_solid = liquid_solid;
         }
         world.tick_seed = world.tick_seed.wrapping_add(1);
         Ok(())

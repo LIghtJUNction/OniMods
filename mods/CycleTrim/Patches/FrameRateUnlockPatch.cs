@@ -217,6 +217,15 @@ namespace CycleTrim.Patches
                 (double)GC.GetTotalMemory(false) / (1024d * 1024d)));
             ReportChain(summary, gc0 - lastGc0, gc1 - lastGc1, gc2 - lastGc2);
 #if !PERFORMANCE_PROBE_HOST_TESTS
+            // These counters overlap; they are not additive memory categories.
+            // Read-only counters never request a collection or unload assets.
+            Debug.Log(string.Format(CultureInfo.InvariantCulture,
+                "[CycleTrim Memory] MonoUsed={0:F1}MiB MonoReserved={1:F1}MiB UnityAllocated={2:F1}MiB UnityReserved={3:F1}MiB UnityUnusedReserved={4:F1}MiB",
+                UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1048576d,
+                UnityEngine.Profiling.Profiler.GetMonoHeapSizeLong() / 1048576d,
+                UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / 1048576d,
+                UnityEngine.Profiling.Profiler.GetTotalReservedMemoryLong() / 1048576d,
+                UnityEngine.Profiling.Profiler.GetTotalUnusedReservedMemoryLong() / 1048576d));
             ReportBuckets();
             DetailedFrameProbe.Report();
 #endif
