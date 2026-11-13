@@ -1,0 +1,497 @@
+{
+  "cpuAffinity": "0,2,4,6,8,10,12,14",
+  "hostLoad": [
+    4.2705078125,
+    6.51953125,
+    7.990234375
+  ],
+  "summary": [
+    {
+      "sparse": false,
+      "diffuse": "false",
+      "baselineMs": 1.409208,
+      "candidateMs": 1.4632935,
+      "improvementPercent": -3.8380068804605143
+    },
+    {
+      "sparse": false,
+      "diffuse": "true",
+      "baselineMs": 2.03763,
+      "candidateMs": 2.042038,
+      "improvementPercent": -0.21632975564747992
+    },
+    {
+      "sparse": true,
+      "diffuse": "false",
+      "baselineMs": 1.508623,
+      "candidateMs": 0.9004795,
+      "improvementPercent": 40.31116455204515
+    },
+    {
+      "sparse": true,
+      "diffuse": "true",
+      "baselineMs": 2.245092,
+      "candidateMs": 1.5878355000000002,
+      "improvementPercent": 29.27525909851355
+    }
+  ],
+  "samples": [
+    {
+      "sparse": false,
+      "order": 0,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 0.983776,
+      "p95Ms": 1.209423,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 0,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 1.970681,
+      "p95Ms": 2.28015,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 1,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 1.312578,
+      "p95Ms": 1.534732,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 1,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 2.080067,
+      "p95Ms": 2.329344,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 2,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 1.584126,
+      "p95Ms": 2.366089,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 2,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 1.959056,
+      "p95Ms": 2.251307,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 3,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.482956,
+      "p95Ms": 1.708693,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 3,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 2.013136,
+      "p95Ms": 2.414153,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 4,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 1.413335,
+      "p95Ms": 1.676474,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 4,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 2.0151,
+      "p95Ms": 2.215766,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 5,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.380545,
+      "p95Ms": 1.795779,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 5,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 2.062124,
+      "p95Ms": 2.484843,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 6,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.437871,
+      "p95Ms": 1.687963,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 6,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 2.146264,
+      "p95Ms": 2.430205,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": false,
+      "order": 7,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 1.513252,
+      "p95Ms": 1.766937,
+      "checksum": "72d2df82c3852e27"
+    },
+    {
+      "sparse": false,
+      "order": 7,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 2.068976,
+      "p95Ms": 2.321816,
+      "checksum": "b1132fd5a64e7bd9"
+    },
+    {
+      "sparse": true,
+      "order": 0,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.293673,
+      "p95Ms": 1.472031,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 0,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 1.829407,
+      "p95Ms": 1.997566,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 1,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 0.85004,
+      "p95Ms": 0.93727,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 1,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 1.389638,
+      "p95Ms": 1.458655,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 2,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 0.854634,
+      "p95Ms": 1.000949,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 2,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 1.560356,
+      "p95Ms": 1.837758,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 3,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.422954,
+      "p95Ms": 1.590464,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 3,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 1.847139,
+      "p95Ms": 2.16635,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 4,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 0.946325,
+      "p95Ms": 1.007022,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 4,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 1.615315,
+      "p95Ms": 2.169757,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 5,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.594292,
+      "p95Ms": 2.079874,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 5,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 2.643045,
+      "p95Ms": 3.146753,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 6,
+      "variant": "baseline",
+      "diffuse": "false",
+      "medianMs": 1.991237,
+      "p95Ms": 3.456236,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 6,
+      "variant": "baseline",
+      "diffuse": "true",
+      "medianMs": 2.72196,
+      "p95Ms": 3.157148,
+      "checksum": "07aa5483565d0ff4"
+    },
+    {
+      "sparse": true,
+      "order": 7,
+      "variant": "candidate",
+      "diffuse": "false",
+      "medianMs": 1.157388,
+      "p95Ms": 1.736281,
+      "checksum": "171a2adc34882bdb"
+    },
+    {
+      "sparse": true,
+      "order": 7,
+      "variant": "candidate",
+      "diffuse": "true",
+      "medianMs": 2.023529,
+      "p95Ms": 2.44909,
+      "checksum": "07aa5483565d0ff4"
+    }
+  ],
+  "scope": "Production CPU gas-chain microbenchmark, not whole-game FPS or throughput.",
+  "baselineCommit": "670e92db",
+  "workload": {
+    "width": 160,
+    "height": 96,
+    "species": 16,
+    "threads": 8,
+    "warmupsPerRun": 5,
+    "timedSamplesPerRun": 20,
+    "independentRunsPerVariantAndWorkload": 4,
+    "runOrder": [
+      "baseline",
+      "candidate",
+      "candidate",
+      "baseline",
+      "candidate",
+      "baseline",
+      "baseline",
+      "candidate"
+    ],
+    "sparseLayout": "at most one nonzero species slot per open input cell; species varies with cell index",
+    "denseLayout": "all species populated except deterministic zero entries",
+    "solidCells": "every seventh cell"
+  },
+  "sourceSha256": "59b1fd89daf5e6cc82445f749d5dec02ec316570dce3732f1223ff780905c73e",
+  "rustVersion": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "binaries": {
+    "sparse-baseline-test": "24d7058ee775c65942fa8f4211ae8a2722243d9c447f70db08b94ae945a6be43",
+    "final-candidate-test": "2d7f986bb7dc5d1fb56b25acabd3e2c5c04ebef1e27e72fecfcc06b35713a1b1"
+  },
+  "runtime": {
+    "gameBuild": "U59-744825-SCRPAN",
+    "unity": "6000.3.5f2",
+    "headless": true,
+    "graphicsDevice": "Null",
+    "cameraRenderCallbacks": 0,
+    "duplicants": 15,
+    "pausedAfter": true,
+    "gameHasCrash": false,
+    "gameError": null,
+    "loadedNativeSha256": "79fa302a4d6243a1d2577474a4993446c3f1784e7305e9f8d65ac310981d749e",
+    "loadedNativeMatchesCandidate": true,
+    "sparsePathObserved": true,
+    "candidateSamples": [
+      {
+        "wallSeconds": 2.5251916180131957,
+        "controlOverheadSeconds": 0.5251916180131957,
+        "nativeSeconds": 2.0,
+        "gameCpuSeconds": 6.059999999999974,
+        "majorFaults": 832,
+        "rssKiB": 4360864,
+        "swapKiB": 1504756,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.09935659600887448,
+          "leaseAcknowledgmentSeconds": 0.15882243897067383,
+          "resumeSeconds": 0.03401228098664433,
+          "runningWallSeconds": 2.0000290630268864,
+          "pauseVerificationSeconds": 0.08771355001954362
+        },
+        "updateFrames": 181,
+        "gameCpuSecondsPerNativeSecond": 3.029999999999987
+      },
+      {
+        "wallSeconds": 2.4849445339641534,
+        "controlOverheadSeconds": 0.4849445339641534,
+        "nativeSeconds": 1.1875,
+        "gameCpuSeconds": 6.199999999999989,
+        "majorFaults": 1511,
+        "rssKiB": 4267476,
+        "swapKiB": 1639864,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.09634425502736121,
+          "leaseAcknowledgmentSeconds": 0.16187987598823383,
+          "resumeSeconds": 0.03721819800557569,
+          "runningWallSeconds": 2.000015216995962,
+          "pauseVerificationSeconds": 0.05314263398759067
+        },
+        "updateFrames": 78,
+        "gameCpuSecondsPerNativeSecond": 5.221052631578938
+      },
+      {
+        "wallSeconds": 2.389414563018363,
+        "controlOverheadSeconds": 0.38941456301836297,
+        "nativeSeconds": 2.0625,
+        "gameCpuSeconds": 5.960000000000008,
+        "majorFaults": 2037,
+        "rssKiB": 4281340,
+        "swapKiB": 1631680,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.0664700570050627,
+          "leaseAcknowledgmentSeconds": 0.14259069599211216,
+          "resumeSeconds": 0.022387814009562135,
+          "runningWallSeconds": 2.0000156789901666,
+          "pauseVerificationSeconds": 0.055963328981306404
+        },
+        "updateFrames": 214,
+        "gameCpuSecondsPerNativeSecond": 2.8896969696969736
+      }
+    ],
+    "baselineSamples": [
+      {
+        "wallSeconds": 2.591587728005834,
+        "controlOverheadSeconds": 0.5915877280058339,
+        "nativeSeconds": 2.0625,
+        "gameCpuSeconds": 6.47999999999999,
+        "majorFaults": 1122,
+        "rssKiB": 3809868,
+        "swapKiB": 2102656,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.12107760703656822,
+          "leaseAcknowledgmentSeconds": 0.1677026450051926,
+          "resumeSeconds": 0.042147934960667044,
+          "runningWallSeconds": 2.0000434260000475,
+          "pauseVerificationSeconds": 0.07975705701392144
+        },
+        "updateFrames": 145,
+        "gameCpuSecondsPerNativeSecond": 3.1418181818181767
+      },
+      {
+        "wallSeconds": 2.530636220006272,
+        "controlOverheadSeconds": 0.5306362200062722,
+        "nativeSeconds": 2.0625,
+        "gameCpuSeconds": 6.310000000000002,
+        "majorFaults": 492,
+        "rssKiB": 3817744,
+        "swapKiB": 2100660,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.08715463394764811,
+          "leaseAcknowledgmentSeconds": 0.15580471401335672,
+          "resumeSeconds": 0.03947086102562025,
+          "runningWallSeconds": 2.000024000997655,
+          "pauseVerificationSeconds": 0.09887038700981066
+        },
+        "updateFrames": 133,
+        "gameCpuSecondsPerNativeSecond": 3.0593939393939404
+      },
+      {
+        "wallSeconds": 2.584856179950293,
+        "controlOverheadSeconds": 0.5848561799502932,
+        "nativeSeconds": 1.625,
+        "gameCpuSeconds": 5.6299999999999955,
+        "majorFaults": 187,
+        "rssKiB": 3808460,
+        "swapKiB": 2110760,
+        "pausedAfter": true,
+        "failed": false,
+        "stepTimings": {
+          "initialPauseSeconds": 0.10917569196317345,
+          "leaseAcknowledgmentSeconds": 0.1651704860269092,
+          "resumeSeconds": 0.042598204978276044,
+          "runningWallSeconds": 2.0000483270268887,
+          "pauseVerificationSeconds": 0.09010867500910535
+        },
+        "updateFrames": 125,
+        "gameCpuSecondsPerNativeSecond": 3.464615384615382
+      }
+    ],
+    "limits": "Paging and host load differ. Guarded steps include control overhead; they do not establish whole-game FPS or a reliable whole-game speedup."
+  }
+}
