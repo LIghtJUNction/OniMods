@@ -116,7 +116,7 @@ internal static class LegacySessionCapacityAdmissionRegression
         var result = new List<PendingRequest>();
         for (int i = 0; i < count; i++)
         {
-            string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":" + (firstId + i) + "}";
+            string body = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":" + (firstId + i) + "}";
             var request = BuildLegacyRequest(body, sessionId);
             result.Add(new PendingRequest(request, client.SendAsync(request)));
         }

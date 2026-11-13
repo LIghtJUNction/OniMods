@@ -31,6 +31,9 @@ namespace OniMcp.Tools
             private bool _completed = true;
             private string _observationError;
             private string _criticalThreat;
+            private StepConditionFacts _lastFacts = new StepConditionFacts();
+            private Dictionary<string, object> _orderTracking;
+            private bool _runStarted;
 
             public bool IsRunning => !_completed;
             public string RequestId => _requestId;
@@ -56,33 +59,44 @@ namespace OniMcp.Tools
                 _startWallTime = Time.realtimeSinceStartup;
                 _nextObservationTime = _startWallTime;
                 _startCycle = GameUtil.GetCurrentCycle();
-                _orders = new StepOrderTracker(worldId, targetCells);
-                _research = new StepResearchTracker(Research.Instance?.GetActiveResearch());
+                _orders = condition.ContainsFact("orders_complete") ? new StepOrderTracker(worldId, targetCells) : null;
+                _research = condition.ContainsFact("research_complete") ? new StepResearchTracker(Research.Instance?.GetActiveResearch()) : null;
                 _initialNotificationKeys = new HashSet<string>();
                 foreach (var n in GetAllNotifications())
                     if (n != null) _initialNotificationKeys.Add(GetNotificationKey(n));
+                _lastFacts = Observe(out _);
                 _completed = false;
+            }
+
+            public void BeginRun()
+            {
+                // Baseline capture and pre-resume evaluation are outside the execution budget.
+                _startGameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0f;
+                _startWallTime = Time.realtimeSinceStartup;
+                _nextObservationTime = _startWallTime + 0.2f;
+                _runStarted = true;
             }
 
             private StepConditionFacts Observe(out string threat)
             {
                 if (!IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(_worldId))) throw new InvalidOperationException("Loaded game changed while step_until was active.");
                 ScanNotificationsAndAlarms(out threat, out _, out var alarms, out var alerts, out var notes, out _);
-                return new StepConditionFacts
+                _orderTracking = _orders?.ToJson();
+                _lastFacts = new StepConditionFacts
                 {
-                    InitialTrackedOrders = _orders.InitialCount,
-                    RemainingTrackedOrders = _orders.RemainingCount,
+                    InitialTrackedOrders = (_orders?.InitialCount ?? 0),
+                    RemainingTrackedOrders = _orderTracking != null ? Convert.ToInt32(_orderTracking["remainingTrackedOrders"]) : 0,
                     CycleEnded = GameUtil.GetCurrentCycle() > _startCycle,
                     PrintingPodReady = StepPrintingPodState.IsAvailable,
-                    ResearchComplete = _research.HasCompleted,
-                    Duplicants = ReadStepDupeFacts(_worldId), Alarms = alarms, Alerts = alerts, Notifications = notes
+                    ResearchComplete = _research?.HasCompleted ?? false,
+                    Duplicants = _condition.ContainsFact("dupes_idle") ? ReadStepDupeFacts(_worldId) : new List<StepDupeFact>(), Alarms = alarms, Alerts = alerts, Notifications = notes
                 };
+                return _lastFacts;
             }
 
             public Dictionary<string, object> GetStatus()
             {
-                var facts = Observe(out _);
-                return Status(facts);
+                return Status(_lastFacts);
             }
 
             private Dictionary<string, object> Status(StepConditionFacts facts)
@@ -110,13 +124,19 @@ namespace OniMcp.Tools
                     ["initialTrackedOrders"] = facts.InitialTrackedOrders,
                     ["remainingTargetOrders"] = facts.RemainingTrackedOrders,
                     ["remainingTrackedOrders"] = facts.RemainingTrackedOrders,
-                    ["orderTracking"] = _orders.ToJson(),
+                    ["orderTracking"] = _orderTracking,
+                    ["sampledFacts"] = new Dictionary<string, object>
+                    {
+                        ["orders"] = _orders != null,
+                        ["research"] = _research != null,
+                        ["idleDuplicants"] = _condition.ContainsFact("dupes_idle")
+                    },
                     ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable,
                     ["idleFacts"] = StepDupeFactsJson(facts.Duplicants),
                     ["researchTracking"] = new Dictionary<string, object>
                     {
-                        ["initialTechId"] = _research.InitialTechId,
-                        ["initiallyComplete"] = _research.InitiallyComplete,
+                        ["initialTechId"] = _research?.InitialTechId,
+                        ["initiallyComplete"] = _research?.InitiallyComplete ?? false,
                         ["completed"] = facts.ResearchComplete
                     },
                     ["activeAlarms"] = facts.Alarms,
@@ -134,7 +154,7 @@ namespace OniMcp.Tools
                     var facts = Observe(out string threat);
                     if (threat != null) { _criticalThreat = threat; Finish("alert:" + threat); return true; }
                     if (!_evaluator.EvaluateBeforeResume(_condition, facts, out string reason)) return false;
-                    Finish(reason);
+                    Finish(reason, facts);
                     return true;
                 }
                 catch (Exception e)
@@ -149,7 +169,7 @@ namespace OniMcp.Tools
 
             private void Update()
             {
-                if (_completed) return;
+                if (_completed || !_runStarted) return;
                 float wallNow = Time.realtimeSinceStartup;
                 // The wall deadline is checked on every Unity update, even when no game facts changed.
                 if (wallNow - _startWallTime >= _maxWallSeconds) { Finish("timeout_wall_clock"); return; }
@@ -169,7 +189,7 @@ namespace OniMcp.Tools
                     var facts = Observe(out string threat);
                     // The every-frame critical read above remains independent of ordinary fact sampling.
                     if (threat != null) { _criticalThreat = threat; Finish("alert:" + threat); return; }
-                    if (_evaluator.Evaluate(_condition, facts, now - _startGameTime, out string reason)) Finish(reason);
+                    if (_evaluator.Evaluate(_condition, facts, now - _startGameTime, out string reason)) Finish(reason, facts);
                 }
                 catch (Exception e)
                 {
@@ -178,7 +198,7 @@ namespace OniMcp.Tools
                 }
             }
 
-            private void Finish(string stopReason)
+            private void Finish(string stopReason, StepConditionFacts sampledFacts = null)
             {
                 if (_completed) return;
                 _completed = true;
@@ -188,20 +208,20 @@ namespace OniMcp.Tools
                 StepConditionFacts facts;
                 try {
                     if (!sameGame) throw new InvalidOperationException("Loaded game changed while step_until was active.");
-                    facts = Observe(out _);
+                    facts = sampledFacts ?? Observe(out _);
                 }
                 catch (Exception e)
                 {
                     _observationError = e.Message;
                     facts = new StepConditionFacts
                     {
-                        InitialTrackedOrders = _orders.InitialCount, RemainingTrackedOrders = _orders.RemainingCount
+                        InitialTrackedOrders = (_orders?.InitialCount ?? 0), RemainingTrackedOrders = (_orders?.RemainingCount ?? 0)
                     };
                 }
                 var delta = sameGame ? Status(facts) : new Dictionary<string, object>
                 {
                     ["active"] = false, ["requestId"] = _requestId, ["worldId"] = _worldId,
-                    ["initialTrackedOrders"] = _orders.InitialCount, ["remainingTrackedOrders"] = _orders.RemainingCount,
+                    ["initialTrackedOrders"] = (_orders?.InitialCount ?? 0), ["remainingTrackedOrders"] = (_orders?.RemainingCount ?? 0),
                     ["elapsedWallSeconds"] = Math.Round(Math.Max(0f, Time.realtimeSinceStartup - _startWallTime), 1),
                     ["immigrantsAvailable"] = null, ["alerts"] = new string[0], ["alarms"] = new string[0],
                     ["notifications"] = new object[0], ["sceneUnloaded"] = true
@@ -242,7 +262,7 @@ namespace OniMcp.Tools
 
             private void OnDestroy()
             {
-                if (!_completed && _orders != null) Finish("destroyed");
+                if (!_completed) Finish("destroyed");
             }
         }
     }

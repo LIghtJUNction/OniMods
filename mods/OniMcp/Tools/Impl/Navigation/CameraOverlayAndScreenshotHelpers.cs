@@ -15,6 +15,17 @@ namespace OniMcp.Tools
             return WorldEditor.CleanupTemporaryScreenshots();
         }
 
+        public static Dictionary<string, object> QueueScreenshot(string fileName)
+        {
+            var queued = OverlaySwitchQueue.Enqueue(null, default(HashedString), false, true, fileName, 1);
+            var result = (Dictionary<string, object>)queued["screenshot"];
+            result["requestId"] = queued["id"];
+            result["queued"] = true;
+            result["ready"] = false;
+            result["note"] = "Capture is queued; wait for the PNG at path/url before reading it.";
+            return result;
+        }
+
         private static Dictionary<string, McpToolParameter> CameraControlParams()
         {
             return new Dictionary<string, McpToolParameter>
@@ -262,7 +273,7 @@ namespace OniMcp.Tools
                 while (requests.Count > 0)
                 {
                     var request = requests.Dequeue();
-                    if (request.ViewName != "coordinate_grid")
+                    if (!string.IsNullOrEmpty(request.ViewName) && request.ViewName != "coordinate_grid")
                         ApplyOverlayMode(request.Mode, request.AllowSound);
                     if (request.CoordinateOverlay != null)
                         CoordinateGridOverlay.Show(request.CoordinateOverlay);
@@ -273,6 +284,13 @@ namespace OniMcp.Tools
                             yield return null;
                         ScreenCapture.CaptureScreenshot(request.ScreenshotPath);
                         yield return null;
+                        // Unity owns one pending capture. Do not let a second
+                        // tool request replace it before the file is written.
+                        float deadline = Time.realtimeSinceStartup + 10f;
+                        while (!File.Exists(request.ScreenshotPath) && Time.realtimeSinceStartup < deadline)
+                            yield return null;
+                        if (!File.Exists(request.ScreenshotPath))
+                            Debug.LogWarning("[OniMcp] Screenshot did not complete: " + request.ScreenshotPath);
                     }
                     else
                     {
@@ -314,27 +332,6 @@ namespace OniMcp.Tools
                 .Select(c => char.IsLetterOrDigit(c) ? c : '_')
                 .ToArray();
             return new string(chars);
-        }
-
-        private static Dictionary<string, object> SaveScreenshot(string fileName)
-        {
-            var cleanup = CleanupTemporaryScreenshots(1);
-            string dir = ScreenshotDirectory;
-            Directory.CreateDirectory(dir);
-            if (string.IsNullOrEmpty(fileName))
-                fileName = $"cycle_{GameUtil.GetCurrentCycle()}_{System.DateTime.UtcNow:yyyyMMdd_HHmmss_fff}.png";
-            string path = Path.Combine(dir, Path.GetFileName(fileName));
-            if (!path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                path += ".png";
-
-            ScreenCapture.CaptureScreenshot(path);
-            return new Dictionary<string, object>
-            {
-                ["path"] = path,
-                ["cycle"] = GameUtil.GetCurrentCycle(),
-                ["screen"] = new { width = Screen.width, height = Screen.height },
-                ["cleanup"] = cleanup
-            };
         }
 
         private static string ScreenshotDirectory

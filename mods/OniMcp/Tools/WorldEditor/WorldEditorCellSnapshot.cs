@@ -92,7 +92,19 @@ namespace OniMcp.Tools
             sb.AppendLine("## Base");
             sb.AppendLine("- Cell: " + cell);
             sb.AppendLine("- 元素: " + elementName + " (" + elementId + ")");
-            sb.AppendLine("- 质量: " + Grid.Mass[cell].ToString("F2") + " kg");
+            sb.AppendLine("- 太空: spaceBiome=" + Grid.IsCellBiomeSpaceBiome(cell) + " open=" + Grid.IsCellOpenToSpace(cell));
+            sb.AppendLine("- 质量: " + Grid.Mass[cell].ToString("R", System.Globalization.CultureInfo.InvariantCulture) + " kg (显示字段)");
+            if (Jlib.Multicomponent.MulticomponentCellAccess.TryGetCell(cell, out var mixture))
+            {
+                sb.AppendLine("- 总质量: " + mixture.TotalMass.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + " kg");
+                sb.AppendLine("- 组分 (kg):");
+                for (int i = 0; i < mixture.ComponentCount; i++)
+                {
+                    var item = mixture.Components[i];
+                    sb.AppendLine("  - " + item.Element.id + ": "
+                        + item.Mass.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
             float tempC = Grid.Temperature[cell] - 273.15f;
             sb.AppendLine("- 温度: " + tempC.ToString("F1") + "°C");
             sb.AppendLine("- 温度适宜: " + TemperatureSuitabilityText(tempC));

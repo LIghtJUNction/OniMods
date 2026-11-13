@@ -86,6 +86,7 @@ namespace OniMcp.Tools
                         ["elementName"] = ToolUtil.CleanName(element?.name ?? "Unknown"),
                         ["state"] = ToolUtil.GetElementState(element),
                         ["massKg"] = Math.Round(SafeFloat(Grid.Mass[cell]), 3),
+                        ["massKgExact"] = SafeFloat(Grid.Mass[cell]),
                         ["temperatureK"] = Math.Round(SafeFloat(Grid.Temperature[cell]), 2),
                         ["temperatureC"] = Math.Round(SafeFloat(Grid.Temperature[cell]) - 273.15f, 2),
                         ["pressureKg"] = Math.Round(SafeFloat(Grid.Pressure[cell]), 3),

@@ -111,25 +111,7 @@ namespace OniMcp.Tools
 
         public static Dictionary<string, object> SaveScreenshot(string fileName)
         {
-            var cleanup = CleanupTemporaryScreenshots(1);
-            string dir = ScreenshotDirectory;
-            Directory.CreateDirectory(dir);
-            if (string.IsNullOrEmpty(fileName))
-                fileName = $"cycle_{GameUtil.GetCurrentCycle()}_{System.DateTime.UtcNow:yyyyMMdd_HHmmss_fff}.png";
-            string path = Path.Combine(dir, Path.GetFileName(fileName));
-            if (!path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                path += ".png";
-
-            ScreenCapture.CaptureScreenshot(path);
-            return new Dictionary<string, object>
-            {
-                ["path"] = path,
-                ["url"] = ScreenshotUrl(path),
-                ["latestUrl"] = OniMcpOptions.Current.ScreenshotLatestUrl,
-                ["cycle"] = GameUtil.GetCurrentCycle(),
-                ["screen"] = new { width = Screen.width, height = Screen.height },
-                ["cleanup"] = cleanup
-            };
+            return CameraTools.QueueScreenshot(fileName);
         }
 
         public static Dictionary<string, object> CleanupTemporaryScreenshots(int reservedSlots = 0)

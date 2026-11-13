@@ -10,12 +10,17 @@ namespace OniMcp.Tools
     {
         internal Action Tick;
         internal Action Destroy;
+        internal Action Begin;
+        internal Func<Dictionary<string, object>> Status;
         internal int SpeedAtCompletion;
         internal readonly List<Dictionary<string, object>> Completions = new List<Dictionary<string, object>>();
     }
 
     public static partial class GameControlTools
     {
+        internal static int OrderCaptures;
+        internal static int DupeReads;
+        internal static int NotificationScans;
         private static readonly object StepTestWorld = new object();
 
         internal static void ResetSpeedWaitForTest()
@@ -25,9 +30,9 @@ namespace OniMcp.Tools
             _mcpPauseScreen = null;
         }
 
-        internal static StepSpeedTestHandle StartSpeedWaitForTest(float seconds = 1f)
+        internal static StepSpeedTestHandle StartSpeedWaitForTest(float seconds = 1f, string fact = "orders_complete", bool begin = true)
         {
-            if (!StepCondition.TryParse(JObject.Parse("{condition:'orders_complete'}"), out var condition, out string error))
+            if (!StepCondition.TryParse(new JObject { ["condition"] = fact }, out var condition, out string error))
                 throw new InvalidOperationException(error);
             var handle = new StepSpeedTestHandle();
             var watcher = new StepUntilWatcher();
@@ -39,6 +44,13 @@ namespace OniMcp.Tools
                     handle.SpeedAtCompletion = SpeedControlScreen.Instance.GetSpeed();
                     if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
                 });
+            handle.Begin = () =>
+            {
+                ReleaseMcpPause(SpeedControlScreen.Instance, releaseNativePause: true);
+                watcher.BeginRun();
+            };
+            handle.Status = watcher.GetStatus;
+            if (begin) watcher.BeginRun();
             handle.Tick = watcher.TestUpdate;
             handle.Destroy = watcher.TestDestroy;
             return handle;
@@ -46,15 +58,15 @@ namespace OniMcp.Tools
 
         private static object ResolveStepRootWorld() => StepTestWorld;
         private static object ResolveStepWorld(int worldId) => StepTestWorld;
-        private static List<StepDupeFact> ReadStepDupeFacts(int worldId) => new List<StepDupeFact>();
+        private static List<StepDupeFact> ReadStepDupeFacts(int worldId) { DupeReads++; return new List<StepDupeFact>(); }
         private static Dictionary<string, object> StepDupeFactsJson(List<StepDupeFact> facts) => new Dictionary<string, object>();
 
         private sealed class StepOrderTracker
         {
-            internal StepOrderTracker(int worldId, HashSet<int> cells) { }
+            internal StepOrderTracker(int worldId, HashSet<int> cells) { OrderCaptures++; }
             internal int InitialCount => 0;
             internal int RemainingCount => 0;
-            internal Dictionary<string, object> ToJson() => new Dictionary<string, object>();
+            internal Dictionary<string, object> ToJson() => new Dictionary<string, object> { ["remainingTrackedOrders"] = 0 };
         }
 
         private sealed partial class StepUntilWatcher
@@ -68,6 +80,7 @@ namespace OniMcp.Tools
             private void ScanNotificationsAndAlarms(out string threat, out string alarm,
                 out List<string> alarms, out List<string> alerts, out List<StepNotificationFact> notes, out int newCount)
             {
+                NotificationScans++;
                 threat = alarm = null;
                 alarms = new List<string>();
                 alerts = new List<string>();

@@ -24,6 +24,7 @@ namespace OniMcp.Server
             typeof(McpHttpServer).Assembly.GetName().Version?.ToString(3) ?? "unknown";
 
         private HttpListener _listener;
+        private List<McpToolInfo> _toolManifest;
 
         private Thread _listenerThread;
 
@@ -79,6 +80,8 @@ namespace OniMcp.Server
             {
                 _options = OniMcpOptions.Current;
                 CameraTools.CleanupTemporaryScreenshots();
+                // Freeze metadata on the game thread before HTTP workers start.
+                _toolManifest = OniToolRegistry.GetToolInfos();
 
                 _listener = new HttpListener();
                 foreach (var prefix in _options.ListenPrefixes)

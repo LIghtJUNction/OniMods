@@ -337,9 +337,9 @@ internal static class Program
         var pause = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
         Check(!pause.IsError && nested.PauseCount == 2, "MCP pause must add exactly one owned pause beside an external pause");
         var resume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
-        Check(!resume.IsError && nested.PauseCount == 1 && nested.IsPaused,
-            "MCP resume must not drain an unrelated ONI pause reference");
-        Check((bool)Body(resume)["isPaused"], "resume result must report the remaining external pause");
+        Check(!resume.IsError && nested.PauseCount == 0 && !nested.IsPaused,
+            "MCP resume must release its own reference and one native pause");
+        Check(!(bool)Body(resume)["isPaused"], "resume result must report the released native pause");
 
         var repeated = new SpeedControlScreen();
         SpeedControlScreen.Instance = repeated;

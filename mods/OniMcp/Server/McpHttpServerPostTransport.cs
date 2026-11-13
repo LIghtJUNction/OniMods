@@ -192,6 +192,34 @@ namespace OniMcp.Server
                 }
             }
 
+            // Protocol negotiation and the frozen tool manifest do not touch
+            // Unity state. They must remain available while save loading stalls
+            // the game thread. Keep the existing session/admission checks above.
+            if (isInitialize || rpcRequest.Method == "tools/list"
+                || rpcRequest.Method == "notifications/initialized")
+            {
+                try
+                {
+                    if (isNotification)
+                    {
+                        SetResponseSessionId(response, sessionId);
+                        SetResponseProtocolVersion(response, sessionId);
+                        response.StatusCode = 202;
+                        response.ContentLength64 = 0;
+                        response.Close();
+                    }
+                    else
+                    {
+                        object metadata = isInitialize
+                            ? HandleInitialize(rpcRequest.Id, rpcRequest.Params?.ToObject<InitializeParams>(), sessionId)
+                            : new ListToolsResult { Tools = _toolManifest };
+                        SendPostResponse(response, rpcRequest.Id, metadata, null, sessionId);
+                    }
+                }
+                finally { admission.Release(); }
+                return;
+            }
+
             // 通知（无 id）：返回 202 Accepted
             if (isNotification)
             {

@@ -20,8 +20,54 @@ internal static class LegacyPingRegression
 
     internal static void Run()
     {
+        RunMetadataWithoutPumping();
         RunLegacyResourceNotFoundCodeRegression();
         RunLegacyPingLifecycleRegression();
+    }
+
+    private static void RunMetadataWithoutPumping()
+    {
+        _bridge = new JlibDispatcher();
+        Invoke(_bridge, "Awake");
+        Invoke(new MainThreadBridge(), "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(3)
+            })
+            {
+                const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":14901,\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"stalled-game-regression\",\"version\":\"1\"}}}";
+                string session;
+                using (var response = client.PostAsync("", new StringContent(initialize, Encoding.UTF8, "application/json")).GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK && ReadJson(response)["result"] != null,
+                        "Initialize requires pumping the stalled game thread");
+                    session = response.Headers.GetValues("Mcp-Session-Id").Single();
+                }
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Headers.TryAddWithoutValidation("Mcp-Session-Id", session);
+                    request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2025-11-25");
+                    request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":14902}", Encoding.UTF8, "application/json");
+                    using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                        Assert(ReadJson(response)["result"]?["tools"] is JArray tools && tools.Count > 0,
+                            "Tool discovery requires pumping the stalled game thread");
+                }
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
     }
 
     private static void RunLegacyResourceNotFoundCodeRegression()

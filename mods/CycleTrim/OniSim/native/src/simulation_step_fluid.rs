@@ -161,11 +161,20 @@ pub(crate) fn liquid_phase_with_flow(
         max_y: (bounds.3 + 1).min(region.max_y),
         ..region
     };
+    static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+    let started = profiling.then(std::time::Instant::now);
     LIQUID_PRESSURE.with(|scratch| {
         let mut scratch = scratch.borrow_mut();
         let pressure_changed = scratch.run(world, elements, diseases, events, region);
+        let pressure_at = started.map(|start| start.elapsed());
         let transport_changed = LIQUID_TRANSPORT.with(|transport| transport.borrow_mut()
             .run(world, elements, diseases, events, region, &scratch.covered));
+        if let (Some(start), Some(pressure)) = (started, pressure_at) {
+            eprintln!("[CycleTrim OniSim] liquid detail cells={} nodes={} sweeps={} pressure={:.3}ms transport={:.3}ms",
+                width * height, scratch.profile_nodes, scratch.profile_sweeps, pressure.as_secs_f64() * 1000.0,
+                (start.elapsed() - pressure).as_secs_f64() * 1000.0);
+        }
         flow_already_applied || pressure_changed || transport_changed
     })
 }

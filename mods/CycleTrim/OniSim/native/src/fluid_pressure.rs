@@ -53,6 +53,8 @@ pub(crate) struct PressureScratch {
     nodes: Vec<Node>,
     faces: Vec<Face>,
     pub(crate) covered: Vec<u8>,
+    pub(crate) profile_sweeps: usize,
+    pub(crate) profile_nodes: usize,
     #[cfg(test)]
     pub(crate) last_sweeps: usize,
     #[cfg(test)]
@@ -195,7 +197,9 @@ impl PressureScratch {
 
         // Iterations only solve pressures; no material is moved until the
         // final face fluxes are known. Viscosity is a per-update face budget.
+        self.profile_nodes = self.nodes.len();
         for sweep in 0..MAX_SWEEPS {
+            self.profile_sweeps = sweep + 1;
             for offset in 0..self.nodes.len() {
                 let i = if sweep & 1 == 0 {
                     offset

@@ -136,6 +136,7 @@ namespace OniMcp.Tools
             // Validate and capture the baseline before releasing our pause.
             ReleaseMcpPause(speedControl, releaseNativePause: true);
             speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
+            watcher.BeginRun();
 
             if (!wait)
             {

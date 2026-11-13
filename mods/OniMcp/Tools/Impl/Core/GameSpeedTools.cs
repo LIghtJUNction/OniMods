@@ -222,12 +222,14 @@ namespace OniMcp.Tools
 
             if (ownsPause)
             {
-                // Release only the reference acquired by MCP. Other ONI pause owners stay intact.
+                // Release the single reference acquired by MCP first.
                 speedControl.Unpause();
             }
-            else if (!hasMcpPauseLease && releaseNativePause)
+            if (releaseNativePause && (ownsPause || !hasMcpPauseLease) && speedControl.IsPaused)
             {
-                // Resume must also release a native ONI pause when MCP never acquired one.
+                // Explicit resume/step releases at most one native user pause as well.
+                // ONI exposes only a count: never drain remaining pause owners.
+                // A stale lease from another load must not release its replacement.
                 speedControl.Unpause();
             }
         }

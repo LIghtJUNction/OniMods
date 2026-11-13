@@ -88,10 +88,10 @@ internal static class StepSpeedInterruptionRegression
             var externalWait = GameControlTools.StartSpeedWaitForTest();
             external.Pause();
             var result = Command(action, 2);
-            Check(!result.IsError && externalWait.Completions.Count == 1 && external.PauseCount == 1
+            Check(!result.IsError && externalWait.Completions.Count == 1 && external.PauseCount == (action == "resume" ? 0 : 1)
                 && external.GetSpeed() == (action == "set_speed" ? 1 : 0),
                 "interrupting a wait must preserve an unrelated native pause");
-            Check((bool)JObject.Parse(result.Content[0].Text)["isPaused"],
+            Check((bool)JObject.Parse(result.Content[0].Text)["isPaused"] == (action != "resume"),
                 action + " must report the remaining external pause after completing the wait");
         }
 
@@ -121,6 +121,42 @@ internal static class StepSpeedInterruptionRegression
             && (string)staleLoadWait.Completions[0]["stopReason"] == "scene_unloaded"
             && newScreen.PauseCount == 1,
             "cancelling a wait from an old game must not acquire a pause in the new game");
+
+        foreach (int nativeCount in new[] { 0, 1, 3 })
+        {
+            var screen = Reset();
+            for (int i = 0; i < nativeCount; i++) screen.Pause();
+            Command("pause");
+            Command("pause");
+            Command("resume");
+            Check(screen.PauseCount == Math.Max(0, nativeCount - 1),
+                "explicit resume releases MCP plus at most one native reference");
+        }
+
+        var cycleScreen = Reset();
+        cycleScreen.Pause();
+        Command("pause");
+        int ordersBefore = GameControlTools.OrderCaptures;
+        int dupesBefore = GameControlTools.DupeReads;
+        var lightweight = GameControlTools.StartSpeedWaitForTest(12f, "cycle_end", false);
+        int scansBefore = GameControlTools.NotificationScans;
+        UnityEngine.Time.realtimeSinceStartup = 113.2f;
+        lightweight.Status();
+        lightweight.Status();
+        lightweight.Tick();
+        Check(lightweight.Completions.Count == 0, "baseline time must not start the run deadline");
+        lightweight.Begin();
+        Check(!cycleScreen.IsPaused, "step resume must release the stacked native and MCP pauses");
+        lightweight.Tick();
+        Check(lightweight.Completions.Count == 0, "run must retain its full wall budget after slow initialization");
+        Check(GameControlTools.OrderCaptures == ordersBefore && GameControlTools.DupeReads == dupesBefore,
+            "cycle_end must skip order capture and idle fact reads");
+        Check(GameControlTools.NotificationScans == scansBefore,
+            "status polling must reuse the sample without rescanning notifications");
+        UnityEngine.Time.realtimeSinceStartup = 125.3f;
+        lightweight.Tick();
+        Check(lightweight.Completions.Count == 1 && SpeedControlScreen.Instance.IsPaused,
+            "the run deadline must still finish and pause");
 
         Reset();
         Console.WriteLine("Step speed interruption regression checks passed: " + assertions);
