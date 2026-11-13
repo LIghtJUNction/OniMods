@@ -17,14 +17,14 @@ CycleTrim explores gas and liquid mixtures with GPU acceleration. The developmen
 Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
 
 [h2]Current progress[/h2]
-Single-process coroutines overlap CPU gas tasks on the existing worker pool with GPU liquid readback; result publication retains its original order. This does not imply a specific FPS improvement. 0.4.22 fixes trace-gas depletion being restored to its previous mass and reuses liquid/gas staging buffers to reduce repeated allocations, while retaining cross-world batching and event ordering. All gas species participate; equal-sized worlds own separate buffers, and changed inputs trigger recomputation. Requires Jlib 0.3.8. Local tests and paired benchmarks passed; in-game performance is verified separately.
+0.4.22 overlaps CPU gas tasks with GPU liquid readback through single-process coroutines, preserving result order. It fixes trace-gas depletion and reuses staging buffers. All gas species participate; changed inputs are recomputed. Requires Jlib 0.3.8. Paired native benchmarks passed; game FPS still needs controlled verification.
 [list]
-[*]Version 0.4.13 transports all gas species without limiting a cell to two gas slots. Liquid species equality and complete mixture save/load remain unfinished.
+[*]Complete liquid mixtures and mixture save/load remain unfinished.
 [*]GPU thermal diffusion covers the grid. Eligible gas regions use diffusion, velocity, bounded transport and heat kernels in one submission; eligible liquids use multicomponent diffusion. Other conditions still use CPU processing or exclude regions.
 [*]Phase changes, bubbles, some liquid flow, disease, radiation, buildings and publication still use the CPU. Building interactions, liquids and persistence need end-to-end validation.
 [*]Pressure, partial pressure and liquid volume fractions are unfinished. Breathing, plants and pipes need end-to-end validation.
 [/list]
-Standalone tests, development builds and Workshop releases are different stages; in-game frame-rate gains are not yet fully verified.
+Native tests do not establish in-game compatibility or FPS.
 
 [h3]Gas mixing: oxygen and carbon dioxide in one cell[/h3]
 [img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-gas-mix.png[/img]
