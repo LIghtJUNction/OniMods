@@ -28,6 +28,8 @@ pub(crate) struct Workspace {
     sparse_transport: bool,
     #[cfg(test)]
     reference_transport: bool,
+    #[cfg(test)]
+    reference_density: bool,
 }
 
 // Chunk boundaries are complete rows. Advance x/y explicitly so the hot
@@ -444,6 +446,13 @@ impl Workspace {
             self.sparse_transport = false;
             return self.step_single_channel(job, dt, pool);
         }
+        let cached_density = !diffuse && {
+            #[cfg(test)]
+            { !self.reference_transport && !self.reference_density }
+            #[cfg(not(test))]
+            { true }
+        };
+        self.thermal.resize(count, ThermalCell::default());
         let environment = crate::float_env::FloatEnv::capture();
         self.source_enthalpy.resize(values, 0.0);
         self.density.resize(count, 0.0);
@@ -458,13 +467,14 @@ impl Workspace {
                 .par_chunks_mut(rows * channels)
                 .with_min_len(minimum_chunks)
                 .zip(self.density.par_chunks_mut(rows))
+                .zip(self.thermal.par_chunks_mut(rows))
                 .enumerate()
-                .map(|(chunk, (energy, density))| {
+                .map(|(chunk, ((energy, density), thermal))| {
                     let _environment = environment.install();
                     let mut present = 0usize;
                     let mut open = 0usize;
-                    for (local, (energy, density)) in
-                        energy.chunks_mut(channels).zip(density).enumerate()
+                    for (local, ((energy, density), thermal)) in
+                        energy.chunks_mut(channels).zip(density).zip(thermal).enumerate()
                     {
                         let cell = chunk * rows + local;
                         let track = job.state.solid[cell] == 0;
@@ -479,6 +489,11 @@ impl Workspace {
                                 * job.temperature[cell];
                         }
                         *density = total;
+                        if cached_density {
+                            // Match the stencil's sum, including signed zero.
+                            thermal.mass = job.state.mass[cell * channels..(cell + 1) * channels]
+                                .iter().sum::<f32>();
+                        }
                     }
                     (present, open)
                 })
@@ -541,10 +556,16 @@ impl Workspace {
         };
         self.velocity.resize(count, [0.0; 2]);
         self.conductivity.resize(count, 0.0);
+        // Without diffusion the packing pass already visits every source cell.
+        // Reuse thermal scratch for its exact total until velocity generation
+        // finishes; transport then overwrites every cell. Diffusion keeps its
+        // stencil reductions: caching that path did not improve measurements.
         let total = |cell: usize| {
-            mass[cell * channels..(cell + 1) * channels]
-                .iter()
-                .sum::<f32>()
+            if cached_density {
+                self.thermal[cell].mass
+            } else {
+                mass[cell * channels..(cell + 1) * channels].iter().sum::<f32>()
+            }
         };
         let min_drift = job
             .state
@@ -927,6 +948,45 @@ mod tests {
     use super::*;
 
     #[test]
+    fn cached_density_matches_stencil_reductions_after_diffusion() {
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(2).build().unwrap();
+        for (width, height, channels) in [(1, 7, 2), (17, 13, 8), (96, 97, 16)] {
+            let count = width * height;
+            let solid: Vec<_> = (0..count).map(|cell| u32::from(cell % 7 == 0)).collect();
+            let mass: Vec<_> = (0..count * channels).map(|slot| {
+                if solid[slot / channels] != 0 { -0.0 }
+                else { (slot % 11) as f32 * 0.125 }
+            }).collect();
+            let temperatures: Vec<_> = (0..count).map(|cell| 300.0 + (cell % 17) as f32).collect();
+            let species: Vec<_> = (0..channels).map(|channel| onisim_gpu::multicomponent::SpeciesInfo {
+                element_id: channel as u16 + 1, phase: 1,
+                specific_heat_capacity: 0.5 + channel as f32 * 0.25,
+                vertical_drift: (channel % 3) as f32 * 0.01,
+            }).collect();
+            let conductivity = vec![0.1; channels];
+            let mut output_mass = vec![0.0; mass.len()];
+            let mut output_temperature = vec![0.0; count];
+            let job = GasBatchJob {
+                dimensions: (width, height, channels),
+                state: State { mass: &mass, enthalpy: &[], velocity_x: &[], velocity_y: &[],
+                    solid: &solid, species: &species },
+                temperature: &temperatures, conductivity: &conductivity,
+                mass_output: &mut output_mass, temperature_output: &mut output_temperature,
+            };
+            let mut cached = Workspace::default();
+            let mut reference = Workspace { reference_density: true, ..Workspace::default() };
+            // Alternate paths on the same workspace to catch stale densities.
+            for diffuse in [false, true, false, true] {
+                cached.step(&job, diffuse, 0.05, &pool).unwrap();
+                reference.step(&job, diffuse, 0.05, &pool).unwrap();
+                assert!(cached.mass_output.iter().chain(&cached.temperature_output)
+                    .zip(reference.mass_output.iter().chain(&reference.temperature_output))
+                    .all(|(a, b)| a.to_bits() == b.to_bits()));
+            }
+        }
+    }
+
+    #[test]
     fn row_coordinates_cover_odd_shapes_and_partial_chunks() {
         for (width, height) in [(1, 7), (17, 13), (96, 65)] {
             let count = width * height;
@@ -1157,9 +1217,14 @@ mod tests {
     #[test]
     #[ignore = "manual CPU gas-chain benchmark; run without a game or concurrent benchmark"]
     fn benchmark_cpu_gas_chain() {
-        let (width, height, channels) = (160, 96, 16);
+        let channels = std::env::var("CYCLETRIM_GAS_BENCH_CHANNELS")
+            .map(|value| value.parse::<usize>().expect("invalid benchmark channel count"))
+            .unwrap_or(16);
+        assert!((2..=16).contains(&channels));
+        let (width, height) = (160, 96);
         let count = width * height;
         let sparse = std::env::var_os("CYCLETRIM_GAS_BENCH_SPARSE").is_some();
+        let density_only = std::env::var_os("CYCLETRIM_GAS_BENCH_DENSITY").is_some();
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(8)
             .build()
@@ -1216,7 +1281,8 @@ mod tests {
                     temperature_output: &mut output_temperature,
                 };
                 let reference = sample % 4 == 0 || sample % 4 == 3;
-                workspace.reference_transport = reference;
+                workspace.reference_transport = reference && !density_only;
+                workspace.reference_density = reference && density_only;
                 let started = std::time::Instant::now();
                 workspace.step(&job, diffuse, 0.05, &pool).unwrap();
                 let elapsed = started.elapsed().as_secs_f64() * 1000.0;
@@ -1250,7 +1316,7 @@ mod tests {
             reference_samples.sort_by(f64::total_cmp);
             paired_reductions.sort_by(f64::total_cmp);
             eprintln!(
-                "CPU gas chain 160x96x16 sparse={sparse} diffuse={diffuse} 8 threads 10 warmup pairs + 60 measured pairs median={:.6}ms p95={:.6}ms checksum={checksum:016x} reference_median={:.6}ms paired_reduction_median={:.3}%; not whole-game FPS",
+                "CPU gas chain 160x96x{channels} sparse={sparse} diffuse={diffuse} 8 threads 10 warmup pairs + 60 measured pairs median={:.6}ms p95={:.6}ms checksum={checksum:016x} reference_median={:.6}ms paired_reduction_median={:.3}%; not whole-game FPS",
                 (samples[29] + samples[30]) * 0.5,
                 samples[56],
                 (reference_samples[29] + reference_samples[30]) * 0.5,
