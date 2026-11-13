@@ -11,10 +11,12 @@ const SECOND_GAS: u16 = 4;
 const LIQUID: u16 = 5;
 const SOLID: u16 = 6;
 
-fn elements() -> ElementTable {
-    let entries = [(0x2d39bf75_u32, 0_u8), (0x6d95058c, 3), (0xa9360b34, 0),
+fn elements(second_liquid: bool) -> ElementTable {
+    let mut entries = vec![(0x2d39bf75_u32, 0_u8), (0x6d95058c, 3), (0xa9360b34, 0),
         (0x10000003, 1), (0x10000004, 1), (0x10000005, 2), (0x10000006, 3)];
-    let mut bytes = (entries.len() as i32).to_le_bytes().to_vec();
+    if second_liquid { entries.push((0x10000007, 2)); }
+    let entries_count = entries.len();
+    let mut bytes = (entries_count as i32).to_le_bytes().to_vec();
     for (index, (hash, phase)) in entries.into_iter().enumerate() {
         let mut record = [0_u8; 164];
         record[..4].copy_from_slice(&hash.to_le_bytes());
@@ -38,14 +40,14 @@ fn elements() -> ElementTable {
         }
         bytes.extend_from_slice(&record);
     }
-    bytes.extend_from_slice(&[0; 28]);
+    bytes.resize(bytes.len() + entries_count * 4, 0);
     ElementTable::parse(&bytes).unwrap()
 }
 
 pub(crate) fn create(width: usize, height: usize, scene: &str) -> (State, Vec<Region>) {
     assert!(width >= 16 && height >= 16);
-    assert!(["pure", "liquid", "mixed", "thermal", "regions", "empty", "zero", "command", "alternating_idle"].contains(&scene));
-    let elements = Arc::new(elements());
+    assert!(["pure", "liquid", "mixed", "thermal", "regions", "empty", "zero", "command", "alternating_idle", "coroutine"].contains(&scene));
+    let elements = Arc::new(elements(scene == "coroutine"));
     let mut world = PhysicsWorld::new(width, height, 42, &elements).unwrap();
     world.world_offsets = vec![[0, 0, width as i32, height as i32]];
     world.simulate_all_active = true;
@@ -59,13 +61,13 @@ pub(crate) fn create(width: usize, height: usize, scene: &str) -> (State, Vec<Re
                 else { 0.75 + (x % 17) as f32 * 0.03125 };
             world.write.temperature[cell] = if thermal && x < width / 2 { 600.0 } else { 300.0 };
             world.write.strength[cell] = 255;
-            if scene == "mixed" && x > width / 2 {
+            if matches!(scene, "mixed" | "coroutine") && x > width / 2 {
                 world.write.element[cell] = SECOND_GAS;
                 world.write.mass[cell] = 0.5 + (y % 13) as f32 * 0.03125;
             }
         }
     }
-    if scene == "liquid" || scene == "mixed" {
+    if scene == "liquid" || matches!(scene, "mixed" | "coroutine") {
         // The pool is a bounded but genuine connected pressure workload, rather
         // than a million-node stress solver that would obscure batch controls.
         let pool_width = (width / 3).min(48);
@@ -73,7 +75,7 @@ pub(crate) fn create(width: usize, height: usize, scene: &str) -> (State, Vec<Re
         for y in 2..=pool_height + 1 {
             for x in 2..=pool_width + 1 {
                 let cell = y * world.stride + x;
-                world.write.element[cell] = LIQUID;
+                world.write.element[cell] = if scene == "coroutine" && x > pool_width / 2 { 7 } else { LIQUID };
                 world.write.mass[cell] = if x <= pool_width / 2 { 1000.0 } else { 700.0 };
                 world.write.temperature[cell] = 300.0 + (x % 3) as f32;
             }
@@ -85,7 +87,7 @@ pub(crate) fn create(width: usize, height: usize, scene: &str) -> (State, Vec<Re
             world.write.mass[cell] = 1000.0;
         }
     }
-    if scene == "mixed" {
+    if matches!(scene, "mixed" | "coroutine") {
         for y in height / 2..height / 2 + 3 {
             for x in width / 3..width / 3 + 5 {
                 let cell = y * world.stride + x;

@@ -265,6 +265,7 @@ pub(crate) struct LiquidStaging {
 
 pub(crate) struct PendingLiquidRegion {
     min_x:usize, min_y:usize, width:usize, height:usize,
+    full_region: (usize, usize, usize, usize),
     ids:Vec<u16>, species:Vec<onisim_gpu::multicomponent::SpeciesInfo>, staging:LiquidStaging,
     pending:onisim_gpu::multicomponent::PendingLiquidProjection,
 }
@@ -278,9 +279,24 @@ pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementT
     let max_x=(region.max_x as usize).min(world.width); let max_y=(region.max_y as usize).min(world.height);
     if max_x.saturating_sub(min_x)<2 || max_y.saturating_sub(min_y)<2 {return Ok(None);}
     let (width,height)=(max_x-min_x,max_y-min_y);
-    let Some(ids) = liquid_discovery::discover(world, elements, (min_x, min_y, width, height)) else {
+    let full_region = (min_x, min_y, width, height);
+    let Some(discovered) = liquid_discovery::discover_bounded(world, elements, full_region) else {
         return Ok(None);
     };
+    let ids = discovered.ids;
+    #[cfg(test)]
+    let reference = crate::native_chain_tests::BENCHMARK_INLINE_COROUTINES.load(std::sync::atomic::Ordering::SeqCst);
+    #[cfg(not(test))]
+    let reference = false;
+    // Retain a one-cell stencil halo and quantize to stable 32-cell tiles.
+    // Small moving pools reuse pipelines instead of changing dimensions each tick.
+    let [left, bottom, right, top] = discovered.bounds;
+    let tile_min = |value: usize, origin: usize| origin + value.saturating_sub(1).saturating_sub(origin) / 32 * 32;
+    let tile_max = |value: usize, origin: usize, limit: usize| (origin + (value + 1 - origin).div_ceil(32) * 32).min(limit);
+    let (min_x, min_y, max_x, max_y) = if reference { (min_x, min_y, max_x, max_y) } else {
+        (tile_min(left, min_x), tile_min(bottom, min_y), tile_max(right, min_x, max_x), tile_max(top, min_y, max_y))
+    };
+    let (width, height) = (max_x - min_x, max_y - min_y);
     let species:Vec<_>=ids.iter().map(|&id|onisim_gpu::multicomponent::SpeciesInfo {
         element_id:id, phase:2, specific_heat_capacity:elements.elements[id as usize].record.specific_heat_capacity,vertical_drift:0.0
     }).collect();
@@ -318,25 +334,72 @@ pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementT
                 format!("GPU liquid diffusion failed: {error}")));
         }
     };
-    Ok(Some(PendingLiquidRegion {min_x,min_y,width,height,ids,species,staging,pending}))
+    Ok(Some(PendingLiquidRegion {min_x,min_y,width,height,full_region,ids,species,staging,pending}))
 }
 
+#[cfg(test)]
 pub(crate) fn finish_sparse_liquid_region(work:PendingLiquidRegion,world:&mut PhysicsWorld,
     events:&mut EventQueues,solid_out:&mut Vec<u32>,gpu:&mut crate::gpu_sim::GpuSimulation) -> crate::status::Result<bool> {
-    let PendingLiquidRegion {min_x,min_y,width,height,ids,species,mut staging,pending}=work;
+    onisim_gpu::coroutine::run(finish_sparse_liquid_region_async(work, world, events, solid_out, gpu))
+}
+
+pub(crate) struct ReadyLiquidRegion {
+    min_x: usize, min_y: usize, width: usize, height: usize,
+    full_region: (usize, usize, usize, usize),
+    ids: Vec<u16>, species: Vec<onisim_gpu::multicomponent::SpeciesInfo>,
+    staging: LiquidStaging, result: Result<bool, String>,
+}
+
+pub(crate) async fn read_sparse_liquid_region(work: PendingLiquidRegion) -> ReadyLiquidRegion {
+    #[cfg(test)]
+    crate::native_chain_tests::BENCHMARK_COROUTINE_READBACKS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let PendingLiquidRegion { min_x, min_y, width, height, full_region, ids, species, mut staging, pending } = work;
+    staging.projected.resize(width * height, onisim_gpu::multicomponent::ProjectedLiquidCell::default());
+    #[cfg(test)]
+    let inline = crate::native_chain_tests::BENCHMARK_INLINE_COROUTINES.load(std::sync::atomic::Ordering::SeqCst);
+    #[cfg(not(test))]
+    let inline = false;
+    let result = if inline { pending.finish(&mut staging.projected) }
+        else { pending.finish_async(&mut staging.projected).await };
+    ReadyLiquidRegion { min_x, min_y, width, height, full_region, ids, species, staging, result }
+}
+
+#[cfg(test)]
+pub(crate) async fn finish_sparse_liquid_region_async(work: PendingLiquidRegion, world: &mut PhysicsWorld,
+    events: &mut EventQueues, solid_out: &mut Vec<u32>, gpu: &mut crate::gpu_sim::GpuSimulation) -> crate::status::Result<bool> {
+    let ready = read_sparse_liquid_region(work).await;
+    publish_sparse_liquid_region(ready, world, events, solid_out, gpu)
+}
+
+pub(crate) fn publish_sparse_liquid_region(work: ReadyLiquidRegion, world: &mut PhysicsWorld,
+    events: &mut EventQueues, solid_out: &mut Vec<u32>, gpu: &mut crate::gpu_sim::GpuSimulation) -> crate::status::Result<bool> {
+    let ReadyLiquidRegion { min_x, min_y, width, height, full_region, ids, species, mut staging, result } = work;
     let result = (|| {
         let LiquidStaging { solid, projected, .. } = &mut staging;
-        projected.resize(width*height, onisim_gpu::multicomponent::ProjectedLiquidCell::default());
-        if !pending.finish(projected).map_err(|error|crate::status::Error::new(crate::status::Status::InternalFailure,format!("GPU liquid diffusion failed: {error}")))? {return Ok(false);}
-        for y in 0..height {for x in 0..width {
-            let local=y*width+x; if solid[local]!=0 {continue;}
-            let cell=(min_y+y)*world.stride+min_x+x; let result=projected[local];
-            let first=result.first as usize; let second=result.second as usize;
-            let capacity=result.first_mass*species[first].specific_heat_capacity+result.second_mass*species[second].specific_heat_capacity;
-            if capacity>0.0 {world.write.temperature[cell]=result.enthalpy/capacity;}
-            project_gases(world,events,cell,ids[first],result.first_mass,ids[second],result.second_mass);
+        if !result.map_err(|error| crate::status::Error::new(crate::status::Status::InternalFailure,
+            format!("GPU liquid diffusion failed: {error}")))? { return Ok(false); }
+        for y in 0..height { for x in 0..width {
+            let local = y * width + x;
+            if solid[local] != 0 { continue; }
+            let cell = (min_y + y) * world.stride + min_x + x;
+            let result = projected[local];
+            let first = result.first as usize;
+            let second = result.second as usize;
+            let capacity = result.first_mass * species[first].specific_heat_capacity
+                + result.second_mass * species[second].specific_heat_capacity;
+            if capacity > 0.0 { world.write.temperature[cell] = result.enthalpy / capacity; }
+            project_gases(world, events, cell, ids[first], result.first_mass, ids[second], result.second_mass);
         }}
-        std::mem::swap(solid_out, solid);
+        if (min_x, min_y, width, height) == full_region {
+            std::mem::swap(solid_out, solid);
+        } else {
+            solid_out.resize(full_region.2 * full_region.3, 1);
+            solid_out.fill(1);
+            for row in 0..height {
+                let destination = (min_y - full_region.1 + row) * full_region.2 + min_x - full_region.0;
+                solid_out[destination..destination + width].copy_from_slice(&solid[row * width..(row + 1) * width]);
+            }
+        }
         Ok(true)
     })();
     gpu.liquid_staging = staging;
@@ -642,7 +705,16 @@ pub(crate) fn step_region_with_mask(
         diffusion_solid, gpu_available, if cfg!(test) { 0 } else { 256 })
 }
 
+#[cfg(test)]
 pub(crate) fn step_region_with_dispatch(
+    world: &mut PhysicsWorld, elements: &ElementTable, events: &mut EventQueues,
+    region: Region, gpu: Option<&mut crate::gpu_sim::GpuSimulation>, gpu_diffusion: bool,
+    diffusion_solid: Option<&mut Vec<u32>>, gpu_available: bool, minimum_gpu_cells: usize,
+) -> crate::status::Result<bool> {
+    onisim_gpu::coroutine::run(step_region_with_dispatch_async(world, elements, events,
+        region, gpu, gpu_diffusion, diffusion_solid, gpu_available, minimum_gpu_cells, true))
+}
+pub(crate) async fn step_region_with_dispatch_async(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     events: &mut EventQueues,
@@ -652,11 +724,12 @@ pub(crate) fn step_region_with_dispatch(
     diffusion_solid: Option<&mut Vec<u32>>,
     gpu_available: bool,
     minimum_gpu_cells: usize,
+    overlap_gpu_readback: bool,
 ) -> crate::status::Result<bool> {
     let mut staging = gpu.as_deref_mut().map(|device|
         std::mem::take(&mut device.gas_staging)).unwrap_or_default();
-    let result = step_region_prepared(world, elements, events, region, gpu.as_deref_mut(),
-        gpu_diffusion, diffusion_solid, gpu_available, minimum_gpu_cells, &mut staging);
+    let result = step_region_prepared_with_result_async(world, elements, events, region, gpu.as_deref_mut(),
+        gpu_diffusion, diffusion_solid, gpu_available, minimum_gpu_cells, &mut staging, None, overlap_gpu_readback).await;
     if let Some(device) = gpu { device.gas_staging = staging; }
     result
 }
@@ -665,6 +738,7 @@ pub(crate) fn step_region_with_dispatch(
 mod batch;
 pub(crate) use batch::GasBatch;
 
+#[cfg(test)]
 fn step_region_prepared(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
@@ -677,22 +751,23 @@ fn step_region_prepared(
     minimum_gpu_cells: usize,
     staging: &mut GasStaging,
 ) -> crate::status::Result<bool> {
-    step_region_prepared_with_result(world, elements, events, region, gpu, gpu_diffusion,
-        diffusion_solid, gpu_available, minimum_gpu_cells, staging, None)
+    onisim_gpu::coroutine::run(step_region_prepared_with_result_async(world, elements, events, region, gpu, gpu_diffusion,
+        diffusion_solid, gpu_available, minimum_gpu_cells, staging, None, true))
 }
 
-fn step_region_prepared_with_result(
+async fn step_region_prepared_with_result_async(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     events: &mut EventQueues,
     region: Region,
-    gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
+    mut gpu: Option<&mut crate::gpu_sim::GpuSimulation>,
     gpu_diffusion: bool,
     diffusion_solid: Option<&mut Vec<u32>>,
     gpu_available: bool,
     minimum_gpu_cells: usize,
     staging: &mut GasStaging,
     prepared: Option<staging::GasRegion>,
+    overlap_gpu_readback: bool,
 ) -> crate::status::Result<bool> {
     static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     let started = (*PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some())
@@ -703,7 +778,7 @@ fn step_region_prepared_with_result(
     let max_y = (region.max_y as usize).min(world.height);
     if max_x <= min_x || max_y <= min_y { return Ok(false); }
     let key = (min_x, min_y, max_x - min_x, max_y - min_y);
-    let precomputed = prepared.is_some();
+    let mut precomputed = prepared.is_some();
     let info = if let Some(info) = prepared { info } else {
         if let Some(old) = staging.idle.get(&key) {
             let same_materials = old.species.iter().all(|species| {
@@ -726,6 +801,37 @@ fn step_region_prepared_with_result(
     };
     let prepared_at = started.map(|start| start.elapsed());
     let staging::GasRegion { width, height, channels, use_gpu, sparse, .. } = info;
+    if overlap_gpu_readback && !precomputed && use_gpu && !sparse && staging.mass.len() <= 1024 * 1024 {
+        if let Some(device) = gpu.as_deref_mut().filter(|g| g.coroutine_cpu_gas_enabled()) {
+            // Move private staging into the existing bounded worker pool. The
+            // coroutine retains exclusive world ownership and publishes below.
+            let mut owned = std::mem::take(staging);
+            let (returned, result) = device.cpu_work_async(move |spaces| {
+                let state = onisim_gpu::multicomponent::State {
+                    mass: &owned.mass, enthalpy: &owned.enthalpy,
+                    velocity_x: &owned.velocity_x, velocity_y: &owned.velocity_y,
+                    solid: &owned.solid, species: &owned.gpu_species,
+                };
+                let jobs = [crate::gpu_sim::GasBatchJob {
+                    dimensions: (width, height, channels), state,
+                    temperature: &owned.temperature, conductivity: &owned.species_conductivity,
+                    mass_output: &mut owned.next_mass, temperature_output: &mut owned.next_temperature,
+                }];
+                let result = crate::gpu_sim::GpuSimulation::compute_cpu_gas_in(
+                    spaces, &jobs, gpu_diffusion, FIXED_DT * 0.25);
+                if matches!(result, Ok(true)) {
+                    std::mem::swap(&mut owned.next_mass, &mut spaces[0].mass_output);
+                    std::mem::swap(&mut owned.next_temperature, &mut spaces[0].temperature_output);
+                }
+                let completed = matches!(result, Ok(true));
+                ((owned, result), completed)
+            }).await.map_err(|error| crate::status::Error::new(
+                crate::status::Status::InternalFailure, error))?;
+            *staging = returned;
+            precomputed = result.map_err(|error| crate::status::Error::new(
+                crate::status::Status::InternalFailure, error))?;
+        }
+    }
     let GasStaging { sparse_cells, mass, enthalpy, temperature,
         solid, velocity_x, velocity_y, species, gpu_species, species_conductivity,
         next_mass, projected, next_enthalpy, next_temperature, .. } = staging;
@@ -856,6 +962,28 @@ mod tests {
             if iteration == 1 { storage = Some(identity); }
             if iteration > 1 { assert_eq!(storage.unwrap(), identity, "warm staging buffers must not be reallocated"); }
         }
+        // Sparse pools retain the full-region ownership mask while transferring
+        // only a quantized crop with the original stencil halo.
+        let (mut world, mut elements, region) = gas_fixture(96, 64);
+        elements.elements[3].record.state = 2;
+        elements.elements[4].record.state = 2;
+        world.write.element.fill(0);
+        world.write.mass.fill(0.0);
+        world.mixture_mass.fill(0.0);
+        world.write.properties.fill(0);
+        for y in 20..30 { for x in 35..45 {
+            let cell = y * world.stride + x;
+            world.write.element[cell] = 3;
+            world.write.mass[cell] = 1.0;
+            world.mixture_element[cell] = 4;
+            world.mixture_mass[cell] = 0.5;
+        }}
+        let pending = begin_sparse_liquid_region(&world, &elements, region, &mut gpu).unwrap().unwrap();
+        assert_eq!((pending.width, pending.height), (32, 32));
+        assert!(finish_sparse_liquid_region(pending, &mut world, &mut EventQueues::default(), &mut mask, &mut gpu).unwrap());
+        assert_eq!(mask.len(), 96 * 64);
+        assert_eq!(mask[(24 - 1) * 96 + 40 - 1], 0);
+        assert_eq!(mask[(10 - 1) * 96 + 10 - 1], 1);
     }
 
     #[test]

@@ -1,5 +1,6 @@
-//! Targeted experimental operators, deliberately not enabled in the game.
-//! The CPU helper is also called by native presentation; GPU code is not.
+//! Compute operators used by the native hybrid simulation and targeted benchmarks.
+//! Production dispatch chooses CPU or GPU per stage; experimental operators are also retained.
+pub mod coroutine;
 pub mod gpu_context;
 pub mod disease_growth;
 pub mod disease_diffusion;

@@ -190,6 +190,10 @@ impl<'a> PreparedStep<'a> {
     }
 
     pub(crate) fn run(self, events: &mut EventQueues, systems: &mut StepSystems<'_>) -> Result<()> {
+        onisim_gpu::coroutine::run(self.run_async(events, systems))
+    }
+
+    async fn run_async(self, events: &mut EventQueues, systems: &mut StepSystems<'_>) -> Result<()> {
         let Self {
             world,
             elements,
@@ -280,25 +284,35 @@ impl<'a> PreparedStep<'a> {
             let pending_liquid = if let Some(gpu) = systems.gpu.as_deref_mut() {
                 crate::multicomponent_flux::begin_sparse_liquid_region(world, elements, region, gpu)?
             } else { None };
+            // Readback owns only private staging. JoinSet cancels it if this
+            // frame fails; publication remains after the gas phase below.
+            let pending_liquid = pending_liquid.map(|work| {
+                let mut readbacks = tokio::task::JoinSet::new();
+                readbacks.spawn(crate::multicomponent_flux::read_sparse_liquid_region(work));
+                readbacks
+            });
             diffusion_solid.clear();
             let gpu_transport_ran = if let (Some(batch), Some(gpu)) = (gas_batch.as_mut(), systems.gpu.as_deref_mut()) {
-                batch.apply(index, world, elements, events, gpu, gpu_diffusion, &mut diffusion_solid)?
+                batch.apply_async(index, world, elements, events, gpu, gpu_diffusion, &mut diffusion_solid).await?
             } else {
                 let gpu_available = systems.gpu.is_some();
                 // CPU-immediate execution preserves the batched path's small
                 // region policy, including in host tests with tiny worlds.
                 let minimum_gpu_cells = if world.regions.len() > 1 || !cfg!(test) { 256 } else { 0 };
-                crate::multicomponent_flux::step_region_with_dispatch(
+                crate::multicomponent_flux::step_region_with_dispatch_async(
                     world, elements, events, region, systems.gpu.as_deref_mut(), gpu_diffusion,
-                    Some(&mut diffusion_solid), gpu_available, minimum_gpu_cells,
-                )?
+                    Some(&mut diffusion_solid), gpu_available, minimum_gpu_cells, pending_liquid.is_some(),
+                ).await?
             };
             let transport_ms = lap();
             liquid_solid.clear();
             // The gas pass treats liquid and liquid-containing cells as walls,
             // so it cannot create an eligible liquid region after preparation.
-            let liquid_gpu_ran = if let Some(work) = pending_liquid {
-                crate::multicomponent_flux::finish_sparse_liquid_region(work, world, events, &mut liquid_solid,
+            let liquid_gpu_ran = if let Some(mut readbacks) = pending_liquid {
+                let ready = readbacks.join_next().await
+                    .ok_or_else(|| invalid("liquid readback task missing"))?
+                    .map_err(|error| Error::new(crate::status::Status::InternalFailure, format!("liquid readback coroutine failed: {error}")))?;
+                crate::multicomponent_flux::publish_sparse_liquid_region(ready, world, events, &mut liquid_solid,
                     systems.gpu.as_deref_mut().ok_or_else(|| invalid("pending liquid work lost its GPU device"))?)?
             } else { false };
             crate::gas::diffuse_region(world, elements, events, region,

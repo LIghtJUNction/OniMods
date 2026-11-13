@@ -15,7 +15,7 @@ struct ThermalCell {
 }
 
 #[derive(Default)]
-pub(super) struct Workspace {
+pub(crate) struct Workspace {
     density: Vec<f32>,
     source_enthalpy: Vec<f32>,
     diffused_mass: Vec<f32>,
@@ -23,8 +23,8 @@ pub(super) struct Workspace {
     velocity: Vec<[f32; 2]>,
     conductivity: Vec<f32>,
     thermal: Vec<ThermalCell>,
-    mass_output: Vec<f32>,
-    temperature_output: Vec<f32>,
+    pub(crate) mass_output: Vec<f32>,
+    pub(crate) temperature_output: Vec<f32>,
     sparse_transport: bool,
     #[cfg(test)]
     reference_transport: bool,
@@ -71,6 +71,47 @@ fn profile_cpu_chain(started: Option<std::time::Instant>, workspaces: &[Workspac
 }
 
 impl GpuSimulation {
+    pub(crate) fn coroutine_cpu_gas_enabled(&self) -> bool {
+        #[cfg(test)]
+        if crate::native_chain_tests::BENCHMARK_INLINE_COROUTINES.load(std::sync::atomic::Ordering::SeqCst) { return false; }
+        #[cfg(test)]
+        if self.thermal_reference { return false; }
+        crate::parallel::pool(crate::parallel::MIN_PARALLEL_CELLS).is_some()
+    }
+
+    pub(crate) async fn cpu_work_async<T, F>(&mut self, work: F) -> Result<T, String>
+    where T: Send + 'static,
+          F: FnOnce(&mut Vec<Workspace>) -> (T, bool) + Send + 'static,
+    {
+        let pool = crate::parallel::pool(crate::parallel::MIN_PARALLEL_CELLS)
+            .ok_or("CPU simulation workers unavailable")?;
+        #[cfg(test)]
+        crate::native_chain_tests::BENCHMARK_COROUTINE_JOBS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let profiling = std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some();
+        let submitted = std::time::Instant::now();
+        let mut spaces = std::mem::take(&mut self.gas_cpu);
+        let environment = crate::float_env::FloatEnv::capture();
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        pool.spawn_fifo(move || {
+            let started = std::time::Instant::now();
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let _environment = environment.install();
+                work(&mut spaces)
+            }));
+            let _ = sender.send((spaces, result, started, std::time::Instant::now()));
+        });
+        let (spaces, result, started, finished) = receiver.await.map_err(|_| "CPU gas coroutine disconnected")?;
+        self.gas_cpu = spaces;
+        if profiling {
+            eprintln!("[CycleTrim OniSim] CPU coroutine queue={:.3}ms work={:.3}ms resume={:.3}ms",
+                (started-submitted).as_secs_f64()*1000.0, (finished-started).as_secs_f64()*1000.0,
+                finished.elapsed().as_secs_f64()*1000.0);
+        }
+        let (value, completed) = result.map_err(|_| "CPU gas coroutine panicked")?;
+        self.gas_cpu_seen |= completed;
+        Ok(value)
+    }
+
     pub(super) fn try_cpu_gas(
         &mut self,
         jobs: &mut [GasBatchJob<'_>],
@@ -160,6 +201,12 @@ impl GpuSimulation {
         if self.thermal_reference {
             return Ok(false);
         }
+        let completed = Self::compute_cpu_gas_in(&mut self.gas_cpu, jobs, diffuse, dt)?;
+        self.gas_cpu_seen |= completed && !jobs.is_empty();
+        Ok(completed)
+    }
+
+    pub(crate) fn compute_cpu_gas_in(workspaces: &mut Vec<Workspace>, jobs: &[GasBatchJob<'_>], diffuse: bool, dt: f32) -> Result<bool, String> {
         let work: usize = jobs.iter().map(|job| job.state.mass.len()).sum();
         let Some(pool) = crate::parallel::pool(work.max(crate::parallel::MIN_PARALLEL_CELLS))
         else {
@@ -170,10 +217,10 @@ impl GpuSimulation {
         if jobs.iter().any(|job| job.state.mass.len() > 1024 * 1024) {
             return Ok(false);
         }
-        self.gas_cpu.resize_with(jobs.len(), Workspace::default);
+        workspaces.resize_with(jobs.len(), Workspace::default);
         let environment = crate::float_env::FloatEnv::capture();
         let results: Vec<_> = pool.install(|| {
-            self.gas_cpu
+            workspaces
                 .par_iter_mut()
                 .zip(jobs.par_iter())
                 .map(|(workspace, job)| {
@@ -185,7 +232,6 @@ impl GpuSimulation {
         for result in results {
             result?;
         }
-        self.gas_cpu_seen |= !jobs.is_empty();
         Ok(true)
     }
 }

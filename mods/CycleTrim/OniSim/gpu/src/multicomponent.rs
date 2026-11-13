@@ -304,6 +304,47 @@ impl PendingLiquidProjection {
         if output.len() != self.count { return Err("liquid projection output dimensions mismatch".into()); }
         self.device.poll(wgpu::PollType::Wait {submission_index:Some(self.submission.clone()),timeout:Some(Duration::from_secs(30))}).map_err(|e|e.to_string())?;
         self.result.recv_timeout(Duration::from_secs(2)).map_err(|e|e.to_string())?.map_err(|e|e.to_string())?;
+        self.copy_result(output)
+    }
+
+    /// Suspend the calling coroutine while the GPU owns the readback. The
+    /// current-thread executor can run other ready tasks between polls.
+    pub async fn finish_async(self, output: &mut [ProjectedLiquidCell]) -> Result<bool, String> {
+        if output.len() != self.count { return Err("liquid projection output dimensions mismatch".into()); }
+        let started = std::time::Instant::now();
+        let deadline = started + Duration::from_secs(30);
+        let mut polls = 0;
+        let mut sleeps = 0;
+        loop {
+            polls += 1;
+            self.device.poll(wgpu::PollType::Poll).map_err(|error| error.to_string())?;
+            match self.result.try_recv() {
+                Ok(result) => { result.map_err(|error| error.to_string())?; break; }
+                Err(mpsc::TryRecvError::Disconnected) => return Err("liquid readback callback disconnected".into()),
+                Err(mpsc::TryRecvError::Empty) => {
+                    if std::time::Instant::now() >= deadline { return Err("liquid readback coroutine timed out".into()); }
+                    // Short submissions should not pay the timer wheel's
+                    // millisecond granularity. Yield to ready coroutines first,
+                    // then back off to bound idle CPU use on long GPU work.
+                    if polls <= 64 {
+                        tokio::task::yield_now().await;
+                    } else {
+                        sleeps += 1;
+                        tokio::time::sleep(Duration::from_micros(100)).await;
+                    }
+                }
+            }
+        }
+        let ready = std::time::Instant::now();
+        let result = self.copy_result(output);
+        if std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some() {
+            eprintln!("[CycleTrim OniSim] liquid coroutine polls={polls} sleeps={sleeps} wait={:.3}ms copy={:.3}ms",
+                (ready-started).as_secs_f64()*1000.0, ready.elapsed().as_secs_f64()*1000.0);
+        }
+        result
+    }
+
+    fn copy_result(&self, output: &mut [ProjectedLiquidCell]) -> Result<bool, String> {
         let view=self.readback.get_mapped_range(..).map_err(|e|e.to_string())?;
         let valid=if self.compact {
             let cells:&[CompactGasCell]=bytemuck::cast_slice(&view);

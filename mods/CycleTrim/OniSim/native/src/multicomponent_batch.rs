@@ -160,7 +160,15 @@ impl GasBatch {
         })
     }
 
-    pub(crate) fn apply(
+    #[cfg(test)]
+    pub(crate) fn apply(&mut self, index: usize, world: &mut PhysicsWorld,
+        elements: &ElementTable, events: &mut EventQueues,
+        gpu: &mut crate::gpu_sim::GpuSimulation, diffuse: bool, solid: &mut Vec<u32>)
+        -> crate::status::Result<bool> {
+        onisim_gpu::coroutine::run(self.apply_async(index, world, elements, events, gpu, diffuse, solid))
+    }
+
+    pub(crate) async fn apply_async(
         &mut self,
         index: usize,
         world: &mut PhysicsWorld,
@@ -192,7 +200,7 @@ impl GasBatch {
             scratch.idle.remove(&key);
             scratch.preparations += 1;
         }
-        step_region_prepared_with_result(
+        step_region_prepared_with_result_async(
             world,
             elements,
             events,
@@ -204,7 +212,8 @@ impl GasBatch {
             256,
             &mut self.staging[index],
             ready,
-        )
+            false,
+        ).await
     }
 
     pub(crate) fn retain(self, gpu: &mut crate::gpu_sim::GpuSimulation) {

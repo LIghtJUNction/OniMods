@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace CycleTrim.Core
 {
@@ -9,7 +10,17 @@ namespace CycleTrim.Core
     /// </summary>
     internal sealed class PerformanceProbeCounter
     {
-        private readonly object snapshotLock;
+        // Keep each writer's coherent tuple on a bounded stripe. Padding avoids
+        // adjacent writers bouncing the same cache line; reporting sums tuples.
+        [StructLayout(LayoutKind.Sequential, Size = 128)]
+        private sealed class Stripe
+        {
+            internal long Calls;
+            internal long Ticks;
+            internal long Maximum;
+        }
+
+        private readonly Stripe[] stripes;
         private long callCount;
         private long totalTicks;
         private long maxTicks;
@@ -18,7 +29,9 @@ namespace CycleTrim.Core
         {
             if (consistentSnapshots)
             {
-                snapshotLock = new object();
+                stripes = new Stripe[16];
+                for (var i = 0; i < stripes.Length; i++)
+                    stripes[i] = new Stripe();
             }
         }
 
@@ -40,16 +53,15 @@ namespace CycleTrim.Core
                 elapsedTicks = 0;
             }
 
-            if (snapshotLock != null)
+            if (stripes != null)
             {
-                lock (snapshotLock)
+                var stripe = stripes[Thread.CurrentThread.ManagedThreadId & (stripes.Length - 1)];
+                lock (stripe)
                 {
-                    callCount++;
-                    totalTicks += elapsedTicks;
-                    if (elapsedTicks > maxTicks)
-                    {
-                        maxTicks = elapsedTicks;
-                    }
+                    stripe.Calls++;
+                    stripe.Ticks += elapsedTicks;
+                    if (elapsedTicks > stripe.Maximum)
+                        stripe.Maximum = elapsedTicks;
                 }
                 return;
             }
@@ -72,14 +84,24 @@ namespace CycleTrim.Core
             }
         }
 
+        // Each stripe contributes a complete tuple. This is an aggregate of
+        // coherent stripe samples, not a globally linearizable transaction.
         internal PerformanceProbeSnapshot Snapshot()
         {
-            if (snapshotLock != null)
+            if (stripes != null)
             {
-                lock (snapshotLock)
+                long calls = 0, ticks = 0, maximum = 0;
+                foreach (var stripe in stripes)
                 {
-                    return new PerformanceProbeSnapshot(callCount, totalTicks, maxTicks);
+                    lock (stripe)
+                    {
+                        calls += stripe.Calls;
+                        ticks += stripe.Ticks;
+                        if (stripe.Maximum > maximum)
+                            maximum = stripe.Maximum;
+                    }
                 }
+                return new PerformanceProbeSnapshot(calls, ticks, maximum);
             }
 
             return new PerformanceProbeSnapshot(

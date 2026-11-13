@@ -440,6 +440,7 @@ version = "0.1.0"
 dependencies = [
  "onisim-gpu",
  "rayon",
+ "tokio",
 ]
 
 [[package]]
@@ -450,6 +451,7 @@ dependencies = [
  "pollster",
  "serde",
  "serde_json",
+ "tokio",
  "wgpu",
 ]
 

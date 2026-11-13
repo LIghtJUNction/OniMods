@@ -9,11 +9,29 @@ use super::MAX_REGION_LIQUIDS;
 // Large regions increase each block's span instead of allocating more summaries.
 const MAX_BLOCKS: usize = 64;
 
+pub(super) struct Discovery {
+    pub(super) ids: Vec<u16>,
+    // Exclusive maximum coordinates in the original world's grid.
+    pub(super) bounds: [usize; 4],
+}
+
+#[cfg(test)]
+fn discover(world: &PhysicsWorld, elements: &ElementTable, region: (usize, usize, usize, usize)) -> Option<Vec<u16>> {
+    discover_bounded(world, elements, region).map(|result| result.ids)
+}
+
+#[cfg(test)]
+fn discover_with_pool(world: &PhysicsWorld, elements: &ElementTable,
+    region: (usize, usize, usize, usize), pool: Option<&rayon::ThreadPool>) -> Option<Vec<u16>> {
+    discover_bounded_with_pool(world, elements, region, pool).map(|result| result.ids)
+}
+
 #[derive(Clone, Copy, Default)]
 struct Summary {
     ids: [u16; MAX_REGION_LIQUIDS],
     len: usize,
     overflow: bool,
+    bounds: [u32; 4],
 }
 
 impl Summary {
@@ -30,20 +48,33 @@ impl Summary {
         true
     }
 
-    fn finish(self) -> Option<Vec<u16>> {
+    fn include(&mut self, x: usize, y: usize) {
+        // Coordinates follow the game's 32-bit grid ABI. A zero exclusive
+        // maximum denotes an empty summary without an extra Option tag.
+        let right = u32::try_from(x + 1).expect("liquid x exceeds grid ABI");
+        let top = u32::try_from(y + 1).expect("liquid y exceeds grid ABI");
+        self.bounds = if self.bounds[2] == 0 {
+            [x as u32, y as u32, right, top]
+        } else {
+            let [left, bottom, old_right, old_top] = self.bounds;
+            [left.min(x as u32), bottom.min(y as u32), old_right.max(right), old_top.max(top)]
+        };
+    }
+
+    fn finish(self) -> Option<Discovery> {
         if self.overflow || self.len < 2 {
             None
         } else {
-            Some(self.ids[..self.len].to_vec())
+            Some(Discovery { ids: self.ids[..self.len].to_vec(), bounds: self.bounds.map(|coordinate| coordinate as usize) })
         }
     }
 }
 
-pub(super) fn discover(
+pub(super) fn discover_bounded(
     world: &PhysicsWorld,
     elements: &ElementTable,
     region: (usize, usize, usize, usize),
-) -> Option<Vec<u16>> {
+) -> Option<Discovery> {
     let cells = region.2 * region.3;
     // Do not initialize or enter a worker pool for a single serial block.
     let pool = if cells > crate::parallel::CHUNK_CELLS {
@@ -51,15 +82,15 @@ pub(super) fn discover(
     } else {
         None
     };
-    discover_with_pool(world, elements, region, pool)
+    discover_bounded_with_pool(world, elements, region, pool)
 }
 
-fn discover_with_pool(
+fn discover_bounded_with_pool(
     world: &PhysicsWorld,
     elements: &ElementTable,
     region: (usize, usize, usize, usize),
     pool: Option<&rayon::ThreadPool>,
-) -> Option<Vec<u16>> {
+) -> Option<Discovery> {
     let cells = region.2 * region.3;
     let blocks = cells.div_ceil(crate::parallel::CHUNK_CELLS).min(MAX_BLOCKS);
     let Some(pool) = pool.filter(|_| blocks > 1) else {
@@ -94,6 +125,12 @@ fn discover_with_pool(
                 return None;
             }
         }
+        if summary.bounds[2] != 0 {
+            let [left, bottom, right, top] = summary.bounds.map(|coordinate| coordinate as usize);
+            merged.include(left, bottom);
+            merged.include(right - 1, top - 1);
+        }
+
     }
     merged.finish()
 }
@@ -124,9 +161,9 @@ fn scan(
                         .elements
                         .get(id as usize)
                         .is_some_and(|element| element.record.state & 3 == 2)
-                    && !summary.insert(id)
                 {
-                    return summary;
+                    if !summary.insert(id) { return summary; }
+                    summary.include(min_x + column + cell - first, min_y + row);
                 }
             }
         }

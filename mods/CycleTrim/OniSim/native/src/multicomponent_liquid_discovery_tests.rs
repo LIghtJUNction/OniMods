@@ -284,3 +284,23 @@ fn varied_sparse_inputs_match_serial_reference_for_both_pool_paths() {
         );
     }
 }
+
+#[test]
+fn bounds_cover_positive_primary_and_secondary_liquids_in_both_scan_modes() {
+    assert!(std::mem::size_of::<Summary>() * MAX_BLOCKS <= 4096);
+    let (mut world, elements, region) = fixture(65, 37);
+    let first = 7 * world.stride + 5;
+    world.write.element[first] = 4;
+    let second = 35 * world.stride + 60;
+    world.mixture_element[second] = 5;
+    world.mixture_mass[second] = 0.5;
+    let invalid = 3 * world.stride + 2;
+    world.write.element[invalid] = 6;
+    world.write.mass[invalid] = f32::NAN;
+    let pool = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+    for pool in [None, Some(&pool)] {
+        let result = discover_bounded_with_pool(&world, &elements, region, pool).unwrap();
+        assert_eq!(result.ids, vec![4, 5]);
+        assert_eq!(result.bounds, [5, 7, 61, 36]);
+    }
+}

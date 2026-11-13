@@ -363,3 +363,66 @@ fn benchmark_optimized_native_chain() {
             index == 0, samples.len(), faults[index]);
     }
 }
+
+// Manual same-process control: changes only coroutine scheduling, not kernels.
+pub(crate) static BENCHMARK_COROUTINE_JOBS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+pub(crate) static BENCHMARK_COROUTINE_READBACKS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+pub(crate) static BENCHMARK_INLINE_COROUTINES: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+#[test]
+#[ignore = "manual coroutine parity and complete-worker ABBA benchmark; GPU required"]
+fn benchmark_coroutine_native_chain() {
+    use std::sync::atomic::Ordering;
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) { BENCHMARK_INLINE_COROUTINES.store(false, Ordering::SeqCst); }
+    }
+    let _reset = Reset;
+    let width = integer("ONISIM_CHAIN_WIDTH", 256);
+    let height = integer("ONISIM_CHAIN_HEIGHT", 224);
+    let mut baseline = Runner::new(width, height, "coroutine", 0.2);
+    let mut candidate = Runner::new(width, height, "coroutine", 0.2);
+    for step in 0..12 {
+        BENCHMARK_INLINE_COROUTINES.store(true, Ordering::SeqCst);
+        baseline.advance(false);
+        BENCHMARK_INLINE_COROUTINES.store(false, Ordering::SeqCst);
+        candidate.advance(false);
+        let a = baseline.ready.as_ref().unwrap().data();
+        let b = candidate.ready.as_ref().unwrap().data();
+        assert_eq!(snapshot::publication(baseline.state.grid.as_ref().unwrap(), a, baseline.state.generation).0,
+            snapshot::publication(candidate.state.grid.as_ref().unwrap(), b, candidate.state.generation).0,
+            "publication differs at step {step}");
+        assert_eq!(snapshot::world(&baseline.state.engine.as_ref().unwrap().lock().unwrap().world).0,
+            snapshot::world(&candidate.state.engine.as_ref().unwrap().lock().unwrap().world).0,
+            "physics differs at step {step}");
+    }
+    assert!(BENCHMARK_COROUTINE_JOBS.load(Ordering::SeqCst) > 0, "CPU coroutine path was not exercised");
+    assert!(BENCHMARK_COROUTINE_READBACKS.load(Ordering::SeqCst) > 0, "GPU readback path was not exercised");
+    println!("COROUTINE_PATHS,cpu_jobs={},readbacks={}", BENCHMARK_COROUTINE_JOBS.load(Ordering::SeqCst), BENCHMARK_COROUTINE_READBACKS.load(Ordering::SeqCst));
+    drop(baseline);
+    drop(candidate);
+    let mut runner = Runner::new(width, height, "coroutine", 0.2);
+    for step in 0..12 {
+        BENCHMARK_INLINE_COROUTINES.store(step % 2 == 0, Ordering::SeqCst);
+        runner.advance(false);
+    }
+    let mut samples = [Vec::new(), Vec::new()];
+    let mut faults = [0_u64; 2];
+    let mut cpu_ticks = [0_u64; 2];
+    for group in 0..integer("ONISIM_CHAIN_PAIR_GROUPS", 12) {
+        for inline in [true, false, false, true].map(|mode| mode ^ (group % 2 != 0)) {
+            BENCHMARK_INLINE_COROUTINES.store(inline, Ordering::SeqCst);
+            let index = usize::from(!inline);
+            let before = process_counters();
+            samples[index].push(runner.advance(false));
+            let after = process_counters();
+            faults[index] += after.1 - before.1;
+            cpu_ticks[index] += after.0 - before.0;
+        }
+    }
+    for (index, values) in samples.iter().enumerate() {
+        println!("COROUTINE_CHAIN_SAMPLE,inline={},major_faults={},cpu_ticks={},values={}", index == 0, faults[index], cpu_ticks[index],
+            values.iter().map(|v| format!("{v:.3}")).collect::<Vec<_>>().join(";"));
+    }
+}
