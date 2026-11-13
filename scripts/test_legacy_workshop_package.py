@@ -74,6 +74,7 @@ def run_preflight(
             ONIM_PUBLISH_CONSUMER_APP_ID="457140",
             ONIM_PUBLISH_WORKSHOP_ID=item_id,
             ONIM_PUBLISH_NAME=name,
+            ONIM_PUBLISH_EXPECTED_OWNER="76561199137573787",
         )
         result = subprocess.run(
             ["dotnet", str(PUBLISHER), "--validate-vdf", "--vdf", str(vdf)],
