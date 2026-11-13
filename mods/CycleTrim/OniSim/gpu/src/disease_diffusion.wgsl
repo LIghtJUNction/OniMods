@@ -101,8 +101,6 @@ fn add_disease(current: ActiveCell, delta: Delta) -> ActiveCell {
             else { cell.disease = delta.disease; cell.count = remaining; }
         } else if (cell.count < 0) {
             cell.disease = delta.disease; cell.count = negate(cell.count);
-        } else {
-            cell.disease = delta.disease;
         }
     }
     if (cell.count <= 0) {

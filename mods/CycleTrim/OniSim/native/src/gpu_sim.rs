@@ -4,7 +4,7 @@
 use rayon::prelude::*;
 use std::{collections::VecDeque, sync::Arc};
 use onisim_gpu::{
-    disease_diffusion::{ActiveCell as DiffusionActive, Disease as DiffusionDisease, DiseaseDiffusionGpu, DiseaseElement as DiffusionElement, SnapshotCell as DiffusionSnapshot},
+    disease_diffusion::{Disease as DiffusionDisease, DiseaseElement as DiffusionElement},
     disease_growth::{DiseaseCell, DiseaseElementMetadata, DiseaseGrowthGpu, DiseaseMetadata},
     gas_pressure_faces::{GasCell, GasPressureFacesGpu, GasResult},
     bubble_settling::{Cell as BubbleCell, Material as BubbleMaterial, ResultCell as BubbleResult, BubbleSettlingGpu, PendingBubble},
@@ -22,6 +22,13 @@ mod gas_cpu;
 #[cfg(test)]
 #[path = "gpu_bubble_tests.rs"]
 mod bubble_tests;
+
+#[cfg(test)]
+#[path = "gpu_disease_tests.rs"]
+mod disease_tests;
+
+#[cfg(test)]
+use onisim_gpu::disease_diffusion::{ActiveCell as DiffusionActive, DiseaseDiffusionGpu, SnapshotCell as DiffusionSnapshot};
 
 #[path = "gpu_thermal_cpu.rs"]
 mod thermal_cpu;
@@ -52,9 +59,10 @@ pub(crate) struct GpuSimulation {
     disease_growth: DiseaseGrowthGpu,
     disease_cells: Vec<DiseaseCell>,
     disease_growth_indices: Vec<usize>,
-    disease_diffusion: DiseaseDiffusionGpu,
-    disease_old: Vec<DiffusionSnapshot>,
-    disease_active: Vec<DiffusionActive>,
+    disease_cpu_announced: bool,
+    #[cfg(test)] disease_diffusion: DiseaseDiffusionGpu,
+    #[cfg(test)] disease_old: Vec<DiffusionSnapshot>,
+    #[cfg(test)] disease_active: Vec<DiffusionActive>,
     phase_transition: PhaseTransitionGpu,
     phase_cells: Vec<PhaseCell>,
     phase_decisions: Vec<PhaseDecision>,
@@ -161,6 +169,7 @@ impl GpuSimulation {
             adapter_name, width, height
         );
         let disease_growth = DiseaseGrowthGpu::new(context.clone());
+        #[cfg(test)]
         let disease_diffusion = DiseaseDiffusionGpu::new(context.clone());
         let phase_transition = PhaseTransitionGpu::new(context.clone());
         #[cfg(test)]
@@ -194,9 +203,10 @@ impl GpuSimulation {
             disease_growth,
             disease_cells: Vec::new(),
             disease_growth_indices: Vec::new(),
-            disease_diffusion,
-            disease_old: Vec::new(),
-            disease_active: Vec::new(),
+            disease_cpu_announced: false,
+            #[cfg(test)] disease_diffusion,
+            #[cfg(test)] disease_old: Vec::new(),
+            #[cfg(test)] disease_active: Vec::new(),
             phase_transition,
             phase_cells: Vec::new(),
             phase_decisions: Vec::new(),
@@ -658,12 +668,27 @@ impl GpuSimulation {
         let (min_x, max_x, min_y, max_y) = (region.min_x as usize, region.max_x as usize, region.min_y as usize, region.max_y as usize);
         if min_x >= max_x || min_y >= max_y { return Ok(()); }
         if max_x >= world.stride || max_y >= world.padded_height { return Err("disease diffusion region out of bounds".into()); }
+        if !self.disease_cpu_announced {
+            eprintln!("[CycleTrim OniSim] Disease diffusion uses resident CPU arrays (no GPU round trip)");
+            self.disease_cpu_announced = true;
+        }
+        if (min_y..=max_y).all(|y| {
+            let start = y * world.stride + min_x;
+            world.read.disease_idx[start..=start + max_x - min_x].iter().all(|&id| id == u8::MAX)
+        }) { return Ok(()); }
+        let mut events = crate::events::EventQueues::default();
+        crate::simulation_step::disease_diffusion(world, elements, table, &mut events, region)
+            .map_err(|error| error.message)
+    }
+
+    #[cfg(test)]
+    fn diffuse_diseases_gpu_reference(&mut self, world: &mut PhysicsWorld, elements: &ElementTable,
+        table: &DiseaseTable, region: crate::world::Region) -> Result<(), String> {
+        let (min_x, max_x, min_y, max_y) = (region.min_x as usize, region.max_x as usize, region.min_y as usize, region.max_y as usize);
+        if min_x >= max_x || min_y >= max_y { return Ok(()); }
+        if max_x >= world.stride || max_y >= world.padded_height { return Err("disease diffusion region out of bounds".into()); }
         let width = max_x - min_x + 1;
         let height = max_y - min_y + 1;
-        if width * height < 8192 && !cfg!(test) {
-            let mut events = crate::events::EventQueues::default();
-            return crate::simulation_step::disease_diffusion(world, elements, table, &mut events, region).map_err(|e| e.message);
-        }
         // Most regions have no germs. Check the compact ID field before
         // packing two wider snapshots and touching element metadata.
         if (min_y..=max_y).all(|y| {

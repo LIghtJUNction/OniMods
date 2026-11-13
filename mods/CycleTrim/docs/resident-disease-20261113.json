@@ -1,0 +1,1983 @@
+{
+  "schema": 1,
+  "runtimeStatus": "awaiting-uncontended-comparison",
+  "nativeBuild": {
+    "schema": 1,
+    "target": "linux-x64",
+    "triple": "x86_64-unknown-linux-gnu",
+    "sourceSha256": "60fe537a0ca5b9722ca92bdba3f5af7add835407df8a251c3581fda146b26e61",
+    "binarySha256": "f6e7e26655fb3a97d7891a7bb70fc9bb0cbdc933d0c45cb24461b078265e82ed",
+    "commit": "25a9236dd0871d19e572084b9caad6b8e4892aa1",
+    "gameRuntimeTested": false
+  },
+  "baselineNativeSha256": "79fa302a4d6243a1d2577474a4993446c3f1784e7305e9f8d65ac310981d749e",
+  "tests": {
+    "nativePassed": 215,
+    "nativeFailed": 0,
+    "nativeIgnored": 16
+  },
+  "kernel": [
+    {
+      "pattern": "empty",
+      "cpuMs": 0.022094,
+      "gpuRoundTripMs": 0.021374
+    },
+    {
+      "pattern": "sparse",
+      "cpuMs": 0.062708,
+      "gpuRoundTripMs": 5.566861
+    },
+    {
+      "pattern": "dense",
+      "cpuMs": 0.558428,
+      "gpuRoundTripMs": 5.318613
+    }
+  ],
+  "runtime": {
+    "graphical-baseline": {
+      "analysis": {
+        "schema": 1,
+        "label": "graphical-baseline",
+        "validForComparison": true,
+        "issues": [],
+        "warmupsExcluded": 1,
+        "windows": [
+          {
+            "activeSeconds": 4.163356,
+            "cameraFramesPerSecond": 14.411450762317706,
+            "nativeSecondsPerWallSecond": 1.621288210760742
+          },
+          {
+            "activeSeconds": 4.096885,
+            "cameraFramesPerSecond": 23.92061285586488,
+            "nativeSecondsPerWallSecond": 2.013725061845768
+          },
+          {
+            "activeSeconds": 4.159619,
+            "cameraFramesPerSecond": 22.1174102724312,
+            "nativeSecondsPerWallSecond": 1.7880243358826853
+          },
+          {
+            "activeSeconds": 4.113675,
+            "cameraFramesPerSecond": 23.822980668137372,
+            "nativeSecondsPerWallSecond": 2.111858617902484
+          },
+          {
+            "activeSeconds": 4.189993,
+            "cameraFramesPerSecond": 21.479749488841627,
+            "nativeSecondsPerWallSecond": 1.9242275583753956
+          },
+          {
+            "activeSeconds": 4.202514,
+            "cameraFramesPerSecond": 23.79528063440122,
+            "nativeSecondsPerWallSecond": 1.9184945011485983
+          }
+        ],
+        "summary": {
+          "cameraFramesPerSecond": {
+            "median": 23.79528063440122,
+            "min": 21.479749488841627,
+            "max": 23.92061285586488
+          },
+          "nativeSecondsPerWallSecond": {
+            "median": 1.9242275583753956,
+            "min": 1.7880243358826853,
+            "max": 2.111858617902484
+          }
+        },
+        "limits": "Camera callback cadence, not display presentation timing. Transition intervals are excluded. Simulation throughput is measured at the requested speed cap. Inspect raw steps and host pressure even when control timing passes; invalid series are retained, not silently filtered."
+      },
+      "steps": {
+        "schema": 1,
+        "label": "graphical-baseline",
+        "capturedAt": "2026-11-13T11:07:39.848597+00:00",
+        "workload": "end-to-end guarded wall-time steps, including client startup, lease acknowledgment and final pause verification",
+        "headless": false,
+        "unity": "6000.3.5f2",
+        "warmups": 1,
+        "controlNotifications": true,
+        "requiredLogMarkers": [],
+        "requestedStepSeconds": 5.0,
+        "speed": 3,
+        "samples": [
+          {
+            "wallSeconds": 5.6448522380087525,
+            "controlOverheadSeconds": 0.6448522380087525,
+            "nativeSeconds": 10.0,
+            "gameCpuSeconds": 15.259999999999991,
+            "majorFaults": 8465,
+            "rssKiB": 2914840,
+            "swapKiB": 4853468,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.11872806999599561,
+              "leaseAcknowledgmentSeconds": 0.15404224098892882,
+              "resumeSeconds": 0.12532550800824538,
+              "runningWallSeconds": 5.000029199989513,
+              "pauseVerificationSeconds": 0.11083196505205706
+            },
+            "updateFrames": 136,
+            "gameCpuSecondsPerNativeSecond": 1.5259999999999991
+          },
+          {
+            "wallSeconds": 5.674337892967742,
+            "controlOverheadSeconds": 0.6743378929677419,
+            "nativeSeconds": 9.1875,
+            "gameCpuSeconds": 15.860000000000014,
+            "majorFaults": 5961,
+            "rssKiB": 2942940,
+            "swapKiB": 4829548,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.12082070502219722,
+              "leaseAcknowledgmentSeconds": 0.16036029998213053,
+              "resumeSeconds": 0.1396014550118707,
+              "runningWallSeconds": 5.000129711988848,
+              "pauseVerificationSeconds": 0.09031962201697752
+            },
+            "updateFrames": 136,
+            "gameCpuSecondsPerNativeSecond": 1.726258503401362
+          },
+          {
+            "wallSeconds": 5.725107180012856,
+            "controlOverheadSeconds": 0.7251071800128557,
+            "nativeSeconds": 11.0,
+            "gameCpuSeconds": 13.850000000000023,
+            "majorFaults": 5231,
+            "rssKiB": 2972296,
+            "swapKiB": 4808528,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.1311848010518588,
+              "leaseAcknowledgmentSeconds": 0.1633808600017801,
+              "resumeSeconds": 0.1247817279654555,
+              "runningWallSeconds": 5.000035753007978,
+              "pauseVerificationSeconds": 0.16126906499266624
+            },
+            "updateFrames": 143,
+            "gameCpuSecondsPerNativeSecond": 1.2590909090909113
+          },
+          {
+            "wallSeconds": 5.612273096048739,
+            "controlOverheadSeconds": 0.6122730960487388,
+            "nativeSeconds": 9.8125,
+            "gameCpuSeconds": 11.970000000000027,
+            "majorFaults": 7037,
+            "rssKiB": 3000668,
+            "swapKiB": 4780332,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.14049871498718858,
+              "leaseAcknowledgmentSeconds": 0.14863402699120343,
+              "resumeSeconds": 0.09715619299095124,
+              "runningWallSeconds": 5.000020175008103,
+              "pauseVerificationSeconds": 0.10999797901604325
+            },
+            "updateFrames": 126,
+            "gameCpuSecondsPerNativeSecond": 1.219872611464971
+          },
+          {
+            "wallSeconds": 5.7722296680440195,
+            "controlOverheadSeconds": 0.7722296680440195,
+            "nativeSeconds": 9.75,
+            "gameCpuSeconds": 16.120000000000005,
+            "majorFaults": 6055,
+            "rssKiB": 2996980,
+            "swapKiB": 4755944,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.1637410840485245,
+              "leaseAcknowledgmentSeconds": 0.15880786895286292,
+              "resumeSeconds": 0.12320564599940553,
+              "runningWallSeconds": 5.000041716033593,
+              "pauseVerificationSeconds": 0.17867295996984467
+            },
+            "updateFrames": 135,
+            "gameCpuSecondsPerNativeSecond": 1.6533333333333338
+          }
+        ],
+        "hostLoadAverage": [
+          6.70947265625,
+          6.4580078125,
+          6.27685546875
+        ],
+        "hostCpuCount": 24,
+        "limits": "Not maximum simulation throughput or FPS. Compare matched save/mod/cap/work configurations. RSS is resident process memory, not total memory saved. Paging and concurrent workloads add noise.",
+        "summary": {
+          "wallSeconds": {
+            "median": 5.674337892967742,
+            "min": 5.612273096048739,
+            "max": 5.7722296680440195
+          },
+          "controlOverheadSeconds": {
+            "median": 0.6743378929677419,
+            "min": 0.6122730960487388,
+            "max": 0.7722296680440195
+          },
+          "gameCpuSecondsPerNativeSecond": {
+            "median": 1.5259999999999991,
+            "min": 1.219872611464971,
+            "max": 1.726258503401362
+          }
+        },
+        "complete": true
+      },
+      "cadence": {
+        "schema": 1,
+        "label": "graphical-baseline",
+        "returncode": 0,
+        "summary": {
+          "activeIntervals": 24,
+          "activeSeconds": 24.926042,
+          "cameraFramesPerSecond": 21.583851940873725,
+          "nativeSecondsPerWallSecond": 1.8956078145098207
+        },
+        "intervals": [
+          {
+            "seconds": 1.132044,
+            "renderFrames": 5,
+            "nativeSeconds": 0.875
+          },
+          {
+            "seconds": 1.011115,
+            "renderFrames": 16,
+            "nativeSeconds": 1.875
+          },
+          {
+            "seconds": 1.011756,
+            "renderFrames": 19,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.008441,
+            "renderFrames": 20,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.040218,
+            "renderFrames": 23,
+            "nativeSeconds": 2.0625
+          },
+          {
+            "seconds": 1.006762,
+            "renderFrames": 24,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.034962,
+            "renderFrames": 26,
+            "nativeSeconds": 2.1875
+          },
+          {
+            "seconds": 1.014943,
+            "renderFrames": 25,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.05366,
+            "renderFrames": 20,
+            "nativeSeconds": 1.6875
+          },
+          {
+            "seconds": 1.069121,
+            "renderFrames": 22,
+            "nativeSeconds": 1.75
+          },
+          {
+            "seconds": 1.000356,
+            "renderFrames": 23,
+            "nativeSeconds": 1.8125
+          },
+          {
+            "seconds": 1.036482,
+            "renderFrames": 27,
+            "nativeSeconds": 2.1875
+          },
+          {
+            "seconds": 1.015718,
+            "renderFrames": 23,
+            "nativeSeconds": 2.0625
+          },
+          {
+            "seconds": 1.021729,
+            "renderFrames": 28,
+            "nativeSeconds": 2.1875
+          },
+          {
+            "seconds": 1.067308,
+            "renderFrames": 26,
+            "nativeSeconds": 2.4375
+          },
+          {
+            "seconds": 1.00892,
+            "renderFrames": 21,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.095254,
+            "renderFrames": 21,
+            "nativeSeconds": 1.875
+          },
+          {
+            "seconds": 1.02306,
+            "renderFrames": 24,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.040601,
+            "renderFrames": 22,
+            "nativeSeconds": 2.1875
+          },
+          {
+            "seconds": 1.031078,
+            "renderFrames": 23,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.015498,
+            "renderFrames": 28,
+            "nativeSeconds": 2.0625
+          },
+          {
+            "seconds": 1.053112,
+            "renderFrames": 23,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.089268,
+            "renderFrames": 27,
+            "nativeSeconds": 2.0
+          },
+          {
+            "seconds": 1.044636,
+            "renderFrames": 22,
+            "nativeSeconds": 2.0
+          }
+        ],
+        "rows": [
+          {
+            "capturedAt": "2026-11-13T11:07:38.7505660Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 3096,
+            "renderedFrameCount": 3096,
+            "cameraRenderFrames": 3094,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:39.7678370Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 3144,
+            "renderedFrameCount": 3144,
+            "cameraRenderFrames": 3142,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:40.2186120Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 3155,
+            "renderedFrameCount": 3155,
+            "cameraRenderFrames": 3153,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:40.4837980Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 3161,
+            "renderedFrameCount": 3161,
+            "cameraRenderFrames": 3159,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:41.6158420Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984407.75,
+            "duplicants": 15,
+            "frameCount": 3166,
+            "renderedFrameCount": 3166,
+            "cameraRenderFrames": 3164,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:42.6269570Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984409.625,
+            "duplicants": 15,
+            "frameCount": 3182,
+            "renderedFrameCount": 3182,
+            "cameraRenderFrames": 3180,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:43.6387130Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984411.625,
+            "duplicants": 15,
+            "frameCount": 3201,
+            "renderedFrameCount": 3201,
+            "cameraRenderFrames": 3199,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:44.6471540Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984413.625,
+            "duplicants": 15,
+            "frameCount": 3221,
+            "renderedFrameCount": 3221,
+            "cameraRenderFrames": 3219,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:45.5562370Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984415.0625,
+            "duplicants": 15,
+            "frameCount": 3241,
+            "renderedFrameCount": 3241,
+            "cameraRenderFrames": 3239,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:45.9360610Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984415.0625,
+            "duplicants": 15,
+            "frameCount": 3253,
+            "renderedFrameCount": 3253,
+            "cameraRenderFrames": 3251,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:46.1196800Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984415.1875,
+            "duplicants": 15,
+            "frameCount": 3258,
+            "renderedFrameCount": 3258,
+            "cameraRenderFrames": 3256,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:47.1598980Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984417.25,
+            "duplicants": 15,
+            "frameCount": 3281,
+            "renderedFrameCount": 3281,
+            "cameraRenderFrames": 3279,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:48.1666600Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984419.25,
+            "duplicants": 15,
+            "frameCount": 3305,
+            "renderedFrameCount": 3305,
+            "cameraRenderFrames": 3303,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:49.2016220Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984421.4375,
+            "duplicants": 15,
+            "frameCount": 3331,
+            "renderedFrameCount": 3331,
+            "cameraRenderFrames": 3329,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:50.2165650Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984423.4375,
+            "duplicants": 15,
+            "frameCount": 3356,
+            "renderedFrameCount": 3356,
+            "cameraRenderFrames": 3354,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:51.1990530Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984425.0625,
+            "duplicants": 15,
+            "frameCount": 3376,
+            "renderedFrameCount": 3376,
+            "cameraRenderFrames": 3374,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:51.2408120Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984425.0625,
+            "duplicants": 15,
+            "frameCount": 3377,
+            "renderedFrameCount": 3377,
+            "cameraRenderFrames": 3375,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:51.6420720Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984425.0625,
+            "duplicants": 15,
+            "frameCount": 3390,
+            "renderedFrameCount": 3390,
+            "cameraRenderFrames": 3388,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:51.9107980Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984425.1875,
+            "duplicants": 15,
+            "frameCount": 3396,
+            "renderedFrameCount": 3396,
+            "cameraRenderFrames": 3394,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:52.9644580Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984426.875,
+            "duplicants": 15,
+            "frameCount": 3416,
+            "renderedFrameCount": 3416,
+            "cameraRenderFrames": 3414,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:54.0335790Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984428.625,
+            "duplicants": 15,
+            "frameCount": 3438,
+            "renderedFrameCount": 3438,
+            "cameraRenderFrames": 3436,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:55.0339350Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984430.4375,
+            "duplicants": 15,
+            "frameCount": 3461,
+            "renderedFrameCount": 3461,
+            "cameraRenderFrames": 3459,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:56.0704170Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984432.625,
+            "duplicants": 15,
+            "frameCount": 3488,
+            "renderedFrameCount": 3488,
+            "cameraRenderFrames": 3486,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:56.9904170Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984434.25,
+            "duplicants": 15,
+            "frameCount": 3513,
+            "renderedFrameCount": 3513,
+            "cameraRenderFrames": 3511,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:57.3790840Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984434.25,
+            "duplicants": 15,
+            "frameCount": 3529,
+            "renderedFrameCount": 3529,
+            "cameraRenderFrames": 3527,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:57.6031510Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984434.375,
+            "duplicants": 15,
+            "frameCount": 3536,
+            "renderedFrameCount": 3536,
+            "cameraRenderFrames": 3534,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:58.6188690Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984436.4375,
+            "duplicants": 15,
+            "frameCount": 3559,
+            "renderedFrameCount": 3559,
+            "cameraRenderFrames": 3557,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:07:59.6405980Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984438.625,
+            "duplicants": 15,
+            "frameCount": 3587,
+            "renderedFrameCount": 3587,
+            "cameraRenderFrames": 3585,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:00.7079060Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984441.0625,
+            "duplicants": 15,
+            "frameCount": 3613,
+            "renderedFrameCount": 3613,
+            "cameraRenderFrames": 3611,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:01.7168260Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984443.0625,
+            "duplicants": 15,
+            "frameCount": 3634,
+            "renderedFrameCount": 3634,
+            "cameraRenderFrames": 3632,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:02.7648170Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984445.25,
+            "duplicants": 15,
+            "frameCount": 3655,
+            "renderedFrameCount": 3655,
+            "cameraRenderFrames": 3653,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:02.7939270Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984445.25,
+            "duplicants": 15,
+            "frameCount": 3656,
+            "renderedFrameCount": 3656,
+            "cameraRenderFrames": 3654,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:03.1504300Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984445.25,
+            "duplicants": 15,
+            "frameCount": 3666,
+            "renderedFrameCount": 3666,
+            "cameraRenderFrames": 3664,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:03.3393730Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984445.375,
+            "duplicants": 15,
+            "frameCount": 3671,
+            "renderedFrameCount": 3671,
+            "cameraRenderFrames": 3669,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:04.4346270Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984447.25,
+            "duplicants": 15,
+            "frameCount": 3692,
+            "renderedFrameCount": 3692,
+            "cameraRenderFrames": 3690,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:05.4576870Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984449.25,
+            "duplicants": 15,
+            "frameCount": 3716,
+            "renderedFrameCount": 3716,
+            "cameraRenderFrames": 3714,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:06.4982880Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984451.4375,
+            "duplicants": 15,
+            "frameCount": 3738,
+            "renderedFrameCount": 3738,
+            "cameraRenderFrames": 3736,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:07.5293660Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984453.4375,
+            "duplicants": 15,
+            "frameCount": 3761,
+            "renderedFrameCount": 3761,
+            "cameraRenderFrames": 3759,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:08.4604730Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984455.0625,
+            "duplicants": 15,
+            "frameCount": 3782,
+            "renderedFrameCount": 3782,
+            "cameraRenderFrames": 3780,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:08.8739100Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984455.0625,
+            "duplicants": 15,
+            "frameCount": 3792,
+            "renderedFrameCount": 3792,
+            "cameraRenderFrames": 3790,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:09.1114360Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984455.1875,
+            "duplicants": 15,
+            "frameCount": 3798,
+            "renderedFrameCount": 3798,
+            "cameraRenderFrames": 3796,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:10.1269340Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984457.25,
+            "duplicants": 15,
+            "frameCount": 3826,
+            "renderedFrameCount": 3826,
+            "cameraRenderFrames": 3824,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:11.1800460Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984459.25,
+            "duplicants": 15,
+            "frameCount": 3849,
+            "renderedFrameCount": 3849,
+            "cameraRenderFrames": 3847,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:12.2693140Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984461.25,
+            "duplicants": 15,
+            "frameCount": 3876,
+            "renderedFrameCount": 3876,
+            "cameraRenderFrames": 3874,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:13.3139500Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984463.25,
+            "duplicants": 15,
+            "frameCount": 3898,
+            "renderedFrameCount": 3898,
+            "cameraRenderFrames": 3896,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:14.1645870Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984464.8125,
+            "duplicants": 15,
+            "frameCount": 3916,
+            "renderedFrameCount": 3916,
+            "cameraRenderFrames": 3914,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:08:14.2797990Z",
+            "pid": 1890953,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984464.8125,
+            "duplicants": 15,
+            "frameCount": 3917,
+            "renderedFrameCount": 3917,
+            "cameraRenderFrames": 3915,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          }
+        ]
+      }
+    },
+    "graphical-candidate": {
+      "analysis": {
+        "schema": 1,
+        "label": "graphical-candidate",
+        "validForComparison": false,
+        "issues": [
+          "Missing distinct active windows; pause boundaries were not fully observed",
+          "Control overhead exceeded two seconds; inspect stalls and host pressure"
+        ],
+        "warmupsExcluded": 1,
+        "windows": [
+          {
+            "activeSeconds": 1.740586,
+            "cameraFramesPerSecond": 1.1490383123844499,
+            "nativeSecondsPerWallSecond": 0.21544468357208435
+          },
+          {
+            "activeSeconds": 4.16118,
+            "cameraFramesPerSecond": 9.852974396685555,
+            "nativeSecondsPerWallSecond": 1.4719382482853423
+          },
+          {
+            "activeSeconds": 4.824161999999999,
+            "cameraFramesPerSecond": 10.364494393015825,
+            "nativeSecondsPerWallSecond": 1.1660056192142803
+          },
+          {
+            "activeSeconds": 4.317902,
+            "cameraFramesPerSecond": 13.895637279400967,
+            "nativeSecondsPerWallSecond": 1.6211576825967795
+          },
+          {
+            "activeSeconds": 3.1165269999999996,
+            "cameraFramesPerSecond": 13.476539750818782,
+            "nativeSecondsPerWallSecond": 1.4840237225604016
+          }
+        ],
+        "summary": {
+          "cameraFramesPerSecond": {
+            "median": 11.920517071917303,
+            "min": 9.852974396685555,
+            "max": 13.895637279400967
+          },
+          "nativeSecondsPerWallSecond": {
+            "median": 1.4779809854228718,
+            "min": 1.1660056192142803,
+            "max": 1.6211576825967795
+          }
+        },
+        "limits": "Camera callback cadence, not display presentation timing. Transition intervals are excluded. Simulation throughput is measured at the requested speed cap. Inspect raw steps and host pressure even when control timing passes; invalid series are retained, not silently filtered."
+      },
+      "steps": {
+        "schema": 1,
+        "label": "graphical-candidate",
+        "capturedAt": "2026-11-13T11:31:42.503587+00:00",
+        "workload": "end-to-end guarded wall-time steps, including client startup, lease acknowledgment and final pause verification",
+        "headless": false,
+        "unity": "6000.3.5f2",
+        "warmups": 1,
+        "controlNotifications": true,
+        "requiredLogMarkers": [],
+        "requestedStepSeconds": 5.0,
+        "speed": 3,
+        "samples": [
+          {
+            "wallSeconds": 13.80333237099694,
+            "controlOverheadSeconds": 8.80333237099694,
+            "nativeSeconds": 1.0,
+            "gameCpuSeconds": 5.939999999999998,
+            "majorFaults": 114539,
+            "rssKiB": 1891880,
+            "swapKiB": 4310900,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.1857306729652919,
+              "leaseAcknowledgmentSeconds": 0.1738662120187655,
+              "resumeSeconds": 1.6916780860046856,
+              "runningWallSeconds": 5.0000465649645776,
+              "pauseVerificationSeconds": 6.546933146019001
+            },
+            "updateFrames": 23,
+            "gameCpuSecondsPerNativeSecond": 5.939999999999998
+          },
+          {
+            "wallSeconds": 5.94799564499408,
+            "controlOverheadSeconds": 0.9479956449940801,
+            "nativeSeconds": 7.8125,
+            "gameCpuSeconds": 12.980000000000018,
+            "majorFaults": 40567,
+            "rssKiB": 2071888,
+            "swapKiB": 4144148,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.17574485699879006,
+              "leaseAcknowledgmentSeconds": 0.1812150999903679,
+              "resumeSeconds": 0.21873003098880872,
+              "runningWallSeconds": 5.000026859052014,
+              "pauseVerificationSeconds": 0.14107037597568706
+            },
+            "updateFrames": 78,
+            "gameCpuSecondsPerNativeSecond": 1.6614400000000022
+          },
+          {
+            "wallSeconds": 6.122957455983851,
+            "controlOverheadSeconds": 1.122957455983851,
+            "nativeSeconds": 6.375,
+            "gameCpuSeconds": 11.610000000000014,
+            "majorFaults": 15600,
+            "rssKiB": 2144020,
+            "swapKiB": 4090008,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.18998467602068558,
+              "leaseAcknowledgmentSeconds": 0.17893087299307808,
+              "resumeSeconds": 0.2496076449751854,
+              "runningWallSeconds": 5.000044978049118,
+              "pauseVerificationSeconds": 0.3392927369568497
+            },
+            "updateFrames": 74,
+            "gameCpuSecondsPerNativeSecond": 1.8211764705882374
+          },
+          {
+            "wallSeconds": 6.0684318440034986,
+            "controlOverheadSeconds": 1.0684318440034986,
+            "nativeSeconds": 8.625,
+            "gameCpuSeconds": 13.160000000000025,
+            "majorFaults": 17351,
+            "rssKiB": 1975808,
+            "swapKiB": 4284620,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.18698310700710863,
+              "leaseAcknowledgmentSeconds": 0.1718696430325508,
+              "resumeSeconds": 0.24084644595859572,
+              "runningWallSeconds": 5.000020377046894,
+              "pauseVerificationSeconds": 0.21386083198012784
+            },
+            "updateFrames": 85,
+            "gameCpuSecondsPerNativeSecond": 1.5257971014492782
+          },
+          {
+            "wallSeconds": 18.500021737010684,
+            "controlOverheadSeconds": 13.500021737010684,
+            "nativeSeconds": 5.1875,
+            "gameCpuSeconds": 12.920000000000016,
+            "majorFaults": 189617,
+            "rssKiB": 2083624,
+            "swapKiB": 4176640,
+            "pausedAfter": true,
+            "failed": false,
+            "stepTimings": {
+              "initialPauseSeconds": 0.19107838004129007,
+              "leaseAcknowledgmentSeconds": 0.16215945599833503,
+              "resumeSeconds": 0.18560413300292566,
+              "runningWallSeconds": 5.000032586976886,
+              "pauseVerificationSeconds": 12.809907058021054
+            },
+            "updateFrames": 55,
+            "gameCpuSecondsPerNativeSecond": 2.4906024096385573
+          }
+        ],
+        "hostLoadAverage": [
+          9.5439453125,
+          8.36767578125,
+          7.8642578125
+        ],
+        "hostCpuCount": 24,
+        "limits": "Not maximum simulation throughput or FPS. Compare matched save/mod/cap/work configurations. RSS is resident process memory, not total memory saved. Paging and concurrent workloads add noise.",
+        "summary": {
+          "wallSeconds": {
+            "median": 6.122957455983851,
+            "min": 5.94799564499408,
+            "max": 18.500021737010684
+          },
+          "controlOverheadSeconds": {
+            "median": 1.122957455983851,
+            "min": 0.9479956449940801,
+            "max": 13.500021737010684
+          },
+          "gameCpuSecondsPerNativeSecond": {
+            "median": 1.8211764705882374,
+            "min": 1.5257971014492782,
+            "max": 5.939999999999998
+          }
+        },
+        "complete": true
+      },
+      "cadence": {
+        "schema": 1,
+        "label": "graphical-candidate",
+        "returncode": 0,
+        "summary": {
+          "activeIntervals": 16,
+          "activeSeconds": 18.160357,
+          "cameraFramesPerSecond": 10.737674375013663,
+          "nativeSecondsPerWallSecond": 1.3077936738798692
+        },
+        "hostBefore": {
+          "pswpin": 648389437,
+          "pswpout": 835667158,
+          "memoryPressure": "some avg10=5.89 avg60=4.13 avg300=3.19 total=2833567120\nfull avg10=5.77 avg60=4.03 avg300=3.12 total=2638748240",
+          "rustcProcesses": [
+            {
+              "pid": 1953370,
+              "rssKiB": 1610716
+            }
+          ]
+        },
+        "hostAfter": {
+          "pswpin": 650011650,
+          "pswpout": 837417128,
+          "memoryPressure": "some avg10=4.41 avg60=4.13 avg300=3.37 total=2836443690\nfull avg10=4.31 avg60=3.92 avg300=3.26 total=2641486988",
+          "rustcProcesses": [
+            {
+              "pid": 1953370,
+              "rssKiB": 1664680
+            }
+          ]
+        },
+        "intervals": [
+          {
+            "seconds": 1.740586,
+            "renderFrames": 2,
+            "nativeSeconds": 0.375
+          },
+          {
+            "seconds": 1.002834,
+            "renderFrames": 6,
+            "nativeSeconds": 1.125
+          },
+          {
+            "seconds": 1.071463,
+            "renderFrames": 12,
+            "nativeSeconds": 1.8125
+          },
+          {
+            "seconds": 1.064816,
+            "renderFrames": 7,
+            "nativeSeconds": 1.375
+          },
+          {
+            "seconds": 1.022067,
+            "renderFrames": 16,
+            "nativeSeconds": 1.8125
+          },
+          {
+            "seconds": 1.012865,
+            "renderFrames": 16,
+            "nativeSeconds": 1.625
+          },
+          {
+            "seconds": 1.007946,
+            "renderFrames": 12,
+            "nativeSeconds": 1.8125
+          },
+          {
+            "seconds": 1.726002,
+            "renderFrames": 14,
+            "nativeSeconds": 1.4375
+          },
+          {
+            "seconds": 1.077349,
+            "renderFrames": 8,
+            "nativeSeconds": 0.75
+          },
+          {
+            "seconds": 1.011152,
+            "renderFrames": 12,
+            "nativeSeconds": 1.1875
+          },
+          {
+            "seconds": 1.203731,
+            "renderFrames": 15,
+            "nativeSeconds": 1.8125
+          },
+          {
+            "seconds": 1.039816,
+            "renderFrames": 16,
+            "nativeSeconds": 1.625
+          },
+          {
+            "seconds": 1.063203,
+            "renderFrames": 17,
+            "nativeSeconds": 2.375
+          },
+          {
+            "seconds": 1.065275,
+            "renderFrames": 13,
+            "nativeSeconds": 1.625
+          },
+          {
+            "seconds": 1.012692,
+            "renderFrames": 13,
+            "nativeSeconds": 1.625
+          },
+          {
+            "seconds": 1.03856,
+            "renderFrames": 16,
+            "nativeSeconds": 1.375
+          }
+        ],
+        "rows": [
+          {
+            "capturedAt": "2026-11-13T11:31:41.5928260Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 5919,
+            "renderedFrameCount": 5919,
+            "cameraRenderFrames": 5917,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:42.6544220Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 5940,
+            "renderedFrameCount": 5940,
+            "cameraRenderFrames": 5938,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:43.3184250Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 5947,
+            "renderedFrameCount": 5947,
+            "cameraRenderFrames": 5945,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:47.7500050Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984406.875,
+            "duplicants": 15,
+            "frameCount": 5953,
+            "renderedFrameCount": 5953,
+            "cameraRenderFrames": 5951,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:53.1039230Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984407.0625,
+            "duplicants": 15,
+            "frameCount": 5954,
+            "renderedFrameCount": 5954,
+            "cameraRenderFrames": 5952,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:53.7651550Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984407.0625,
+            "duplicants": 15,
+            "frameCount": 5956,
+            "renderedFrameCount": 5956,
+            "cameraRenderFrames": 5954,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:54.3110780Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984407.0625,
+            "duplicants": 15,
+            "frameCount": 5969,
+            "renderedFrameCount": 5969,
+            "cameraRenderFrames": 5967,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:55.1912960Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984407.25,
+            "duplicants": 15,
+            "frameCount": 5973,
+            "renderedFrameCount": 5973,
+            "cameraRenderFrames": 5971,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:31:56.9318820Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984407.625,
+            "duplicants": 15,
+            "frameCount": 5975,
+            "renderedFrameCount": 5975,
+            "cameraRenderFrames": 5973,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:06.8536720Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984408.0625,
+            "duplicants": 15,
+            "frameCount": 5977,
+            "renderedFrameCount": 5977,
+            "cameraRenderFrames": 5975,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:07.6491100Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984408.0625,
+            "duplicants": 15,
+            "frameCount": 5979,
+            "renderedFrameCount": 5979,
+            "cameraRenderFrames": 5977,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:08.2178420Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984408.0625,
+            "duplicants": 15,
+            "frameCount": 5992,
+            "renderedFrameCount": 5992,
+            "cameraRenderFrames": 5990,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:08.4825890Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984408.125,
+            "duplicants": 15,
+            "frameCount": 5998,
+            "renderedFrameCount": 5998,
+            "cameraRenderFrames": 5996,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:09.4854230Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984409.25,
+            "duplicants": 15,
+            "frameCount": 6004,
+            "renderedFrameCount": 6004,
+            "cameraRenderFrames": 6002,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:10.5568860Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984411.0625,
+            "duplicants": 15,
+            "frameCount": 6016,
+            "renderedFrameCount": 6016,
+            "cameraRenderFrames": 6014,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:11.6217020Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984412.4375,
+            "duplicants": 15,
+            "frameCount": 6023,
+            "renderedFrameCount": 6023,
+            "cameraRenderFrames": 6021,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:12.6437690Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984414.25,
+            "duplicants": 15,
+            "frameCount": 6039,
+            "renderedFrameCount": 6039,
+            "cameraRenderFrames": 6037,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:13.7102080Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984415.875,
+            "duplicants": 15,
+            "frameCount": 6057,
+            "renderedFrameCount": 6057,
+            "cameraRenderFrames": 6055,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:14.2288250Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984415.875,
+            "duplicants": 15,
+            "frameCount": 6070,
+            "renderedFrameCount": 6070,
+            "cameraRenderFrames": 6068,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:14.4968290Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984416.0,
+            "duplicants": 15,
+            "frameCount": 6075,
+            "renderedFrameCount": 6075,
+            "cameraRenderFrames": 6073,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:15.5096940Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984417.625,
+            "duplicants": 15,
+            "frameCount": 6091,
+            "renderedFrameCount": 6091,
+            "cameraRenderFrames": 6089,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:16.5176400Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984419.4375,
+            "duplicants": 15,
+            "frameCount": 6103,
+            "renderedFrameCount": 6103,
+            "cameraRenderFrames": 6101,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:18.2436420Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984420.875,
+            "duplicants": 15,
+            "frameCount": 6117,
+            "renderedFrameCount": 6117,
+            "cameraRenderFrames": 6115,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:19.3209910Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984421.625,
+            "duplicants": 15,
+            "frameCount": 6125,
+            "renderedFrameCount": 6125,
+            "cameraRenderFrames": 6123,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:19.7805000Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984422.25,
+            "duplicants": 15,
+            "frameCount": 6130,
+            "renderedFrameCount": 6130,
+            "cameraRenderFrames": 6128,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:19.8987550Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984422.25,
+            "duplicants": 15,
+            "frameCount": 6131,
+            "renderedFrameCount": 6131,
+            "cameraRenderFrames": 6129,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:20.5390410Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984422.25,
+            "duplicants": 15,
+            "frameCount": 6139,
+            "renderedFrameCount": 6139,
+            "cameraRenderFrames": 6137,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:20.8030070Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984422.4375,
+            "duplicants": 15,
+            "frameCount": 6142,
+            "renderedFrameCount": 6142,
+            "cameraRenderFrames": 6140,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:21.8141590Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984423.625,
+            "duplicants": 15,
+            "frameCount": 6154,
+            "renderedFrameCount": 6154,
+            "cameraRenderFrames": 6152,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:23.0178900Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984425.4375,
+            "duplicants": 15,
+            "frameCount": 6169,
+            "renderedFrameCount": 6169,
+            "cameraRenderFrames": 6167,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:24.0577060Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984427.0625,
+            "duplicants": 15,
+            "frameCount": 6185,
+            "renderedFrameCount": 6185,
+            "cameraRenderFrames": 6183,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:25.1209090Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984429.4375,
+            "duplicants": 15,
+            "frameCount": 6202,
+            "renderedFrameCount": 6202,
+            "cameraRenderFrames": 6200,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:26.0583110Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984430.875,
+            "duplicants": 15,
+            "frameCount": 6216,
+            "renderedFrameCount": 6216,
+            "cameraRenderFrames": 6214,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:26.5238660Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984430.875,
+            "duplicants": 15,
+            "frameCount": 6222,
+            "renderedFrameCount": 6222,
+            "cameraRenderFrames": 6220,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:26.7789280Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984431.0,
+            "duplicants": 15,
+            "frameCount": 6225,
+            "renderedFrameCount": 6225,
+            "cameraRenderFrames": 6223,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:27.8442030Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984432.625,
+            "duplicants": 15,
+            "frameCount": 6238,
+            "renderedFrameCount": 6238,
+            "cameraRenderFrames": 6236,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:28.8568950Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984434.25,
+            "duplicants": 15,
+            "frameCount": 6251,
+            "renderedFrameCount": 6251,
+            "cameraRenderFrames": 6249,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:29.8954550Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": false,
+            "simulationSeconds": 984435.625,
+            "duplicants": 15,
+            "frameCount": 6267,
+            "renderedFrameCount": 6267,
+            "cameraRenderFrames": 6265,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:44.4338820Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984436.0625,
+            "duplicants": 15,
+            "frameCount": 6269,
+            "renderedFrameCount": 6269,
+            "cameraRenderFrames": 6267,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          },
+          {
+            "capturedAt": "2026-11-13T11:32:44.5951420Z",
+            "pid": 1949096,
+            "gameLoaded": true,
+            "paused": true,
+            "simulationSeconds": 984436.0625,
+            "duplicants": 15,
+            "frameCount": 6271,
+            "renderedFrameCount": 6271,
+            "cameraRenderFrames": 6269,
+            "targetFrameRate": -1,
+            "vSyncCount": 0,
+            "graphicsDevice": "OpenGLCore",
+            "gameError": null
+          }
+        ]
+      },
+      "nativeLoadedSha256": "f6e7e26655fb3a97d7891a7bb70fc9bb0cbdc933d0c45cb24461b078265e82ed",
+      "residentCpuPathLogged": true
+    }
+  }
+}
