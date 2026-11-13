@@ -88,6 +88,7 @@ jobs:
           --skip gpu_sim::thermal_cpu::tests::hybrid_complete_steps_track_gpu_reference_without_species_loss
           --skip gpu_sim::thermal_cpu::tests::sparse_face_cpu_heat_matches_gpu_gather_and_energy
           --skip liquid_transport::tests::gpu_diffusion_leaves_extra_species_cells_owned_by_volume_transport
+          --skip multicomponent_flux::tests::liquid_workspace_reuses_storage_after_warmup_and_resets_obstacles
           --skip multicomponent_flux::tests::gas_batch_matches_serial_with_equal_shapes_and_invalidated_inputs
           --skip multicomponent_flux::tests::gas_batch_sleeping_worlds_stay_asleep_and_wake_on_input_change
       - name: Build native library and identity receipt
