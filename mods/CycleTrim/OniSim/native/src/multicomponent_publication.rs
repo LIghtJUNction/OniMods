@@ -249,6 +249,7 @@ impl MulticomponentBuffers {
         state: &(impl Fn(usize, usize) -> (f32, f32) + Sync)) {
         const BLOCK: usize = 1024;
         let environment = crate::float_env::FloatEnv::capture();
+        let has_extras = !world.extra_mixtures.is_empty();
         let counts: Vec<Result<usize>> = pool.install(|| (0..count.div_ceil(BLOCK)).into_par_iter()
             .map(|block| {
                 let _environment = environment.install();
@@ -260,17 +261,36 @@ impl MulticomponentBuffers {
                         return Err(Error::new(Status::InvalidState,
                             format!("cell {cell} contains invalid mass or temperature")));
                     }
-                    let mut count = 0usize;
-                    world.for_each_cell_species(internal, |id, mass| {
-                        if mass > 0.0 && mass.is_finite()
-                            && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 != 0) {
-                            count += 1;
+                    if !has_extras {
+                        let m0 = world.write.mass[internal];
+                        if m0 > 0.0 && m0.is_finite() {
+                            let id0 = world.write.element[internal] as usize;
+                            if world.element_phase.get(id0).copied().unwrap_or(0) != 0 {
+                                total += 1;
+                            }
                         }
-                    });
-                    if count > u16::MAX as usize {
-                        return Err(Error::new(Status::ResourceLimit, "too many species in one publication cell"));
+                        let m1 = world.mixture_mass[internal];
+                        if m1 > 0.0 && m1.is_finite() {
+                            let id1 = world.mixture_element[internal];
+                            if id1 != world.write.element[internal]
+                                && world.element_phase.get(id1 as usize).copied().unwrap_or(0) != 0
+                            {
+                                total += 1;
+                            }
+                        }
+                    } else {
+                        let mut count = 0usize;
+                        world.for_each_cell_species(internal, |id, mass| {
+                            if mass > 0.0 && mass.is_finite()
+                                && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 != 0) {
+                                count += 1;
+                            }
+                        });
+                        if count > u16::MAX as usize {
+                            return Err(Error::new(Status::ResourceLimit, "too many species in one publication cell"));
+                        }
+                        total += count;
                     }
-                    total += count;
                 }
                 Ok(total)
             }).collect());

@@ -308,22 +308,52 @@ pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementT
     cells.fill(onisim_gpu::multicomponent::PackedSparseCell::default());
     masks.resize(count, 0); masks.fill(0);
     solid.resize(count, 1); solid.fill(1);
-    for y in 0..height {for x in 0..width {
-        let local=y*width+x; let cell=(min_y+y)*world.stride+min_x+x;
-        // The two-slot GPU projection cannot own arbitrary inventories.
-        // Keep all extra-species cells in the volume transport path.
-        if world.write.properties[cell]&1!=0 || world.extra_mixtures.contains_key(&cell) {continue;}
-        let Some(primary)=ids.iter().position(|&id|id==world.write.element[cell]) else {continue;};
-        if world.write.mass[cell]<=0.0 || !world.write.mass[cell].is_finite() ||
-            !world.write.temperature[cell].is_finite() || world.write.temperature[cell]<=0.0 {continue;}
-        let mix=if world.mixture_mass[cell]>0.0 {
-            let Some(channel)=ids.iter().position(|&id|id==world.mixture_element[cell]) else {continue;}; Some(channel)
-        } else {None};
-        let second=mix.unwrap_or(primary); solid[local]=0;
-        cells[local]=onisim_gpu::multicomponent::PackedSparseCell {first:primary as u16,second:second as u16,
-            first_mass:world.write.mass[cell],second_mass:if mix.is_some() {world.mixture_mass[cell]} else {0.0},temperature:world.write.temperature[cell]};
-        masks[local]=(1u16<<primary)|if mix.is_some() {1u16<<second} else {0};
-    }}
+    let has_extras = !world.extra_mixtures.is_empty();
+    for y in 0..height {
+        let world_row = (min_y + y) * world.stride + min_x;
+        let local_row = y * width;
+        for x in 0..width {
+            let local = local_row + x;
+            let cell = world_row + x;
+            // The two-slot GPU projection cannot own arbitrary inventories.
+            // Keep all extra-species cells in the volume transport path.
+            if world.write.properties[cell] & 1 != 0
+                || (has_extras && world.extra_mixtures.contains_key(&cell))
+            {
+                continue;
+            }
+            let mass0 = world.write.mass[cell];
+            if mass0 <= 0.0 || !mass0.is_finite() {
+                continue;
+            }
+            let temp = world.write.temperature[cell];
+            if !temp.is_finite() || temp <= 0.0 {
+                continue;
+            }
+            let Some(primary) = ids.iter().position(|&id| id == world.write.element[cell]) else {
+                continue;
+            };
+            let mix_mass = world.mixture_mass[cell];
+            let mix = if mix_mass > 0.0 {
+                let Some(channel) = ids.iter().position(|&id| id == world.mixture_element[cell]) else {
+                    continue;
+                };
+                Some(channel)
+            } else {
+                None
+            };
+            let second = mix.unwrap_or(primary);
+            solid[local] = 0;
+            cells[local] = onisim_gpu::multicomponent::PackedSparseCell {
+                first: primary as u16,
+                second: second as u16,
+                first_mass: mass0,
+                second_mass: if mix.is_some() { mix_mass } else { 0.0 },
+                temperature: temp,
+            };
+            masks[local] = (1u16 << primary) | if mix.is_some() { 1u16 << second } else { 0 };
+        }
+    }
     isolate_stencil_masks(masks, solid, width, height, 1);
     if !solid.contains(&0) { gpu.liquid_staging = staging; return Ok(None); }
     let pending = match gpu.begin_sparse_liquid(width, height, ids.len(), cells, solid, &species) {

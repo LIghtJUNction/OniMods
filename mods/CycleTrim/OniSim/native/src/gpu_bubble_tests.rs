@@ -67,3 +67,65 @@ fn cropped_cross_phase_columns_match_ordered_cpu_moves_at_map_edges() {
         }
     }
 }
+
+#[test]
+#[ignore]
+fn benchmark_bubble_movement_gpu_vs_cpu() {
+    use std::time::Instant;
+    let make = |stride_x: usize, stride_y: usize| {
+        let (mut state, _) = crate::native_chain_tests::fixture::create(736, 304, "mixed");
+        let mut world = state.world.take().unwrap();
+        let table = state.elements.take().unwrap();
+        for y in (2..world.height).step_by(stride_y) {
+            for x in (2..world.width).step_by(stride_x) {
+                let cell = y * world.stride + x;
+                world.write.element[cell] = 5;
+                world.write.mass[cell] = 1000.0;
+                world.mixture_element[cell] = 3;
+                world.mixture_mass[cell] = 0.5;
+            }
+        }
+        (world, table)
+    };
+    let (sample, _) = make(32, 16);
+    let mut gpu = GpuSimulation::new(sample.stride, sample.padded_height).unwrap();
+    for (name, stride_x, stride_y) in [("sparse", 32usize, 16usize), ("dense", 2, 2)] {
+        let mut gpu_times = Vec::new();
+        let mut cpu_times = Vec::new();
+        for round in 0..12 {
+            let (mut w_gpu, table) = make(stride_x, stride_y);
+            let (mut w_cpu, _) = make(stride_x, stride_y);
+            let mut e_gpu = EventQueues::default();
+            let mut e_cpu = EventQueues::default();
+            if round % 2 == 0 {
+                let t0 = Instant::now();
+                if let Some(p) = gpu.begin_move_bubbles(&w_gpu, &table).unwrap() {
+                    gpu.finish_move_bubbles(&mut w_gpu, &mut e_gpu, p).unwrap();
+                }
+                gpu_times.push(t0.elapsed().as_secs_f64() * 1e3);
+                let t1 = Instant::now();
+                crate::gas::rise_bubbles(&mut w_cpu, &table, &mut e_cpu);
+                cpu_times.push(t1.elapsed().as_secs_f64() * 1e3);
+            } else {
+                let t1 = Instant::now();
+                crate::gas::rise_bubbles(&mut w_cpu, &table, &mut e_cpu);
+                cpu_times.push(t1.elapsed().as_secs_f64() * 1e3);
+                let t0 = Instant::now();
+                if let Some(p) = gpu.begin_move_bubbles(&w_gpu, &table).unwrap() {
+                    gpu.finish_move_bubbles(&mut w_gpu, &mut e_gpu, p).unwrap();
+                }
+                gpu_times.push(t0.elapsed().as_secs_f64() * 1e3);
+            }
+            assert_eq!(w_gpu.write.element, w_cpu.write.element);
+            assert_eq!(w_gpu.mixture_mass, w_cpu.mixture_mass);
+        }
+        gpu_times.sort_by(f64::total_cmp);
+        cpu_times.sort_by(f64::total_cmp);
+        println!(
+            "BUBBLE_ABBA,{name},gpu_median_ms={:.3},cpu_median_ms={:.3},cpu_speedup={:.2}x",
+            gpu_times[gpu_times.len() / 2],
+            cpu_times[cpu_times.len() / 2],
+            gpu_times[gpu_times.len() / 2] / cpu_times[cpu_times.len() / 2],
+        );
+    }
+}

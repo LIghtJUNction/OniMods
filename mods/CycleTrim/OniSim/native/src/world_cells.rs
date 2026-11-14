@@ -79,6 +79,33 @@ impl Cells {
     }
 
     pub(crate) fn copy_from(&mut self, other: &Self) {
+        if self.element.len() >= 32768
+            && let Some(pool) = crate::parallel::pool(self.element.len())
+        {
+            pool.install(|| {
+                rayon::scope(|s| {
+                    s.spawn(|_| {
+                        self.element.copy_from_slice(&other.element);
+                        self.temperature.copy_from_slice(&other.temperature);
+                        self.mass.copy_from_slice(&other.mass);
+                    });
+                    s.spawn(|_| {
+                        self.properties.copy_from_slice(&other.properties);
+                        self.insulation.copy_from_slice(&other.insulation);
+                        self.strength.copy_from_slice(&other.strength);
+                    });
+                    s.spawn(|_| {
+                        self.disease_idx.copy_from_slice(&other.disease_idx);
+                        self.disease_count.copy_from_slice(&other.disease_count);
+                        self.disease_infestation
+                            .copy_from_slice(&other.disease_infestation);
+                    });
+                    self.disease_growth.copy_from_slice(&other.disease_growth);
+                    self.radiation.copy_from_slice(&other.radiation);
+                });
+            });
+            return;
+        }
         self.element.copy_from_slice(&other.element);
         self.temperature.copy_from_slice(&other.temperature);
         self.mass.copy_from_slice(&other.mass);

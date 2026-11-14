@@ -206,16 +206,9 @@ impl<'a> PreparedStep<'a> {
         let step_started = profiling.then(std::time::Instant::now);
         world.scan_direction = -world.scan_direction;
         if let Some(gpu) = systems.gpu.as_deref_mut() {
-            let pending = gpu.begin_move_bubbles(world, elements).map_err(|error|
-                Error::new(Status::InternalFailure, format!("GPU bubble movement failed: {error}")))?;
             gpu.begin_step(elements);
-            if let Some(pending) = pending {
-                gpu.finish_move_bubbles(world, events, pending).map_err(|error|
-                    Error::new(Status::InternalFailure, format!("GPU bubble readback failed: {error}")))?;
-            }
-        } else {
-            crate::gas::rise_bubbles(world, elements, events);
         }
+        crate::gas::rise_bubbles(world, elements, events);
         world.sync_read_from_write();
         if world.gas_channel_count == 0 {
             crate::multicomponent_flux::rebuild_gas_channels(world, elements);

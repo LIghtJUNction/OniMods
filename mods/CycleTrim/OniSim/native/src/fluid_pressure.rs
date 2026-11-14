@@ -94,6 +94,7 @@ fn storage(head: f64, capacity: f64, elevation: f64) -> (f64, f64) {
 }
 
 impl PressureScratch {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn run(
         &mut self,
         world: &mut PhysicsWorld,
@@ -101,6 +102,18 @@ impl PressureScratch {
         diseases: &DiseaseTable,
         events: &mut EventQueues,
         region: Region,
+    ) -> bool {
+        self.run_with_candidates(world, elements, diseases, events, region, None)
+    }
+
+    pub(crate) fn run_with_candidates(
+        &mut self,
+        world: &mut PhysicsWorld,
+        elements: &ElementTable,
+        diseases: &DiseaseTable,
+        events: &mut EventQueues,
+        region: Region,
+        candidate_cells: Option<&[usize]>,
     ) -> bool {
         // Reset only the last active set; resize initializes a new world once.
         for node in &self.nodes {
@@ -126,49 +139,66 @@ impl PressureScratch {
         let max_x = (region.max_x as usize).min(world.width + 1);
         let min_y = region.min_y.max(1) as usize;
         let max_y = (region.max_y as usize).min(world.height + 1);
-        for y in min_y..max_y {
-            for x in min_x..max_x {
-                let cell = y * world.stride + x;
-                let element = world.read.element[cell];
-                let record = &elements.elements[element as usize].record;
-                let mass = world.read.mass[cell];
-                if record.state & 3 != 2
-                    || !(mass > 0.0)
-                    || !mass.is_finite()
-                    || world.write.element[cell] != element
-                    || world.write.mass[cell] != mass
-                    || world.read.properties[cell] & 2 != 0
-                    || world.write.properties[cell] & 2 != 0
-                    || world.mixture_mass[cell] > 0.0
-                    || world.extra_mixtures.contains_key(&cell)
-                    || !(record.max_mass > 0.0 && record.max_mass.is_finite())
-                    || !(record.viscosity > 0.0 && record.viscosity.is_finite())
-                    || !world.read.temperature[cell].is_finite()
-                {
-                    continue;
+        let mut push_node = |cell: usize, y: usize| {
+            let element = world.read.element[cell];
+            if world.element_phase[element as usize] != 2 {
+                return;
+            }
+            let mass = world.read.mass[cell];
+            if !(mass > 0.0)
+                || !mass.is_finite()
+                || world.write.element[cell] != element
+                || world.write.mass[cell] != mass
+                || (world.read.properties[cell] | world.write.properties[cell]) & 2 != 0
+                || world.mixture_mass[cell] > 0.0
+                || (!world.extra_mixtures.is_empty() && world.extra_mixtures.contains_key(&cell))
+                || !world.read.temperature[cell].is_finite()
+            {
+                return;
+            }
+            let record = &elements.elements[element as usize].record;
+            if !(record.max_mass > 0.0 && record.max_mass.is_finite())
+                || !(record.viscosity > 0.0 && record.viscosity.is_finite())
+            {
+                return;
+            }
+            let capacity = f64::from(record.max_mass);
+            let mass = f64::from(mass);
+            self.index[cell] = self.nodes.len();
+            self.nodes.push(Node {
+                cell,
+                mass,
+                capacity,
+                fill: mass / capacity,
+                limit: f64::from(record.viscosity) / capacity,
+                temperature: f64::from(world.read.temperature[cell]),
+                viscosity: f64::from(record.viscosity),
+                elevation: y as f64,
+                head: head(mass, capacity, y as f64),
+                neighbors: [NONE; 4],
+                outgoing: 0.0,
+                removed_mass: 0.0,
+                received_mass: 0.0,
+                received_heat: 0.0,
+                disease: world.read.disease_idx[cell],
+                germs: world.read.disease_count[cell],
+                outgoing_germs: 0,
+            });
+        };
+        if let Some(cells) = candidate_cells {
+            for &cell in cells {
+                let y = cell / world.stride;
+                let x = cell - y * world.stride;
+                if y >= min_y && y < max_y && x >= min_x && x < max_x {
+                    push_node(cell, y);
                 }
-                let capacity = f64::from(record.max_mass);
-                let mass = f64::from(mass);
-                self.index[cell] = self.nodes.len();
-                self.nodes.push(Node {
-                    cell,
-                    mass,
-                    capacity,
-                    fill: mass / capacity,
-                    limit: f64::from(record.viscosity) / capacity,
-                    temperature: f64::from(world.read.temperature[cell]),
-                    viscosity: f64::from(record.viscosity),
-                    elevation: y as f64,
-                    head: head(mass, capacity, y as f64),
-                    neighbors: [NONE; 4],
-                    outgoing: 0.0,
-                    removed_mass: 0.0,
-                    received_mass: 0.0,
-                    received_heat: 0.0,
-                    disease: world.read.disease_idx[cell],
-                    germs: world.read.disease_count[cell],
-                    outgoing_germs: 0,
-                });
+            }
+        } else {
+            for y in min_y..max_y {
+                let row_base = y * world.stride;
+                for x in min_x..max_x {
+                    push_node(row_base + x, y);
+                }
             }
         }
         for a in 0..self.nodes.len() {

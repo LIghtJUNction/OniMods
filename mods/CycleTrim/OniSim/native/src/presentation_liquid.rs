@@ -35,76 +35,156 @@ pub(super) fn update(
     if world.height <= 1 {
         return Ok(());
     }
-    if cache.next_row.len() != world.width {
-        cache.next_row = filled(world.width, None)?;
+    let rows = world.height - 1;
+    let width = world.width;
+    let count = width * rows;
+    let environment = crate::float_env::FloatEnv::capture();
+    let reuse = environment.masks_all_exceptions();
+    if reuse && let Some(pool) = crate::parallel::pool(world.width * world.height) {
+        const CHUNK_ROWS: usize = 16;
+        let chunk_cells = width * CHUNK_ROWS;
+        let statuses: Vec<crate::float_env::FloatEnv> = pool.install(|| {
+            (
+                liquid[..count].par_chunks_mut(chunk_cells),
+                liquid_data[..count].par_chunks_mut(chunk_cells),
+                material[..count].par_chunks_mut(chunk_cells),
+            )
+                .into_par_iter()
+                .enumerate()
+                .map(|(chunk, (liq_chunk, data_chunk, mat_chunk))| {
+                    let _env = environment.install();
+                    let mut next_row: Vec<Option<f32>> = Vec::new();
+                    let y_start = chunk * CHUNK_ROWS;
+                    let chunk_rows = liq_chunk.len() / width;
+                    for row_offset in 0..chunk_rows {
+                        let y = y_start + row_offset;
+                        let r0 = row_offset * width;
+                        let r1 = r0 + width;
+                        update_row(
+                            y,
+                            &mut liq_chunk[r0..r1],
+                            &mut data_chunk[r0..r1],
+                            &mut mat_chunk[r0..r1],
+                            exposed,
+                            &mut next_row,
+                            true,
+                            world,
+                            elements,
+                        );
+                    }
+                    crate::float_env::FloatEnv::capture()
+                })
+                .collect()
+        });
+        crate::float_env::FloatEnv::merge_masked_statuses(&statuses);
+        return Ok(());
+    }
+    if cache.next_row.len() != width {
+        cache.next_row = filled(width, None)?;
     } else {
         cache.next_row.fill(None);
     }
-    if let Some(pool) = crate::parallel::pool(world.width * world.height) {
-        let empty = pool.install(|| (0..world.height - 1).into_par_iter().with_min_len(8).all(|y| {
-            let start = (y + 1) * world.stride + 1;
-            world.write.element[start..start + world.width].iter()
-                .all(|&id| elements.elements[id as usize].record.state & 3 != 2)
-        }));
-        if empty {
-            let count = world.width * (world.height - 1);
-            for image in [&mut liquid[..count], &mut liquid_data[..count], &mut material[..count]] {
-                if image.iter().any(|&pixel| pixel != 0) { image.fill(0); }
-            }
-            return Ok(());
-        }
-    }
-    // There are no callbacks or floating-point environment changes within an
-    // update. Masked exception flags are sticky, so a repeated bounded powf has
-    // already supplied its effects. Never elide arithmetic with unmasked traps.
-    let reuse = crate::float_env::FloatEnv::capture().masks_all_exceptions();
     // Officially the last public row retains its zero constructor image.
-    for y in 0..world.height.saturating_sub(1) {
-        let internal_row = (y + 1) * world.stride + 1;
-        for (x, next_gradient) in cache.next_row.iter_mut().enumerate() {
-            // Consume every column, including non-liquids, so no entry survives
-            // beyond the one row for which it was calculated.
-            let previous_gradient = next_gradient.take();
-            let public = y * world.width + x;
-            let cell = internal_row + x;
-            let element = record(world, elements, cell);
-            if element.state & 3 != 2 {
-                liquid[public] = 0;
-                liquid_data[public] = 0;
-                material[public] = 0;
-                continue;
+    for y in 0..rows {
+        let r0 = y * width;
+        let r1 = r0 + width;
+        update_row(
+            y,
+            &mut liquid[r0..r1],
+            &mut liquid_data[r0..r1],
+            &mut material[r0..r1],
+            exposed,
+            &mut cache.next_row,
+            reuse,
+            world,
+            elements,
+        );
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn update_row(
+    y: usize,
+    liquid_row: &mut [u32],
+    liquid_data_row: &mut [u32],
+    material_row: &mut [u32],
+    exposed: &[u8],
+    next_row: &mut Vec<Option<f32>>,
+    reuse: bool,
+    world: &PhysicsWorld,
+    elements: &ElementTable,
+) {
+    let internal_row = (y + 1) * world.stride + 1;
+    let row_elements = &world.write.element[internal_row..internal_row + world.width];
+    let has_liquid = row_elements
+        .iter()
+        .any(|&id| elements.elements[id as usize].record.state & 3 == 2);
+    if !has_liquid {
+        if !next_row.is_empty() {
+            next_row.fill(None);
+        }
+        for image in [liquid_row, liquid_data_row, material_row] {
+            if image.iter().any(|&pixel| pixel != 0) {
+                image.fill(0);
             }
-            let above = cell + world.stride;
-            let above_state = record(world, elements, above).state;
-            let mass = world.write.mass[cell];
-            let alpha = if (world.read.properties[above] | above_state) & 2 == 0
-                && !(mass > MASS_ALPHA_LIMIT)
-            {
-                cvtt_f32_i32((mass * MASS_SCALE).powf(EXPONENT) * 255.0) as u32
+        }
+        return;
+    }
+    if next_row.len() != world.width {
+        next_row.resize(world.width, None);
+    }
+    let single_species_only = world.extra_mixtures.is_empty();
+    let exposed_start = y * world.width;
+    for (x, next_gradient) in next_row.iter_mut().enumerate() {
+        // Consume every column, including non-liquids, so no entry survives
+        // beyond the one row for which it was calculated.
+        let previous_gradient = next_gradient.take();
+        let cell = internal_row + x;
+        let element = &elements.elements[row_elements[x] as usize].record;
+        if element.state & 3 != 2 {
+            liquid_row[x] = 0;
+            liquid_data_row[x] = 0;
+            material_row[x] = 0;
+            continue;
+        }
+        let public = exposed_start + x;
+        let above = cell + world.stride;
+        let above_state = record(world, elements, above).state;
+        let mass = world.write.mass[cell];
+        let alpha = if (world.read.properties[above] | above_state) & 2 == 0
+            && !(mass > MASS_ALPHA_LIMIT)
+        {
+            cvtt_f32_i32((mass * MASS_SCALE).powf(EXPONENT) * 255.0) as u32
+        } else {
+            255
+        };
+        let gradient = if above_state & 2 == 0 {
+            0.0
+        } else {
+            let value =
+                previous_gradient.unwrap_or_else(|| raw_gradient(cell, public, exposed, world));
+            if value > 0.0 {
+                smin(
+                    gradient_above(
+                        above,
+                        public + world.width,
+                        exposed,
+                        world,
+                        elements,
+                        if reuse { Some(next_gradient) } else { None },
+                    ),
+                    value,
+                )
             } else {
-                255
-            };
-            let gradient = if above_state & 2 == 0 {
-                0.0
-            } else {
-                let value =
-                    previous_gradient.unwrap_or_else(|| raw_gradient(cell, public, exposed, world));
-                if value > 0.0 {
-                    smin(
-                        gradient_above(
-                            above,
-                            public + world.width,
-                            exposed,
-                            world,
-                            elements,
-                            if reuse { Some(next_gradient) } else { None },
-                        ),
-                        value,
-                    )
-                } else {
-                    smin(1.0, value)
-                }
-            };
+                smin(1.0, value)
+            }
+        };
+        let rgb = if !(world.mixture_mass[cell] > 0.0)
+            && (single_species_only || !world.extra_mixtures.contains_key(&cell))
+        {
+            gradient_color(element, gradient) & 0x00ff_ffff
+        } else {
             // 真实多组分混合液体视觉渲染：将所有组分液体的颜色按质量占比物理混合（支持任意数量混合）！
             let mut total_liquid_mass = 0.0f32;
             let mut total_r = 0.0f32;
@@ -126,21 +206,20 @@ pub(super) fn update(
                 total_b += sp_mass * ((sp_rgb >> 16) & 0xff) as f32;
             });
 
-            let rgb = if total_liquid_mass > 0.0 {
+            if total_liquid_mass > 0.0 {
                 let r = ((total_r / total_liquid_mass).round() as u32).min(255);
                 let g = ((total_g / total_liquid_mass).round() as u32).min(255);
                 let b = ((total_b / total_liquid_mass).round() as u32).min(255);
                 (r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16)
             } else {
                 gradient_color(element, gradient) & 0x00ff_ffff
-            };
-            liquid[public] = (alpha << 24) | rgb;
-            liquid_data[public] =
-                transition_color(element, world.write.temperature[cell], elements);
-            material[public] = element.material_properties & 0xff00_000f;
-        }
+            }
+        };
+        liquid_row[x] = (alpha << 24) | rgb;
+        liquid_data_row[x] =
+            transition_color(element, world.write.temperature[cell], elements);
+        material_row[x] = element.material_properties & 0xff00_000f;
     }
-    Ok(())
 }
 
 fn record<'a>(world: &PhysicsWorld, elements: &'a ElementTable, cell: usize) -> &'a ElementRecord {

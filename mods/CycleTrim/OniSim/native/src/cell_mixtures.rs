@@ -31,6 +31,10 @@ impl CellMixtures {
         })
     }
 
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     pub(crate) fn get(&self, cell: &usize) -> Option<&Components> {
         let slot = *self.slots.get(*cell)? as usize;
         self.entries.get(slot).map(|entry| &entry.1)

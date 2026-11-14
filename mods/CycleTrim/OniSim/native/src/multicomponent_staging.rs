@@ -121,24 +121,66 @@ fn pack_sparse_region(
     any_mixture
 }
 
-fn pack_dense_gpu_cell(world: &PhysicsWorld, elements: &ElementTable, channels: &[usize],
-    cell: usize, mass: &mut [f32], temperature: &mut f32, solid: &mut u32) -> bool {
+fn pack_dense_gpu_cell(
+    world: &PhysicsWorld,
+    channels: &[usize],
+    has_extras: bool,
+    cell: usize,
+    mass: &mut [f32],
+    temperature: &mut f32,
+    solid: &mut u32,
+) -> bool {
     mass.fill(0.0);
     *temperature = world.write.temperature[cell].max(1.0);
-    let phase = elements.elements[world.write.element[cell] as usize].record.state & 3;
-    let mut blocked = world.write.properties[cell] & 1 != 0 || (phase != 1 && world.write.mass[cell] > 0.0);
+    let id0 = world.write.element[cell];
+    let m0 = world.write.mass[cell];
+    let phase = world.element_phase[id0 as usize];
+    let mut blocked = world.write.properties[cell] & 1 != 0 || (phase != 1 && m0 > 0.0);
     let mut present = false;
     if !blocked {
-        world.for_each_cell_species(cell, |id, amount| {
-            if amount > 0.0 {
-                let channel = channels.get(id as usize).copied().unwrap_or(usize::MAX);
-                if channel == usize::MAX { blocked = true; }
-                else { mass[channel] += amount; present = true; }
+        if !has_extras {
+            if m0 > 0.0 {
+                let channel = channels.get(id0 as usize).copied().unwrap_or(usize::MAX);
+                if channel == usize::MAX {
+                    blocked = true;
+                } else {
+                    mass[channel] = m0;
+                    present = true;
+                }
             }
-        });
+            if !blocked {
+                let m1 = world.mixture_mass[cell];
+                if m1 > 0.0 {
+                    let id1 = world.mixture_element[cell];
+                    if id1 != id0 {
+                        let channel = channels.get(id1 as usize).copied().unwrap_or(usize::MAX);
+                        if channel == usize::MAX {
+                            blocked = true;
+                        } else {
+                            mass[channel] += m1;
+                            present = true;
+                        }
+                    }
+                }
+            }
+        } else {
+            world.for_each_cell_species(cell, |id, amount| {
+                if amount > 0.0 {
+                    let channel = channels.get(id as usize).copied().unwrap_or(usize::MAX);
+                    if channel == usize::MAX {
+                        blocked = true;
+                    } else {
+                        mass[channel] += amount;
+                        present = true;
+                    }
+                }
+            });
+        }
     }
     *solid = u32::from(blocked);
-    if blocked { mass.fill(0.0); }
+    if blocked && present {
+        mass.fill(0.0);
+    }
     present && !blocked
 }
 
@@ -216,24 +258,70 @@ impl GasStaging {
         if let Some(pool) = pool {
             let environment = crate::float_env::FloatEnv::capture();
             let absent = (usize::MAX, usize::MAX);
+            let has_extras = !world.extra_mixtures.is_empty();
             let first = pool.install(|| (0..height.div_ceil(8)).into_par_iter()
                 .fold(|| vec![absent; elements.len()], |mut first, chunk| {
                     let _environment = environment.install();
-                    for y in chunk * 8..((chunk + 1) * 8).min(height) {
-                        for x in 0..width {
-                            let mut component = 0;
-                            world.for_each_cell_species((min_y + y) * world.stride + min_x + x, |id, amount| {
-                                if amount > 0.0 && amount.is_finite()
-                                    && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1) {
-                                    first[id as usize] = first[id as usize].min((y * width + x, component));
+                    let row_start = chunk * 8;
+                    let row_end = (row_start + 8).min(height);
+                    if !has_extras {
+                        for y in row_start..row_end {
+                            let world_row = (min_y + y) * world.stride + min_x;
+                            let local_row = y * width;
+                            for x in 0..width {
+                                let cell = world_row + x;
+                                let m0 = world.write.mass[cell];
+                                let mut component = 0usize;
+                                if m0 > 0.0 {
+                                    let id0 = world.write.element[cell];
+                                    if m0.is_finite()
+                                        && elements.elements.get(id0 as usize).is_some_and(|e| e.record.state & 3 == 1)
+                                    {
+                                        let slot = &mut first[id0 as usize];
+                                        let candidate = (local_row + x, 0);
+                                        if candidate < *slot {
+                                            *slot = candidate;
+                                        }
+                                    }
+                                    component = 1;
                                 }
-                                component += 1;
-                            });
+                                let m1 = world.mixture_mass[cell];
+                                if m1 > 0.0 {
+                                    let id1 = world.mixture_element[cell];
+                                    if id1 != world.write.element[cell]
+                                        && m1.is_finite()
+                                        && elements.elements.get(id1 as usize).is_some_and(|e| e.record.state & 3 == 1)
+                                    {
+                                        let slot = &mut first[id1 as usize];
+                                        let candidate = (local_row + x, component);
+                                        if candidate < *slot {
+                                            *slot = candidate;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        for y in row_start..row_end {
+                            for x in 0..width {
+                                let mut component = 0;
+                                world.for_each_cell_species((min_y + y) * world.stride + min_x + x, |id, amount| {
+                                    if amount > 0.0 && amount.is_finite()
+                                        && elements.elements.get(id as usize).is_some_and(|e| e.record.state & 3 == 1) {
+                                        let slot = &mut first[id as usize];
+                                        let candidate = (y * width + x, component);
+                                        if candidate < *slot {
+                                            *slot = candidate;
+                                        }
+                                    }
+                                    component += 1;
+                                });
+                            }
                         }
                     }
                     first
                 }).reduce(|| vec![absent; elements.len()], |mut a, b| {
-                    for (a, b) in a.iter_mut().zip(b) { *a = (*a).min(b); }
+                    for (a, b) in a.iter_mut().zip(b) { if b < *a { *a = b; } }
                     a
                 }));
             let mut present: Vec<_> = first.into_iter().enumerate()
@@ -312,17 +400,29 @@ impl GasStaging {
         } else if let Some(pool) = pool.filter(|_| use_gpu) {
             let rows = width * 8;
             let environment = crate::float_env::FloatEnv::capture();
+            let has_extras = !world.extra_mixtures.is_empty();
             any_mixture = pool.install(|| mass.par_chunks_mut(rows * channels)
                 .zip(temperature.par_chunks_mut(rows)).zip(solid.par_chunks_mut(rows))
                 .enumerate().map(|(chunk, ((packed_mass, temperature), solid))| {
                     let _environment = environment.install();
                     let mut any = false;
-                    for (local, ((mass, temperature), solid)) in packed_mass.chunks_mut(channels)
-                        .zip(temperature).zip(solid).enumerate() {
-                        let index = chunk * rows + local;
-                        let cell = (min_y + index / width) * world.stride + min_x + index % width;
-                        any |= pack_dense_gpu_cell(world, elements, local_channel_of_element,
-                            cell, mass, temperature, solid);
+                    let start_y = min_y + chunk * 8;
+                    for (row_offset, ((row_mass, row_temp), row_solid)) in packed_mass
+                        .chunks_mut(width * channels)
+                        .zip(temperature.chunks_mut(width))
+                        .zip(solid.chunks_mut(width))
+                        .enumerate()
+                    {
+                        let row_cell = (start_y + row_offset) * world.stride + min_x;
+                        for (x, ((cell_mass, cell_temp), cell_solid)) in row_mass
+                            .chunks_mut(channels)
+                            .zip(row_temp)
+                            .zip(row_solid)
+                            .enumerate()
+                        {
+                            any |= pack_dense_gpu_cell(world, local_channel_of_element, has_extras,
+                                row_cell + x, cell_mass, cell_temp, cell_solid);
+                        }
                     }
                     any
                 }).reduce(|| false, |a, b| a || b));

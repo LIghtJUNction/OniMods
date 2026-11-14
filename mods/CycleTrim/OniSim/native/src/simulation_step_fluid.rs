@@ -42,25 +42,52 @@ pub(crate) fn liquid_phase_with_flow(
     let empty = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
     let merge = |a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)|
         (a.0.min(b.0), a.1.min(b.1), a.2.max(b.2), a.3.max(b.3));
-    let row_bounds = |y: i32| {
+    let has_extras = !world.extra_mixtures.is_empty();
+    let row_scan = |y: i32| {
         let mut bounds = empty;
+        let mut cells = Vec::new();
+        let row_base = y as usize * world.stride;
         for x in region.min_x..region.max_x {
-            let cell = y as usize * world.stride + x as usize;
+            let cell = row_base + x as usize;
             let liquid = (world.write.mass[cell] > 0.0
                 && world.element_phase[world.write.element[cell] as usize] == 2)
                 || (world.mixture_mass[cell] > 0.0
                     && world.element_phase[world.mixture_element[cell] as usize] == 2)
-                || world.extra_mixtures.get(&cell).is_some_and(|species|
-                    species.iter().any(|&(id, mass)| mass > 0.0 && world.element_phase[id as usize] == 2));
-            if liquid { bounds = merge(bounds, (x, y, x + 1, y + 1)); }
+                || (has_extras
+                    && world.extra_mixtures.get(&cell).is_some_and(|species| {
+                        species.iter().any(|&(id, mass)| mass > 0.0 && world.element_phase[id as usize] == 2)
+                    }));
+            if liquid {
+                bounds = merge(bounds, (x, y, x + 1, y + 1));
+                cells.push(cell);
+            }
         }
-        bounds
+        (bounds, cells)
     };
-    let bounds = if let Some(pool) = crate::parallel::pool(width.saturating_mul(height)) {
-        pool.install(|| (region.min_y..region.max_y).into_par_iter().with_min_len(8)
-            .map(row_bounds).reduce(|| empty, merge))
+    let (bounds, liquid_cells) = if let Some(pool) = crate::parallel::pool(width.saturating_mul(height)) {
+        let rows: Vec<_> = pool.install(|| (region.min_y..region.max_y).into_par_iter().with_min_len(8)
+            .map(row_scan).collect());
+        let total_cells: usize = rows.iter().map(|(_, c)| c.len()).sum();
+        let mut bounds = empty;
+        let mut liquid_cells = Vec::with_capacity(total_cells);
+        for (row_bounds, row_cells) in rows {
+            if !row_cells.is_empty() {
+                bounds = merge(bounds, row_bounds);
+                liquid_cells.extend(row_cells);
+            }
+        }
+        (bounds, liquid_cells)
     } else {
-        (region.min_y..region.max_y).map(row_bounds).fold(empty, merge)
+        let mut bounds = empty;
+        let mut liquid_cells = Vec::new();
+        for y in region.min_y..region.max_y {
+            let (row_bounds, row_cells) = row_scan(y);
+            if !row_cells.is_empty() {
+                bounds = merge(bounds, row_bounds);
+                liquid_cells.extend(row_cells);
+            }
+        }
+        (bounds, liquid_cells)
     };
     if bounds.0 == i32::MAX { return flow_already_applied; }
     // One-cell halo owns the free surface and region-boundary faces. Gas-only
@@ -77,7 +104,7 @@ pub(crate) fn liquid_phase_with_flow(
     let started = profiling.then(std::time::Instant::now);
     LIQUID_PRESSURE.with(|scratch| {
         let mut scratch = scratch.borrow_mut();
-        let pressure_changed = scratch.run(world, elements, diseases, events, region);
+        let pressure_changed = scratch.run_with_candidates(world, elements, diseases, events, region, Some(&liquid_cells));
         let pressure_at = started.map(|start| start.elapsed());
         let transport_changed = LIQUID_TRANSPORT.with(|transport| transport.borrow_mut()
             .run(world, elements, diseases, events, region, &scratch.covered));

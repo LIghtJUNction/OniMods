@@ -22,6 +22,7 @@ pub(crate) struct Workspace {
     diffused_enthalpy: Vec<f32>,
     velocity: Vec<[f32; 2]>,
     conductivity: Vec<f32>,
+    active_masks: Vec<u32>,
     thermal: Vec<ThermalCell>,
     pub(crate) mass_output: Vec<f32>,
     pub(crate) temperature_output: Vec<f32>,
@@ -245,6 +246,7 @@ fn transport<const SPARSE: bool>(
     job: &GasBatchJob<'_>,
     source: (&[f32], &[f32]),
     velocity: &[[f32; 2]],
+    active_masks: Option<&[u32]>,
     dt: f32,
     pool: &rayon::ThreadPool,
 ) {
@@ -259,16 +261,19 @@ fn transport<const SPARSE: bool>(
     };
     let environment = crate::float_env::FloatEnv::capture();
     let solid = job.state.solid;
-    let flux = |a: f32, b: f32, speed: f32| {
-        let cap = 1.0f32.min(0.125 / dt);
+    let species = job.state.species;
+    let cap = 1.0f32.min(0.125 / dt);
+    let diff_k = 2.0f32.min(0.125 / dt);
+    #[inline(always)]
+    fn face_flux(a: f32, b: f32, speed: f32, cap: f32, diff_k: f32) -> f32 {
         let speed = speed.clamp(-cap, cap);
         let delta = if (a - b).abs() <= 1e-7f32.max(a.max(b) * 1e-5) {
             0.0
         } else {
             a - b
         };
-        speed * if speed >= 0.0 { a } else { b } + 2.0f32.min(0.125 / dt) * delta
-    };
+        speed * if speed >= 0.0 { a } else { b } + diff_k * delta
+    }
     pool.install(|| {
         mass_output
             .par_chunks_mut(rows * channels)
@@ -286,66 +291,130 @@ fn transport<const SPARSE: bool>(
                         *thermal = ThermalCell { mass: 0.0, heat: 1.0, temperature: 0.0 };
                         continue;
                     }
-                    // Geometry and face velocities are shared by every species.
-                    let adjacent = neighbors_at(cell, x, y, width, height)
-                        .map(|other| other.filter(|&other| solid[other] == 0));
-                    let faces: [Option<(usize, f32)>; 4] = std::array::from_fn(|face| {
-                        adjacent[face].map(|other| {
-                            let axis = usize::from(face >= 2);
-                            (other * channels, 0.5 * (velocity[cell][axis] + velocity[other][axis]))
-                        })
-                    });
+                    let cell_base = cell * channels;
+                    let cell_vel = velocity[cell];
+                    let left = if x > 0 && solid[cell - 1] == 0 {
+                        let other = cell - 1;
+                        Some((other * channels, (0.5 * (cell_vel[0] + velocity[other][0])).clamp(-cap, cap)))
+                    } else {
+                        None
+                    };
+                    let right = if x + 1 < width && solid[cell + 1] == 0 {
+                        let other = cell + 1;
+                        Some((other * channels, (0.5 * (cell_vel[0] + velocity[other][0])).clamp(-cap, cap)))
+                    } else {
+                        None
+                    };
+                    let down = if y > 0 && solid[cell - width] == 0 {
+                        let other = cell - width;
+                        Some((other * channels, 0.5 * (cell_vel[1] + velocity[other][1])))
+                    } else {
+                        None
+                    };
+                    let up = if y + 1 < height && solid[cell + width] == 0 {
+                        let other = cell + width;
+                        Some((other * channels, 0.5 * (cell_vel[1] + velocity[other][1])))
+                    } else {
+                        None
+                    };
+                    let m_c = &mass[cell_base..cell_base + channels];
+                    let e_c = &enthalpy[cell_base..cell_base + channels];
                     let mut total_mass = 0.0;
                     let mut capacity = 0.0;
                     let mut energy = 0.0;
-                    for channel in 0..channels {
-                        let slot = cell * channels + channel;
-                        // A species absent on both sides of every open face
-                        // has exactly zero mass and heat flux. Keep signed
-                        // zero and nonzero enthalpy on the ordinary path.
-                        if SPARSE
-                            && mass[slot].to_bits() == 0
-                            && enthalpy[slot].to_bits() == 0
-                            && faces.iter().flatten().all(|&(base, _)| {
-                                let other_slot = base + channel;
-                                mass[other_slot].to_bits() == 0
-                                    && enthalpy[other_slot].to_bits() == 0
-                            })
-                        {
-                            output[channel] = 0.0;
-                            continue;
-                        }
-                        let mut mass_flux = [0.0; 4];
-                        let mut heat_flux = [0.0; 4];
-                        for (face, data) in faces.iter().enumerate() {
-                            let Some((base, base_speed)) = *data else {
-                                continue;
-                            };
-                            let other_slot = base + channel;
-                            let speed = base_speed
-                                + if face >= 2 {
-                                    job.state.species[channel].vertical_drift
+                    macro_rules! step_channel {
+                        ($channel:expr) => {{
+                            let channel = $channel;
+                            let mc = m_c[channel];
+                            let ec = e_c[channel];
+                            let (mf0, hf0) = if let Some((b, s)) = left {
+                                let o = b + channel;
+                                let ma = mass[o];
+                                let ea = enthalpy[o];
+                                let dm = if (ma - mc).abs() <= 1e-7f32.max(ma.max(mc) * 1e-5) { 0.0 } else { ma - mc };
+                                let de = if (ea - ec).abs() <= 1e-7f32.max(ea.max(ec) * 1e-5) { 0.0 } else { ea - ec };
+                                if s >= 0.0 {
+                                    (s * ma + diff_k * dm, s * ea + diff_k * de)
                                 } else {
-                                    0.0
-                                };
-                            let (a, b) = if face == 0 || face == 2 {
-                                (other_slot, slot)
+                                    (s * mc + diff_k * dm, s * ec + diff_k * de)
+                                }
                             } else {
-                                (slot, other_slot)
+                                (0.0, 0.0)
                             };
-                            mass_flux[face] = flux(mass[a], mass[b], speed);
-                            heat_flux[face] = flux(enthalpy[a], enthalpy[b], speed);
+                            let (mf1, hf1) = if let Some((b, s)) = right {
+                                let o = b + channel;
+                                let mb = mass[o];
+                                let eb = enthalpy[o];
+                                let dm = if (mc - mb).abs() <= 1e-7f32.max(mc.max(mb) * 1e-5) { 0.0 } else { mc - mb };
+                                let de = if (ec - eb).abs() <= 1e-7f32.max(ec.max(eb) * 1e-5) { 0.0 } else { ec - eb };
+                                if s >= 0.0 {
+                                    (s * mc + diff_k * dm, s * ec + diff_k * de)
+                                } else {
+                                    (s * mb + diff_k * dm, s * eb + diff_k * de)
+                                }
+                            } else {
+                                (0.0, 0.0)
+                            };
+                            let drift = species[channel].vertical_drift;
+                            let (mf2, hf2) = if let Some((b, bs)) = down {
+                                let o = b + channel;
+                                let s = bs + drift;
+                                (face_flux(mass[o], mc, s, cap, diff_k), face_flux(enthalpy[o], ec, s, cap, diff_k))
+                            } else {
+                                (0.0, 0.0)
+                            };
+                            let (mf3, hf3) = if let Some((b, bs)) = up {
+                                let o = b + channel;
+                                let s = bs + drift;
+                                (face_flux(mc, mass[o], s, cap, diff_k), face_flux(ec, enthalpy[o], s, cap, diff_k))
+                            } else {
+                                (0.0, 0.0)
+                            };
+                            let next_m = mc - dt * ((mf1 - mf0) + (mf3 - mf2));
+                            let next_energy = ec - dt * ((hf1 - hf0) + (hf3 - hf2));
+                            output[channel] = next_m;
+                            total_mass += next_m;
+                            capacity += next_m * species[channel].specific_heat_capacity;
+                            energy += next_energy;
+                        }};
+                    }
+                    if SPARSE {
+                        if let Some(masks) = active_masks {
+                            let mut active = masks[cell]
+                                | left.map_or(0, |_| masks[cell - 1])
+                                | right.map_or(0, |_| masks[cell + 1])
+                                | down.map_or(0, |_| masks[cell - width])
+                                | up.map_or(0, |_| masks[cell + width]);
+                            if active == 0 {
+                                output.fill(0.0);
+                                *thermal = ThermalCell { mass: 0.0, heat: 1.0, temperature: 0.0 };
+                                continue;
+                            }
+                            output.fill(0.0);
+                            while active != 0 {
+                                let channel = active.trailing_zeros() as usize;
+                                active &= active - 1;
+                                step_channel!(channel);
+                            }
+                        } else {
+                            for channel in 0..channels {
+                                if m_c[channel].to_bits() == 0
+                                    && e_c[channel].to_bits() == 0
+                                    && left.is_none_or(|(b, _)| mass[b + channel].to_bits() == 0 && enthalpy[b + channel].to_bits() == 0)
+                                    && right.is_none_or(|(b, _)| mass[b + channel].to_bits() == 0 && enthalpy[b + channel].to_bits() == 0)
+                                    && down.is_none_or(|(b, _)| mass[b + channel].to_bits() == 0 && enthalpy[b + channel].to_bits() == 0)
+                                    && up.is_none_or(|(b, _)| mass[b + channel].to_bits() == 0 && enthalpy[b + channel].to_bits() == 0)
+                                {
+                                    output[channel] = 0.0;
+                                    continue;
+                                }
+                                step_channel!(channel);
+                            }
                         }
-                        output[channel] = mass[slot]
-                            - dt * ((mass_flux[1] - mass_flux[0])
-                                + (mass_flux[3] - mass_flux[2]));
-                        let next_energy = enthalpy[slot]
-                            - dt * ((heat_flux[1] - heat_flux[0])
-                                + (heat_flux[3] - heat_flux[2]));
-                        total_mass += output[channel];
-                        capacity +=
-                            output[channel] * job.state.species[channel].specific_heat_capacity;
-                        energy += next_energy;
+                    } else {
+                        for channel in 0..channels {
+                            step_channel!(channel);
+                        }
                     }
                     *thermal = if total_mass > 0.0 && capacity > 0.0 {
                         ThermalCell {
@@ -396,51 +465,36 @@ impl Workspace {
         {
             return Err("invalid CPU gas tensor dimensions, outputs or coefficients".into());
         }
-        if count >= 8192 {
-            if job
-                .state
-                .enthalpy
-                .iter()
-                .any(|e| !e.is_finite() || *e < 0.0)
-            {
-                return Err("state contains negative mass/enthalpy or non-finite values".into());
-            }
-            let environment = crate::float_env::FloatEnv::capture();
-            let results: Vec<_> = pool.install(|| {
-                job.state
-                    .mass
-                    .par_chunks(4096 * channels)
-                    .zip(job.state.solid.par_chunks(4096))
-                    .zip(job.temperature.par_chunks(4096))
-                    .map(|((mass, solid), temperature)| {
-                        let _environment = environment.install();
-                        let state = State {
-                            mass,
-                            enthalpy: &[],
-                            velocity_x: &[],
-                            velocity_y: &[],
-                            solid,
-                            species: job.state.species,
-                        };
-                        onisim_gpu::multicomponent::validate_temperature_state(
-                            &state,
-                            temperature.len(),
-                            channels,
-                            temperature,
-                        )
-                    })
-                    .collect()
-            });
-            for result in results {
-                result?;
-            }
-        } else {
+        if channels == 1 || count < 8192 {
             onisim_gpu::multicomponent::validate_temperature_state(
                 &job.state,
                 count,
                 channels,
                 job.temperature,
             )?;
+        } else {
+            for (channel, species) in job.state.species.iter().enumerate() {
+                if species.phase != 1 {
+                    return Err(format!("channel {channel} has the wrong phase for this operator"));
+                }
+                if !species.specific_heat_capacity.is_finite()
+                    || species.specific_heat_capacity <= 0.0
+                    || !species.vertical_drift.is_finite()
+                    || job.state.species[..channel]
+                        .iter()
+                        .any(|prev| prev.element_id == species.element_id)
+                {
+                    return Err(format!("invalid or duplicate gas species metadata at channel {channel}"));
+                }
+            }
+            if !job.state.enthalpy.is_empty() {
+                if job.state.enthalpy.len() != values {
+                    return Err("input tensor or species metadata dimensions mismatch".into());
+                }
+                if job.state.enthalpy.iter().any(|e| !e.is_finite() || *e < 0.0) {
+                    return Err("state contains negative mass/enthalpy or non-finite values".into());
+                }
+            }
         }
         if channels == 1 {
             self.sparse_transport = false;
@@ -456,49 +510,91 @@ impl Workspace {
         let environment = crate::float_env::FloatEnv::capture();
         self.source_enthalpy.resize(values, 0.0);
         self.density.resize(count, 0.0);
+        self.conductivity.resize(count, 0.0);
+        let use_masks = !diffuse && channels <= 32;
+        self.active_masks.resize(count, 0);
         let rows = width * 2;
         let minimum_chunks = if count < 8192 {
             count.div_ceil(rows)
         } else {
             1
         };
-        let (present_species, open_slots) = pool.install(|| {
+        let (present_species, open_slots, validation_error) = pool.install(|| {
             self.source_enthalpy
                 .par_chunks_mut(rows * channels)
                 .with_min_len(minimum_chunks)
                 .zip(self.density.par_chunks_mut(rows))
                 .zip(self.thermal.par_chunks_mut(rows))
+                .zip(self.conductivity.par_chunks_mut(rows))
+                .zip(self.active_masks.par_chunks_mut(rows))
                 .enumerate()
-                .map(|(chunk, ((energy, density), thermal))| {
+                .map(|(chunk, ((((energy, density), thermal), conductivity), masks))| {
                     let _environment = environment.install();
                     let mut present = 0usize;
                     let mut open = 0usize;
-                    for (local, ((energy, density), thermal)) in
-                        energy.chunks_mut(channels).zip(density).zip(thermal).enumerate()
+                    let mut error: Option<&'static str> = None;
+                    let start = chunk * rows;
+                    for (local, ((((energy, density), thermal), conductivity), mask_out)) in energy
+                        .chunks_mut(channels)
+                        .zip(density)
+                        .zip(thermal)
+                        .zip(conductivity)
+                        .zip(masks)
+                        .enumerate()
                     {
-                        let cell = chunk * rows + local;
+                        let cell = start + local;
                         let track = job.state.solid[cell] == 0;
                         open += usize::from(track) * channels;
+                        let cell_mass = &job.state.mass[cell * channels..(cell + 1) * channels];
+                        let temp = job.temperature[cell];
+                        if count >= 8192 && !temp.is_finite() {
+                            error.get_or_insert("state contains negative mass/enthalpy or non-finite values");
+                        }
                         let mut total = 0.0;
+                        let mut weighted = 0.0;
+                        let mut mask = 0u32;
                         for channel in 0..channels {
-                            let m = job.state.mass[cell * channels + channel];
+                            let m = cell_mass[channel];
+                            if count >= 8192 {
+                                if !m.is_finite() || m < 0.0 {
+                                    error.get_or_insert("state contains negative mass/enthalpy or non-finite values");
+                                } else if !track && m != 0.0 {
+                                    error.get_or_insert("solid cells must contain zero mass and enthalpy");
+                                }
+                            }
                             total += m;
                             present += usize::from(track && m != 0.0);
-                            energy[channel] = m
-                                * job.state.species[channel].specific_heat_capacity
-                                * job.temperature[cell];
+                            let e = m * job.state.species[channel].specific_heat_capacity * temp;
+                            if count >= 8192 && m != 0.0 && (!e.is_finite() || e < 0.0) {
+                                error.get_or_insert("state contains negative mass/enthalpy or non-finite values");
+                            }
+                            energy[channel] = e;
+                            if !diffuse {
+                                weighted += m * job.conductivity[channel];
+                            }
+                            if use_masks && (m.to_bits() != 0 || e.to_bits() != 0) {
+                                mask |= 1u32 << channel;
+                            }
                         }
                         *density = total;
                         if cached_density {
-                            // Match the stencil's sum, including signed zero.
-                            thermal.mass = job.state.mass[cell * channels..(cell + 1) * channels]
-                                .iter().sum::<f32>();
+                            thermal.mass = total;
                         }
+                        if !diffuse {
+                            *conductivity = weighted;
+                        }
+                        *mask_out = mask;
                     }
-                    (present, open)
+                    (present, open, error)
                 })
-                .reduce(|| (0, 0), |(pa, oa), (pb, ob)| (pa + pb, oa + ob))
+                .reduce(
+                    || (0, 0, None),
+                    |(pa, oa, ea), (pb, ob, eb)| (pa + pb, oa + ob, ea.or(eb)),
+                )
         });
+        if let Some(error) = validation_error {
+            return Err(error.into());
+        }
         let solid = job.state.solid;
         let (mass, enthalpy) = if diffuse && channels > 1 {
             self.diffused_mass.resize(values, 0.0);
@@ -555,7 +651,6 @@ impl Workspace {
             (job.state.mass, &self.source_enthalpy[..])
         };
         self.velocity.resize(count, [0.0; 2]);
-        self.conductivity.resize(count, 0.0);
         // Without diffusion the packing pass already visits every source cell.
         // Reuse thermal scratch for its exact total until velocity generation
         // finishes; transport then overwrites every cell. Diffusion keeps its
@@ -611,10 +706,15 @@ impl Workspace {
                                 .abs()
                                 .max((velocity[1] + max_drift).abs());
                         finite &= rate.is_finite();
-                        let mut weighted = 0.0;
-                        for channel in 0..channels {
-                            weighted += mass[cell * channels + channel] * job.conductivity[channel];
-                        }
+                        let weighted = if diffuse {
+                            let mut sum = 0.0;
+                            for channel in 0..channels {
+                                sum += mass[cell * channels + channel] * job.conductivity[channel];
+                            }
+                            sum
+                        } else {
+                            *conductivity
+                        };
                         *conductivity = if center > 0.0 { weighted / center } else { 0.0 };
                     }
                     finite
@@ -629,7 +729,7 @@ impl Workspace {
         // At least three quarters of the input slots must be empty before
         // sparse face checks pay off. Dense mixtures keep their original
         // branch-free species loop through a separate monomorphization.
-        self.sparse_transport = present_species.saturating_mul(4) < open_slots;
+        self.sparse_transport = channels > 2 && present_species.saturating_mul(4) < open_slots;
         #[cfg(test)]
         if self.reference_transport {
             if self.sparse_transport {
@@ -643,10 +743,10 @@ impl Workspace {
         }
         if self.sparse_transport {
             transport::<true>(&mut self.mass_output, &mut self.thermal, job,
-                (mass, enthalpy), &self.velocity, dt, pool);
+                (mass, enthalpy), &self.velocity, use_masks.then_some(&self.active_masks[..]), dt, pool);
         } else {
             transport::<false>(&mut self.mass_output, &mut self.thermal, job,
-                (mass, enthalpy), &self.velocity, dt, pool);
+                (mass, enthalpy), &self.velocity, None, dt, pool);
         }
         self.finish_thermal(width, height, dt, pool)
     }
@@ -898,45 +998,55 @@ impl Workspace {
             (k * delta * (dt * 4.0)).max(-limit).min(limit)
         };
         self.temperature_output.resize(count, 0.0);
-        pool.install(|| {
-            self.temperature_output
-                .par_chunks_mut(rows)
-                .with_min_len(minimum_chunks)
-                .enumerate()
-                .for_each(|(chunk, output)| {
-                    let _environment = environment.install();
-                    let coordinates = cell_coordinates(width, chunk * rows, output.len());
-                    for (output, (cell, x, y)) in output.iter_mut().zip(coordinates) {
-                        let state = thermal[cell];
-                        let capacity = state.mass * state.heat;
-                        if state.mass <= 0.0 || capacity <= 1e-6 {
-                            *output = state.temperature;
-                            continue;
-                        }
-                        let adjacent = neighbors_at(cell, x, y, width, height);
-                        let mut energy = 0.0;
-                        if let Some(other) = adjacent[0] {
-                            energy += heat_flux(other, cell);
-                        }
-                        if let Some(other) = adjacent[1] {
-                            energy -= heat_flux(cell, other);
-                        }
-                        if let Some(other) = adjacent[2] {
-                            energy += heat_flux(other, cell);
-                        }
-                        if let Some(other) = adjacent[3] {
-                            energy -= heat_flux(cell, other);
-                        }
-                        *output = (state.temperature + energy / capacity).clamp(1.0, 10000.0);
-                    }
-                })
+        let (temp_finite, mass_finite) = pool.install(|| {
+            rayon::join(
+                || {
+                    self.temperature_output
+                        .par_chunks_mut(rows)
+                        .with_min_len(minimum_chunks)
+                        .enumerate()
+                        .map(|(chunk, output)| {
+                            let _environment = environment.install();
+                            let coordinates = cell_coordinates(width, chunk * rows, output.len());
+                            let mut finite = true;
+                            for (output, (cell, x, y)) in output.iter_mut().zip(coordinates) {
+                                let state = thermal[cell];
+                                let capacity = state.mass * state.heat;
+                                if state.mass <= 0.0 || capacity <= 1e-6 {
+                                    *output = state.temperature;
+                                    finite &= state.temperature.is_finite();
+                                    continue;
+                                }
+                                let adjacent = neighbors_at(cell, x, y, width, height);
+                                let mut energy = 0.0;
+                                if let Some(other) = adjacent[0] {
+                                    energy += heat_flux(other, cell);
+                                }
+                                if let Some(other) = adjacent[1] {
+                                    energy -= heat_flux(cell, other);
+                                }
+                                if let Some(other) = adjacent[2] {
+                                    energy += heat_flux(other, cell);
+                                }
+                                if let Some(other) = adjacent[3] {
+                                    energy -= heat_flux(cell, other);
+                                }
+                                let value = (state.temperature + energy / capacity).clamp(1.0, 10000.0);
+                                *output = value;
+                                finite &= value.is_finite();
+                            }
+                            finite
+                        })
+                        .reduce(|| true, |a, b| a && b)
+                },
+                || {
+                    self.mass_output
+                        .par_chunks(16384)
+                        .all(|chunk| chunk.iter().all(|v| v.is_finite()))
+                },
+            )
         });
-        if self
-            .mass_output
-            .iter()
-            .chain(&self.temperature_output)
-            .any(|v| !v.is_finite())
-        {
+        if !temp_finite || !mass_finite {
             return Err("non-finite CPU gas tensor output".into());
         }
         Ok(())

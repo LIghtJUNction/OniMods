@@ -243,10 +243,12 @@ impl PhysicsWorld {
         if self.mixture_mass[cell] > 0.0 && self.mixture_element[cell] != self.write.element[cell] {
             f(self.mixture_element[cell], self.mixture_mass[cell]);
         }
-        if let Some(extras) = self.extra_mixtures.get(&cell) {
-            for &(element, mass) in extras {
-                if mass > 0.0 && element != self.write.element[cell] && element != self.mixture_element[cell] {
-                    f(element, mass);
+        if !self.extra_mixtures.is_empty() {
+            if let Some(extras) = self.extra_mixtures.get(&cell) {
+                for &(element, mass) in extras {
+                    if mass > 0.0 && element != self.write.element[cell] && element != self.mixture_element[cell] {
+                        f(element, mass);
+                    }
                 }
             }
         }
