@@ -1100,8 +1100,8 @@ impl GpuSimulation {
         for (index, region) in world.regions.iter().enumerate() {
             let min_x = region.min_x.max(1) as usize;
             let min_y = region.min_y.max(1) as usize;
-            let max_x = (region.max_x as usize).min(world.width);
-            let max_y = (region.max_y as usize).min(world.height);
+            let max_x = (region.max_x as usize).min(world.width + 1);
+            let max_y = (region.max_y as usize).min(world.height + 1);
             if max_x.saturating_sub(min_x) < 2 || max_y.saturating_sub(min_y) < 2 { continue; }
             for y in min_y..max_y {
                 self.region_map[y*world.stride+min_x..y*world.stride+max_x].fill((index+1) as u32);
@@ -1184,6 +1184,111 @@ fn material_upload_ranges<T: PartialEq>(previous: &[T], current: &[T], table_cha
 #[cfg(test)]
 mod material_range_tests {
     use super::material_upload_ranges;
+
+    fn exact_public_boundary_world(width: usize, height: usize) -> (
+        crate::world::PhysicsWorld,
+        std::sync::Arc<crate::tables::ElementTable>,
+        crate::world::Region,
+    ) {
+        let (mut state, _) = crate::native_chain_tests::fixture::create(width, height, "pure");
+        let mut world = state.world.take().unwrap();
+        let elements = state.elements.take().unwrap();
+        world.write.element.fill(world.vacuum_element);
+        world.write.mass.fill(0.0);
+        world.write.temperature.fill(300.0);
+        world.write.properties.fill(0);
+        world.initialize_boundary();
+        let region = crate::world::Region {
+            min_x: 1, min_y: 1, max_x: width as i32 + 1, max_y: height as i32 + 1,
+            ..Default::default()
+        };
+        world.regions.push(region);
+        (world, elements, region)
+    }
+
+    #[test]
+    fn gpu_gas_transport_includes_last_public_cells() {
+        use crate::{events::EventQueues, multicomponent_flux as flux};
+        let mut gpu = super::GpuSimulation::new(18, 18).unwrap();
+        // Force the Vulkan chain even on a host with the CPU fast path enabled.
+        gpu.thermal_reference = true;
+        for (x, y, nx, ny) in [(16, 8, 15, 8), (8, 16, 8, 15), (16, 16, 15, 16)] {
+            let (mut world, elements, region) = exact_public_boundary_world(16, 16);
+            let source = y * world.stride + x;
+            let neighbour = ny * world.stride + nx;
+            world.write.element[source] = 3;
+            world.write.mass[source] = 1.0;
+            let mut mask = Vec::new();
+            gpu.begin_step(&elements);
+            for _ in 0..8 {
+                assert!(flux::step_region_with_dispatch(&mut world, &elements,
+                    &mut EventQueues::default(), region, Some(&mut gpu), true,
+                    Some(&mut mask), true, 256).unwrap());
+            }
+            assert!(gpu.gas_gpu_seen && !gpu.gas_cpu_seen, "must exercise the Vulkan chain");
+            assert_eq!(mask.len(), 256);
+            assert!(world.write.mass[source] < 1.0 && world.write.mass[neighbour] > 0.0);
+            let total: f32 = (1..=16).map(|row|
+                world.write.mass[row * world.stride + 1..row * world.stride + 17].iter().sum::<f32>()).sum();
+            assert!((total - 1.0).abs() < 1e-5, "gas mass drift: {total}");
+            assert_eq!(world.write.mass[y * world.stride + 17], 9999.0);
+            assert_eq!(world.write.mass[17 * world.stride + x], 9999.0);
+        }
+    }
+
+    #[test]
+    fn gpu_gas_batch_wakes_on_last_public_cell_changes() {
+        use crate::{events::EventQueues, multicomponent_flux::GasBatch, world::Region};
+        let (mut world, elements, region) = exact_public_boundary_world(32, 16);
+        for y in 1..=16 { for x in 1..=32 {
+            let cell = y * world.stride + x;
+            world.write.element[cell] = 3;
+            world.write.mass[cell] = 1.0;
+        }}
+        world.regions = vec![Region { max_x: 17, ..region }, Region { min_x: 17, ..region }];
+        let mut gpu = super::GpuSimulation::new(world.stride, world.padded_height).unwrap();
+        gpu.thermal_reference = true;
+        let mut events = EventQueues::default();
+        for _ in 0..3 {
+            let mut batch = GasBatch::prepare(&mut world, &elements, &mut gpu, true).unwrap();
+            for index in 0..2 {
+                let mut mask = Vec::new();
+                assert!(batch.apply(index, &mut world, &elements, &mut events, &mut gpu, true, &mut mask).unwrap());
+                assert_eq!(mask.len(), 256);
+            }
+            batch.retain(&mut gpu);
+        }
+        assert!(gpu.gas_gpu_seen && !gpu.gas_cpu_seen);
+        let corner = 16 * world.stride + 32;
+        world.write.mass[corner] = 2.0;
+        let mut batch = GasBatch::prepare(&mut world, &elements, &mut gpu, true).unwrap();
+        for index in 0..2 {
+            assert!(batch.apply(index, &mut world, &elements, &mut events, &mut gpu, true, &mut Vec::new()).unwrap());
+        }
+        batch.retain(&mut gpu);
+        assert!(world.write.mass[corner] < 2.0 && world.write.mass[corner - 1] > 1.0,
+            "the last cell must participate in batch invalidation and transport");
+    }
+
+    #[test]
+    fn thermal_deferred_regions_include_last_public_cells_but_not_halo() {
+        let (mut world, elements, _) = exact_public_boundary_world(16, 16);
+        for y in 1..=16 { for x in 1..=16 {
+            let cell = y * world.stride + x;
+            world.write.element[cell] = 3;
+            world.write.mass[cell] = 1.0;
+        }}
+        world.sync_read_from_write();
+        let mut gpu = super::GpuSimulation::new(world.stride, world.padded_height).unwrap();
+        gpu.step_thermal(&mut world, &elements, crate::simulation_step::FIXED_DT).unwrap();
+        for (x, y) in [(16, 8), (8, 16), (16, 16)] {
+            assert_eq!(gpu.region_map[y * world.stride + x], 1);
+        }
+        for (x, y) in [(0, 8), (17, 8), (8, 0), (8, 17)] {
+            assert_eq!(gpu.region_map[y * world.stride + x], 0);
+        }
+    }
+
 
     #[test]
     fn liquid_pipeline_cache_retains_multiple_region_shapes() {
@@ -1499,7 +1604,7 @@ mod material_range_tests {
         assert!(multicomponent_flux::step_region(&mut world, &elements, &mut events, region, Some(&mut gpu),true).unwrap());
         let stride = world.stride;
         let species_total = |world: &PhysicsWorld, id| -> f32 {
-            (1..4).flat_map(|y| (1..4).map(move |x| y * stride + x)).map(|i|
+            (1..=world.height).flat_map(|y| (1..=world.width).map(move |x| y * stride + x)).map(|i|
                 if world.write.element[i] == id { world.write.mass[i] } else { 0.0 } +
                 if world.mixture_element[i] == id { world.mixture_mass[i] } else { 0.0 }).sum()
         };
@@ -1510,10 +1615,10 @@ mod material_range_tests {
         multicomponent_flux::refresh_active_gas_channels(&mut world, &elements);
         assert_ne!(world.gas_channel_of_element[12], u8::MAX);
         let stride = world.stride;
-        let total_before: f32 = (1..4).flat_map(|y| (1..4).map(move |x| y * stride + x))
+        let total_before: f32 = (1..=world.height).flat_map(|y| (1..=world.width).map(move |x| y * stride + x))
             .map(|i| world.write.mass[i] + world.mixture_mass[i]).sum();
         assert!(multicomponent_flux::step_region(&mut world, &elements, &mut events, region, Some(&mut gpu),true).unwrap());
-        let total_after: f32 = (1..4).flat_map(|y| (1..4).map(move |x| y * stride + x))
+        let total_after: f32 = (1..=world.height).flat_map(|y| (1..=world.width).map(move |x| y * stride + x))
             .map(|i| world.write.mass[i] + world.mixture_mass[i]).sum();
         assert!((total_after - total_before).abs() < 1e-4);
         let old_channels = world.gas_element_of_channel;

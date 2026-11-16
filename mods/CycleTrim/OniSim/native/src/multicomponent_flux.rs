@@ -57,8 +57,8 @@ pub(crate) fn refresh_active_gas_channels(world: &mut PhysicsWorld, elements: &E
     for region in &world.regions {
         let min_x = region.min_x.max(1) as usize;
         let min_y = region.min_y.max(1) as usize;
-        let max_x = (region.max_x as usize).min(world.width);
-        let max_y = (region.max_y as usize).min(world.height);
+        let max_x = (region.max_x as usize).min(world.width + 1);
+        let max_y = (region.max_y as usize).min(world.height + 1);
         for y in min_y..max_y {
             for x in min_x..max_x {
                 let cell = y * world.stride + x;
@@ -97,8 +97,8 @@ pub(crate) fn region_gas_species_up_to_three(world: &PhysicsWorld, elements: &El
     let mut count = 0;
     let min_x = region.min_x.max(1) as usize;
     let min_y = region.min_y.max(1) as usize;
-    let max_x = (region.max_x as usize).min(world.width);
-    let max_y = (region.max_y as usize).min(world.height);
+    let max_x = (region.max_x as usize).min(world.width + 1);
+    let max_y = (region.max_y as usize).min(world.height + 1);
     for y in min_y..max_y { for x in min_x..max_x {
         let cell = y * world.stride + x;
         for (id,mass) in [(world.write.element[cell],world.write.mass[cell]), (world.mixture_element[cell],world.mixture_mass[cell])] {
@@ -276,7 +276,7 @@ mod liquid_discovery;
 pub(crate) fn begin_sparse_liquid_region(world:&PhysicsWorld, elements:&ElementTable, region:Region,
     gpu:&mut crate::gpu_sim::GpuSimulation) -> crate::status::Result<Option<PendingLiquidRegion>> {
     let min_x=region.min_x.max(1) as usize; let min_y=region.min_y.max(1) as usize;
-    let max_x=(region.max_x as usize).min(world.width); let max_y=(region.max_y as usize).min(world.height);
+    let max_x=(region.max_x as usize).min(world.width + 1); let max_y=(region.max_y as usize).min(world.height + 1);
     if max_x.saturating_sub(min_x)<2 || max_y.saturating_sub(min_y)<2 {return Ok(None);}
     let (width,height)=(max_x-min_x,max_y-min_y);
     let full_region = (min_x, min_y, width, height);
@@ -442,8 +442,8 @@ pub(crate) fn diffuse_liquid_region(world: &mut PhysicsWorld, elements: &Element
     solid_out: &mut Vec<u32>) -> crate::status::Result<bool> {
     let min_x = region.min_x.max(1) as usize;
     let min_y = region.min_y.max(1) as usize;
-    let max_x = (region.max_x as usize).min(world.width);
-    let max_y = (region.max_y as usize).min(world.height);
+    let max_x = (region.max_x as usize).min(world.width + 1);
+    let max_y = (region.max_y as usize).min(world.height + 1);
     if max_x.saturating_sub(min_x) < 2 || max_y.saturating_sub(min_y) < 2 { return Ok(false); }
     let (width, height) = (max_x - min_x, max_y - min_y);
     let mut ids = Vec::new();
@@ -804,8 +804,8 @@ async fn step_region_prepared_with_result_async(
         && world.tick_seed % 17 == 0).then(std::time::Instant::now);
     let min_x = region.min_x.max(1) as usize;
     let min_y = region.min_y.max(1) as usize;
-    let max_x = (region.max_x as usize).min(world.width);
-    let max_y = (region.max_y as usize).min(world.height);
+    let max_x = (region.max_x as usize).min(world.width + 1);
+    let max_y = (region.max_y as usize).min(world.height + 1);
     if max_x <= min_x || max_y <= min_y { return Ok(false); }
     let key = (min_x, min_y, max_x - min_x, max_y - min_y);
     let mut precomputed = prepared.is_some();
@@ -909,8 +909,8 @@ async fn step_region_prepared_with_result_async(
                     let bottom = r.min_y.max(1) as usize;
                     x == left
                         && y == bottom
-                        && width == (r.max_x as usize).min(world.width).saturating_sub(left)
-                        && height == (r.max_y as usize).min(world.height).saturating_sub(bottom)
+                        && width == (r.max_x as usize).min(world.width + 1).saturating_sub(left)
+                        && height == (r.max_y as usize).min(world.height + 1).saturating_sub(bottom)
                 })
             });
             if idle.len() >= capacity {
@@ -971,6 +971,114 @@ mod tests {
         };
         (world, elements, region)
     }
+
+    fn exact_public_boundary_fixture(width: usize, height: usize) -> (PhysicsWorld, ElementTable, Region) {
+        let (_, table, _) = gas_fixture(width, height);
+        let mut world = PhysicsWorld::new(width, height, 7, &table).unwrap();
+        world.write.element.fill(world.vacuum_element);
+        world.write.mass.fill(0.0);
+        world.write.temperature.fill(300.0);
+        world.write.properties.fill(0);
+        world.initialize_boundary();
+        let region = Region {
+            min_x: 1, min_y: 1, max_x: width as i32 + 1, max_y: height as i32 + 1,
+            ..Region::default()
+        };
+        (world, table, region)
+    }
+
+    #[test]
+    fn gas_species_inventory_includes_last_public_cells() {
+        for (x, y) in [(8, 4), (4, 8), (8, 8)] {
+            let (mut world, table, region) = exact_public_boundary_fixture(8, 8);
+            let cell = y * world.stride + x;
+            world.write.element[cell] = 4;
+            world.write.mass[cell] = 1.0;
+            world.regions.push(region);
+            assert_eq!(region_gas_species_up_to_three(&world, &table, region), 1);
+            refresh_active_gas_channels(&mut world, &table);
+            assert_eq!(world.gas_channel_count, 1);
+            assert_eq!(world.gas_element_of_channel[0], 4);
+        }
+    }
+
+    #[test]
+    fn sleeping_gas_wakes_when_last_public_cell_changes() {
+        let (mut world, table, region) = exact_public_boundary_fixture(8, 8);
+        for y in 1..=world.height {
+            for x in 1..=world.width {
+                let cell = y * world.stride + x;
+                world.write.element[cell] = 3;
+                world.write.mass[cell] = 1.0;
+            }
+        }
+        world.regions.push(region);
+        let mut staging = GasStaging::default();
+        let mut mask = Vec::new();
+        let mut events = EventQueues::default();
+        for _ in 0..3 {
+            assert!(step_region_prepared(&mut world, &table, &mut events, region,
+                None, false, Some(&mut mask), false, 256, &mut staging).unwrap());
+        }
+        assert_eq!(staging.preparations, 1);
+        assert_eq!(staging.idle_hits, 2);
+        assert!(staging.idle.contains_key(&(1, 1, 8, 8)));
+        let corner = world.height * world.stride + world.width;
+        world.write.mass[corner] = 2.0;
+        assert!(step_region_prepared(&mut world, &table, &mut events, region,
+            None, false, Some(&mut mask), false, 256, &mut staging).unwrap());
+        assert_eq!(staging.preparations, 2, "edge change must invalidate the sleeping snapshot");
+        assert_eq!(staging.idle_hits, 2);
+        assert_eq!(mask.len(), 64);
+        assert!(world.write.mass[corner] < 2.0);
+        assert!(world.write.mass[corner - 1] > 1.0);
+    }
+
+    #[test]
+    fn liquid_diffusion_includes_last_public_cells() {
+        let mut gpu = crate::gpu_sim::GpuSimulation::new(10, 10).unwrap();
+        for reference in [false, true] {
+            for (x, y, nx, ny) in [(8, 4, 7, 4), (4, 8, 4, 7), (8, 8, 7, 8)] {
+                let (mut world, mut table, region) = exact_public_boundary_fixture(8, 8);
+                for id in [3_usize, 4] {
+                    table.elements[id].record.state = 2;
+                    world.element_phase[id] = 2;
+                }
+                let source = y * world.stride + x;
+                let neighbour = ny * world.stride + nx;
+                world.write.element[source] = 3;
+                world.write.mass[source] = 1.0;
+                world.write.element[neighbour] = 4;
+                world.write.mass[neighbour] = 1.0;
+                let mut mask = Vec::new();
+                let mut events = EventQueues::default();
+                let ran = if reference {
+                    diffuse_liquid_region(&mut world, &table, &mut events, region, &mut gpu, &mut mask).unwrap()
+                } else {
+                    let pending = begin_sparse_liquid_region(&world, &table, region, &mut gpu)
+                        .unwrap().expect("the second liquid on the public edge must be discovered");
+                    finish_sparse_liquid_region(pending, &mut world, &mut events, &mut mask, &mut gpu).unwrap()
+                };
+                assert!(ran);
+                assert_eq!(mask.len(), 64);
+                assert_eq!(mask[(y - 1) * 8 + x - 1], 0);
+                assert_eq!(mask[(ny - 1) * 8 + nx - 1], 0);
+                assert!(world.mixture_mass[source] > 0.0 && world.mixture_mass[neighbour] > 0.0);
+                for id in [3_u16, 4] {
+                    let mut total = 0.0_f32;
+                    for cell in [source, neighbour] {
+                        world.for_each_cell_species(cell, |element, mass| {
+                            if element == id { total += mass; }
+                        });
+                    }
+                    assert!((total - 1.0).abs() < 1e-5, "liquid {id} mass drift: {total}");
+                }
+                assert_eq!(world.write.mass[y * world.stride + 9], 9999.0);
+                assert_eq!(world.write.mass[9 * world.stride + x], 9999.0);
+            }
+        }
+    }
+
 
     #[test]
     fn liquid_workspace_reuses_storage_after_warmup_and_resets_obstacles() {
@@ -1095,6 +1203,70 @@ mod tests {
             for id in [3,4] {
                 let total = |w: &PhysicsWorld| { let mut m=0.0; w.for_each_cell_species(cell, |e,v| {if e==id {m+=v;}}); m };
                 assert!((total(&a)-total(&b)).abs()<1e-5,"storage order changed cell {cell} species {id}");
+            }
+        }
+    }
+
+    // This uses the existing gas_fixture only for the element table; the actual
+    // world has exact public dimensions, with no extra real interior row/column.
+    #[test]
+    fn gas_transport_includes_last_public_row_and_column() {
+        const WIDTH: usize = 8;
+        const HEIGHT: usize = 8;
+        let (_, table, _) = gas_fixture(WIDTH, HEIGHT);
+        let mut frame_bytes = [0_u8; 28];
+        frame_bytes[..4].copy_from_slice(&FIXED_DT.to_le_bytes());
+        frame_bytes[12..16].copy_from_slice(&(WIDTH as i32).to_le_bytes());
+        frame_bytes[16..20].copy_from_slice(&(HEIGHT as i32).to_le_bytes());
+        let region = crate::frames::NewFrame::parse(
+            &frame_bytes,
+            WIDTH as i32,
+            HEIGHT as i32,
+        )
+        .unwrap()
+        .regions[0];
+        assert_eq!((region.max_x, region.max_y), (9, 9));
+
+        for gpu_available in [false, true] {
+            for (x, y, neighbour_x, neighbour_y) in [(8, 4, 7, 4), (4, 8, 4, 7), (8, 8, 7, 8)] {
+                let mut world = PhysicsWorld::new(WIDTH, HEIGHT, 7, &table).unwrap();
+                world.write.element.fill(world.vacuum_element);
+                world.write.mass.fill(0.0);
+                world.write.temperature.fill(300.0);
+                world.write.properties.fill(0);
+                world.initialize_boundary();
+                let source = y * world.stride + x;
+                let neighbour = neighbour_y * world.stride + neighbour_x;
+                world.write.element[source] = 3;
+                world.write.mass[source] = 1.0;
+                let mut mask = Vec::new();
+                let mut events = EventQueues::default();
+                for _ in 0..8 {
+                    assert!(step_region_with_dispatch(
+                        &mut world,
+                        &table,
+                        &mut events,
+                        region,
+                        None,
+                        false,
+                        Some(&mut mask),
+                        gpu_available,
+                        256,
+                    )
+                    .unwrap(), "last public cell was excluded from gas staging");
+                    assert_eq!(mask.len(), WIDTH * HEIGHT);
+                }
+                assert!(world.write.mass[neighbour] > 0.0,
+                    "gas at ({x},{y}) must spread into adjacent interior vacuum");
+                assert!(world.write.mass[source] < 1.0);
+                let total: f32 = (1..=HEIGHT)
+                    .map(|row| world.write.mass[row * world.stride + 1..row * world.stride + WIDTH + 1]
+                        .iter().sum::<f32>())
+                    .sum();
+                assert!((total - 1.0).abs() < 1e-5, "gas mass drift: {total}");
+                // The true halo remains outside the transport rectangle.
+                assert_eq!(world.write.mass[y * world.stride + WIDTH + 1], 9999.0);
+                assert_eq!(world.write.mass[(HEIGHT + 1) * world.stride + x], 9999.0);
             }
         }
     }

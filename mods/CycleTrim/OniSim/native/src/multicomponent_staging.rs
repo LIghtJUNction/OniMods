@@ -237,10 +237,12 @@ impl GasStaging {
             return None;
         }
 
+        // Region maxima are exclusive padded coordinates. The final public
+        // cell is at (world.width, world.height); only the next cell is halo.
         let min_x = region.min_x.max(1) as usize;
         let min_y = region.min_y.max(1) as usize;
-        let max_x = (region.max_x as usize).min(world.width);
-        let max_y = (region.max_y as usize).min(world.height);
+        let max_x = (region.max_x as usize).min(world.width + 1);
+        let max_y = (region.max_y as usize).min(world.height + 1);
         if max_x <= min_x || max_y <= min_y {
             return None;
         }

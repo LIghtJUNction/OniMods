@@ -1,6 +1,32 @@
 # OniSim engineering log
 
-## Current status (2026-11-08)
+## Current status (2026-11-16)
+
+CycleTrim 0.4.24 corrects multicomponent region coverage at the final public row
+and column. Public coordinates are shifted by one into padded storage, so the
+interior occupies `[1, width + 1) x [1, height + 1)`. Gas and liquid staging,
+species discovery, batch/idle keys, diffusion ownership masks and the thermal
+region map now share those exclusive upper bounds. The surrounding halo remains
+outside the regional operators.
+
+Validation on the development machine:
+
+- Eight new boundary regressions pass, covering edge/corner gas expansion,
+  per-species liquid conservation, exact mask dimensions, sleeping-region
+  invalidation, batch wake-up and thermal ownership.
+- Gas direct/batch tests explicitly require the GPU path; Vulkan logs identify
+  the NVIDIA GeForce RTX 4060 Laptop GPU. Sparse liquid and reference liquid
+  diffusion both execute on that device.
+- The complete native Release suite passes: **229 passed, 0 failed, 19 ignored**.
+  The ignored cases retain their existing manual benchmark annotations.
+- The conservation fixture for a 4x4 public world now sums all sixteen cells;
+  its original `1e-4` tolerance is unchanged.
+
+This is native CPU/GPU correctness validation. No ONI process was launched in
+this iteration under the previously retained no-launch instruction. Whole-game
+FPS, save/load and long-duration acceptance are outside these results.
+
+## Status snapshot (2026-11-08)
 
 ### Runtime policy
 

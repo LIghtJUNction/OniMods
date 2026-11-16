@@ -108,8 +108,8 @@ pub(crate) fn diffuse_region(world: &mut PhysicsWorld, tables: &ElementTable, ev
     let min_y = region.min_y.max(1) as usize;
     let max_x = (region.max_x as usize).min(world.width + 1);
     let max_y = (region.max_y as usize).min(world.height + 1);
-    let gpu_max_x = (region.max_x as usize).min(world.width);
-    let gpu_max_y = (region.max_y as usize).min(world.height);
+    let gpu_max_x = (region.max_x as usize).min(world.width + 1);
+    let gpu_max_y = (region.max_y as usize).min(world.height + 1);
     let gpu_width = gpu_max_x.saturating_sub(min_x);
     let gpu_height = gpu_max_y.saturating_sub(min_y);
     // A fully open gas mask excludes positive-mass liquid cells; a fully open
@@ -393,6 +393,37 @@ mod bubble_tests {
             assert_eq!(world.write.mass[destination], x as f32);
         }
     }
+
+    #[test]
+    fn gpu_owned_edges_at_last_public_cells_are_not_diffused_twice() {
+        let (_, table) = fixture();
+        for (ax, ay, bx, by) in [(4, 2, 4, 3), (2, 4, 3, 4), (3, 4, 4, 4)] {
+            let mut world = PhysicsWorld::new(4, 4, 0, &table).unwrap();
+            world.write.element.fill(world.vacuum_element);
+            let a = ay * world.stride + ax;
+            let b = by * world.stride + bx;
+            world.write.element[a] = 4;
+            world.write.mass[a] = 9.0;
+            world.mixture_element[a] = 5;
+            world.mixture_mass[a] = 1.0;
+            world.write.element[b] = 4;
+            world.write.mass[b] = 6.0;
+            world.mixture_element[b] = 5;
+            world.mixture_mass[b] = 4.0;
+            let region = crate::world::Region {
+                min_x: 1, min_y: 1, max_x: 5, max_y: 5, ..Default::default()
+            };
+            let mut mask = [0; 16];
+            diffuse_region(&mut world, &table, &mut EventQueues::default(), region, Some(&mask), None);
+            assert_eq!((world.mixture_mass[a], world.mixture_mass[b]), (1.0, 4.0),
+                "a full public-grid mask must suppress every already-owned edge");
+            mask[(ay - 1) * 4 + ax - 1] = 1;
+            diffuse_region(&mut world, &table, &mut EventQueues::default(), region, Some(&mask), None);
+            assert!(world.mixture_mass[a] > 1.0 && world.mixture_mass[b] < 4.0,
+                "an unowned edge must still execute its CPU fallback");
+        }
+    }
+
 
     #[test]
     fn gpu_owned_gas_edges_are_not_diffused_twice_on_cpu() {

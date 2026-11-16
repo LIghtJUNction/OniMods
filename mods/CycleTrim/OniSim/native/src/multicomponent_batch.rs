@@ -48,8 +48,8 @@ impl GasBatch {
                 let key = (
                     x,
                     y,
-                    (region.max_x as usize).min(world.width).saturating_sub(x),
-                    (region.max_y as usize).min(world.height).saturating_sub(y),
+                    (region.max_x as usize).min(world.width + 1).saturating_sub(x),
+                    (region.max_y as usize).min(world.height + 1).saturating_sub(y),
                 );
                 // Sleeping worlds do not get dense packing, uploads or dispatches.
                 let sleeping = scratch.idle.get(&key).is_some_and(|old| {
