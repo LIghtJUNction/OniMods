@@ -417,7 +417,7 @@ fn compact_load_plan_maps_offset_rows_without_touching_other_cells() {
         0,
     ));
     assert!(world.write.mass.iter().all(|&mass| mass == 123.0));
-    plan.apply(world);
+    ok(plan.apply(world));
     let targets = [8, 9, 14, 15];
     for target in 0..world.write.mass.len() {
         if let Some(index) = targets.iter().position(|&cell| cell == target) {
@@ -454,7 +454,7 @@ fn compact_legacy_load_preserves_omitted_fields_and_clears_unknown_radiation() {
     }
     image.extend_from_slice(&[0; 12]);
     let plan = ok(crate::save::plan_load(world, &elements, None, &image, 0));
-    plan.apply(world);
+    ok(plan.apply(world));
     assert_eq!(&world.write.radiation[..3], &[11.0, 0.0, 0.0]);
     assert_eq!(&world.write.disease_count[..3], &[9, 9, 9]);
     assert_eq!(&world.backwall_mass[..3], &[91.0, 91.0, 91.0]);

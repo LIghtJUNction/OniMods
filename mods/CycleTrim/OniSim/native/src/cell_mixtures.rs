@@ -31,6 +31,15 @@ impl CellMixtures {
         })
     }
 
+    pub(crate) fn try_reserve(&mut self, additional: usize) -> Result<()> {
+        // Overlapping Load plans may mention the same cells repeatedly. There
+        // can never be more sparse entries than indexed destination cells.
+        let additional = additional.min(self.slots.len() - self.entries.len());
+        self.entries.try_reserve(additional).map_err(|_| {
+            Error::new(Status::ResourceLimit, "could not reserve loaded mixture cells")
+        })
+    }
+
     pub(crate) fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -224,6 +233,30 @@ mod tests {
                 "mixture lookups: hash={map_ms:.3}ms indexed={:.3}ms",
                 start.elapsed().as_secs_f64() * 1000.0
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod load_reserve_tests {
+    use super::CellMixtures;
+
+    #[test]
+    fn cumulative_reserve_handles_overlapping_plans_without_later_allocation() {
+        let mut cells = CellMixtures::new(4).unwrap();
+        cells.insert(0, vec![(3, 1.0)]);
+        // Several overlapping plans can mention more records than grid cells.
+        cells.try_reserve(12).unwrap();
+        let capacity = cells.entries.capacity();
+        for sequence in [vec![0, 1], vec![1, 2], vec![0, 2, 3]] {
+            cells.try_reserve(sequence.len()).unwrap();
+            assert_eq!(cells.entries.capacity(), capacity);
+            for cell in sequence {
+                cells.remove(&cell);
+                cells.insert(cell, vec![(4, 0.25)]);
+            }
+            assert_eq!(cells.entries.capacity(), capacity,
+                "committing a later load cannot allocate after an earlier one");
         }
     }
 }

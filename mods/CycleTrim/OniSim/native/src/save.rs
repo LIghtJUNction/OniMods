@@ -8,6 +8,9 @@ use crate::status::{Error, Result, Status};
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::PhysicsWorld;
 
+#[path = "save_mixtures.rs"]
+mod mixtures;
+
 const MAGIC: &[u8; 8] = b"SIMSAVE\0";
 const CURRENT_VERSION: i32 = 15;
 const VACUUM: i32 = 758_759_285;
@@ -71,6 +74,7 @@ pub(crate) fn serialize(
             put_f32(&mut bytes, world.backwall_temperature[index]);
         }
     }
+    mixtures::append(world, elements, &mut bytes)?;
     // Official BackwallWrite also clears these source fields for invalid cells.
     // Defer that side effect until all serialization can complete successfully.
     for index in 0..count {
@@ -84,6 +88,7 @@ pub(crate) fn serialize(
 
 pub(crate) struct LoadPlan {
     cells: Vec<LoadedCell>,
+    mixtures: Vec<mixtures::LoadedMixture>,
     origin: [usize; 2],
     width: usize,
     has_disease: bool,
@@ -106,7 +111,9 @@ pub(crate) fn plan_load(
     if reader.take(8)? != MAGIC {
         return Err(invalid("save magic must be SIMSAVE followed by zero"));
     }
-    let version = reader.i32()?;
+    let stored_version = reader.i32()?;
+    let mixture_required = stored_version == mixtures::FORMAT_VERSION;
+    let version = if mixture_required { CURRENT_VERSION } else { stored_version };
     if version < 0 {
         return Err(invalid("negative save version"));
     }
@@ -136,7 +143,8 @@ pub(crate) fn plan_load(
         ));
     }
     let count = width.checked_mul(height).ok_or_else(resource)?;
-    if bytes.len() != encoded_length(version, count)? {
+    let base_bytes = encoded_length(version, count)?;
+    if bytes.len() < base_bytes {
         return Err(invalid(
             "save byte count does not match its version and dimensions",
         ));
@@ -229,11 +237,13 @@ pub(crate) fn plan_load(
     if (8..=14).contains(&version) {
         reader.take(count.checked_mul(4).ok_or_else(resource)?)?;
     }
-    if reader.position != bytes.len() {
-        return Err(invalid("unconsumed bytes in native save"));
+    if reader.position != base_bytes {
+        return Err(invalid("unconsumed bytes in native save body"));
     }
+    let mixtures = mixtures::parse(bytes, base_bytes, mixture_required, elements, &elements_by_hash, &mut cells)?;
     Ok(LoadPlan {
         cells,
+        mixtures,
         origin: [x, y],
         width,
         has_disease: version >= 9,
@@ -244,12 +254,25 @@ pub(crate) fn plan_load(
 }
 
 impl LoadPlan {
+    /// Reserve the maximum additional cell slots before committing any batch item.
+    /// Each plan already owns all of its decoded species vectors.
+    pub(crate) fn reserve_batch(plans: &[Self], world: &mut PhysicsWorld) -> Result<()> {
+        let mut additional = 0usize;
+        for plan in plans {
+            additional = additional.checked_add(plan.mixtures.iter()
+                .filter(|record| !record.extras.is_empty()).count()).ok_or_else(resource)?;
+        }
+        world.extra_mixtures.try_reserve(additional)
+    }
+
     // Every fallible parse, lookup and allocation completes before changing the world.
-    pub(crate) fn apply(self, world: &mut PhysicsWorld) {
+    pub(crate) fn apply(self, world: &mut PhysicsWorld) -> Result<()> {
+        Self::reserve_batch(std::slice::from_ref(&self), world)?;
         for (row, cells) in self.cells.chunks_exact(self.width).enumerate() {
             let start = (self.origin[1] + row) * world.stride + self.origin[0];
             for (column, cell) in cells.iter().enumerate() {
                 let target = start + column;
+                world.clear_cell_mixtures(target);
                 world.write.element[target] = cell.element;
                 world.write.temperature[target] = cell.temperature;
                 world.write.mass[target] = cell.mass;
@@ -267,9 +290,19 @@ impl LoadPlan {
                 }
             }
         }
+        mixtures::apply(self.mixtures, world, self.origin, self.width);
+        // Load is restricted to an unstarted world. No old GPU Engine survives;
+        // rebuild its CPU staging input before the new worker initializes.
+        for row in 0..self.cells.len() / self.width {
+            let start = (self.origin[1] + row) * world.stride + self.origin[0];
+            for target in start..start + self.width {
+                mixtures::refresh_cell_cache(world, target);
+            }
+        }
         world.saved_options = self.saved_options;
         world.legacy_thermal_boundaries |= self.legacy_thermal_boundaries;
         world.sync_read_from_write();
+        Ok(())
     }
 }
 
@@ -447,3 +480,7 @@ mod tests {
         assert!(std::mem::size_of::<super::LoadedCell>() <= 32);
     }
 }
+
+#[cfg(test)]
+#[path = "save_mixtures_tests.rs"]
+mod mixtures_tests;

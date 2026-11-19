@@ -123,7 +123,8 @@ pub(crate) fn execute(
         return Ok(std::ptr::null_mut());
     }
     if id == LOAD {
-        if state.grid.as_ref().is_none_or(|grid| grid.started) {
+        if state.grid.as_ref().is_none_or(|grid| grid.started)
+            || state.engine.is_some() || state.worker.is_some() {
             return Err(Error::new(
                 Status::InvalidState,
                 "Load requires an allocated, unstarted grid",
@@ -172,8 +173,9 @@ pub(crate) fn execute(
             options = plan.saved_options;
             plans.push(plan);
         }
+        crate::save::LoadPlan::reserve_batch(&plans, world)?;
         for plan in plans {
-            plan.apply(world);
+            plan.apply(world)?;
         }
         let grid = state.grid.as_mut().unwrap();
         world.publish_to(grid);

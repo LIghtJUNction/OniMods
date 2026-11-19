@@ -313,3 +313,133 @@ overlapping loads. They are not a collection of historical colony files or a
 cross-implementation exchange of complete colony saves. Repeated EndSave calls
 are compared with the official idempotent release. Broad historical-colony,
 concurrent-save and multi-world acceptance remain open.
+
+## OniMix required inventory extension (2026-11-20)
+
+The native writer must preserve every authoritative species inventory in a cell.
+The legacy display slot alone does not contain the second slot or the sparse
+additional slots in `PhysicsWorld`. The OniMix format stores those inventories
+directly; a render publication or GPU staging buffer is not a save source.
+Implementation: [save.rs](../native/src/save.rs) and
+[save_mixtures.rs](../native/src/save_mixtures.rs).
+
+### Compatibility and mandatory marker
+
+A world with no positive secondary or additional inventory still produces the
+ordinary version-15 image, without an extension. Its byte layout and legacy
+load-time normalization rules remain the same.
+
+A world containing additional inventory uses the same `SIMSAVE\0` magic and
+version-15 body layout, but stores **`0x4f4d0001`** in the version word at byte 8.
+This dedicated OniMix version is not an official version number. The matching
+reader requires the complete extension described below. If its entire trailer
+is removed, the image is rejected instead of being interpreted as a legacy
+single-species save. Unknown version words, extension versions, flags and
+trailing data are rejected.
+
+Mixed saves require an OniSim reader supporting this format. No claim is made
+that an official game reader can load or preserve them. The inspected U60
+managed `Sim.Save`, `Sim.Load` and `Sim.LoadWorld` methods treat the native blob
+as length-prefixed opaque bytes; they do not interpret its version word.
+`SaveLoader` initializes and allocates the native world, loads this blob, then
+starts the simulation. This is a source contract, separate from game acceptance.
+
+### Extension layout
+
+All integer fields and IEEE-754 binary32 values are little endian. Let
+`B = 29 + 36*N`, where `N` is the padded cell count in the body. The extension
+starts at `B`.
+
+| Offset from B | Bytes | Meaning |
+| --- | ---: | --- |
+| 0 | 8 | ASCII `ONIMIX` followed by two zero bytes |
+| 8 | 4 | Unsigned extension version, currently 1 |
+| 12 | 4 | Header size, exactly 32 |
+| 16 | 4 | Payload byte count, excluding this header |
+| 20 | 4 | Number of mixed-cell records, positive and no greater than N |
+| 24 | 4 | Reserved flags, exactly zero |
+| 28 | 4 | IEEE CRC32 of the entire image, excluding only this checksum word |
+
+CRC32 uses polynomial `0xedb88320`, initial value `0xffffffff`, and final XOR
+`0xffffffff`. It covers the native body, the version marker, the extension
+header and the inventory payload. It detects accidental corruption; it is not
+an authentication mechanism.
+
+Mixed-cell records appear in strictly increasing local padded-cell order.
+A record contains the following fixed prefix, followed by a secondary pair
+when present, then the specified number of extra pairs.
+
+| Offset within record | Bytes | Meaning |
+| --- | ---: | --- |
+| 0 | 4 | Unsigned local padded-cell index |
+| 4 | 4 | Secondary slot present: exactly 0 or 1 |
+| 8 | 4 | Number of extra positive-mass slots |
+| 12 | 4 | Shared cell temperature, binary32 |
+| 16 | 4 | Primary element's stable signed hash |
+| 20 | 4 | Primary mass, binary32 |
+| 24 onward | 8 per pair | Stable signed element hash, then binary32 mass |
+
+A record must contain a positive secondary or extra inventory. Inactive
+zero-mass secondary/extra slots carry no inventory and are omitted. Active
+slot order and float bits are preserved; no decimal rounding or fixed
+16-species cap is introduced. The stored primary hash, temperature and mass
+must exactly match the corresponding body record.
+
+The current simulation stores one shared temperature per cell. OniMix retains
+that state without inventing per-species temperatures. Disease and backwall
+state remain in the body and use its existing hash remapping rules. Dense gas
+channels and `species_mass` are derived staging data and are rebuilt from the
+restored inventories.
+
+### Validation and atomic loading
+
+Every positive inventory must refer to a known material element and have finite,
+positive mass. The primary slot may have zero mass; its mass and temperature
+must be finite and nonnegative. Duplicate positive element IDs across primary,
+secondary and extra slots are rejected, rather than silently dropped or added
+in a different floating-point order. The accumulated total must remain finite.
+
+Loading first validates the complete body, extension, checksum, ranges, element
+hashes, slot counts and all records. Each decoded plan owns its extra-species
+vectors. Batched Load preallocates every additional cell-map slot before any
+plan is applied, so a later invalid image cannot partially apply an earlier
+image.
+
+Application replaces only the selected destination rectangle, including clearing
+its previous secondary and extra inventories. Cells outside that rectangle are
+retained. Recorded mixed cells restore their primary state exactly instead of
+applying a legacy phase conversion to just one species. The destination dense
+gas staging arrays and dirty flags are refreshed before the read snapshot is
+synchronized.
+
+Load is accepted only before the worker and GPU Engine start. A fresh Engine is
+then constructed from the loaded world; a previous GPU cache is never reused
+by a hot-load path. The first multicomponent publication is created from the
+authoritative world, so a paused initial frame exposes all restored species
+before the first simulation step.
+
+### Evidence and limits
+
+The regression suite is
+[save_mixtures_tests.rs](../native/src/save_mixtures_tests.rs). It targets
+22-species round trips with exact mass bits, element-table reordering,
+offset placement, preservation outside the loaded rectangle, clearing stale
+inventories, dense-cache refresh, checksum and layout failures, complete and
+partial trailer truncation, atomic batches and the first worker publication.
+The pure-save case constructs an independent expected version-15 byte image.
+
+The final targeted host run passed 18 tests (13 save, 3 legacy load and 2
+mixture-container tests), with one existing manual benchmark ignored. An
+independent Python FFI fixture authored a 22-species image, loaded it through
+`SIM_HandleMessage`, and verified exact inventory bits and byte-identical
+save/load/save output. The pre-extension OniSim library rejected the marked
+image with a version error and retained its previous world unchanged. This
+old-reader result applies to that tested OniSim build, not to official readers.
+Both host and FFI checks ran with GPU simulation disabled.
+
+The pre-fix round-trip test failed because only the primary inventory survived.
+A passing native host suite establishes these authored state and format
+contracts; it does not establish a real colony save/reload, Unity rendering,
+official-reader compatibility or a performance improvement. Actual game
+acceptance must compare the complete same-cell species inventory before save
+and after reload, using a disposable save copy.

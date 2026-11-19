@@ -257,7 +257,7 @@ impl State {
         Arc::make_mut(&mut output.grid).started = true;
         Arc::make_mut(&mut old.grid).started = true;
         Arc::make_mut(&mut old.multicomponent)
-            .update_from_grid(grid, self.elements.as_ref().unwrap());
+            .update_from_simulation(self.elements.as_ref().unwrap(), world);
         let initial_multicomponent = old.multicomponent.descriptor(self.generation);
         let initial_buffers = Arc::clone(&old.multicomponent);
         let initial_pointers = old.presentation.pointers();
