@@ -31,14 +31,15 @@ namespace CycleTrim
             // the launching shell's environment, so expose the native probe as
             // an explicit diagnostic-only launch argument as well.
             var arguments = Environment.GetCommandLineArgs();
-            bool managedDiagnostics = Array.IndexOf(arguments, "--cycletrim-managed-profile") >= 0;
-            bool performanceDiagnostics = managedDiagnostics || CycleTrimPatchOptions.DiagnosticsRequested(
+            var diagnostics = CycleTrimPatchOptions.ResolveDiagnostics(
                 options.EnablePerformanceDiagnostics, arguments,
                 Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));
-            if ((!managedDiagnostics && performanceDiagnostics) || Array.IndexOf(arguments, "--cycletrim-gpu-profile") >= 0)
+            if ((diagnostics & CycleTrimDiagnostics.Native) != 0)
                 Environment.SetEnvironmentVariable("CYCLETRIM_GPU_PROFILE", "1");
-            // Preserve an explicit native diagnostic environment setting.
-            // --cycletrim-perf-probe now enables both ends of the frame chain.
+            // Preserve explicit native environment settings; coarse frame timing
+            // does not opt into native profiling or per-method instrumentation.
+            if (diagnostics != CycleTrimDiagnostics.None)
+                Console.WriteLine("[CycleTrim] Performance diagnostics: " + diagnostics);
             FrameRateUnlockPatch.Apply("settings loaded");
             // Aggressive defaults: max OniSim cell workers unless the operator
             // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).
@@ -52,10 +53,11 @@ namespace CycleTrim
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
-                performanceDiagnostics, options.OptimizeSaveMetadata,
+                (diagnostics & CycleTrimDiagnostics.Detailed) != 0, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
                 options.OptimizeAnimationSymbols, options.OptimizeStateMachineLookups,
-                options.ConduitAnimation, result.State == LoaderState.MappedUnverified);
+                options.ConduitAnimation, result.State == LoaderState.MappedUnverified,
+                frameDiagnostics: (diagnostics & CycleTrimDiagnostics.Frame) != 0);
 
             if (result.State == LoaderState.MappedUnverified)
             {
@@ -136,7 +138,7 @@ namespace CycleTrim
                     Jlib.Runtime.PropertyTextureRevisionCache.LastFailure);
             else
                 Debug.Log("[CycleTrim] Pressure texture revision cache installed.");
-            if (CycleTrim.Core.CycleTrimPatchOptions.EnablePerformanceDiagnostics)
+            if (CycleTrim.Core.CycleTrimPatchOptions.EnableDetailedPerformanceDiagnostics)
             {
                 Jlib.Runtime.StateMachineBucketTelemetry.Install(harmony);
                 Jlib.Runtime.StateMachineBucketTelemetry.Enabled = true;

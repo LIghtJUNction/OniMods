@@ -601,8 +601,15 @@ namespace HarmonyLib
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class HarmonyPatch : Attribute
     {
+        public HarmonyPatch() { }
         public HarmonyPatch(Type declaringType, string methodName) { }
     }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class HarmonyPrepare : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class HarmonyTargetMethod : Attribute { }
 
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class HarmonyPrefix : Attribute { }

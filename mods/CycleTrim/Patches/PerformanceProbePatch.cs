@@ -69,7 +69,7 @@ namespace CycleTrim.Patches
             // Steam forwards launch arguments to an already-running client, but
             // does not forward the caller's environment into the game process.
             return CycleTrimPatchOptions.DiagnosticsRequested(
-                CycleTrimPatchOptions.EnablePerformanceDiagnostics,
+                CycleTrimPatchOptions.EnableDetailedPerformanceDiagnostics,
                 Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable(EnvironmentVariable));
         }
 

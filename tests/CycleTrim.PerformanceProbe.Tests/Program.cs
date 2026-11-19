@@ -17,6 +17,11 @@ namespace CycleTrim.PerformanceProbe.Tests
             var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
             try
             {
+                if (args.Length > 0 && args[0] == "--regression-options")
+                {
+                    OptionsRegression.Run();
+                    return 0;
+                }
                 if (args.Length == 2 && args[0] == "--regression-native-lease")
                 {
                     using (var fixture = new NativeMulticomponentFixture(args[1], 4, 4, 100))

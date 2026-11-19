@@ -12,6 +12,8 @@ namespace CycleTrim.PerformanceProbe.Tests
 
         internal static void Run()
         {
+            assertions = 0;
+            DiagnosticsModes();
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
             Check(new OniSimOptions().OptimizePowerOverlay,
@@ -71,6 +73,47 @@ namespace CycleTrim.PerformanceProbe.Tests
                 + " assertions; configuration applied before patching and dialog registered after");
         }
 
+        private static void DiagnosticsModes()
+        {
+            var frame = CycleTrimDiagnostics.Frame;
+            var full = frame | CycleTrimDiagnostics.Detailed | CycleTrimDiagnostics.Native;
+            var managed = frame | CycleTrimDiagnostics.Detailed;
+            CheckMode(CycleTrimDiagnostics.None, new string[0]);
+            CheckMode(frame, new[] { "--cycletrim-frame-profile" });
+            CheckMode(managed, new[] { "--cycletrim-managed-profile" });
+            CheckMode(full, new[] { "--cycletrim-perf-probe" });
+            CheckMode(CycleTrimDiagnostics.Native, new[] { "--cycletrim-native-profile" });
+            CheckMode(CycleTrimDiagnostics.Native, new[] { "--cycletrim-gpu-profile" });
+            CheckMode(frame | CycleTrimDiagnostics.Native,
+                new[] { "--cycletrim-frame-profile", "--cycletrim-native-profile" });
+            CheckMode(frame | CycleTrimDiagnostics.Native,
+                new[] { "--cycletrim-frame-profile", "--cycletrim-gpu-profile" });
+            CheckMode(full, new[] { "--cycletrim-frame-profile", "--cycletrim-perf-probe" });
+            CheckMode(managed, new[] { "--cycletrim-frame-profile", "--cycletrim-managed-profile" });
+            CheckMode(managed, new[] { "--cycletrim-managed-profile", "--cycletrim-perf-probe" });
+            CheckMode(full, new[] { "--cycletrim-managed-profile", "--cycletrim-native-profile" });
+            CheckMode(full, new string[0], configured: true);
+            CheckMode(full, new[] { "--cycletrim-frame-profile" }, configured: true);
+            CheckMode(full, new[] { "--cycletrim-frame-profile" }, environment: "true");
+            CheckMode(frame, new[] { "--cycletrim-frame-profile" }, environment: "0");
+            CheckMode(CycleTrimDiagnostics.None, new[] { "--cycletrim-frame-profile-other" });
+        }
+
+        private static void CheckMode(CycleTrimDiagnostics expected, string[] arguments,
+            bool configured = false, string environment = null)
+        {
+            var actual = CycleTrimPatchOptions.ResolveDiagnostics(configured, arguments, environment);
+            string label = string.Join(" ", arguments) + "; configured=" + configured + "; env=" + environment;
+            Check(actual == expected, "diagnostic selection: " + label);
+            CycleTrimPatchOptions.Configure(true, true, true, true, true,
+                (actual & CycleTrimDiagnostics.Detailed) != 0,
+                frameDiagnostics: (actual & CycleTrimDiagnostics.Frame) != 0);
+            Check(CycleTrimPatchOptions.EnablePerformanceDiagnostics
+                == ((expected & CycleTrimDiagnostics.Frame) != 0), "frame hooks: " + label);
+            Check(CycleTrimPatchOptions.EnableDetailedPerformanceDiagnostics
+                == ((expected & CycleTrimDiagnostics.Detailed) != 0), "detailed hooks: " + label);
+        }
+
         private static void Load(OniSimOptions settings, bool expectedEnabled,
             bool useDefaults = false, LoaderState loaderState = LoaderState.MappedUnverified)
         {
@@ -80,6 +123,8 @@ namespace CycleTrim.PerformanceProbe.Tests
             POptions.RegisteredType = null;
             POptions.OnRegister = null;
             var expected = useDefaults ? new OniSimOptions() : settings ?? new OniSimOptions();
+            var diagnostics = CycleTrimPatchOptions.ResolveDiagnostics(expected.EnablePerformanceDiagnostics,
+                Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));
             var harmony = new HarmonyLib.Harmony("CycleTrim.Options.Test");
             HarmonyLib.Harmony.BeforePatchAll = () =>
             {
@@ -93,8 +138,12 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "async path setting before patch install");
                 Check(CycleTrimPatchOptions.LimitCreatureBrainUpdates == expected.LimitCreatureBrainUpdates,
                     "creature brain setting before patch install");
-                Check(CycleTrimPatchOptions.EnablePerformanceDiagnostics == expected.EnablePerformanceDiagnostics,
-                    "diagnostic setting before patch install");
+                Check(CycleTrimPatchOptions.EnablePerformanceDiagnostics
+                    == ((diagnostics & CycleTrimDiagnostics.Frame) != 0),
+                    "frame diagnostic setting before patch install");
+                Check(CycleTrimPatchOptions.EnableDetailedPerformanceDiagnostics
+                    == ((diagnostics & CycleTrimDiagnostics.Detailed) != 0),
+                    "detailed diagnostic setting before patch install");
                 Check(CycleTrimPatchOptions.OptimizeSaveMetadata == expected.OptimizeSaveMetadata,
                     "save metadata setting before patch install");
                 Check(CycleTrimPatchOptions.OptimizePowerOverlay == expected.OptimizePowerOverlay,
