@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-11-19T20:14:16.019062+00:00",
+  "game_build": 763796,
+  "scope": "Fix cross-runtime representations of an unchanged inspected ABI; neither native algorithms nor platform allowlists changed.",
+  "observed_before": {
+    "player_log": {
+      "path": "/tmp/onimods-quality-20261120/runtime-native-functional/player.log",
+      "sha256": "0ee60f92179216a56f6bbf88992e9c47c4367a7e19870a27cc8e27893ee59076",
+      "bytes": 56997
+    },
+    "failure": "PortableProfile rejected actual Unity runtime inventory after exact Assembly/build checks.",
+    "canonical_lines": 116,
+    "metadata_inventory_sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+    "unity_mono_inventory_sha256": "c41e8fdd35dca4650b0c6a0decd07bbb1a33d82e5a487cc7b22b5fb26a5454c6",
+    "differences": [
+      {
+        "kind": "ReturnParameter.Attributes",
+        "count": 18,
+        "sites": "16 native imports and two callback delegates",
+        "metadata": "None",
+        "UnityMono": "Retval"
+      },
+      {
+        "kind": "StructLayoutAttribute.Pack",
+        "count": 3,
+        "sites": [
+          "Sim+Element+<gradientColours>e__FixedBuffer",
+          "SimMessages+WorldOffsetData",
+          "Vector2I"
+        ],
+        "metadata": 0,
+        "UnityMono": 8
+      }
+    ],
+    "other_differences": 0,
+    "dllimport_marshalas_named_argument_differences": 0,
+    "reproduction": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/reproduction.json",
+      "sha256": "40af258b4784c4dbdf429ca5afd83b82d374244ac4c862fbef50135ecbe34ad5",
+      "bytes": 2177
+    },
+    "diff": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/inventory.diff",
+      "sha256": "ecb33c568c54705a32575f31bfe7770b21fa53a216dcaf734f8f9837f4fc66bd",
+      "bytes": 17007
+    }
+  },
+  "change": {
+    "return_attributes": "Normalize Retval only when Position==-1. Preserve ordinary parameter Retval and every other direction/marshaling flag.",
+    "packing": "Canonicalize the CLR effective default packing 8 to the metadata unspecified encoding 0. Keep every other pack, size, explicit offset and field type.",
+    "hash_policy": "The existing AbiSha256 constant is unchanged; no new accepted digest and no unknown build or runtime allowance.",
+    "diagnostics": "Refusal logs now include actual and expected ABI digests; --inventory exports canonical metadata for comparison.",
+    "probe": "Standalone installed-Unity-Mono host compiles the production serializer, loads the game assembly for reflection and invokes only authored probe code. No game or native Sim functions invoked."
+  },
+  "observed_after": {
+    "passed": true,
+    "unity_mono_probe": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/unity-mono-after.json",
+      "sha256": "2928de58b054be6d153759a375f96b2b0b1565fad2cffa6c60f594c3342d75f0",
+      "bytes": 2340
+    },
+    "metadata_inventory": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/metadata-after.txt",
+      "sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+      "bytes": 28163
+    },
+    "unity_inventory": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/unity-mono-after.inventory.txt",
+      "sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+      "bytes": 28163
+    },
+    "byte_identical": true,
+    "abi_sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+    "assembly_sha256": "801207a0e194ad11892c86af754ad4d3218d89de3a079c2179e24723947135d4",
+    "mono_sha256": "ef78998d272456345b025b41c71bd3fd294da19d963e68f1a1e00c907eacb20b",
+    "mscorlib_sha256": "481b0d5a4ffbbda781aa55418cd61b996e59588eceb1d3c99aa218416c88ab5a",
+    "effective_default_pack_check": "Authored byte+Int64 structs with default and explicit Pack8 have equal Marshal.SizeOf and Value offsets on this actual runtime.",
+    "validation": {
+      "path": "/tmp/onimods-quality-20261120/u60-runtime-inventory/validation-after.json",
+      "sha256": "ee9add6487624cee8ee0b8be35c4148a80fd8a6934d284ecf06b28e84fc9f606",
+      "bytes": 4226
+    },
+    "runs": [
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "dotnet",
+          "build",
+          "tests/OniSim.Loader.Tests/OniSim.Loader.Tests.csproj",
+          "-c",
+          "Release",
+          "--no-restore",
+          "--disable-build-servers",
+          "-m:1",
+          "-p:UseSharedCompilation=false",
+          "-nodeReuse:false"
+        ],
+        "exit_code": 0,
+        "seconds": 4.2740381119947415
+      },
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "dotnet",
+          "tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll"
+        ],
+        "exit_code": 0,
+        "seconds": 0.1862482659998932
+      },
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "dotnet",
+          "tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll",
+          "--check-profile",
+          "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll"
+        ],
+        "exit_code": 0,
+        "seconds": 1.3504404419945786
+      },
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "python3",
+          "mods/CycleTrim/OniSim/conformance/mono_abi_probe.py",
+          "--mono-runtime",
+          "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/MonoBleedingEdge/x86_64/libmonobdwgc-2.0.so",
+          "--managed-path",
+          "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Managed",
+          "--game-assembly",
+          "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll",
+          "--game-build",
+          "763796",
+          "--output",
+          "/tmp/onimods-quality-20261120/u60-runtime-inventory/unity-mono-after.json"
+        ],
+        "exit_code": 0,
+        "seconds": 1.9542580760025885
+      },
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "dotnet",
+          "tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll",
+          "--inventory",
+          "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll"
+        ],
+        "exit_code": 0,
+        "seconds": 1.2339936409989605
+      },
+      {
+        "command": [
+          "rtk",
+          "proxy",
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "mods/CycleTrim/OniSim/managed/OniSim.Mod/PortableProfile.cs",
+          "tests/OniSim.Loader.Tests/Program.cs",
+          "tests/OniSim.Loader.Tests/PortableProfileTests.cs"
+        ],
+        "exit_code": 0,
+        "seconds": 0.029838352005754132
+      }
+    ]
+  },
+  "negative_regressions": [
+    "field width",
+    "Pack1/2/8/16 versus Pack4",
+    "explicit Size",
+    "explicit FieldOffset",
+    "ordinary argument In/Out/Retval",
+    "return Out",
+    "return MarshalAs I1 versus Bool",
+    "CallingConvention",
+    "CharSet",
+    "EntryPoint",
+    "unknown builds",
+    "mixed build/runtime fingerprints",
+    "changed official simulator"
+  ],
+  "independent_review": "onimcp_harness inspected complete before inventories, targeted normalization and regressions; no blocker found.",
+  "unverified": [
+    "Full Unity Player native takeover after rebuilding this patch",
+    "Gameplay, multi-component inventory save/reload and real performance; root owns subsequent live validation"
+  ]
+}

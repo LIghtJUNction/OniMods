@@ -38,11 +38,19 @@ namespace OniSim.CycleTrim
                 !Equals(version.GetField("isDebugBuild").GetRawConstantValue(), false) ||
                 !Equals(version.GetField("Patch").GetRawConstantValue(), ""))
                 throw new InvalidOperationException("The game is not the inspected release build.");
-            if (!string.Equals(Fingerprint(assembly), AbiSha256, StringComparison.Ordinal))
-                throw new InvalidOperationException("The game's SimDLL imports or message layouts do not match the inspected OniSim ABI profile.");
+            string actual = Fingerprint(assembly);
+            if (!string.Equals(actual, AbiSha256, StringComparison.Ordinal))
+                throw new InvalidOperationException("The game's SimDLL imports or message layouts do not match the inspected OniSim ABI profile. " +
+                    "expected=" + AbiSha256 + "; actual=" + actual);
         }
 
         internal static string Fingerprint(Assembly assembly)
+        {
+            using (SHA256 sha = SHA256.Create())
+                return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(CanonicalInventory(assembly)))).Replace("-", "").ToLowerInvariant();
+        }
+
+        internal static string CanonicalInventory(Assembly assembly)
         {
             var text = new StringBuilder();
             var pending = new Queue<Type>();
@@ -93,7 +101,11 @@ namespace OniSim.CycleTrim
                 else if (type.IsValueType)
                 {
                     var layout = type.StructLayoutAttribute;
-                    definition.Append(layout.Value).Append(':').Append(layout.Pack).Append(':').Append(layout.Size).Append(':').Append(layout.CharSet).Append('|');
+                    // Mono exposes the effective default pack (8), while metadata
+                    // reflection preserves the unspecified encoding (0). These have
+                    // the same eight-byte alignment ceiling; all other packs differ.
+                    int pack = layout.Pack == 8 ? 0 : layout.Pack;
+                    definition.Append(layout.Value).Append(':').Append(pack).Append(':').Append(layout.Size).Append(':').Append(layout.CharSet).Append('|');
                     foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).OrderBy(f => f.MetadataToken))
                     {
                         definition.Append(field.Name).Append(':').Append(field.FieldType.FullName).Append('|');
@@ -104,8 +116,7 @@ namespace OniSim.CycleTrim
                 definitions[name] = definition.ToString();
             }
             foreach (string definition in definitions.Values) text.Append(definition).Append('\n');
-            using (SHA256 sha = SHA256.Create())
-                return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(text.ToString()))).Replace("-", "").ToLowerInvariant();
+            return text.ToString();
         }
 
         private static void AppendMethod(StringBuilder text, MethodInfo method, Queue<Type> pending)
@@ -117,7 +128,12 @@ namespace OniSim.CycleTrim
 
         private static void AppendParameter(StringBuilder text, ParameterInfo parameter, Queue<Type> pending)
         {
-            text.Append(parameter.ParameterType.FullName).Append(':').Append(parameter.Attributes).Append('|');
+            // The return slot is already explicit in AppendMethod. Unity Mono
+            // synthesizes Retval for it even when the Param table has no flags.
+            // Keep Retval on ordinary parameters and every marshaling/direction flag.
+            ParameterAttributes attributes = parameter.Attributes;
+            if (parameter.Position == -1) attributes &= ~ParameterAttributes.Retval;
+            text.Append(parameter.ParameterType.FullName).Append(':').Append(attributes).Append('|');
             AppendAttributes(text, parameter.GetCustomAttributesData());
             pending.Enqueue(parameter.ParameterType);
         }

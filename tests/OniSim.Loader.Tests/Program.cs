@@ -2,12 +2,17 @@ using NativeModule = Jlib.Runtime.NativeModule;
 using System.Runtime.InteropServices;
 using OniSim.CycleTrim;
 
-if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile"))
+if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile" || args[0] == "--inventory"))
 {
     string assemblyPath = Path.GetFullPath(args[1]);
     var resolver = new System.Reflection.PathAssemblyResolver(Directory.GetFiles(Path.GetDirectoryName(assemblyPath), "*.dll"));
     using var context = new System.Reflection.MetadataLoadContext(resolver, "mscorlib");
     var assembly = context.LoadFromAssemblyPath(assemblyPath);
+    if (args[0] == "--inventory")
+    {
+        Console.Write(PortableProfile.CanonicalInventory(assembly));
+        return;
+    }
     Console.WriteLine("portableAbiSha256=" + PortableProfile.Fingerprint(assembly));
     if (args[0] == "--check-profile")
     {
