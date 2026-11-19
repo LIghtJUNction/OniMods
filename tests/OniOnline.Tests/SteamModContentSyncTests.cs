@@ -136,6 +136,7 @@ internal static class SteamModContentSyncTests
         Activation(check);
         NativeModActivationAdapterTests.Run(check);
         Catalog(check);
+        InactiveCatalogContent(check);
         Diagnostics(check);
         RuntimePolicy(check);
         NativeReviewFailure(check);
@@ -437,6 +438,79 @@ internal static class SteamModContentSyncTests
             record.ConfiguredEnabled = false; record.Loaded = false;
             var disabled = new NativeModCatalog(() => new[] { record }, () => epoch, () => idle).CaptureLoadedSnapshot();
             check(disabled.IsComplete && !disabled.InstalledManifest.Entries.Single().Enabled, "installed disabled package remains available for plan comparison");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private static void InactiveCatalogContent(System.Action<bool, string> check)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "oni-inactive-catalog-" + Guid.NewGuid().ToString("N"));
+        string activeRoot = Directory.CreateDirectory(Path.Combine(root, "active")).FullName;
+        string inactiveRoot = Directory.CreateDirectory(Path.Combine(root, "inactive")).FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(activeRoot, "code.dll"), "active-code");
+            File.WriteAllText(Path.Combine(inactiveRoot, "code.dll"), "inactive-code");
+            string unclassified = Path.Combine(inactiveRoot, "extra.json");
+            File.WriteAllText(unclassified, "{}");
+            var active = new NativeModRecord
+            {
+                Id = "active", Version = "1", ContentRoot = activeRoot, Source = ModDistributionSource.Local,
+                Policy = ModSyncPolicy.Required, ConfiguredEnabled = true, Loaded = true, Installed = true
+            };
+            var inactive = new NativeModRecord
+            {
+                Id = "inactive", Version = "1", ContentRoot = inactiveRoot, Source = ModDistributionSource.Local,
+                Policy = ModSyncPolicy.Required, Installed = true
+            };
+            Func<IEnumerable<NativeModRecord>> source = () => new[] { active, inactive };
+            var catalog = new NativeModCatalog(source, () => 1, () => true);
+            var initial = catalog.CaptureLoadedSnapshot();
+            check(initial.IsComplete && initial.CanReviewInstalled,
+                "an unclassified installed but disabled and unloaded package does not block the loaded snapshot");
+            check(initial.ActiveManifest.Entries.Single().Id == active.Id &&
+                initial.InstalledManifest.Entries.Count == 1,
+                "an unverified inactive package is omitted rather than assigned an invented content identity");
+            check(initial.Issues.Single().Id == inactive.Id &&
+                initial.Issues.Single().Code == "content_data_unclassified" && !initial.Issues.Single().Blocking,
+                "inactive package content failure remains visible as a nonblocking diagnostic");
+            check(catalog.CaptureInstalled().IsComplete,
+                "connection revalidation also ignores unrequested inactive content failures");
+
+            inactive.ConfiguredEnabled = true;
+            var configured = new NativeModCatalog(source, () => 1, () => true).CaptureLoadedSnapshot();
+            check(!configured.IsComplete && !configured.CanReviewInstalled && configured.Issues.Single().Blocking,
+                "configured enabled content is still required even before its code has loaded");
+            inactive.ConfiguredEnabled = false; inactive.Loaded = true;
+            var stillLoaded = new NativeModCatalog(source, () => 1, () => true).CaptureLoadedSnapshot();
+            check(!stillLoaded.IsComplete && !stillLoaded.CanReviewInstalled && stillLoaded.Issues.Single().Blocking,
+                "disabling settings cannot hide unverified code that is still loaded");
+            inactive.Loaded = false;
+            var desired = Manifest(initial.ActiveManifest.Entries.Single(),
+                new ModManifestEntry(inactive.Id, "1", ModSyncPolicy.Required, ModDistributionSource.Local,
+                    0, new string('a', 64), true));
+            var requested = catalog.CaptureInstalled(desired);
+            check(!requested.IsComplete && !requested.CanReviewInstalled && requested.Issues.Single().Blocking,
+                "a disabled package requested by the room must have verified content before review or activation");
+
+            File.Delete(unclassified);
+            inactive.Version = "\n";
+            var malformed = new NativeModCatalog(source, () => 1, () => true).CaptureLoadedSnapshot();
+            check(malformed.IsComplete && malformed.InstalledManifest.Entries.Count == 1 &&
+                malformed.Issues.Single().Code == "invalid_native_mod_metadata" && !malformed.Issues.Single().Blocking,
+                "invalid metadata in unrelated inactive inventory cannot invalidate loaded identities");
+            inactive.ConfiguredEnabled = true;
+            var enabledMalformed = new NativeModCatalog(source, () => 1, () => true).CaptureLoadedSnapshot();
+            check(!enabledMalformed.IsComplete && enabledMalformed.Issues.Single().Blocking,
+                "invalid metadata remains blocking for enabled content");
+
+            inactive.ConfiguredEnabled = false; inactive.Version = "1";
+            int idleChecks = 0;
+            var loaderChanged = new NativeModCatalog(() => new[] { inactive }, () => 1,
+                () => ++idleChecks != 2).CaptureLoadedSnapshot();
+            check(!loaderChanged.IsComplete && loaderChanged.Issues.Single().Blocking &&
+                loaderChanged.Issues.Single().Code == "content_source_changed",
+                "a transient loader change remains blocking even while inspecting inactive inventory");
         }
         finally { Directory.Delete(root, true); }
     }

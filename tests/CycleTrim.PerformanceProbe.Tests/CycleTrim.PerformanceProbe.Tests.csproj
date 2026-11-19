@@ -14,6 +14,8 @@
     <ProjectReference Include="../../mods/CycleTrim/OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj" />
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/ModInfo.cs" Link="ModInfo.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/OnlineModSyncRegistration.cs" Link="OnlineModSyncRegistration.cs" />
+    <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
     <Compile Include="../../mods/CycleTrim/ModInfo.OniSim.cs" Link="ModInfo.OniSim.cs" />
     <Compile Include="../../mods/CycleTrim/OniSimOptions.cs" Link="OniSimOptions.cs" />
     <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />

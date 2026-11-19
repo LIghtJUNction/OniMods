@@ -22,6 +22,11 @@ namespace CycleTrim.PerformanceProbe.Tests
                     OptionsRegression.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--regression-online-content")
+                {
+                    OnlineModSyncRegistrationRegression.Run();
+                    return 0;
+                }
                 if (args.Length == 2 && args[0] == "--regression-native-lease")
                 {
                     using (var fixture = new NativeMulticomponentFixture(args[1], 4, 4, 100))
@@ -60,6 +65,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 TaskInvalidationRegression.Run();
                 WorldInvalidationRegression.Run();
                 OptionsRegression.Run();
+                OnlineModSyncRegistrationRegression.Run();
                 FetchLayoutControlRegression.Run();
                 MulticomponentRegression.Run();
                 MulticomponentBatchRegression.Run();

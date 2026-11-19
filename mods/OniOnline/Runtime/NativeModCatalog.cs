@@ -107,9 +107,18 @@ namespace OniOnline.Runtime
                     if (record.ConfiguredEnabled) issues.Add(new NativeModCatalogIssue(record.Id, "native_mod_not_installed"));
                     continue;
                 }
+                // Installed inventory is broader than the loaded or requested
+                // mod set. An unusable inactive package stays out of the manifest;
+                // it must be verified if it is enabled, loaded, or later required.
+                bool identityRequired = record.ConfiguredEnabled || record.Loaded ||
+                    requiredIds != null && requiredIds.Contains(record.Id);
                 if (!NativeModContentDigest.TryCompute(record.ContentRoot, record.ContentExtensions,
                     () => loaderIdle() && loaderEpoch() == epoch, out var digest, out var error))
-                { issues.Add(new NativeModCatalogIssue(record.Id, error)); continue; }
+                {
+                    issues.Add(new NativeModCatalogIssue(record.Id, error,
+                        identityRequired || error == "content_source_changed"));
+                    continue;
+                }
                 try
                 {
                     var content = new ModManifestEntry(record.Id, record.Version, record.Policy, record.Source,
@@ -130,7 +139,8 @@ namespace OniOnline.Runtime
                     activationEntries?.Add(activationEnabled == enabled ? entry : new ModManifestEntry(content.Id,
                         content.Version, content.Policy, content.Source, content.WorkshopId, content.ContentSha256, activationEnabled));
                 }
-                catch (ArgumentException) { issues.Add(new NativeModCatalogIssue(record.Id, "invalid_native_mod_metadata")); }
+                catch (ArgumentException)
+                { issues.Add(new NativeModCatalogIssue(record.Id, "invalid_native_mod_metadata", identityRequired)); }
             }
             try
             {

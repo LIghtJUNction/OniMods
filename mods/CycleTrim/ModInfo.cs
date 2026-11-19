@@ -38,6 +38,7 @@ namespace CycleTrim
             IReadOnlyList<KMod.Mod> mods)
         {
             base.OnAllModsLoaded(harmony, mods);
+            Core.OnlineModSyncRegistration.RegisterIfAvailable();
             FetchPickupCandidatePatch.InstallAfterAllModsLoaded(harmony);
             InstallCpuWorkOptimizations(harmony);
         }
