@@ -24,7 +24,7 @@ namespace CycleTrim.Core
         internal static ConduitAnimationQuality ConduitAnimation { get; private set; }
             = ConduitAnimationQuality.Full;
         internal static bool EnablePerformanceDiagnostics { get; private set; }
-        internal static bool EnableMulticomponentShim { get; private set; } = true;
+        internal static bool EnableMulticomponentShim { get; private set; }
 
         // Capture settings before Harmony installs patches. Runtime edits take
         // effect after restarting ONI, so a patch group is never half enabled.

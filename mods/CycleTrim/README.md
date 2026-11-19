@@ -113,7 +113,7 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 
 在游戏的**模组 → CycleTrim → 设置**中调整。设置界面由独立 Jlib 提供；更改后按提示重启游戏。
 
-- **OniSim 仿真核心**：启动即强制映射 Rust SimDLL，不再提供官方 SimDLL 运行时回退。紧急关闭用 `CYCLETRIM_ONISIM_ENABLE=0`。
+- **OniSim 仿真核心**：启动时先校验游戏版本与原生接口，通过后映射 Rust SimDLL；未验证版本保留原版仿真及兼容的托管优化。启动前关闭可用 `CYCLETRIM_ONISIM_ENABLE=0`。
 - **物流候选、忙碌复制人刷新、静止小动物寻路、异步寻路去重、小动物思考刷新**：五项优化可分别关闭，便于排查其他模组的兼容问题；默认保持开启。关闭某项后不安装该组优化补丁。
 - **性能诊断日志**：默认关闭。开启后把耗时和内存统计写入 `Player.log`，统计本身有额外开销。
 - **存档类型信息缓存**：默认开启，减少存档时重复反射，并在同一次存档内复用相邻的类型查询；可单独关闭，修改后需要重启。
@@ -137,13 +137,15 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 
 ### OniSim 原生仿真内核
 
-OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包，启动时强制映射接管官方 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的紧急关闭开关。
+OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包，启动时通过版本与接口校验后才映射接管官方 SimDLL。映射被拒绝或在启动前禁用时，不启用依赖该原生后端的多组分适配层，兼容的托管优化继续工作。已经建立的映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的紧急关闭开关。
 
 疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。GPU 算子相关开关见上文 [GPU 进度](#gpu-进度2026-11-08)。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
 
 历史二进制的隔离实测曾通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)；这些回执只适用于记录中的精确二进制，不代表当前源码已通过游戏验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
 
-Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。运行时默认强制接管；`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前紧急关闭。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内原生库；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
+**U60 / 763796（2026-11-20）**：液体纹理回调已适配新接口，依赖 Jlib 0.3.9。当前 U60 的原生替换仍未放行，使用原版仿真；不能把液体候选扫描的微基准加速称为当前 U60 的游戏帧率提升。升级前后指纹、ABI 检查范围及启动退化回归见[兼容性记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)。
+
+Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。运行时默认尝试经过校验的映射；`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前关闭原生替换。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内原生库；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 
 ## 性能实测摘要
 

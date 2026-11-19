@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using OniSim.CycleTrim;
 using CycleTrim.Core;
 using PeterHan.PLib.Options;
 
@@ -57,6 +59,9 @@ namespace CycleTrim.PerformanceProbe.Tests
                 ConduitAnimation = ConduitAnimationQuality.Quarter
             };
             Load(mixed, expectedEnabled: true);
+            Load(mixed, expectedEnabled: true, loaderState: LoaderState.Refused);
+            Load(mixed, expectedEnabled: true, loaderState: LoaderState.Disabled);
+            Load(mixed, expectedEnabled: true, loaderState: LoaderState.MappedUnverified);
 
             POptions.ThrowOnRead = true;
             try { Load(mixed, expectedEnabled: true, useDefaults: true); }
@@ -67,8 +72,10 @@ namespace CycleTrim.PerformanceProbe.Tests
         }
 
         private static void Load(OniSimOptions settings, bool expectedEnabled,
-            bool useDefaults = false)
+            bool useDefaults = false, LoaderState loaderState = LoaderState.MappedUnverified)
         {
+            OniSimLoader.NextState = loaderState;
+            OniSimLoader.MappedPathQueries = 0;
             POptions.Settings = settings;
             POptions.RegisteredType = null;
             POptions.OnRegister = null;
@@ -100,19 +107,39 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "state machine lookup setting before patch install");
                 Check(CycleTrimPatchOptions.ConduitAnimation == expected.ConduitAnimation,
                     "conduit display quality applied before patch install");
-                Check(CycleTrimPatchOptions.EnableMulticomponentShim,
-                    "multicomponent shim always armed with OniSim");
+                Check(CycleTrimPatchOptions.EnableMulticomponentShim ==
+                    (loaderState == LoaderState.MappedUnverified),
+                    "multicomponent shim requires a successful native mapping before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
                     "native core always requested before patch install");
             };
             POptions.OnRegister = () => Check(harmony.Installations == 1,
                 "options dialog registered after the vanilla mod load installed patches");
-            try { new ModInfo().OnLoad(harmony); }
-            finally
+            var previousOutput = Console.Out;
+            using (var output = new StringWriter())
             {
-                HarmonyLib.Harmony.BeforePatchAll = null;
-                POptions.OnRegister = null;
+                try
+                {
+                    if (loaderState != LoaderState.MappedUnverified) Console.SetOut(output);
+                    new ModInfo().OnLoad(harmony);
+                }
+                finally
+                {
+                    Console.SetOut(previousOutput);
+                    HarmonyLib.Harmony.BeforePatchAll = null;
+                    POptions.OnRegister = null;
+                }
+                if (loaderState != LoaderState.MappedUnverified)
+                {
+                    Check(output.ToString().Contains("763796") &&
+                        output.ToString().Contains("state=" + loaderState),
+                        "unmapped startup reports the actual game build and loader state");
+                    Check(OniSimLoader.MappedPathQueries == 0,
+                        "unmapped startup must not open a multicomponent publication");
+                }
             }
+            Check(harmony.Installations == 1,
+                "managed patches still install when native mapping is refused or disabled");
             Check(POptions.RegisteredType == typeof(OniSimOptions),
                 "current CycleTrim options type registered");
         }
@@ -130,6 +157,7 @@ namespace CycleTrim.PerformanceProbe.Tests
 // The real entrypoint and options run above. Host-only adapters stand in for
 // PLib's Unity dialog and native-library mapping, not for the option policy.
 public sealed class Sim { }
+public static class KleiVersion { public const int ChangeList = 763796; }
 
 namespace PeterHan.PLib.Core
 {
@@ -183,6 +211,19 @@ namespace Jlib.Runtime
         {
         }
     }
+
+    // The Jlib regression host tests callback resolution with real Harmony.
+    // This host exercises option policy and render prefixes without installing hooks.
+    public static class PropertyTextureCallbackTarget
+    {
+        public static bool TryResolve(Type owner, string callbackName, Type textureRegionType,
+            out System.Reflection.MethodInfo target, out string reason)
+        {
+            target = null;
+            reason = "callback resolution is not executed by this host adapter";
+            return false;
+        }
+    }
 }
 
 namespace UnityEngine
@@ -205,11 +246,13 @@ namespace OniSim.CycleTrim
     public static class OniSimLoader
     {
         internal static bool LastEnabled;
+        internal static LoaderState NextState = LoaderState.MappedUnverified;
+        internal static int MappedPathQueries;
         public static LoaderResult Configure(System.Reflection.Assembly assembly, bool enabled)
         {
             LastEnabled = enabled;
-            return new LoaderResult();
+            return new LoaderResult { State = NextState };
         }
-        public static string GetMappedLibraryPath() { return null; }
+        public static string GetMappedLibraryPath() { MappedPathQueries++; return null; }
     }
 }

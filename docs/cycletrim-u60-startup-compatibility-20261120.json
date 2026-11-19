@@ -1,0 +1,264 @@
+{
+  "schema": 1,
+  "scope": "Observed U59-to-U60 startup compatibility, source fixes and bounded verification; no U60 native runtime acceptance.",
+  "observed": {
+    "previous_session": {
+      "game_build": "U59-744825-SCRPAN",
+      "unity": "6000.3.5f2 (3fa8bc678cb0)",
+      "log": {
+        "path": "<ONI_USER_DATA>/Player-prev.log",
+        "size_bytes": 61425,
+        "sha256": "6872735af0f79439e31a5df8c6571790499899ec4570480eb0a6a214483212ca",
+        "lines": [
+          {
+            "number": 15,
+            "text": "Initialize engine version: 6000.3.5f2 (3fa8bc678cb0)"
+          },
+          {
+            "number": 60,
+            "text": "[17:50:21.026] [1] [INFO] Date: 11/20/2026 01:50:20"
+          },
+          {
+            "number": 68,
+            "text": "[17:50:21.151] [1] [INFO] Build: U59-744825-SCRPAN (release)"
+          },
+          {
+            "number": 253,
+            "text": "[CycleTrim][OniSim] Assembly-scoped SimDLL mapping remains active and unverified; gameReady=false. Environment changes cannot remove or replace it. Restart is required."
+          }
+        ]
+      }
+    },
+    "current_session": {
+      "game_build": "U60-763796-SCRPAN",
+      "unity": "6000.3.17f1 (cf0352b38e81)",
+      "log": {
+        "path": "<ONI_USER_DATA>/Player.log",
+        "size_bytes": 44934,
+        "sha256": "fb9b65628366050fb043ac59265cbe64d4d2850ec5df9b406872d903f8345a9b",
+        "lines": [
+          {
+            "number": 15,
+            "text": "Initialize engine version: 6000.3.17f1 (cf0352b38e81)"
+          },
+          {
+            "number": 58,
+            "text": "[18:08:57.063] [1] [INFO] Date: 11/20/2026 02:08:57"
+          },
+          {
+            "number": 66,
+            "text": "[18:08:57.158] [1] [INFO] Build: U60-763796-SCRPAN (release)"
+          },
+          {
+            "number": 234,
+            "text": "[18:09:02.630] [1] [INFO] [OniHarness] Runtime companion active; headless=False; simulation remains native."
+          },
+          {
+            "number": 237,
+            "text": "[18:09:02.723] [1] [ERROR] null Exception while loading mod LIghtJUNction.Jlib at <ONI_USER_DATA>/mods/Dev/Jlib. "
+          },
+          {
+            "number": 238,
+            "text": "HarmonyLib.HarmonyException: Patching exception in method null ---> System.ArgumentException: Undefined target method for patch method static System.Boolean Jlib.Multicomponent.MulticomponentVisualPatch::Prefix(TextureRegion region, System.Int32 x0, System.Int32 y0, System.Int32 x1, System.Int32 y1)"
+          },
+          {
+            "number": 277,
+            "text": "[CycleTrim][OniSim] OniSim mapping refused: InvalidOperationException: Assembly-CSharp does not match the statically inspected profile."
+          },
+          {
+            "number": 278,
+            "text": "[CycleTrim][OniSim] FATAL path refused \u2014 check Player.log and fix the native mapping."
+          },
+          {
+            "number": 279,
+            "text": "[CycleTrim] Patch installation failed: HarmonyLib.HarmonyException: Patching exception in method null ---> System.ArgumentException: Undefined target method for patch method static System.Boolean CycleTrim.Patches.PropertyTextureLiquidUpdatePatch::Prefix(TextureRegion region, System.Int32 x0, System.Int32 y0, System.Int32 x1, System.Int32 y1)"
+          },
+          {
+            "number": 292,
+            "text": "[Jlib bootstrap] CycleTrim startup blocked: StartupFailed"
+          },
+          {
+            "number": 301,
+            "text": "[18:09:03.516] [1] [INFO] [OniOnline] Loaded assembly: version=0.5.2.0; location=<ONI_USER_DATA>/mods/Dev/OniOnline/implementation/OniOnline.dll; sha256=605aa695a80a2dba21c939630a7859e75f81567353c3252096f659959f8983c6"
+          },
+          {
+            "number": 302,
+            "text": "[18:09:03.516] [1] [INFO] [OniOnline] Framework loaded: lobby, chat and gameplay SDK. Built-in gameplay is chat."
+          },
+          {
+            "number": 303,
+            "text": "[18:09:03.516] [1] [INFO] Failed to load mod Jlib...disabling"
+          },
+          {
+            "number": 348,
+            "text": "[OniMcp] Input safety patch check at Db.Initialize: healthy=True; ToolMenu.OnKeyDown=LIghtJUNction.OniMcp; KButtonEvent.IsAction=LIghtJUNction.OniMcp"
+          },
+          {
+            "number": 349,
+            "text": "[OniMcp] Auto-disinfect policy patch check at Db.Initialize: healthy=True"
+          },
+          {
+            "number": 356,
+            "text": "[OniMcp] MCP Server started on http://localhost:8788/mcp/"
+          },
+          {
+            "number": 372,
+            "text": "[18:09:10.104] [1] [WARNING] [OniHarness] Exit 1; crash=False"
+          }
+        ]
+      }
+    },
+    "steam_update": {
+      "path": "<STEAM_APPS>/appmanifest_457140.acf",
+      "app_id": 457140,
+      "build_id": "26770249",
+      "target_build_id": "26770249",
+      "last_updated_epoch": 1795111729,
+      "last_updated_utc": "2026-11-19T18:08:49+00:00",
+      "update_result": 0,
+      "bytes_downloaded": 320530144,
+      "bytes_to_download": 320530144,
+      "linux_base_depot": {
+        "id": 457143,
+        "manifest": "7223709531536246320"
+      }
+    },
+    "linux_profile": {
+      "source": "mods/CycleTrim/OniSim/managed/OniSim.Mod/OfficialProfile.cs",
+      "assembly_csharp": {
+        "expected_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+        "actual_sha256": "801207a0e194ad11892c86af754ad4d3218d89de3a079c2179e24723947135d4",
+        "actual_size_bytes": 14559744,
+        "matches": false
+      },
+      "unity_mono": {
+        "expected_sha256": "60bf98b369d3a48cd93fab678dc8c6d37f61adea00f942a59e418d1d9db6bf44",
+        "actual_sha256": "ef78998d272456345b025b41c71bd3fd294da19d963e68f1a1e00c907eacb20b",
+        "actual_size_bytes": 3856176,
+        "matches": false
+      },
+      "check_order": [
+        "assembly profile",
+        "Unity Mono profile",
+        "native target open",
+        "native exports/ABI v1",
+        "assembly-scoped SimDLL replacement"
+      ],
+      "refusal_observed_at": "assembly profile",
+      "white_list_changed": false
+    },
+    "portable_abi_inventory": {
+      "source": "mods/CycleTrim/OniSim/managed/OniSim.Mod/PortableProfile.cs",
+      "expected_build": 744825,
+      "actual_build": 763796,
+      "expected_sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+      "actual_sha256": "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879",
+      "inventory_matches": true,
+      "command": "rtk proxy flock --close /tmp/onimods-quality-build.lock dotnet tests/OniSim.Loader.Tests/bin/Release/net10.0/OniSim.Loader.Tests.dll --profile <ONI_MANAGED>/Assembly-CSharp.dll",
+      "ssmcp_job_id": "61217769373768b4fe2b08e86c4c5837-159",
+      "exit_code": 0,
+      "coverage": "Canonical SimDLL import attributes and recursively inventoried Sim/SimMessages field/delegate layouts; metadata only."
+    },
+    "installed_native_package": {
+      "receipt": {
+        "schema": 1,
+        "target": "linux-x64",
+        "triple": "x86_64-unknown-linux-gnu",
+        "sourceSha256": "4d9dc6eb656765c484e0d46c7cac45ea626fe00bb33260a3eaec1dccf3241386",
+        "binarySha256": "fb13706875de43e7f882b8cbd3af0ac7ddee928647d49e2fb2b4c05d590c291e",
+        "commit": "source-archive",
+        "gameRuntimeTested": false
+      },
+      "actual_binary_sha256": "fb13706875de43e7f882b8cbd3af0ac7ddee928647d49e2fb2b4c05d590c291e",
+      "current_source_sha256": "4d9dc6eb656765c484e0d46c7cac45ea626fe00bb33260a3eaec1dccf3241386",
+      "receipt_binary_matches": true,
+      "receipt_source_matches": true
+    },
+    "property_texture_api": {
+      "local_inspection_source": "/tmp/onimods-quality-20261120/PropertyTextures-U60.cs",
+      "local_inspection_sha256": "55c5a1662f937b250283855de3d398dc3bd4771104b9ce8fe00cdca1d31fa490",
+      "game_code_included": false,
+      "converted_from_named_static_method_to_callback_field": [
+        "UpdateGasColour",
+        "UpdateLiquid"
+      ],
+      "callback_signature": "void(TextureRegion,int,int,int,int)",
+      "retained_methods": [
+        "UpdateProperty(ref TextureProperties,int,int,int,int)",
+        "DestroyInstance()",
+        "OnReset(object)",
+        "OnShadersReloaded()",
+        "LateUpdate()"
+      ],
+      "liquid_body_inspection": "Cell traversal, activity checks, colors and opacity arithmetic still correspond to the existing CycleTrim liquid prefix.",
+      "lookup_design": "Shared Jlib resolver inspects the delegate field initializer IL without reading its value or executing the type initializer."
+    },
+    "reference_manifest": {
+      "path": "ci/oni-reference-assemblies.json",
+      "official_oni_build": 744825,
+      "reference_source_declared_oni_build": 737790,
+      "method_body_source_build": 744825,
+      "scope": "Pinned compile/API references and method-body evidence; not evidence of U60 native runtime compatibility."
+    }
+  },
+  "inference": [
+    {
+      "claim": "Steam updated the game between the two observed launches.",
+      "basis": "Different game/Unity versions in adjacent session logs; successful appmanifest update timestamp between sessions."
+    },
+    {
+      "claim": "The native package matches the current source, while the game and Mono no longer match the inspected profile.",
+      "basis": "Native source and binary receipt hashes match; both runtime profile digests differ."
+    },
+    {
+      "claim": "Managed compilation alone did not reveal the string-based Harmony target change.",
+      "basis": "Current source compiled, but startup reported undefined named targets after those targets became callback fields."
+    }
+  ],
+  "unverified": [
+    "U60 Unity Mono mapping/export resolution and first-import timing in a fresh game process.",
+    "All native SimDLL import destinations under the updated game runtime.",
+    "Native initialization, frame/event lifetime, save/load, conduits, DLC and failure behavior on U60.",
+    "End-to-end U60 game performance from the native scanner change. Its existing benchmark remains a production-scanner microbenchmark only."
+  ],
+  "fix": {
+    "native_profile_policy": "Keep inspected whitelist unchanged and refuse U60 native takeover.",
+    "managed_fallback": "Only MappedUnverified enables the CycleTrim multicomponent shim; Refused/Disabled preserve managed patch installation and report the actual game build read from runtime metadata.",
+    "liquid_target": "Resolve old method or inspected callback implementation through Jlib; skip unsupported target layouts with a diagnostic.",
+    "minimum_jlib_version": "0.3.9"
+  },
+  "validation": {
+    "cycletrim_option_host": {
+      "status": "passed",
+      "ssmcp_job_id": "61217769373768b4fe2b08e86c4c5837-173",
+      "exit_code": 0,
+      "command": "rtk proxy flock --close /tmp/onimods-quality-build.lock dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj --configuration Release --no-restore -p:UseSharedCompilation=false -p:BuildInParallel=false -- --skip-synthetic-performance",
+      "options_assertions": 148,
+      "coverage": [
+        "actual ModInfo initialization with controlled loader adapter",
+        "MappedUnverified/Refused/Disabled state transitions",
+        "shim only active for mapped state before patch installation",
+        "managed patches and options still registered after refused/disabled native mapping",
+        "runtime build and loader-state diagnostic",
+        "existing publication, batch fallback, concurrency, allocation and production Prefix pixel regressions"
+      ],
+      "limitation": "Controlled native/PLib/Harmony adapters; callback resolver itself is covered by the Jlib real-Harmony host."
+    },
+    "cycletrim_release_compile": {
+      "status": "passed",
+      "ssmcp_job_id": "61217769373768b4fe2b08e86c4c5837-17c",
+      "exit_code": 0,
+      "command": "rtk proxy flock --close /tmp/onimods-quality-build.lock dotnet build mods/CycleTrim/CycleTrim.csproj --configuration Release --no-restore -m:1 -p:UseSharedCompilation=false -p:IncludeOniSim=false -p:DistPath=/tmp/onimods-quality-20261120/cycletrim-u60-managed-dist/ --verbosity minimal",
+      "duration_seconds": 7.51,
+      "warnings": 28,
+      "errors": 0,
+      "warning_scope": "Existing Jlib/PLib unused variables, nullable analysis, obsolete wrapping properties and XML documentation warnings; none in the changed CycleTrim files.",
+      "scope": "Managed Release compilation and temporary package using current U60 game references and the new shared Jlib callback resolver.",
+      "limitation": "Unmodified Rust native code was not rebuilt (IncludeOniSim=false); no installation or game launch."
+    },
+    "u60_game_acceptance": {
+      "status": "pending",
+      "owner": "root"
+    }
+  }
+}

@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Reflection;
 using CycleTrim.Core;
 using CycleTrim.Patches;
 using Jlib.Runtime;
@@ -42,17 +44,18 @@ namespace CycleTrim
             // already pinned CYCLETRIM_ONISIM_WORKERS (including the kill value 1).
             if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS")))
                 Environment.SetEnvironmentVariable("CYCLETRIM_ONISIM_WORKERS", "8");
-            // OniSim is mandatory: map the Rust SimDLL and keep the multicomponent
-            // read-lease shim armed. Official SimDLL is no longer a runtime option.
+            // The native profile is validated before any replacement is opened.
+            // An unsupported game keeps its simulation; managed optimizations can
+            // still load, but must not consume an unmapped native publication.
+            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, true);
+            Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
             CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
                 options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
                 performanceDiagnostics, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
                 options.OptimizeAnimationSymbols, options.OptimizeStateMachineLookups,
-                options.ConduitAnimation, true);
-            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, true);
-            Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
+                options.ConduitAnimation, result.State == LoaderState.MappedUnverified);
 
             if (result.State == LoaderState.MappedUnverified)
             {
@@ -75,8 +78,29 @@ namespace CycleTrim
                     Console.WriteLine("[CycleTrim] Multicomponent provider unavailable: " + error.Message);
                 }
             }
-            else if (result.State == LoaderState.Refused)
-                Console.WriteLine("[CycleTrim][OniSim] FATAL path refused — check Player.log and fix the native mapping.");
+            else
+                Console.WriteLine("[CycleTrim][OniSim] Native replacement not active for game build " +
+                    ReadCurrentGameBuild() + " (state=" + result.State + "); the game's simulation " +
+                    "and compatible managed optimizations remain enabled.");
+        }
+
+        private static string ReadCurrentGameBuild()
+        {
+            // KleiVersion.ChangeList is a const. Reading its metadata avoids
+            // reporting the build used to compile the mod after a game update.
+            try
+            {
+                Type version = typeof(Sim).Assembly.GetType("KleiVersion", false);
+                FieldInfo build = version == null ? null : version.GetField("ChangeList",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                return build != null && build.IsLiteral
+                    ? Convert.ToString(build.GetRawConstantValue(), CultureInfo.InvariantCulture)
+                    : "unknown";
+            }
+            catch (Exception)
+            {
+                return "unknown";
+            }
         }
 
         partial void RegisterOniSimOptions()
