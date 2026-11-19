@@ -35,9 +35,14 @@ try
         throw new Exception("The bundle selected the wrong platform");
     var result = OniSimLoader.Configure(typeof(Program).Assembly, false);
     if (result.State != LoaderState.Disabled) throw new Exception("Disabled settings opened a native library");
-    Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, "off");
-    if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Disabled)
-        throw new Exception("The startup disable override was ignored");
+    foreach (string setting in new[] { "0", "false", "off" })
+    {
+        Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, setting);
+        if (OniSimLoader.Configure(typeof(Program).Assembly, true).State != LoaderState.Disabled)
+            throw new Exception("The startup disable override was ignored: " + setting);
+        if (OniSimLoader.GetMappedLibraryPath() != null)
+            throw new Exception("The startup disable override retained a native mapping: " + setting);
+    }
     Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
     if (OniSimLoader.Configure(typeof(Program).Assembly).State != LoaderState.Refused)
         throw new Exception("Default-on loader did not attempt the guarded mapping path");

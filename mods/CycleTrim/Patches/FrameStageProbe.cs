@@ -39,6 +39,11 @@ namespace CycleTrim.Patches
             var type = AccessTools.TypeByName(typeName);
             var method = type == null || Array.IndexOf(arguments, null) >= 0
                 ? null : AccessTools.Method(type, methodName, arguments);
+            return Resolve(phase, method);
+        }
+
+        private static MethodBase Resolve(FrameTimingPhase phase, MethodBase method)
+        {
             resolved[(int)phase] = method != null;
             if (method == null)
                 UnityEngine.Debug.LogWarning("[CycleTrim][FrameChain] unresolved target: " + Name(phase));
@@ -51,6 +56,15 @@ namespace CycleTrim.Patches
             var method = Resolve(phase, typeName, methodName, arguments);
             if (method != null)
                 targets.Add(method, phase);
+        }
+
+        internal static MethodInfo ResolveGroundRender(Type renderer, Type vector)
+        {
+            if (renderer == null || vector == null) return null;
+            // U60 removed U59's optional forceVisibleRebuild argument. Both
+            // methods enclose the terrain rebuild and draw submission boundary.
+            return AccessTools.Method(renderer, "Render", new[] { vector, vector })
+                ?? AccessTools.Method(renderer, "Render", new[] { vector, vector, typeof(bool) });
         }
 
         [HarmonyPatch]
@@ -75,7 +89,9 @@ namespace CycleTrim.Patches
                 Add(FrameTimingPhase.UserInterface, "KScreenManager", "Update");
                 Add(FrameTimingPhase.Camera, "CameraController", "Update");
                 var vector = AccessTools.TypeByName("Vector2I");
-                Add(FrameTimingPhase.Terrain, "GroundRenderer", "Render", vector, vector, typeof(bool));
+                var terrain = Resolve(FrameTimingPhase.Terrain,
+                    ResolveGroundRender(AccessTools.TypeByName("GroundRenderer"), vector));
+                if (terrain != null) targets.Add(terrain, FrameTimingPhase.Terrain);
                 Add(FrameTimingPhase.Audio, "KFMOD", "RenderEveryTick", typeof(float));
                 Add(FrameTimingPhase.AppLateUpdate, "App", "LateUpdate");
                 return targets.Keys;

@@ -46,6 +46,17 @@ public sealed class App
 }
 public sealed class StateMachineUpdater
 {
+    public class BaseUpdateBucket
+    {
+        public string name = "frame fixture bucket";
+        [MethodImpl(MethodImplOptions.NoInlining)] public virtual void Update(float dt) { }
+    }
+    public sealed class BucketGroup
+    {
+        public BaseUpdateBucket bucket = new BaseUpdateBucket();
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void AdvanceOneSubTick(float dt) { bucket.Update(dt); }
+    }
     [MethodImpl(MethodImplOptions.NoInlining)] public void AdvanceOneSimSubTick() { }
     [MethodImpl(MethodImplOptions.NoInlining)] public void Render(float dt) { }
     [MethodImpl(MethodImplOptions.NoInlining)] public void RenderEveryTick(float dt) { }
@@ -76,7 +87,7 @@ public sealed partial class CameraController
 }
 public sealed class GroundRenderer
 {
-    [MethodImpl(MethodImplOptions.NoInlining)] public void Render(Vector2I min, Vector2I max, bool force) { }
+    [MethodImpl(MethodImplOptions.NoInlining)] public void Render(Vector2I min, Vector2I max) { }
 }
 public static class KFMOD
 {
@@ -95,3 +106,15 @@ public sealed class ChoreProvider
 
 public sealed class PropertyTexturesJob : IWorkItemCollection { public void Run() { } }
 public sealed class SimDebugViewJob : IWorkItemCollection { public void Run() { } }
+
+
+// Keep the inspected U59 overload as a separate shape; patch discovery must not
+// silently accept unrelated changes to the terrain callback's parameters.
+public sealed class LegacyGroundRenderer
+{
+    public void Render(Vector2I min, Vector2I max, bool forceVisibleRebuild = false) { }
+}
+public sealed class UnknownGroundRenderer
+{
+    public void Render(Vector2I min, Vector2I max, int unknown) { }
+}

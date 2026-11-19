@@ -34,7 +34,9 @@ Steam 向既有客户端转发游戏参数，但不保证转发调用者的环�
 粗粒度模式输出 `[CycleTrim][FrameChain]`、更新频率及内存摘要，记录相邻
 `Game.Update` 入口之间的完整间隔。每个窗口约一秒，最多 2,048 个样本；
 包含帧号、总耗时、P50/P95/P99、阶段 inclusive/self 时间和未归因时间。
-它不安装 `DetailedFrameProbe`、`StateMachineBucketTelemetry` 或寻路/物流热点回调。
+它不安装 `DetailedFrameProbe`、`StateMachineBucketTelemetry` 或寻路/物流热点回调，
+也不读取这些未安装探针的快照。粗粒度地形阶段保留相同边界：U60 的
+`GroundRenderer.Render(Vector2I, Vector2I)`，以及 U59 带第三个可选布尔参数的签名。
 [计时窗口](../mods/CycleTrim/Core/FrameTimingWindow.cs)仍有观察开销，需要用同一 DLL
 分别测关闭和开启诊断的成本。
 
@@ -134,6 +136,21 @@ strace 会改变调度，不能把该运行的帧耗时和未跟踪运行直接�
 用 Steam 和 OniHarness，每次从同一测试检查点副本开始，核对游戏版本、原生库和
 已加载 Mod 哈希、其他 Mod、复制人数量、图形模式、速度、更新上限和存档字节。
 先无头定位模拟开销，图形模式另测渲染，不能互相替代。
+
+### 使用同一 DLL 对照原版模拟器
+
+原版对照组启动时添加 `--cycletrim-original-sim`；原生接管组不添加此参数。
+这个参数在 [首次 loader 调用](../mods/CycleTrim/ModInfo.OniSim.cs)之前设置既有
+`CYCLETRIM_ONISIM_ENABLE=0` 熔断，并记录 `Original simulator control mode requested`。
+随后 loader 必须报告 `Disabled`；此组不会映射 OniSim，也不注册 OniSim 多组分 provider。
+它只用于新进程的对照，不能在已经映射原生库的进程中动态切换。
+
+默认仍请求原生接管；未传参数时保留已有环境设置，不替用户覆盖紧急熔断。
+两组须使用相同 DLL、相同粗粒度诊断参数和相同存档输入，并核对真实 loader 状态。
+例如，在下方 OniHarness `launch` 命令中仅对原版组追加
+`--game-arg=--cycletrim-original-sim`。Steam 不能可靠转发启动 shell 的环境，
+所以不要用前置 shell 环境赋值代替这个参数。原版与多组分原生模拟的模型不同，
+这项 A/B 是产品配置对照；不能把差值全归给某一处相同算法的优化。
 
 ### U60 的输入与有效样本门禁
 

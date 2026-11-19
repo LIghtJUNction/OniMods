@@ -226,9 +226,12 @@ namespace CycleTrim.Patches
                 UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / 1048576d,
                 UnityEngine.Profiling.Profiler.GetTotalReservedMemoryLong() / 1048576d,
                 UnityEngine.Profiling.Profiler.GetTotalUnusedReservedMemoryLong() / 1048576d));
-            ReportBuckets();
-            DetailedFrameProbe.Report();
 #endif
+            if (CycleTrimPatchOptions.EnableDetailedPerformanceDiagnostics)
+            {
+                ReportBuckets();
+                DetailedFrameProbe.Report();
+            }
             lastGc0 = gc0;
             lastGc1 = gc1;
             lastGc2 = gc2;
@@ -272,7 +275,6 @@ namespace CycleTrim.Patches
             Debug.Log("[CycleTrim][FrameChain] " + json);
         }
 
-#if !PERFORMANCE_PROBE_HOST_TESTS
         private static void ReportBuckets()
         {
             var samples = Jlib.Runtime.StateMachineBucketTelemetry.SnapshotAndReset();
@@ -296,7 +298,6 @@ namespace CycleTrim.Patches
             json.Append("]}");
             Debug.Log("[CycleTrim][StateMachineBuckets] " + json);
         }
-#endif
 
         private static void Number(StringBuilder json, string name, long value)
         {

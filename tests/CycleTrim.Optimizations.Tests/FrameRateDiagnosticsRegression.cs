@@ -24,6 +24,8 @@ namespace CycleTrim.Optimizations.Tests
             CheckIndependentOpenScopeBoundary();
             CheckBoundedScopesAndDuplicateFinalizers();
             CheckDiagnosticRequests();
+            CheckGroundRendererSignatures();
+            CheckUninstalledDetailedTelemetry();
             var harmony = new Harmony(Owner);
             try
             {
@@ -54,16 +56,76 @@ namespace CycleTrim.Optimizations.Tests
                 CheckLifecycleResets();
                 CheckExceptionAndReentrancy();
                 CheckStageHooksAndWorkerExclusion();
+                Check(Jlib.Runtime.MainThreadMethodTelemetry.InstalledMethodCount == 0
+                    && !Jlib.Runtime.MainThreadMethodTelemetry.Enabled
+                    && !Jlib.Runtime.StateMachineBucketTelemetry.Enabled,
+                    "coarse frame reporting must leave detailed telemetry uninstalled and disabled");
+                Check(!Debug.Messages.Exists(message => message.StartsWith("[CycleTrim][DetailedMethods]")
+                    || message.StartsWith("[CycleTrim][StateMachineBuckets]")),
+                    "coarse frame reporting must not produce detailed telemetry");
+                CheckDetailedReports(harmony);
                 Console.WriteLine("PASS frame diagnostics preserve simulation time and measure complete callback intervals");
             }
             finally
             {
                 harmony.UnpatchAll(Owner);
+                Jlib.Runtime.MainThreadMethodTelemetry.Enabled = false;
+                Jlib.Runtime.StateMachineBucketTelemetry.Enabled = false;
                 Configure(false);
                 FrameRateUnlockPatch.AfterMainMenuSpawn.Postfix();
                 Debug.Messages.Clear();
             }
         }
+
+        private static void CheckGroundRendererSignatures()
+        {
+            var current = FrameStageProbe.ResolveGroundRender(typeof(GroundRenderer), typeof(Vector2I));
+            var legacy = FrameStageProbe.ResolveGroundRender(typeof(LegacyGroundRenderer), typeof(Vector2I));
+            Check(current != null && current.GetParameters().Length == 2,
+                "U60 terrain callback must resolve its two-argument boundary");
+            Check(legacy != null && legacy.GetParameters().Length == 3,
+                "U59 terrain callback must retain its optional bool boundary");
+            Check(FrameStageProbe.ResolveGroundRender(typeof(UnknownGroundRenderer), typeof(Vector2I)) == null,
+                "an unknown terrain signature must remain unresolved");
+        }
+
+        private static void CheckUninstalledDetailedTelemetry()
+        {
+            InvalidOperationException observed = null;
+            try { DetailedFrameProbe.Report(); }
+            catch (InvalidOperationException error) { observed = error; }
+            Check(observed != null && observed.Message ==
+                "Telemetry installation and snapshots require the installation thread.",
+                "the real detailed reporter must reproduce the uninstalled snapshot failure");
+        }
+
+        private static void CheckDetailedReports(Harmony harmony)
+        {
+            CycleTrimPatchOptions.Configure(true, true, true, true, true, true);
+            Jlib.Runtime.MainThreadMethodTelemetry.Install(harmony,
+                new[] { AccessTools.Method(typeof(FrameRateDiagnosticsRegression), nameof(DetailedWork)) });
+            Jlib.Runtime.MainThreadMethodTelemetry.Enabled = true;
+            Jlib.Runtime.StateMachineBucketTelemetry.Install(harmony);
+            Jlib.Runtime.StateMachineBucketTelemetry.Enabled = true;
+            var group = new StateMachineUpdater.BucketGroup();
+            var game = new Game();
+            game.OnSpawn();
+            game.FrameUpdateAction = () =>
+            {
+                DetailedWork();
+                group.AdvanceOneSubTick(0.2f);
+            };
+            Debug.Messages.Clear();
+            DriveFrames(game, FrameTimingWindow.SampleCapacity + 1);
+            Check(Debug.Messages.Exists(message => message.StartsWith("[CycleTrim][DetailedMethods]")),
+                "installed detailed mode must still emit method samples");
+            Check(Debug.Messages.Exists(message => message.StartsWith("[CycleTrim][StateMachineBuckets]")),
+                "installed detailed mode must still emit bucket samples");
+            Console.WriteLine("PASS coarse reporting without detailed installation; installed detailed reporting preserved");
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void DetailedWork() { Thread.SpinWait(1); }
 
         private static void CheckCompleteFrameAndGap()
         {
@@ -308,7 +370,7 @@ namespace CycleTrim.Optimizations.Tests
                 paths.UpdateNavGrids(false);
                 probes.TickFrame();
                 camera.Update();
-                terrain.Render(default(Vector2I), default(Vector2I), false);
+                terrain.Render(default(Vector2I), default(Vector2I));
                 KFMOD.RenderEveryTick(0.2f);
                 app.LateUpdate();
                 if (frame == 0)
@@ -472,7 +534,8 @@ namespace CycleTrim.Optimizations.Tests
 
         private static void Configure(bool enabled)
         {
-            CycleTrimPatchOptions.Configure(true, true, true, true, true, enabled);
+            CycleTrimPatchOptions.Configure(true, true, true, true, true, false,
+                frameDiagnostics: enabled);
         }
 
         private static void Check(bool condition, string message)

@@ -31,6 +31,13 @@ namespace CycleTrim
             // the launching shell's environment, so expose the native probe as
             // an explicit diagnostic-only launch argument as well.
             var arguments = Environment.GetCommandLineArgs();
+            if (Array.IndexOf(arguments, "--cycletrim-original-sim") >= 0)
+            {
+                // Apply the existing emergency switch before the loader can
+                // validate or map anything; Steam forwards arguments, not env.
+                Environment.SetEnvironmentVariable("CYCLETRIM_ONISIM_ENABLE", "0");
+                Console.WriteLine("[CycleTrim][OniSim] Original simulator control mode requested; native replacement disabled before mapping.");
+            }
             var diagnostics = CycleTrimPatchOptions.ResolveDiagnostics(
                 options.EnablePerformanceDiagnostics, arguments,
                 Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));

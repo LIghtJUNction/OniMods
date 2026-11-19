@@ -125,6 +125,9 @@ namespace CycleTrim.PerformanceProbe.Tests
             var expected = useDefaults ? new OniSimOptions() : settings ?? new OniSimOptions();
             var diagnostics = CycleTrimPatchOptions.ResolveDiagnostics(expected.EnablePerformanceDiagnostics,
                 Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable("CYCLETRIM_PERF_PROBE"));
+            var enableBeforeLoad = Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_ENABLE");
+            var originalSimulator = Array.IndexOf(Environment.GetCommandLineArgs(),
+                "--cycletrim-original-sim") >= 0;
             var harmony = new HarmonyLib.Harmony("CycleTrim.Options.Test");
             HarmonyLib.Harmony.BeforePatchAll = () =>
             {
@@ -161,6 +164,9 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "multicomponent shim requires a successful native mapping before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
                     "native core always requested before patch install");
+                Check(OniSimLoader.EnableEnvironmentAtConfigure
+                    == (originalSimulator ? "0" : enableBeforeLoad),
+                    "original-simulator argument applies the existing disable switch before loader entry; default preserves it");
             };
             POptions.OnRegister = () => Check(harmony.Installations == 1,
                 "options dialog registered after the vanilla mod load installed patches");
@@ -295,11 +301,13 @@ namespace OniSim.CycleTrim
     public static class OniSimLoader
     {
         internal static bool LastEnabled;
+        internal static string EnableEnvironmentAtConfigure;
         internal static LoaderState NextState = LoaderState.MappedUnverified;
         internal static int MappedPathQueries;
         public static LoaderResult Configure(System.Reflection.Assembly assembly, bool enabled)
         {
             LastEnabled = enabled;
+            EnableEnvironmentAtConfigure = Environment.GetEnvironmentVariable("CYCLETRIM_ONISIM_ENABLE");
             return new LoaderResult { State = NextState };
         }
         public static string GetMappedLibraryPath() { MappedPathQueries++; return null; }

@@ -56,6 +56,8 @@ public sealed class GraphicsOptionsScreen
 
 namespace UnityEngine
 {
+    public class MonoBehaviour { }
+
     public static class QualitySettings
     {
         public static int vSyncCount = 1;
