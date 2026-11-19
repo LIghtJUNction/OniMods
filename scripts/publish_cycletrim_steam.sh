@@ -138,8 +138,17 @@ PY
 }
 
 require_clean_worktree() {
+  local is_worktree worktree_status
+  if ! is_worktree="$(git -C "$ROOT" rev-parse --is-inside-work-tree)" || [[ "$is_worktree" != true ]]; then
+    echo "Refusing upload: $ROOT is not a Git worktree." >&2
+    exit 1
+  fi
+  if ! worktree_status="$(git -C "$ROOT" status --porcelain --untracked-files=normal)"; then
+    echo "Refusing upload: unable to read Git worktree status for $ROOT." >&2
+    exit 1
+  fi
   [[ "$ALLOW_DIRTY" == true ]] && return
-  if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]]; then
+  if [[ -n "$worktree_status" ]]; then
     echo "Refusing upload from a dirty worktree. Commit the release or pass --allow-dirty." >&2
     exit 1
   fi
