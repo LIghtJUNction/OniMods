@@ -1,6 +1,45 @@
 # OniSim multicomponent publication bridge
 
-**Status:** architecture gate; not a production implementation or runtime acceptance receipt.
+**Status:** source contracts and historical design gates; not a runtime acceptance receipt.
+
+## Derived-field contract (2026-11-20)
+
+The borrowed v1 view retains its 20-byte species records, 24-byte cell headers,
+40-byte update descriptor, version and reserved-field checks. The native
+capability `liquidVolumeFraction: true` now promises the following calculation
+for the serial, parallel, initial and legacy-grid publication paths.
+
+For each liquid species, raw fill is `mass / max(max_mass, 1e-6)`, using the
+same nominal capacity as `native/src/liquid_transport.rs`. Sum all authoritative
+liquid species, including the secondary slot and sparse extras. This raw sum
+can exceed one for compressed liquid; the transport solver keeps that value.
+The published cell occupied fraction is `min(raw_sum, 1)`. Each liquid's
+published occupied fraction is `raw_species / max(raw_sum, 1)`, so an overfull
+cell remains full and the fractions divide its occupied volume without
+discarding any mass. Publication accumulates in f64 and converts the result to
+f32; transport retains its existing f32 arithmetic.
+
+This is a solver occupancy measure, not an equation of state. The current
+solver has no calibrated authoritative gas, liquid or partial pressure in
+kPa. Its wire pressure fields retain finite placeholders for ABI compatibility.
+OniSim's Jlib adapter explicitly sets pressure availability to false, even if
+a numeric wire value is present. Gas and solid per-species volume fractions
+also remain unavailable. Inventory mass and temperature remain readable.
+
+Jlib 0.3.10 exposes these availability fields. The original constructors keep
+their existing all-values-known meaning for other providers. New OniSim
+readers require the explicit native fill capability: missing, malformed or
+non-boolean capability data leaves fill unknown. Vent retains the original
+game decision when fill is unknown; composition hover does not display an
+unavailable partial pressure. MCP cell resources include availability and
+reason codes separately from nullable numeric fields, so JSON null omission
+cannot turn an unknown pressure into a measured vacuum.
+
+The targeted regression sources cover multiple liquid capacities, secondary
+and extra inventories, compressed fill above one, empty/gas cells, all
+publication paths, single/batch availability and the production Vent prefix.
+Host results and game acceptance receipts are recorded separately; this
+contract does not establish a whole-game performance improvement.
 
 ## Decision
 

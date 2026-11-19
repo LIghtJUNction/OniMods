@@ -40,6 +40,7 @@ mod float_env;
 mod fluid_displacement;
 mod fluid_helpers;
 mod fluid_pressure;
+mod liquid_fill;
 mod liquid_transport;
 #[cfg(test)]
 mod hydraulic_regression_tests;
@@ -117,6 +118,7 @@ const CAPABILITIES: &[u8] = concat!(
     "\"callbacks\":false,\"callbackRecords\":true,\"saveLoad\":true,\"events\":true,",
     "\"flow\":true,\"textures\":false,\"radiationSimulation\":true,\"radiationStorage\":\"native\",",
     "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",\"multicomponentPublication\":\"multicomponent-coexistence-v1\",",
+    "\"liquidVolumeFraction\":true,",
     "\"storageMutationTiming\":\"frame-command-stage\",\"officialCommandScheduling\":false,",
     "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable\",\"runtimeValidated\":false,",
     "\"batchPrevalidation\":true,\"readyObservation\":true,\"externalPointerSynchronization\":\"caller-required\"}\0"

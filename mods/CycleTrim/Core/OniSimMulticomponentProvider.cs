@@ -60,6 +60,7 @@ namespace CycleTrim.Core
         private readonly System.Action releaseUpdate;
         private readonly Func<ushort, Element> resolveElement;
         private readonly Func<ulong> contentRevision;
+        private readonly bool liquidVolumeFractionAvailable;
         public ulong ContentRevision { get { return contentRevision == null ? 0 : contentRevision(); } }
 
         // Engine.run_batch reuses derived publication only after both buffers
@@ -75,6 +76,14 @@ namespace CycleTrim.Core
             System.Action releaseUpdate,
             Func<ushort, Element> resolveElement = null,
             Func<ulong> contentRevision = null)
+            : this(acquireUpdate, releaseUpdate, false, resolveElement, contentRevision) { }
+
+        public OniSimMulticomponentProvider(
+            Func<IntPtr> acquireUpdate,
+            System.Action releaseUpdate,
+            bool liquidVolumeFractionAvailable,
+            Func<ushort, Element> resolveElement = null,
+            Func<ulong> contentRevision = null)
         {
             if (acquireUpdate == null)
                 throw new ArgumentNullException("acquireUpdate");
@@ -84,6 +93,7 @@ namespace CycleTrim.Core
             this.releaseUpdate = releaseUpdate;
             this.resolveElement = resolveElement ?? ResolveCanonicalElement;
             this.contentRevision = contentRevision;
+            this.liquidVolumeFractionAvailable = liquidVolumeFractionAvailable;
         }
 
         public bool IsReady
@@ -176,7 +186,9 @@ namespace CycleTrim.Core
                         mass,
                         temperature,
                         volumeFraction,
-                        partialPressureKPa);
+                        partialPressureKPa,
+                        volumeFractionAvailable: liquidVolumeFractionAvailable && phase == MulticomponentPhase.Liquid,
+                        partialPressureAvailable: false);
                 }
 
                 // Species records are copied while the native GameData read
@@ -189,7 +201,9 @@ namespace CycleTrim.Core
                     totalMass,
                     gasPressureKPa,
                     liquidPressureKPa,
-                    liquidVolumeFraction);
+                    liquidVolumeFraction,
+                    liquidVolumeFractionAvailable: liquidVolumeFractionAvailable,
+                    pressureAvailable: false);
                 return true;
             }
             finally
@@ -325,11 +339,15 @@ namespace CycleTrim.Core
                             return false;
                         components[i] = new MulticomponentSpecies(element, phase, mass,
                             ReadSingle(species, record + 8), ReadSingle(species, record + 12),
-                            ReadSingle(species, record + 16));
+                            ReadSingle(species, record + 16),
+                            volumeFractionAvailable: owner.liquidVolumeFractionAvailable && phase == MulticomponentPhase.Liquid,
+                            partialPressureAvailable: false);
                     }
                     snapshot = new MulticomponentCellSnapshot(components, count,
                         ReadSingle(cells, at + 8), ReadSingle(cells, at + 12),
-                        ReadSingle(cells, at + 16), ReadSingle(cells, at + 20));
+                        ReadSingle(cells, at + 16), ReadSingle(cells, at + 20),
+                        liquidVolumeFractionAvailable: owner.liquidVolumeFractionAvailable,
+                        pressureAvailable: false);
                     return true;
                 }
                 finally { reading = false; }

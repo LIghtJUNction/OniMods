@@ -35,6 +35,26 @@ pub struct OniSimMulticomponentSpeciesRecord {
     pub partial_pressure_kpa: f32,
 }
 
+// All publication paths use the authoritative liquid species, including extras.
+// Gas/solid volume and every kPa field remain uncomputed in ABI v1; managed
+// consumers must consult the separate capability/availability contract.
+fn publish_liquid_fill(records: &mut [OniSimMulticomponentSpeciesRecord],
+    elements: &ElementTable) -> f32 {
+    let raw_fill: f64 = records.iter().filter(|record| record.phase == 2)
+        .map(|record| crate::liquid_fill::raw_fill_wide(record.mass,
+            elements.elements[record.element_id as usize].record.max_mass))
+        .fold(0.0_f64, |total, fill| total + fill);
+    if raw_fill > 0.0 {
+        for record in records.iter_mut().filter(|record| record.phase == 2) {
+            let species_fill = crate::liquid_fill::raw_fill_wide(record.mass,
+                elements.elements[record.element_id as usize].record.max_mass);
+            record.volume_fraction =
+                crate::liquid_fill::species_occupied_fraction(species_fill, raw_fill);
+        }
+    }
+    crate::liquid_fill::occupied_fraction(raw_fill)
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct OniSimMulticomponentCellHeader {
@@ -224,6 +244,8 @@ impl MulticomponentBuffers {
             });
 
             if self.validation_error.is_some() { return; }
+            let liquid_volume_fraction =
+                publish_liquid_fill(&mut self.species[species_offset..next_species], elements);
             if unchanged && species_count == previous.species_count {
                 self.reused_cells += 1;
             }
@@ -238,7 +260,7 @@ impl MulticomponentBuffers {
                 total_mass,
                 gas_pressure_kpa: 0.0,
                 liquid_pressure_kpa: 0.0,
-                liquid_volume_fraction: 0.0,
+                liquid_volume_fraction,
             };
         }
         self.species_len = next_species;
@@ -326,6 +348,7 @@ impl MulticomponentBuffers {
                     let cell = block * BLOCK + local;
                     let internal = world.internal_index(cell);
                     let temperature = state(cell, internal).1;
+                    let start = at;
                     let offset = offsets[block] + at;
                     let previous = *header;
                     let mut unchanged = previous.species_offset as usize == offset;
@@ -348,11 +371,13 @@ impl MulticomponentBuffers {
                         count += 1;
                         total_mass += mass;
                     });
+                    let liquid_volume_fraction =
+                        publish_liquid_fill(&mut records[start..at], elements);
                     reused += usize::from(unchanged && count == previous.species_count);
                     *header = OniSimMulticomponentCellHeader {
                         species_offset: offset as u32, species_count: count,
                         reserved: if count == 0 { 0 } else { CELL_FLAG_HAS_SPECIES },
-                        total_mass, gas_pressure_kpa: 0.0, liquid_pressure_kpa: 0.0, liquid_volume_fraction: 0.0,
+                        total_mass, gas_pressure_kpa: 0.0, liquid_pressure_kpa: 0.0, liquid_volume_fraction,
                     };
                 }
                 reused
@@ -484,6 +509,8 @@ impl MulticomponentBuffers {
                 total_mass += mix_mass;
             }
 
+            let liquid_volume_fraction =
+                publish_liquid_fill(&mut self.species[species_offset..next_species], elements);
             self.cells[cell] = OniSimMulticomponentCellHeader {
                 species_offset: species_offset as u32,
                 species_count,
@@ -495,7 +522,7 @@ impl MulticomponentBuffers {
                 total_mass,
                 gas_pressure_kpa: 0.0,
                 liquid_pressure_kpa: 0.0,
-                liquid_volume_fraction: 0.0,
+                liquid_volume_fraction,
             };
         }
         self.species_len = next_species;
@@ -913,11 +940,11 @@ mod tests {
         assert_eq!(cells[0].gas_pressure_kpa, 0.0);
         assert_eq!(cells[1].species_offset, 1);
         assert_eq!(cells[1].species_count, 1);
-        assert_eq!(cells[1].liquid_volume_fraction, 0.0);
+        assert_eq!(cells[1].liquid_volume_fraction, 0.25);
         assert_eq!(cells[1].liquid_pressure_kpa, 0.0);
         assert_eq!(species[1].element_id, 2);
         assert_eq!(species[1].phase, 2);
-        assert_eq!(species[1].volume_fraction, 0.0);
+        assert_eq!(species[1].volume_fraction, 0.25);
         assert_eq!(species[1].partial_pressure_kpa, 0.0);
     }
 
@@ -1002,3 +1029,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "multicomponent_liquid_fill_tests.rs"]
+mod liquid_fill_tests;

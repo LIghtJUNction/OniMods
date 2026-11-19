@@ -75,6 +75,7 @@ namespace CycleTrim
                     {
                         var reader = OniSimPublicationReader.Open(nativePath);
                         var provider = new OniSimMulticomponentProvider(reader.Acquire, reader.Release,
+                            liquidVolumeFractionAvailable: reader.LiquidVolumeFractionAvailable,
                             contentRevision: () => reader.ContentRevision);
                         if (!MulticomponentCellAccess.RegisterProvider(provider))
                             Console.WriteLine("[CycleTrim] Multicomponent provider was already registered.");

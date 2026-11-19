@@ -18,7 +18,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Tags = new List<string> { "world", "cell", "grid", "terrain", "elements", "temperature", "disease", "map", "格子", "元素" },
                 Hidden = true,
-                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=cell_info",
+                Description = "读取格子信息：使用 resources/read uri=oni://world/cell/{x}/{y}，或 world_editor command=read path=/active/map/cell_X_Y.md",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter
@@ -137,8 +137,16 @@ namespace OniMcp.Tools
                     ["state"] = ToolUtil.GetElementState(component.Element),
                     ["massKg"] = (double)component.Mass,
                     ["temperatureK"] = (double)component.Temperature,
-                    ["partialPressureKPa"] = (double)component.PartialPressureKPa,
-                    ["volumeFraction"] = (double)component.VolumeFraction
+                    ["partialPressureAvailable"] = component.PartialPressureAvailable,
+                    ["partialPressureReasonCode"] = component.PartialPressureAvailable
+                        ? null : "provider_pressure_unavailable",
+                    ["partialPressureKPa"] = component.PartialPressureAvailable
+                        ? (object)(double)component.PartialPressureKPa : null,
+                    ["volumeFractionAvailable"] = component.VolumeFractionAvailable,
+                    ["volumeFractionReasonCode"] = component.VolumeFractionAvailable
+                        ? null : "provider_volume_fraction_unavailable",
+                    ["volumeFraction"] = component.VolumeFractionAvailable
+                        ? (object)(double)component.VolumeFraction : null
                 });
             }
 
@@ -147,9 +155,16 @@ namespace OniMcp.Tools
                 ["available"] = true,
                 ["componentCount"] = mixture.ComponentCount,
                 ["totalMassKg"] = (double)mixture.TotalMass,
-                ["gasPressureKPa"] = (double)mixture.GasPressureKPa,
-                ["liquidPressureKPa"] = (double)mixture.LiquidPressureKPa,
-                ["liquidVolumeFraction"] = (double)mixture.LiquidVolumeFraction,
+                ["pressureAvailable"] = mixture.PressureAvailable,
+                ["pressureReasonCode"] = mixture.PressureAvailable
+                    ? null : "provider_pressure_unavailable",
+                ["gasPressureKPa"] = mixture.PressureAvailable ? (object)(double)mixture.GasPressureKPa : null,
+                ["liquidPressureKPa"] = mixture.PressureAvailable ? (object)(double)mixture.LiquidPressureKPa : null,
+                ["liquidVolumeFractionAvailable"] = mixture.LiquidVolumeFractionAvailable,
+                ["liquidVolumeFractionReasonCode"] = mixture.LiquidVolumeFractionAvailable
+                    ? null : "provider_volume_fraction_unavailable",
+                ["liquidVolumeFraction"] = mixture.LiquidVolumeFractionAvailable
+                    ? (object)(double)mixture.LiquidVolumeFraction : null,
                 ["components"] = components
             };
         }

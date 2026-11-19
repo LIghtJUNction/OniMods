@@ -105,7 +105,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 throw new ArgumentNullException(nameof(resolver));
             // Do not add counters or the session facade's managed GlobalGate to
             // these delegates: this is the exact production native read path.
-            return new OniSimMulticomponentProvider(reader.Acquire, reader.Release, resolver);
+            return new OniSimMulticomponentProvider(reader.Acquire, reader.Release,
+                reader.LiquidVolumeFractionAvailable, resolver);
         }
 
         internal void VerifyLeaseDuringPublicationAndShutdown()

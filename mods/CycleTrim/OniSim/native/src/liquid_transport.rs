@@ -21,7 +21,7 @@ fn volume(species: &[(u16, f32)], elements: &ElementTable) -> f32 {
     species
         .iter()
         .filter(|entry| phase(elements, entry.0) == 2)
-        .map(|&(id, mass)| mass / elements.elements[id as usize].record.max_mass.max(1.0e-6))
+        .map(|&(id, mass)| crate::liquid_fill::raw_fill(mass, elements.elements[id as usize].record.max_mass))
         .sum()
 }
 
@@ -29,7 +29,7 @@ fn cell_volume(world: &PhysicsWorld, elements: &ElementTable, cell: usize) -> f3
     let mut result = 0.0;
     world.for_each_cell_species(cell, |id, mass| {
         if phase(elements, id) == 2 {
-            result += mass / elements.elements[id as usize].record.max_mass.max(1.0e-6);
+            result += crate::liquid_fill::raw_fill(mass, elements.elements[id as usize].record.max_mass);
         }
     });
     result

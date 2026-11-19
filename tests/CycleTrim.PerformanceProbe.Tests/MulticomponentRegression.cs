@@ -18,6 +18,7 @@ namespace CycleTrim.PerformanceProbe.Tests
         internal static void Run()
         {
             VerifyNativeStructSizes();
+            assertions += MulticomponentAvailabilityRegression.Run();
             VerifyFailClosedAccessAndValidation();
             VerifyOniSimProviderAndZeroAllocHotPath();
             VerifyPhysiologyVisualPlantNavBuildingHoverEvaluators();

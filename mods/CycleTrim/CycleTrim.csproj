@@ -13,7 +13,7 @@
     <ModDescription>Early experimental performance mod. Rebuilds the underlying algorithms and moves as much computation as possible onto the GPU. Speed first, compatibility later. / 早期实验性性能模组。重构底层算法，把尽可能多的运算搬到 GPU。先加速，再兼容。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.4.24</ModVersion>
-    <JlibMinimumVersion>0.3.9</JlibMinimumVersion>
+    <JlibMinimumVersion>0.3.10</JlibMinimumVersion>
     <Version>$(ModVersion)</Version>
     <ModApiVersion>2</ModApiVersion>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">true</IncludeOniSim>
