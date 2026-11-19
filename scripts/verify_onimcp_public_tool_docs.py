@@ -11,19 +11,54 @@ from onimcp_verify_parsing import fail
 from verify_onimcp_tool_surface import EXPECTED_REGISTERED, EXPECTED_INTERNAL
 
 
-def extract_nested_tool_list(text: str, marker: str, source: str) -> set[str]:
-    marker_index = text.find(marker)
-    if marker_index < 0:
-        fail(f"{source}: missing marker {marker!r}")
+def extract_public_tool_table(text: str, source: str) -> set[str]:
+    """Read a tool-identifier column without depending on translated headings."""
+    tables: list[set[str]] = []
+    rows: list[str] = []
+    fence: str | None = None
 
-    tools: set[str] = set()
-    for line in text[marker_index:].splitlines()[1:]:
-        if not line.startswith("  - "):
-            break
-        match = re.match(r"\s*-\s+`([a-z0-9_]+)`", line)
-        if match is not None:
-            tools.add(match.group(1))
-    return tools
+    def finish_table() -> None:
+        table = rows[:]
+        rows.clear()
+        if len(table) < 3 or not re.fullmatch(
+            r"\|(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*", table[1]
+        ):
+            return
+        names: list[str] = []
+        malformed = False
+        for row in table[2:]:
+            cell = row[1:-1].split("|", 1)[0].strip()
+            match = re.fullmatch(r"`([a-z][a-z0-9_]*)`|([a-z][a-z0-9_]*)", cell)
+            if match is None:
+                malformed = True
+            else:
+                names.append(match[1] or match[2])
+        if not set(names) & (EXPECTED_REGISTERED | EXPECTED_INTERNAL):
+            return
+        if malformed:
+            fail(f"{source}: malformed tool identifier in public table")
+        if len(set(names)) != len(names):
+            fail(f"{source}: duplicate tool identifier in public table")
+        tables.append(set(names))
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if fence is not None:
+            if re.fullmatch(re.escape(fence[0]) + "{" + str(len(fence)) + ",}", stripped):
+                fence = None
+            continue
+        opening = re.match(r"(`{3,}|~{3,})", stripped)
+        if opening is not None:
+            finish_table()
+            fence = opening[1]
+        elif stripped.startswith("|") and stripped.endswith("|"):
+            rows.append(stripped)
+        else:
+            finish_table()
+    finish_table()
+    if len(tables) != 1:
+        fail(f"{source}: expected one public tool table, found {len(tables)}")
+    return tables[0]
 
 
 def extract_quick_start_tools(text: str) -> set[str]:
@@ -117,11 +152,11 @@ def main() -> None:
     runtime_smoke = runtime_smoke_path.read_text(encoding="utf-8")
 
     assert_exact_public(
-        extract_nested_tool_list(readme_zh, "- 常用公开工具:", str(readme_zh_path.relative_to(root))),
+        extract_public_tool_table(readme_zh, str(readme_zh_path.relative_to(root))),
         str(readme_zh_path.relative_to(root)),
     )
     assert_exact_public(
-        extract_nested_tool_list(readme_en, "- Default public aggregates:", str(readme_en_path.relative_to(root))),
+        extract_public_tool_table(readme_en, str(readme_en_path.relative_to(root))),
         str(readme_en_path.relative_to(root)),
     )
     assert_exact_public(

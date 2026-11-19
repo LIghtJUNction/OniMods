@@ -26,6 +26,14 @@ def method_body(source: str, marker: str) -> str:
     raise AssertionError(f"unbalanced method: {marker}")
 
 
+def assert_documented_auth_default(readme: str) -> None:
+    """Check the stable configuration value, independent of English phrasing."""
+    examples = re.findall(r"`\s*AuthEnabled\s*=\s*(true|false)\s*`", readme)
+    assert examples and examples[0] == "false", (
+        "README must document the opt-in authentication default as AuthEnabled=false"
+    )
+
+
 def main() -> int:
     options = (ROOT / "mods/OniMcp/Config/OniMcpOptions.cs").read_text(encoding="utf-8")
     masked_token = (ROOT / "mods/OniMcp/Config/MaskedTokenOptionsEntry.cs").read_text(encoding="utf-8")
@@ -116,7 +124,7 @@ def main() -> int:
     assert 'type=""password""' in render and 'name=""authTokenReplacement""' in render
     assert "options.AuthToken" not in render
     assert 'path == "/settings"' not in virtual_world
-    assert "only after" in readme and "manually enabled" in readme
+    assert_documented_auth_default(readme)
 
     print("auth/options contract passed")
     print("manual UI check: open OniMcp Options; verify controls fit, token is masked, and the optional Donate link opens the OniMcp project at donate.lmm.best")
