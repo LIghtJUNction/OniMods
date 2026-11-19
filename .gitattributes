@@ -1,7 +1,9 @@
 *.png filter=lfs diff=lfs merge=lfs -text
 
-# Keep CycleTrim branding available in documentation and source archives.
+# Keep Workshop covers and CycleTrim branding available in documentation and source archives.
 mods/CycleTrim/preview.png -filter -diff -merge -text
+mods/OniMcp/preview.png -filter -diff -merge -text
+mods/OniOnline/preview.png -filter -diff -merge -text
 mods/CycleTrim/docs/images/logo-*.png -filter -diff -merge -text
 
 # Preserve the exact hashed input from the completed round-2 experiment.
