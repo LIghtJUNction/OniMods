@@ -217,7 +217,6 @@ def main() -> int:
         ("PerformanceProbeCounter(bool consistentSnapshots = false)", "counter snapshot-coordination mode is missing"),
         ("internal static bool TryRecord(PerformanceProbeCounter counter, long elapsedTicks)", "skipped-Prefix-safe recorder is missing"),
         ("if (counter == null)", "skipped-Prefix-safe recorder does not fail open on a missing owner"),
-        ("lock (snapshotLock)", "coordinated counter does not group record/snapshot state"),
         ("Interlocked.Increment(ref callCount)", "counter call count is not atomic"),
         ("Interlocked.Add(ref totalTicks", "counter total is not atomic"),
         ("Interlocked.CompareExchange(", "counter maximum is not atomic"),
@@ -231,9 +230,16 @@ def main() -> int:
         failures.append("skipped-Prefix-safe recording path must not allocate managed objects")
     if "counter.Record(elapsedTicks);" not in try_record:
         failures.append("valid timing owners must preserve normal counter recording")
-    if "new " in core.split("internal void Record(long elapsedTicks)", 1)[1].split(
+    record_body = core.split("internal void Record(long elapsedTicks)", 1)[1].split(
         "internal PerformanceProbeSnapshot Snapshot()", 1
-    )[0]:
+    )[0]
+    snapshot_body = core.split("internal PerformanceProbeSnapshot Snapshot()", 1)[1].split(
+        "internal readonly struct PerformanceProbeSnapshot", 1
+    )[0]
+    for operation, body in (("record", record_body), ("snapshot", snapshot_body)):
+        require(body, "lock (stripe)",
+                f"coordinated counter {operation} does not protect coherent stripe state", failures)
+    if "new " in record_body:
         failures.append("recording path must not allocate managed objects")
 
     for needle, message in (

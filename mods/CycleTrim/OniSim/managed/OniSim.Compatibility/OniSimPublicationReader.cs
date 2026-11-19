@@ -113,7 +113,7 @@ namespace OniSim.Compatibility
         private sealed class PublicationCapabilities
         {
             [DataMember(Name = "liquidVolumeFraction")]
-            public object LiquidVolumeFraction;
+            public object LiquidVolumeFraction = false;
         }
 
         public ulong ContentRevision { get { return api.GetMulticomponentRevision == null ? 0 : api.GetMulticomponentRevision(); } }
