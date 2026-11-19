@@ -7,7 +7,6 @@ namespace OniModTemplate
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
-            harmony.PatchAll();
         }
     }
 }

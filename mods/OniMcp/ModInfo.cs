@@ -37,8 +37,6 @@ namespace OniMcp
                 Debug.LogWarning($"[OniMcp] POptions registration skipped: {e}");
             }
 
-            // 注册 Harmony Patch
-            harmony.PatchAll();
             InputSafetyPatchVerifier.EnsureInstalled(harmony, "OnLoad");
             AutoDisinfectPolicy.EnsureInstalled(harmony, "OnLoad");
             OniMcpLog.Debug($"[OniMcp] Loaded assembly {modAssembly.GetName().Version} from {modAssembly.Location}");
