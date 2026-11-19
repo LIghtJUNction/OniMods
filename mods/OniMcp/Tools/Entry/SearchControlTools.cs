@@ -74,7 +74,7 @@ namespace OniMcp.Tools
                         {
                             ["style"] = "search_action",
                             ["rule"] = "Pick a search result, then pass id, name, prefabId, areaId, or targetRef into the follow-up action template. Do not pass coordinates to ordinary action tools.",
-                            ["coordinateFallback"] = "Use coordinate_control only when no semantic result id, areaId, name, or targetRef can express the target."
+                            ["coordinateFallback"] = "For a coordinate-only target, use world_editor command=read path=/active/map/cell_X_Y.md worldId=W task=\"Inspect target anchor\", replacing X/Y/W with its coordinates and worldId. If that world is not active, first call navigation_control domain=camera action=set_active_world worldId=W task=\"Inspect target world\". Reuse the returned id, name, prefabId or areaId in the relevant public action template."
                         },
                         ["nextActions"] = BuildNextActions(domain, args)
                     };

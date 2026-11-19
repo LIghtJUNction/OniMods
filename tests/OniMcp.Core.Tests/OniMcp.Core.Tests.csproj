@@ -21,6 +21,9 @@
     <Compile Include="../../mods/OniMcp/Support/McpTextContentEncoder.cs" Link="Production/McpTextContentEncoder.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Core/*.cs" Link="Production/Tools/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/CoreToolEnglishDescriptions.cs" Link="Production/Tools/CoreToolEnglishDescriptions.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/World/WorldSearchEntryTools.cs" Link="Production/Tools/WorldSearchEntryTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/World/WorldSearchRequest.cs" Link="Production/Tools/WorldSearchRequest.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/World/WorldSearchResultTools.cs" Link="Production/Tools/WorldSearchResultTools.cs" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

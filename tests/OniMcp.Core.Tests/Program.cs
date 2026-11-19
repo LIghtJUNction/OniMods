@@ -15,6 +15,14 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--coordinate-search-only")
+        {
+            Run("coordinate labels stay inside the visible screenshot", CoordinateLabelPlacementRegression.Run);
+            Run("cell search kind aliases preserve results", WorldSearchKindRegression.Run);
+            Run("search continuations name executable public tools", SearchGuidanceRegression.Run);
+            return failures == 0 ? 0 : 1;
+        }
+
         if (args.Length == 1 && args[0] == "--public-read-guidance-only")
         {
             Run("public read continuations preserve complete state", PublicReadGuidanceRegression.Run);
@@ -35,6 +43,9 @@ internal static class Program
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
         Run("camera coordinate exception preserves gameplay boundaries", CameraCoordinateRegression.Run);
+        Run("coordinate labels stay inside the visible screenshot", CoordinateLabelPlacementRegression.Run);
+        Run("cell search kind aliases preserve results", WorldSearchKindRegression.Run);
+        Run("search continuations name executable public tools", SearchGuidanceRegression.Run);
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);

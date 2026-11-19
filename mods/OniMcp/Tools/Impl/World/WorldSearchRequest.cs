@@ -147,6 +147,8 @@ namespace OniMcp.Tools
                 if (string.IsNullOrWhiteSpace(value))
                     return;
                 string kind = value.Trim().ToLowerInvariant();
+                if (kind == "cell")
+                    kind = "cells";
                 if (kind == "element")
                     kind = "elements";
                 if (kind == "resource")

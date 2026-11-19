@@ -129,22 +129,26 @@ namespace OniMcp
                 }
             }
 
-            if (request.ShowCoordinates)
+            if (request.ShowCoordinates
+                && TryWorldLineToScreen(request.X1 - 0.5f, request.Y1 - 0.5f,
+                    request.X2 + 0.5f, request.Y2 + 0.5f, out Rect bounds)
+                && bounds.xMax >= 0f && bounds.yMax >= 0f
+                && bounds.xMin <= Screen.width && bounds.yMin <= Screen.height)
             {
                 for (int x = request.X1; x <= request.X2 && labelCount < MaxLabelObjects; x += step)
                 {
                     if (TryWorldToTopLeft(x, request.Y2 + 0.65f, out Vector2 top))
-                        UpdateLabel(labelCount++, x.ToString(), top.x - 18f, top.y - 18f, 42f, 20f);
+                        UpdateAxisLabel(ref labelCount, x.ToString(), top, true, -18f);
                     if (TryWorldToTopLeft(x, request.Y1 - 0.65f, out Vector2 bottom))
-                        UpdateLabel(labelCount++, x.ToString(), bottom.x - 18f, bottom.y - 2f, 42f, 20f);
+                        UpdateAxisLabel(ref labelCount, x.ToString(), bottom, true, -2f);
                 }
 
                 for (int y = request.Y1; y <= request.Y2 && labelCount < MaxLabelObjects; y += step)
                 {
                     if (TryWorldToTopLeft(request.X1 - 0.85f, y, out Vector2 left))
-                        UpdateLabel(labelCount++, y.ToString(), left.x - 42f, left.y - 10f, 40f, 20f);
+                        UpdateAxisLabel(ref labelCount, y.ToString(), left, false, -42f);
                     if (TryWorldToTopLeft(request.X2 + 0.85f, y, out Vector2 right))
-                        UpdateLabel(labelCount++, y.ToString(), right.x + 2f, right.y - 10f, 40f, 20f);
+                        UpdateAxisLabel(ref labelCount, y.ToString(), right, false, 2f);
                 }
             }
 
@@ -187,6 +191,20 @@ namespace OniMcp
                 return false;
             screen = new Vector2(point.x, Screen.height - point.y);
             return true;
+        }
+
+        private void UpdateAxisLabel(ref int count, string text, Vector2 anchor, bool horizontal, float edgeOffset)
+        {
+            if (count >= MaxLabelObjects)
+                return;
+            float length = horizontal ? 42f : 20f;
+            float depth = horizontal ? 20f : 40f;
+            if (CoordinateLabelPlacement.TryPlace(horizontal ? anchor.x : anchor.y,
+                (horizontal ? anchor.y : anchor.x) + edgeOffset,
+                horizontal ? Screen.width : Screen.height, horizontal ? Screen.height : Screen.width,
+                length, depth, out float along, out float across))
+                UpdateLabel(count++, text, horizontal ? along : across, horizontal ? across : along,
+                    horizontal ? length : depth, horizontal ? depth : length);
         }
 
         private void UpdateLine(int index, Rect rect, Color color)

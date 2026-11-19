@@ -74,7 +74,7 @@ namespace OniMcp.Tools
                 ["sort"] = request.Sort,
                 ["near"] = request.HasNear ? (object)new[] { request.NearX.Value, request.NearY.Value } : null,
                 ["summary"] = hits.GroupBy(hit => hit.Kind).ToDictionary(group => group.Key, group => group.Count()),
-                ["recommendedFollowUp"] = "Use world_area_snapshot or world_text_map around a cluster bbox when terrain context is needed; use camera_focus_cell for visual inspection."
+                ["recommendedFollowUp"] = "For terrain context, use world_editor command=read path=/active/map/zoom_X1_Y1_X2_Y2.md worldId=W task=\"Inspect selected terrain\". Use a bounded cluster bbox, or the selected cell as both corners. Replace W with the result worldId; maps require that world to be active. If needed, first call navigation_control domain=camera action=set_active_world worldId=W task=\"Inspect result world\". For visual inspection, use navigation_control domain=camera action=focus_cell x=X y=Y worldId=W task=\"Inspect selected result\"; replace X/Y with a hit or suggestedCells coordinate."
             };
 
             if (request.ReturnMode == "summary")
