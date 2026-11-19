@@ -30,6 +30,7 @@
     <Compile Include="OniSim/managed/OniSim.Mod/OniSimLoader.cs" Link="OniSim/OniSimLoader.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/NativePlatform.cs" Link="OniSim/NativePlatform.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/OfficialProfile.cs" Link="OniSim/OfficialProfile.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/InspectedGameProfile.cs" Link="OniSim/InspectedGameProfile.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/PortableProfile.cs" Link="OniSim/PortableProfile.cs" />
   </ItemGroup>
 

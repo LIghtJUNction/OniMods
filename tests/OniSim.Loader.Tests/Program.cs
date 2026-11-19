@@ -9,11 +9,19 @@ if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile")
     using var context = new System.Reflection.MetadataLoadContext(resolver, "mscorlib");
     var assembly = context.LoadFromAssemblyPath(assemblyPath);
     Console.WriteLine("portableAbiSha256=" + PortableProfile.Fingerprint(assembly));
-    if (args[0] == "--check-profile") PortableProfile.Validate(assembly);
+    if (args[0] == "--check-profile")
+    {
+        var profile = OfficialProfile.ValidateAssembly(assembly);
+        string monoPath = Jlib.Runtime.NativePlatform.MonoPath(assemblyPath);
+        OfficialProfile.ValidateRuntime(assembly, profile, monoPath);
+        Console.WriteLine("Inspected game build=" + PortableProfile.ReadGameBuild(assembly) +
+            "; assembly, release metadata, ABI and platform runtime preflight passed");
+    }
     return;
 }
 
 PortableProfileTests.Run();
+InspectedGameProfileTests.Run();
 MulticomponentImageTests.Run();
 NativePlatform.RequireSupported();
 Environment.SetEnvironmentVariable(OniSimLoader.EnableVariable, null);
@@ -65,13 +73,26 @@ try
     shutdown();
     if (status() != 0) throw new Exception("Native shutdown failed");
     if (frameState() != 0) throw new Exception("Shutdown retained a live frame signal");
+    // U60 now also shuts Sim down at the end of Game.DestroyInstances. A
+    // repeated cleanup and the next official load must remain valid.
+    shutdown();
+    if (status() != 0 || frameState() != 0)
+        throw new Exception("Repeated game shutdown was not harmless");
+    var officialInitialize = module.Bind<Initialize>("SIM_Initialize");
+    officialInitialize(IntPtr.Zero);
+    if (status() != 0) throw new Exception("Reinitialization after game cleanup failed");
+    officialInitialize(IntPtr.Zero);
+    if (status() != 0) throw new Exception("Official initialization did not reset the previous session");
+    shutdown();
+    if (status() != 0 || frameState() != 0)
+        throw new Exception("Reload cleanup left a live frame signal");
     try
     {
         module.RequireSymbol("ONISIM_MissingSymbol");
         throw new Exception("A missing export was accepted");
     }
     catch (EntryPointNotFoundException) { }
-    Console.WriteLine(NativePlatform.Id + " native exports, initialization, shutdown and resident module passed");
+    Console.WriteLine(NativePlatform.Id + " native exports, repeated shutdown, official reinitialization and resident module passed");
 }
 finally
 {

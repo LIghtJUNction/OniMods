@@ -21,6 +21,7 @@ namespace OniSim.CycleTrim
         public const string LibraryVariable = "CYCLETRIM_ONISIM_NATIVE_PATH";
         private static readonly object Gate = new object();
         private static string mappedPath;
+        private static string mappedProfile;
         private static NativeModule targetModule;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int ReadyDelegate();
@@ -78,9 +79,9 @@ namespace OniSim.CycleTrim
                     NativePlatform.RequireSupported();
                     if (Type.GetType("Mono.Runtime") == null)
                         throw new PlatformNotSupportedException("OniSim takeover requires Unity Mono.");
-                    OfficialProfile.ValidateAssembly(gameAssembly);
+                    var profile = OfficialProfile.ValidateAssembly(gameAssembly);
                     string monoPath = Jlib.Runtime.NativePlatform.MonoPath(gameAssembly.Location);
-                    OfficialProfile.ValidateMono(monoPath);
+                    OfficialProfile.ValidateRuntime(gameAssembly, profile, monoPath);
                     // Validate the native Sim target prior to invoking Jlib's native component replacement.
                     targetModule = NativeModule.OpenTarget(path);
                     OfficialProfile.ValidateTarget(targetModule);
@@ -100,6 +101,8 @@ namespace OniSim.CycleTrim
                             "OniSim mapping refused: " + replacement.Message);
                     }
                     mappedPath = path;
+                    mappedProfile = profile == null ? "portable-" + PortableProfile.GameBuild
+                        : "linux-x64-" + profile.GameBuild;
                     return Mapped();
                 }
                 catch (Exception error)
@@ -131,7 +134,8 @@ namespace OniSim.CycleTrim
         private static LoaderResult Mapped()
         {
             return new LoaderResult(LoaderState.MappedUnverified,
-                "Assembly-scoped SimDLL mapping remains active and unverified; gameReady=false. Environment changes cannot remove or replace it. Restart is required.");
+                "Assembly-scoped SimDLL mapping remains active and unverified; profile=" + mappedProfile +
+                "; gameReady=false. Environment changes cannot remove or replace it. Restart is required.");
         }
     }
 }

@@ -15,11 +15,24 @@ namespace OniSim.CycleTrim
         internal const int GameBuild = 744825;
         internal const string AbiSha256 = "1ea01b47d321af150f856c087fe66cb51f50ca7d232fd965fbc086b6bef44879";
 
-        internal static void Validate(Assembly assembly)
+        internal static int ReadGameBuild(Assembly assembly)
         {
             Type version = assembly.GetType("KleiVersion", true);
             FieldInfo build = version.GetField("ChangeList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            if (build == null || !build.IsLiteral || Convert.ToInt32(build.GetRawConstantValue(), CultureInfo.InvariantCulture) != GameBuild)
+            if (build == null || !build.IsLiteral)
+                throw new InvalidOperationException("The game does not declare a constant build identity.");
+            return Convert.ToInt32(build.GetRawConstantValue(), CultureInfo.InvariantCulture);
+        }
+
+        internal static void Validate(Assembly assembly)
+        {
+            Validate(assembly, GameBuild);
+        }
+
+        internal static void Validate(Assembly assembly, int expectedBuild)
+        {
+            Type version = assembly.GetType("KleiVersion", true);
+            if (ReadGameBuild(assembly) != expectedBuild)
                 throw new InvalidOperationException("The game's build does not match the inspected OniSim ABI profile.");
             if (!Equals(version.GetField("BuildBranch").GetRawConstantValue(), "release") ||
                 !Equals(version.GetField("isDebugBuild").GetRawConstantValue(), false) ||
