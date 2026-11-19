@@ -4,7 +4,7 @@
 
 OniMcp exposes a running **Oxygen Not Included** game as a local MCP service. A compatible client can inspect a colony, investigate a problem, and request explicit game actions. The mod supplies the interface; you choose the model and client.
 
-The release target for this iteration is **0.2.9**, requiring an enabled **Jlib 0.3.10 or a newer compatible provider**. Dependent mods share one Jlib installation. Workshop upload confirmation is pending; check the actually installed package and your client's support separately.
+This README describes **OniMcp 0.2.9**, which requires an enabled **Jlib 0.3.10 or a newer compatible provider**. Dependent mods share one Jlib installation. Check the installed package and your client's support separately.
 
 ## Start here
 

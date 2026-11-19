@@ -132,8 +132,8 @@ internal sealed record WorkshopPromotionPlan(
             ? $"ONI MCP Server（已迁移至工坊条目 {verified.NewId}）"
             : $"CycleTrim（已迁移至工坊条目 {verified.NewId}）";
         if (oldTitle.Length > 128 || oldTitleChinese.Length > 128
-            || oldEnglish.Length > 8000
-            || oldChinese.Length > 8000)
+            || WorkshopDescriptionLimits.Exceeded(oldEnglish)
+            || WorkshopDescriptionLimits.Exceeded(oldChinese))
         {
             throw new InvalidOperationException("Migration copy exceeds Steam limits");
         }

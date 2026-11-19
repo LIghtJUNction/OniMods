@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.IO.Compression;
@@ -131,6 +132,21 @@ static void RunPackagedDescriptionLayoutCase()
         var fallback = WorkshopMetadataReader.Read(vdf);
         if (fallback.EnglishDescription != "Combined fallback" || fallback.ChineseDescription != "Combined fallback")
             throw new InvalidOperationException("Description fallback failed when no localized file was packaged");
+        foreach (var (fileName, chinese) in new[]
+        {
+            ("steam-description-en.md", false), ("steam-description-zh.md", true),
+        })
+        {
+            var descriptionPath = Path.Combine(root, fileName);
+            VerifyDescriptionUtf8Limits(description =>
+            {
+                File.WriteAllText(descriptionPath, description);
+                var read = WorkshopMetadataReader.Read(vdf);
+                if ((chinese ? read.ChineseDescription : read.EnglishDescription) != description)
+                    throw new InvalidOperationException("Description length validation changed the text");
+            }, 0, "metadata " + fileName);
+            File.Delete(descriptionPath);
+        }
         Console.WriteLine("packaged docs, root Markdown, Jlib localized text and combined fallback passed");
     }
     finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
@@ -180,6 +196,12 @@ static string RunPlanCase(
                 throw new InvalidOperationException("Legacy ZIP is missing ONI root files");
             }
         }
+        var noticeBytes = Encoding.UTF8.GetByteCount(firstPlan.Description)
+            - Encoding.UTF8.GetByteCount(metadata.EnglishDescription);
+        VerifyDescriptionUtf8Limits(description =>
+            LegacyCandidatePlan.FromExistingPackage(
+                metadata with { EnglishDescription = description }, firstPlan.Package.Path),
+            noticeBytes, name + " candidate including notice");
         var previousOutput = Console.Out;
         using var planOutput = new StringWriter();
         try
@@ -264,6 +286,8 @@ static void RunPromotionCase()
         {
             throw new InvalidOperationException("Repeated promotion plan changed SHA");
         }
+        VerifyPromotionDescriptionUtf8Limits(
+            metadata, candidate, baseline, createJournal.Path, plan);
         RunRecoveryCase(plan, root);
         var publicJson = JsonSerializer.Serialize(new
         {
@@ -457,6 +481,8 @@ static void RunCycleTrimPromotionCase()
         {
             throw new InvalidOperationException("CycleTrim promotion plan changed identity, SHA, tags, or old body");
         }
+        VerifyPromotionDescriptionUtf8Limits(
+            metadata, candidate, snapshot, journal.Path, plan);
         RunRecoveryCase(plan, root);
         var review = plan.ReviewMarkdown();
         var newChinese = ProposedDescription(
@@ -721,6 +747,14 @@ static void RunFirstPublicationCase(string modName = "OniOnline")
         ExpectFirstPublicationException<InvalidOperationException>(
             () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "plan readback under another selected mod name");
         Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", target["ONIM_PUBLISH_NAME"]);
+        foreach (var chinese in new[] { false, true })
+        {
+            VerifyDescriptionUtf8Limits(description =>
+                FirstPublicationPlan.Create(chinese
+                    ? metadata with { ChineseDescription = description }
+                    : metadata with { EnglishDescription = description }),
+                0, modName + " first publication " + (chinese ? "Chinese" : "English"));
+        }
         foreach (var invalid in new[]
         {
             metadata with { Title = "OniOnline" + new string('x', 120) },
@@ -928,4 +962,48 @@ static void ExpectFirstPublicationException<TException>(Action action, string sc
         return;
     }
     throw new InvalidOperationException("First publication accepted " + scenario);
+}
+
+static void VerifyPromotionDescriptionUtf8Limits(
+    WorkshopMetadata metadata, LegacyCandidatePlan candidate,
+    WorkshopPromotionSnapshot snapshot, string journalPath, WorkshopPromotionPlan plan)
+{
+    foreach (var chinese in new[] { false, true })
+    {
+        var original = snapshot.Original;
+        var before = chinese ? original.DescriptionChinese : original.DescriptionEnglish;
+        var after = chinese ? plan.OldDescriptionChinese : plan.OldDescriptionEnglish;
+        var noticeBytes = Encoding.UTF8.GetByteCount(after) - Encoding.UTF8.GetByteCount(before);
+        VerifyDescriptionUtf8Limits(description =>
+            WorkshopPromotionPlan.Create(metadata, candidate.Package.Path,
+                snapshot with
+                {
+                    Original = chinese
+                        ? original with { DescriptionChinese = description }
+                        : original with { DescriptionEnglish = description },
+                },
+                journalPath, plan.NewId),
+            noticeBytes, WorkshopTarget.DisplayName + " migration " + (chinese ? "Chinese" : "English"));
+    }
+}
+
+static void VerifyDescriptionUtf8Limits(Action<string> validate, int prefixBytes, string scenario)
+{
+    var available = 8000 - prefixBytes;
+    foreach (var (name, unit) in new[] { ("CJK", "中"), ("emoji", "🙂"), ("ASCII", "x") })
+    {
+        var unitBytes = Encoding.UTF8.GetByteCount(unit);
+        var boundary = string.Concat(Enumerable.Repeat(unit, available / unitBytes))
+            + new string('x', available % unitBytes);
+        if (Encoding.UTF8.GetByteCount(boundary) + prefixBytes != 8000)
+            throw new InvalidOperationException("Description byte-limit fixture is not on the boundary");
+        validate(boundary);
+        var rejected = false;
+        try { validate(boundary + "x"); }
+        catch (InvalidOperationException) { rejected = true; }
+        if (!rejected)
+            throw new InvalidOperationException(
+                $"{scenario} accepted {name} description with 8001 UTF-8 bytes including notice");
+    }
+    Console.WriteLine($"{scenario}: CJK, emoji and ASCII 8000/8001 UTF-8 byte boundaries passed");
 }

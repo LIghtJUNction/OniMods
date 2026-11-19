@@ -10,6 +10,14 @@ internal sealed record WorkshopMetadata(
     string ChineseDescription,
     string ChangeNote);
 
+internal static class WorkshopDescriptionLimits
+{
+    // ISteamRemoteStorage.k_cchPublishedDocumentDescriptionMax is a byte limit.
+    // https://partner.steamgames.com/doc/api/ISteamRemoteStorage#constants
+    internal static bool Exceeded(string description) =>
+        Encoding.UTF8.GetByteCount(description) > 8000;
+}
+
 internal static partial class WorkshopMetadataReader
 {
     internal static WorkshopMetadata Read(string vdfPath)
@@ -77,10 +85,10 @@ internal static partial class WorkshopMetadataReader
 
     private static void ValidateDescriptionLength(string language, string description)
     {
-        if (description.Length > 8000)
+        if (WorkshopDescriptionLimits.Exceeded(description))
         {
             throw new InvalidOperationException(
-                $"{language} Workshop description exceeds 8000 characters");
+                $"{language} Workshop description exceeds 8000 UTF-8 bytes");
         }
     }
 

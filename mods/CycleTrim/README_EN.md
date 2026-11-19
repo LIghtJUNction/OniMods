@@ -6,7 +6,7 @@
 
 An experimental simulation and performance mod. The goal is to improve underlying algorithms, choose CPU/GPU work from measured costs, and reduce repeated computation and synchronization. Correctness, compatibility and performance are checked separately. **Use disposable test-save copies only.**
 
-The release target for this iteration is **0.4.25**, requiring **Jlib 0.3.10**; Workshop upload confirmation is pending. Current work skips CPU thermal grid prepasses that cannot qualify, removes unused GPU setup, preserves complete multicomponent save inventories and makes derived-data availability explicit. OniSim combines CPU operators and GPU batches inside the native tick. The legacy Grid shows the dominant element; the publication API exposes the complete mixture. See the [implementation notes](OniSim/docs/multicomponent-publication.md), validation scope below and [CHANGELOG](CHANGELOG.md).
+This README describes **CycleTrim 0.4.25**, which requires **Jlib 0.3.10**. Current work skips CPU thermal grid prepasses that cannot qualify, removes unused GPU setup, preserves complete multicomponent save inventories and makes derived-data availability explicit. OniSim combines CPU operators and GPU batches inside the native tick. The legacy Grid shows the dominant element; the publication API exposes the complete mixture. See the [implementation notes](OniSim/docs/multicomponent-publication.md), validation scope below and [CHANGELOG](CHANGELOG.md).
 
 The hot-path cuts below are implemented in source. Vanilla semantic comparisons and whole-game gains are evaluated for specific builds and scenes.
 
@@ -140,7 +140,7 @@ OniSim is CycleTrim's experimental native simulation core, with source under [`O
 
 Use only with a disposable test save. All 62 official message IDs are now accounted for in source routing, but that is not proof of full semantic equivalence. Gas-interaction rules are parsed and stored, while the helper has no Rust fixed-step caller; static inspection also found no incoming call to the legacy helper in the pinned official control flow, so its required role remains unresolved rather than a proven missing phase. Runtime receipts apply only to their exact source, binaries and scenes. Complete DLC, other-Mod, long-duration, large-colony and whole-game performance acceptance remains open. Linux x64 admits the inspected 744825 and 763796 tuples with matching `Assembly-CSharp`, Mono and official Sim fingerprints plus the complete ABI inventory. Unknown builds and mixed runtime pairs are refused. Windows/macOS remain limited to 744825 and have no U60 game acceptance.
 
-**U60 / 763796 development checkpoint (2026-11-20).** The exact Linux x64 tuple passed the [strict profile checks](../../docs/cycletrim-u60-native-profile-20261120.json) and [actual Unity Mono ABI comparison](../../docs/cycletrim-u60-runtime-abi-20261120.json). Source `8db265410028785b1cc89a94ab90e52662a3247b` ran through Steam with normal graphics on a three-duplicant save copy. Six naturally formed oxygen/carbon-dioxide cells retained their complete species inventories, mass, temperature and total-mass binary32 bits after a unique checkpoint and same-process reload, then continued advancing. See the [live receipt](../../docs/cycletrim-u60-multicomponent-live-20261120.json) for method and binary identities. These changes have not been published to Steam Workshop.
+**U60 / 763796 development checkpoint (2026-11-20).** The exact Linux x64 tuple passed the [strict profile checks](../../docs/cycletrim-u60-native-profile-20261120.json) and [actual Unity Mono ABI comparison](../../docs/cycletrim-u60-runtime-abi-20261120.json). Source `8db265410028785b1cc89a94ab90e52662a3247b` ran through Steam with normal graphics on a three-duplicant save copy. Six naturally formed oxygen/carbon-dioxide cells retained their complete species inventories, mass, temperature and total-mass binary32 bits after a unique checkpoint and same-process reload, then continued advancing. See the [live receipt](../../docs/cycletrim-u60-multicomponent-live-20261120.json) for method and binary identities.
 
 **Mixed saves require the new reader.** Worlds with no positive mass in any secondary or later component retain the ordinary SIMSAVE v15 image. Mixed worlds use version `0x4f4d0001` with a mandatory `ONIMIX` extension; the tested pre-extension OniSim rejects them. Do not assume a downgrade, removal or switch to vanilla can read them. Exact 22-species round trips are host/FFI evidence; the live scene covers two positive species per cell. See the [format contract](OniSim/docs/save-format.md#compatibility-and-mandatory-marker).
 
@@ -150,7 +150,7 @@ Builds include OniSim by default; use `IncludeOniSim=false` to create a package 
 
 ## Benchmark summary
 
-### Pending 0.4.25: remove work that cannot help
+### 0.4.25: remove work that cannot help
 
 The [algorithm and resource cleanup](https://github.com/LIghtJUNction/OniMods/commit/bc156bf68f927d7a4b3980e59a3b7b523e0e1ee4) contains two concrete changes:
 

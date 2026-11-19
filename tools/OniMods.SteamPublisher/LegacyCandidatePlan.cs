@@ -59,7 +59,7 @@ internal sealed record LegacyCandidatePlan(
             "PRIVATE LEGACY TEST CANDIDATE — DO NOT SUBSCRIBE. "
             + $"Compatibility test for original Workshop item {target.OriginalWorkshopId}.\n\n"
             + metadata.EnglishDescription;
-        if (target.CandidateTitle.Length > 128 || description.Length > 8000)
+        if (target.CandidateTitle.Length > 128 || WorkshopDescriptionLimits.Exceeded(description))
         {
             throw new InvalidOperationException("Candidate Workshop metadata is too long");
         }

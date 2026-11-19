@@ -7,7 +7,7 @@
 
 [h1]OniOnline · 大厅、聊天与联机开发框架[/h1]
 [b]默认玩法提供大厅与文字聊天；世界模拟需要另行适配的玩法 Mod。[/b]
-待发布目标为 0.5.3，协议 11；0.5.3 尚待工坊上传确认。必需前置为 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]；本轮配套使用 0.3.10。基础会话不要求 CycleTrim 或 DLC。实际工坊包版本以安装包为准。
+OniOnline 0.5.3 版本说明，协议 11。必需前置为 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]；本轮配套使用 0.3.10。基础会话不要求 CycleTrim 或 DLC。实际工坊包版本以安装包为准。
 
 [h2]从哪里开始[/h2]
 订阅并在 Mods 菜单启用 Jlib 和 OniOnline，重启游戏。

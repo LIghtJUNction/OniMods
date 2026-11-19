@@ -451,7 +451,8 @@ internal sealed record PageRequest(string Action, ulong Id, string? Role, PageEd
     {
         if (!File.Exists(path)) throw new FileNotFoundException("Page text file is missing", path);
         var text = File.ReadAllText(path).Trim();
-        if (text.Length is 0 or > 8000) throw new ArgumentException("Page text must be 1 to 8000 characters: " + path);
+        if (text.Length == 0 || WorkshopDescriptionLimits.Exceeded(text))
+            throw new ArgumentException("Page text must be 1 to 8000 UTF-8 bytes: " + path);
         return text;
     }
 

@@ -6,7 +6,7 @@
 
 实验性仿真与性能 Mod。目标是重构底层算法，按实测耗时选择 CPU/GPU，并减少重复计算与同步等待。每次改动分别验证数据正确性、兼容性和性能。**只在可丢弃的测试存档副本上使用。**
 
-本轮待发布目标为 **0.4.25**，需要 **Jlib 0.3.10**；工坊上传确认尚待完成。当前改动重点是跳过必然失败的 CPU 热传导全网格预扫、移除未用 GPU 初始化，以及完整保存多组分库存、明确派生数据可用性。OniSim 在原生时间步内结合 CPU 算子与 GPU 批处理；旧 Grid 仍显示主要元素，完整组分通过发布接口读取。详见[实现说明](OniSim/docs/multicomponent-publication.md)、下文的验证范围与[更新记录](CHANGELOG.md)。
+本文介绍 **CycleTrim 0.4.25** 的功能与改进。使用时需要 **Jlib 0.3.10**。当前改动重点是跳过必然失败的 CPU 热传导全网格预扫、移除未用 GPU 初始化，以及完整保存多组分库存、明确派生数据可用性。OniSim 在原生时间步内结合 CPU 算子与 GPU 批处理；旧 Grid 仍显示主要元素，完整组分通过发布接口读取。详见[实现说明](OniSim/docs/multicomponent-publication.md)、下文的验证范围与[更新记录](CHANGELOG.md)。
 
 下面列出的热路径裁剪已进入源码；原版语义对照与整机收益按具体构建和场景分别验收。
 
@@ -145,7 +145,7 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 运行回执只适用于其精确源码、二进制和场景，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)。Linux x64 接受经过检查的 744825、763796 两组 `Assembly-CSharp`、Mono 与官方 Sim 指纹，并校验完整原生接口与消息布局；未知版本或混用运行时会拒绝映射。Windows/macOS 仍限 744825，没有 U60 实机验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未通过。
 
-**U60 / 763796 开发构建检查点（2026-11-20）**：Linux x64 的精确运行时组合已通过[严格 profile 检查](../../docs/cycletrim-u60-native-profile-20261120.json)与[实际 Unity Mono ABI 核对](../../docs/cycletrim-u60-runtime-abi-20261120.json)。源码 `8db265410028785b1cc89a94ab90e52662a3247b` 经 Steam 正常图形启动，在三复制人存档副本中自然形成 6 个氧气/二氧化碳混合格；新建检查点、同进程重载后，完整组分的质量、温度及总质量 binary32 位一致，并能继续推进。方法、文件身份和结果见[实机回执](../../docs/cycletrim-u60-multicomponent-live-20261120.json)。本轮变更尚未发布到 Steam 创意工坊。
+**U60 / 763796 开发构建检查点（2026-11-20）**：Linux x64 的精确运行时组合已通过[严格 profile 检查](../../docs/cycletrim-u60-native-profile-20261120.json)与[实际 Unity Mono ABI 核对](../../docs/cycletrim-u60-runtime-abi-20261120.json)。源码 `8db265410028785b1cc89a94ab90e52662a3247b` 经 Steam 正常图形启动，在三复制人存档副本中自然形成 6 个氧气/二氧化碳混合格；新建检查点、同进程重载后，完整组分的质量、温度及总质量 binary32 位一致，并能继续推进。方法、文件身份和结果见[实机回执](../../docs/cycletrim-u60-multicomponent-live-20261120.json)。
 
 **混合存档需要新读者。** 没有任何正质量的第二或后续组分时，仍写出原 SIMSAVE v15；混合世界使用专用版本 `0x4f4d0001` 和必需的 `ONIMIX` 扩展。受测的扩展前 OniSim 会拒绝该混合档，不能假定降级、卸载或切回原版后可继续读取。22 组分的精确往返已在 host/FFI 中验证，实机目前只覆盖每格两个正质量组分；格式和旧读者边界见[存档契约](OniSim/docs/save-format.md#compatibility-and-mandatory-marker)。
 
@@ -155,7 +155,7 @@ Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `Inclu
 
 ## 性能实测摘要
 
-### 待发布 0.4.25：先减少确定无效的工作
+### 0.4.25：先减少确定无效的工作
 
 本轮[算法与资源清理提交](https://github.com/LIghtJUNction/OniMods/commit/bc156bf68f927d7a4b3980e59a3b7b523e0e1ee4)包含两项具体改动：
 

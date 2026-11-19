@@ -7,6 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <OniGamePath Condition="'$(OniGamePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/OxygenNotIncluded</OniGamePath>
     <OniManagedPath Condition="'$(OniManagedPath)' == ''">$(OniGamePath)/OxygenNotIncluded_Data/Managed</OniManagedPath>
+    <OniSteamApiPath Condition="'$(OniSteamApiPath)' == '' and Exists('$(OniGamePath)/OxygenNotIncluded_Data/Plugins/libsteam_api.so')">$(OniGamePath)/OxygenNotIncluded_Data/Plugins/libsteam_api.so</OniSteamApiPath>
+    <OniSteamApiPath Condition="'$(OniSteamApiPath)' == ''">$(OniGamePath)/OxygenNotIncluded_Data/Plugins/AnyCPU/libsteam_api.so</OniSteamApiPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +16,7 @@
       <HintPath>$(OniManagedPath)/com.rlabrecque.steamworks.net.dll</HintPath>
       <Private>true</Private>
     </Reference>
-    <None Include="$(OniGamePath)/OxygenNotIncluded_Data/Plugins/libsteam_api.so"
+    <None Include="$(OniSteamApiPath)"
           Link="libsteam_api.so"
           CopyToOutputDirectory="PreserveNewest" />
     <None Include="steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />

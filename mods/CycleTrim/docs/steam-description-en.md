@@ -8,7 +8,7 @@ Third-party libraries and original game assets retain their authorship and licen
 [h1]⚠ HIGH-RISK EXPERIMENTAL MOD ⚠[/h1]
 [b]For experimentation and early previews only. Not suitable for long-term, stable play.[/b]
 CycleTrim is rebuilding core simulation behavior. Crashes, missing materials, unusual flows, corrupted saves and mod conflicts are possible. Back up your original saves and use disposable test saves only.
-[b]Mixed saves in the current development build already use a dedicated format: version 0x4f4d0001 with a mandatory ONIMIX extension. They need a supporting OniSim reader; the tested older OniSim rejects them. Vanilla readability is not established, and removal or downgrade is not a supported continuation path. These changes have not been published to Workshop.[/b]
+[b]Mixed saves in the current development build already use a dedicated format: version 0x4f4d0001 with a mandatory ONIMIX extension. They need a supporting OniSim reader; the tested older OniSim rejects them. Vanilla readability is not established, and removal or downgrade is not a supported continuation path.[/b]
 
 [img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/handdrawn-gpu-explainer-en.gif[/img]
 [i]Hand-drawn-style animation: the planned architecture, still in development.[/i]
@@ -20,7 +20,7 @@ CycleTrim explores gas and liquid mixtures with GPU acceleration. The developmen
 Cells store per-species mass. GPU kernels handle thermal and eligible regional fluid calculations; the CPU coordinates game logic. Regional gas operators share buffers, but uploads, waits and readback remain. Buildings, breathing, sensors and saves need separate integration.
 
 [h2]Current progress[/h2]
-The release target is [b]CycleTrim 0.4.25 + Jlib 0.3.10[/b]; Workshop upload confirmation is pending. This iteration retains multicomponent inventory/persistence and removes unnecessary thermal prepasses and unused GPU setup.
+Version notes: [b]CycleTrim 0.4.25 + Jlib 0.3.10[/b]. This iteration retains multicomponent inventory/persistence and removes unnecessary thermal prepasses and unused GPU setup.
 
 [h3]What work is removed?[/h3]
 [list]
@@ -36,7 +36,7 @@ Four new regressions and the existing CPU/GPU thermal-equivalence case pass, alo
 [/list]
 The 2026-11-20 development checkpoint 8db2654 passed strict profile, runtime and ABI checks for Linux x64 U60/763796. It ran through Steam with normal graphics on a three-duplicant save copy. Six naturally formed oxygen/carbon-dioxide cells retained complete inventories, mass, temperature and total-mass binary32 bits after a unique checkpoint and same-process reload, then continued advancing. See the [url=https://github.com/LIghtJUNction/OniMods/blob/main/docs/cycletrim-u60-multicomponent-live-20261120.json]live evidence[/url] and [url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/OniSim/docs/save-format.md]save-format and old-reader boundaries[/url].
 
-The live scene covers two positive species per cell; 22-species coverage comes from standalone host/FFI checks. Linux U60/763796 has the game receipt above; Windows/macOS native profiles remain limited to 744825. Additional species, long runs, DLC and whole-game performance comparisons remain pending. New pressure-availability/liquid-occupancy checks are recorded separately. Workshop upload confirmation for 0.4.25 is pending.
+The live scene covers two positive species per cell; 22-species coverage comes from standalone host/FFI checks. Linux U60/763796 has the game receipt above; Windows/macOS native profiles remain limited to 744825. Additional species, long runs, DLC and whole-game performance comparisons remain pending. New pressure-availability/liquid-occupancy checks are recorded separately.
 
 [h3]Gas mixing: oxygen and carbon dioxide in one cell[/h3]
 [img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-gas-mix.png[/img]

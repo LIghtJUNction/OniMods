@@ -24,8 +24,10 @@ internal sealed record FirstPublicationPlan(
     {
         RequireTarget();
         if (string.IsNullOrWhiteSpace(metadata.Title) || metadata.Title.Length > 128
-            || metadata.EnglishDescription.Length is 0 or > 8000
-            || metadata.ChineseDescription.Length is 0 or > 8000)
+            || metadata.EnglishDescription.Length == 0
+            || metadata.ChineseDescription.Length == 0
+            || WorkshopDescriptionLimits.Exceeded(metadata.EnglishDescription)
+            || WorkshopDescriptionLimits.Exceeded(metadata.ChineseDescription))
             throw new InvalidOperationException("First publication requires reviewed metadata within Steam limits");
         var extension = Path.GetExtension(metadata.PreviewFile).ToLowerInvariant();
         var preview = File.ReadAllBytes(metadata.PreviewFile);

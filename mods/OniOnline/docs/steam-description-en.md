@@ -7,7 +7,7 @@ This statement describes this project's AI development. Third-party libraries an
 
 [h1]OniOnline · Lobbies, chat and a multiplayer framework[/h1]
 [b]The default gameplay is a chat lobby, not a complete shared colony simulation.[/b]
-Release target 0.5.3, protocol 11; Workshop upload confirmation for 0.5.3 is pending. [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url] is required; this iteration uses 0.3.10. Basic sessions do not require CycleTrim or DLC. Check your installed package for the actual Workshop version.
+OniOnline 0.5.3 version notes; protocol 11. [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url] is required; this iteration uses 0.3.10. Basic sessions do not require CycleTrim or DLC. Check your installed package for the actual Workshop version.
 
 [h2]Where to start[/h2]
 Subscribe to and enable Jlib and OniOnline in the Mods menu, then restart.
