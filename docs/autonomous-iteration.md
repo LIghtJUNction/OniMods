@@ -24,6 +24,24 @@ it is not a requirement to produce a commit.
   to merge or when an actual dependency changes, not on every timer tick.
 - No meaningful change means no new issue, PR or repeated status comment.
 
+## Dependency propagation
+
+**共享依赖的改动，以受影响下游闭环为完成条件。** 修改底层库、公共 API、ABI、协议、包或构建契约的 owner，负责枚举直接和间接依赖，包括库、应用、服务、模板、安装套件及发布产物，并追踪每一项到完成或真实阻碍。
+
+1. **先列影响，再分工。** 在 Project Z 仓库执行：
+   `rtk proxy python3 scripts/project_z.py impact --repositories <repo/package>`。
+   将图中结果与实际依赖声明、子仓固定提交、包引用、锁文件、构建和安装清单核对。图只覆盖已登记关系；发现遗漏下游时登记仓库、依赖边和既有 owner，再继续处理。不得把图中未出现当作不受影响。
+
+2. **沿用已有 owner。** 列明各下游 owner、当前工作和文件范围，先协调再修改。已有 owner 正在处理时交付变更契约、所需版本和精确源码，不抢写、不覆盖。没有明确 owner 的项目由任务负责人指定接手人。传播任务优先沿用既有 owner，避免重复建立并行维护会话。
+
+3. **同步真实依赖。** 对受影响项目更新必要的最低兼容版本、provider 版本、固定源码/子模块提交、包引用、锁文件、CI 引用、模板和安装/发布清单。无需变更的下游记录兼容依据；既不遗漏升级，也不为凑齐版本号盲目抬高最低要求。新接口有新的最低依赖时必须连到实际消费者和模板。
+
+4. **按影响验证并及时推送。** 在精确候选源码上运行相关的构建、契约和回归检查；涉及游戏生命周期、存读档或部署的内容，保留对应实机/运行门禁。按各仓现行规则分批提交推送，跟踪相应 SHA 的 CI。发布包、安装副本与源码分别记录身份；源码推送成功不能替代发布或运行成功。
+
+5. **更新传播状态直到闭环。** 为每个下游记录：owner、输入/输出版本或提交、实际修改、验证命令与结果、推送/产物位置、剩余工作。已交接不等于已完成；继续跟进既有 owner。只有“已更新并验证”“经证据确认无需变更”或“存在明确实际阻碍”三类结果。阻碍必须写明失败或缺失条件、当前精确版本、接手人、下一步动作和解除条件，不能只写“待处理”。
+
+传播过程中继续遵守已有授权、发布限制和凭据保护；禁止为完成状态绕过平台限制、降低验收门槛或宣称未执行的测试通过。汇报区分源码、包、安装环境和实际运行四个层次。
+
 ## Evidence has explicit boundaries
 
 Every claim needs its source, revision, command or run URL, outcome and limitation.

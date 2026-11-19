@@ -77,6 +77,10 @@
 
 ## Autonomous Maintenance
 
+### 共享依赖传播
+
+共享依赖更新由变更 owner 负责追踪全部直接和间接下游，涵盖库、应用、服务、模板和安装套件。先运行 Project Z impact 并核对实际依赖，登记遗漏关系；协调已有 owner，避免抢写。同步必要版本、固定源码、锁文件和发布清单，完成相关验证并及时提交推送。直到下游完成、证实无需变更，或记录明确阻碍、接手人和解除条件，才可收束。详细流程见 [Dependency propagation](docs/autonomous-iteration.md#dependency-propagation)。
+
 ### 单分支 (`main`) 迭代策略（硬性规范）
 
 - 主仓库（`OniMods`）及子仓库（如 `mods/Jlib`）统一践行**单分支 (`main`) 迭代策略**（Trunk-Based Development）。
