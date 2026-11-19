@@ -151,7 +151,7 @@ namespace OniOnline.UI
             menuOpen = false;
             if (actions != null) actions.SetActive(false);
             StopDirectory();
-            map?.SetHomeView(true);
+            if (map != null) map.CloseRemoteView();
             homeView = true;
         }
 
@@ -292,7 +292,7 @@ namespace OniOnline.UI
             if (menuButton != null) { Destroy(menuButton.gameObject); menuButton = null; }
             if (oldActions != null) { oldActions.SetActive(false); Destroy(oldActions); }
             StopDirectory();
-            oldMap?.SuspendRemoteView();
+            if (oldMap != null) oldMap.CloseRemoteView();
         }
         private void OnDestroy() { Cleanup(); }
     }

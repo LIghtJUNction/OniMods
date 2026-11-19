@@ -27,6 +27,7 @@ namespace OniOnline.UI
         private bool codeOpen, advancedOpen, joining, closed, lastBusy, lastSearching;
         private bool scrollbarInitiallyActive;
         private Vector2 canvasSize;
+        private double nextReconnectRefresh;
 
         internal bool IsOpen { get { return !closed && IsScreenActive(); } }
         private bool Connecting { get { return runtime.Busy || joining && runtime.Session != null &&
@@ -400,7 +401,10 @@ namespace OniOnline.UI
 
         private string StatusText()
         {
-            string error = runtime.Error ?? runtime.Session?.LastError;
+            var session = runtime.Session;
+            if (runtime.Error == null && session?.Reconnecting == true)
+                return OnlineText.ReconnectStatus(session);
+            string error = runtime.Error ?? session?.LastError;
             if (error != null)
             {
                 if (error.StartsWith("mod_sync", StringComparison.Ordinal)) return "";
@@ -410,7 +414,7 @@ namespace OniOnline.UI
                 if (error == "capability_mismatch") return T("error.capability_mismatch");
                 if (error == "gameplay_mismatch") return T("error.gameplay_mismatch");
                 if (error == "native_adapter_unavailable") return T("error.native_adapter_unavailable");
-                return T("browser.connection_failed");
+                return OnlineText.ConnectionError(error, runtime.ErrorDetail ?? session?.LastErrorDetail);
             }
             if (runtime.DependencyError != null) return T("browser.connection_failed");
             if (joining && runtime.Session?.Joined != true) return T("ui.connecting");
@@ -455,6 +459,9 @@ namespace OniOnline.UI
             if (runtime.Error != null) joining = false;
             RefreshControls();
             NativeUiTemplates.Text(status, StatusText());
+            float statusHeight = Mathf.Clamp(status.GetPreferredValues(status.text, Mathf.Max(200, panel.rect.width - 48), 0).y + 8, 44, 100);
+            NativeUiTemplates.Size(status.gameObject, -1, statusHeight, 1);
+            NativeUiTemplates.Size(status.transform.parent.gameObject, -1, statusHeight);
             status.transform.parent.gameObject.SetActive(status.text.Length != 0);
             var systems = runtime.Listings.Where(MatchesProvider).ToArray();
             bool hasSystems = systems.Length != 0;
@@ -580,7 +587,9 @@ namespace OniOnline.UI
         {
             if (closed || runtime == null) return;
             UpdateGeometry();
-            if (revision != runtime.Revision || lastBusy != runtime.Busy || lastSearching != runtime.Searching) Refresh();
+            bool retryTick = runtime.Session?.Reconnecting == true && Time.realtimeSinceStartupAsDouble >= nextReconnectRefresh;
+            if (revision != runtime.Revision || lastBusy != runtime.Busy || lastSearching != runtime.Searching || retryTick)
+            { Refresh(); nextReconnectRefresh = Time.realtimeSinceStartupAsDouble + 1; }
             if (pendingFocus != null && Time.frameCount >= focusFrame)
             {
                 var input = pendingFocus; pendingFocus = null;

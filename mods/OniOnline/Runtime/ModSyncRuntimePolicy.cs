@@ -62,6 +62,7 @@ namespace OniOnline.Runtime
                 case "native_mod_content_changed": return "mod_sync.error_changed";
                 case "native_mod_loader_busy": return "mod_sync.activation_wait";
                 case "native_mod_settings_write_failed":
+                case "native_mod_rollback_failed":
                 case "native_mod_activation_invalid":
                 case "native_mod_activation_noop":
                 case "native_mod_activation_conflict":

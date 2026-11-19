@@ -288,9 +288,23 @@ internal static class SteamModContentSyncTests
             enabled && target.Enabled && error == "", "activation operations apply one reviewed native setting");
 
         enabled = false; target.Enabled = false;
-        check(!NativeModActivationOperations.TryApply(new[] { target }, change, () => false, out error) &&
-            !enabled && !target.Enabled && error == "native_mod_settings_write_failed",
-            "activation operations roll back when the native settings write fails");
+        int saveAttempts = 0;
+        check(!NativeModActivationOperations.TryApply(new[] { target }, change, () => ++saveAttempts > 1, out error) &&
+            !enabled && !target.Enabled && saveAttempts == 2 && error == "native_mod_settings_write_failed",
+            "activation operations report the initial write failure after successfully saving rolled-back settings");
+
+        saveAttempts = 0;
+        check(!NativeModActivationOperations.TryApply(new[] { target }, change, () => { saveAttempts++; return false; }, out error) &&
+            !enabled && !target.Enabled && saveAttempts == 2 && error == "native_mod_rollback_failed",
+            "activation operations distinguish rollback persistence failure from a recovered initial write failure");
+
+        var brokenRollback = Target(content, value => {
+            enabled = value;
+            if (!value) throw new InvalidOperationException("rollback failed");
+        });
+        check(!NativeModActivationOperations.TryApply(new[] { brokenRollback }, change, () => false, out error) &&
+            brokenRollback.Enabled && error == "native_mod_rollback_failed",
+            "activation operations report an incomplete rollback instead of hiding it");
 
         var duplicateContent = Entry("duplicate", "1", 'a', false);
         var duplicate = new[] { Target(duplicateContent, _ => { }), Target(duplicateContent, _ => { }) };
@@ -454,6 +468,7 @@ internal static class SteamModContentSyncTests
         check(ModSyncRuntimePolicy.ErrorKey("steam_item_identity_mismatch") == "mod_sync.error_item" &&
             ModSyncRuntimePolicy.ErrorKey("steam_request_timeout") == "mod_sync.error_timeout" &&
             ModSyncRuntimePolicy.ErrorKey("native_mod_settings_write_failed") == "mod_sync.activation_failed" &&
+            ModSyncRuntimePolicy.ErrorKey("native_mod_rollback_failed") == "mod_sync.activation_failed" &&
             ModSyncRuntimePolicy.ErrorKey("native_mod_loader_busy") == "mod_sync.activation_wait" &&
             ModSyncRuntimePolicy.ErrorKey("unrecognized_private_error") == "mod_sync.error_generic",
             "mod sync UI maps known failures to safe localized causes and hides unknown details");

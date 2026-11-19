@@ -2477,3 +2477,47 @@ msgctxt "STRINGS.ONIONLINE.ERROR.NATIVE_BROWSER_UNAVAILABLE"
 msgid "Could not open the system browser."
 msgstr ""
 
+#. STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT"
+msgid "Reconnect attempt {0} in progress"
+msgstr ""
+
+#. STRINGS.ONIONLINE.UI.RECONNECT_WAIT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_WAIT"
+msgid "Reconnect attempt {0} in {1}s"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED"
+msgid "Host refused the connection; check that the lobby is open and the port is correct"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND
+msgctxt "STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND"
+msgid "Host address not found; check the hostname and DNS"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT"
+msgid "Connection timed out; check the host, firewall and network"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE"
+msgid "Host network is unreachable; check the network or VPN"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED"
+msgid "The system blocked the connection; check firewall permissions"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT"
+msgid "Host did not complete the handshake; check both games and the network"
+msgstr ""
+
+#. STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT"
+msgid "Host stopped responding; attempting to restore the connection"
+msgstr ""

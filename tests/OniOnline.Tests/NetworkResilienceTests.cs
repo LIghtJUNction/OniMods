@@ -13,6 +13,7 @@ internal static class NetworkResilienceTests
     internal static void Run(Action<bool, string> assertion)
     {
         check = assertion;
+        ConnectionLifecycleTests.Run(check);
         DelayedReliableNetwork();
         FourPlayerLongBlackhole();
         LostWelcomeAndAcknowledgement();
@@ -87,6 +88,7 @@ internal static class NetworkResilienceTests
             Until(network, host, client, () => client.Joined && !client.Reconnecting && client.Chat.Length == 5, 30,
                 "short interruption restores chat history without manual rejoin");
             check(client.LocalPlayerId == identity, "reconnect preserves player identity");
+            check(client.LastConnectionError == null && client.LastErrorDetail == null, "successful reconnect clears old transport diagnostics");
             check(host.Players.Length == 2, "reconnect replaces its old connection instead of creating a duplicate player");
             check(client.Started, "reconnect preserves started state");
             check(network.Retransmissions > 0 && network.Reordered > 0 && network.Duplicated > 0,

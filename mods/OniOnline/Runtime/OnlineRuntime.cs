@@ -185,8 +185,16 @@ namespace OniOnline.Runtime
         }
         private void CloseSystemMap()
         {
-            ClusterMapScreen.Instance?.GetComponent<StarSystemPanel>()?.CloseOnlineView();
-            StarMapDirectory?.Stop();
+            try
+            {
+                var screen = ClusterMapScreen.Instance;
+                if (screen != null)
+                {
+                    var panel = screen.GetComponent<StarSystemPanel>();
+                    if (panel != null) panel.CloseOnlineView();
+                }
+            }
+            finally { StarMapDirectory?.Stop(); }
         }
 
         internal void BrowseSystems()

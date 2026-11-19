@@ -64,7 +64,9 @@ namespace OniOnline.UI
         {
             homeView = value;
             signature = null; remoteSelection = null; SelectedNativeWorldId = -1;
-            SetState(runtime.Multiplayer?.StarSystem.State, runtime.Session?.Players ?? new PlayerInfo[0], runtime.Session?.LocalPlayerId);
+            if (runtime != null)
+                SetState(runtime.Multiplayer?.StarSystem.State, runtime.Session?.Players ?? new PlayerInfo[0], runtime.Session?.LocalPlayerId);
+            else SuspendRemoteView();
         }
 
         private void Update()
@@ -76,7 +78,7 @@ namespace OniOnline.UI
 
         internal void SetState(StarSystemState state, PlayerInfo[] roster, string localPeerId = null)
         {
-            if (screen == null) return;
+            if (screen == null || runtime == null) return;
             bool remote = Remote;
             if (remote)
             {
@@ -180,6 +182,15 @@ namespace OniOnline.UI
             }
         }
 
+        // Closing a view must not call SetState: the colony and native managers
+        // may already be tearing down while the Unity screen still exists.
+        internal void CloseRemoteView()
+        {
+            homeView = true;
+            signature = null; remoteSelection = null; SelectedNativeWorldId = -1;
+            SuspendRemoteView();
+        }
+
         internal void SuspendRemoteView()
         {
             RestoreNativeVisuals();
@@ -195,7 +206,7 @@ namespace OniOnline.UI
             {
                 foreach (var layer in nativeLayers) if (layer.Key != null) layer.Key.SetActive(layer.Value);
                 nativeLayers.Clear();
-                if (ClusterGrid.Instance != null && screen != null)
+                if (!Game.IsQuitting() && Game.Instance != null && ClusterGrid.Instance != null && screen != null)
                 {
                     foreach (var hex in hexes) if (hex != null) hex.SetRevealed(ClusterGrid.Instance.GetCellRevealLevel(hex.location));
                     // A newly entered native destination mode already owns the rocket's

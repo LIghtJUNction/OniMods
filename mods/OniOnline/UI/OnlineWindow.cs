@@ -484,18 +484,20 @@ namespace OniOnline.UI
             foreach (var control in connectionControls) control.interactable = session == null && !runtime.Busy;
             refresh.GetComponentInChildren<TextMeshProUGUI>().text = T(runtime.Busy ? "ui.cancel" : "ui.refresh");
             portInput.interactable = !inRoom && !runtime.Busy && !runtime.UseSteam;
-            message.interactable = send.interactable = session != null && (session.Joined || session.Reconnecting);
+            message.interactable = send.interactable = session != null &&
+                OniOnline.Core.OnlineChatAvailability.CanSend(runtime.Enabled, session.Joined, session.Reconnecting, session.Closed, session.Leaving);
             string dependency = runtime.DependencyError;
             string error = runtime.Error ?? session?.LastError;
             if (!showNetworkSettings && error != null && error.IndexOf("password", StringComparison.OrdinalIgnoreCase) >= 0)
                 ToggleNetworkSettings();
             connection.text = (runtime.UseSteam ? "Steam P2P" : T("settings.lan")) + "  /  " +
-                (session != null && session.Reconnecting ? T("ui.reconnecting") + " · " + (int)Math.Ceiling(session.RetryInSeconds) + "s" :
+                (session != null && session.Reconnecting ? OnlineText.ReconnectStatus(session, false) :
                 T(session == null ? runtime.Busy ? "ui.connecting" : "ui.not_connected" : session.Joined ? "ui.connected" : "ui.connecting")) +
                 (session != null && session.SmoothedRttMilliseconds > 0 ? " · " + (int)session.SmoothedRttMilliseconds + " ms" : "");
             connection.color = session != null && session.Joined ? OnlineWidgets.OnlineColor : OnlineWidgets.MutedColor;
-            status.text = dependency != null ? T(dependency) : error != null ? T(error.StartsWith("dependency.") ? error : "error." + error) : "";
-            if (error != null && !string.IsNullOrEmpty(detail)) status.text += " · " + detail;
+            status.text = dependency != null ? T(dependency) :
+                error == "reconnecting" ? OnlineText.ConnectionError(session?.LastConnectionError) :
+                OnlineText.ConnectionError(error, detail);
             OnlineWidgets.Size(status.gameObject, -1, string.IsNullOrEmpty(detail) ? 32 : 72);
             if (status.text.Length == 0 && multiplayer?.LastError != null) status.text = T(multiplayer.LastError);
             status.gameObject.SetActive(status.text.Length > 0);

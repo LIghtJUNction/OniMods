@@ -54,9 +54,9 @@ namespace OniOnline.Sdk
         }
         public ModStateSession ModStates { get; }
         public bool Ready { get { return !disposed && room.Joined && !room.Closed && !room.Leaving && !room.Reconnecting &&
-            CanUsePeer(LocalPlayerId) && (IsHost || CanUsePeer(room.Players.FirstOrDefault()?.Id)); } }
+            CanUsePeer(LocalPlayerId) && (IsHost || CanUsePeer(room.HostPlayerId)); } }
         public StarSystemState System { get { return capture()?.Copy(); } }
-        public PlayerInfo[] Players { get { return room.Players.Select(p => new PlayerInfo { Id = p.Id, Name = p.Name, Number = p.Number, Connected = p.Connected }).ToArray(); } }
+        public PlayerInfo[] Players { get { return room.Players; } }
         public event System.Action Changed;
         public event System.Action<string> HandlerFailed;
 
@@ -125,8 +125,11 @@ namespace OniOnline.Sdk
             if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < now) throw new ArgumentOutOfRangeException(nameof(seconds));
             now = seconds;
             ModStates.Pump(seconds);
-            var connected = new HashSet<string>(room.Players.Where(p => p.Connected).Select(p => p.Id), StringComparer.Ordinal);
-            foreach (string peer in budgets.Keys.Where(p => !connected.Contains(p)).ToArray()) budgets.Remove(peer);
+            if (budgets.Count != 0)
+            {
+                var connected = new HashSet<string>(room.ConnectedPlayerIds, StringComparer.Ordinal);
+                foreach (string peer in budgets.Keys.Where(p => !connected.Contains(p)).ToArray()) budgets.Remove(peer);
+            }
             bool ready = Ready;
             long generation = AdmissionGeneration;
             if (wasReady != ready || lastAdmissionGeneration != generation)
@@ -134,7 +137,7 @@ namespace OniOnline.Sdk
         }
         private bool CanUsePeer(string playerId)
         {
-            if (playerId == null || !room.Players.Any(p => p.Id == playerId && p.Connected)) return false;
+            if (!room.IsPlayerConnected(playerId)) return false;
             try { return (canUsePeer == null || canUsePeer(playerId)) &&
                     (admissionGeneration == null || admissionGeneration(playerId) > 0); }
             catch (Exception) { return false; }
@@ -151,7 +154,7 @@ namespace OniOnline.Sdk
         private void Receive(string sender, byte[] bytes)
         {
             if (!Ready || bytes == null || bytes.Length < 5 || bytes.Length > MaxPayloadBytes + 160 || BitConverter.ToInt32(bytes, 0) != Magic ||
-                !CanUsePeer(sender) || !IsHost && sender != room.Players[0].Id) return;
+                !CanUsePeer(sender) || !IsHost && sender != room.HostPlayerId) return;
             if (!budgets.TryGetValue(sender, out var budget)) budgets.Add(sender, budget = new Budget { At = now });
             if (now - budget.At >= 1) { budget.At = now; budget.Packets = budget.Bytes = 0; }
             if (++budget.Packets > 32 || (budget.Bytes += bytes.Length) > 64 * 1024) return;

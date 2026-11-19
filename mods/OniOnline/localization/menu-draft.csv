@@ -374,7 +374,7 @@ entry.selected,已选择,已選擇,Selected
 entry.engine_manual,打印舱操作手册 · 补充条目,列印艙操作手冊 · 補充條目,Printing pod manual · Addendum
 entry.engine_chart,打开星系航图,開啟星系航圖,Open system chart
 error.moderation_state_invalid,存档中的封禁记录无效，无法开放星系。原记录已保留。,存檔中的封禁紀錄無效，無法開放星系。原紀錄已保留。,The saved ban list is invalid. The system cannot be opened. The original data is preserved.
-error.moderation_save_failed,封禁变更在当前星系生效，但未能保存到殖民地状态。,封禁變更在目前星系生效，但未能保存到殖民地狀態。,The ban change applies to this system but could not be stored in the colony.
+error.moderation_save_failed,封禁变更在当前星系生效，但未能保存到殖民地状态。,封禁變更在目前星��生效，但未能保存到殖民地狀態。,The ban change applies to this system but could not be stored in the colony.
 dupe.move,"复制人 {0} → ({1}, {2})","複製人 {0} → ({1}, {2})","Duplicant {0} → ({1}, {2})"
 dupe.cancel,取消移动,取消移動,Cancel move
 dupe.active,正在前往,正在前往,Moving
@@ -493,3 +493,12 @@ mode.online_description,此入口只在已安装并选中需要星球的玩法�
 browser.invalid_code,大厅码无效。,大廳代碼無效。,Invalid lobby code.
 browser.connection_failed,暂时无法连接大厅。,暫時無法連線大廳。,Could not connect to the lobby.
 error.native_browser_unavailable,暂时无法打开星系列表。,暫時無法開啟星系列表。,Could not open the system browser.
+ui.reconnect_attempt,正在进行第 {0} 次重连,正在進行第 {0} 次重新連線,Reconnect attempt {0} in progress
+ui.reconnect_wait,{1} 秒后进行第 {0} 次重连,{1} 秒後進行第 {0} 次重新連線,Reconnect attempt {0} in {1}s
+error.connection_refused,主机未接受连接；请确认大厅已开启并核对端口,主機未接受連線；請確認大廳已開啟並核對連接埠,Host refused the connection; check that the lobby is open and the port is correct
+error.address_not_found,找不到主机地址；请检查主机名与 DNS,找不到主機位址；請檢查主機名稱與 DNS,Host address not found; check the hostname and DNS
+error.connect_timeout,连接超时；请检查主机、防火墙与网络,連線逾時；請檢查主機、防火牆與網路,"Connection timed out; check the host, firewall and network"
+error.network_unreachable,无法访问主机网络；请检查网络或 VPN,無法存取主機網路；請檢查網路或 VPN,Host network is unreachable; check the network or VPN
+error.network_blocked,系统阻止了连接；请检查防火墙权限,系統封鎖了連線；請檢查防火牆權限,The system blocked the connection; check firewall permissions
+error.handshake_timeout,主机未完成握手；请检查双方模组与网络状态,主機未完成交握；請檢查雙方模組與網路狀態,Host did not complete the handshake; check both games and the network
+error.peer_timeout,主机已停止响应；正在尝试恢复连接,主機已停止回應；正在嘗試恢復連線,Host stopped responding; attempting to restore the connection

@@ -271,9 +271,15 @@ namespace OniOnline.Runtime
                 error = "native_mod_settings_write_failed";
             }
             catch (Exception) { error = "native_mod_settings_write_failed"; }
+            bool rollbackFailed = false;
             foreach (var assignment in assignments)
-                try { assignment.Item1.SetEnabled(assignment.Item2); assignment.Item1.Enabled = assignment.Item2; } catch (Exception) { }
-            try { save(); } catch (Exception) { }
+            {
+                try { assignment.Item1.SetEnabled(assignment.Item2); assignment.Item1.Enabled = assignment.Item2; }
+                catch (Exception) { rollbackFailed = true; }
+            }
+            try { if (!save()) rollbackFailed = true; }
+            catch (Exception) { rollbackFailed = true; }
+            if (rollbackFailed) error = "native_mod_rollback_failed";
             return false;
         }
     }

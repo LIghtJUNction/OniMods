@@ -34,6 +34,7 @@ namespace OniOnline.Network
         private readonly ConcurrentDictionary<string, Connection> connections = new ConcurrentDictionary<string, Connection>();
         private readonly ConcurrentQueue<TransportEvent> inbox = new ConcurrentQueue<TransportEvent>();
         private readonly TcpListener listener;
+        private TcpClient pendingClient;
         private string joinAddress;
         private int joinPort;
         private int eventCount;
@@ -71,19 +72,44 @@ namespace OniOnline.Network
         private async Task Connect(string address, int port)
         {
             var client = new TcpClient();
+            Interlocked.Exchange(ref pendingClient, client);
             try
             {
+                if (Volatile.Read(ref disposed) != 0) { client.Close(); return; }
                 var connect = client.ConnectAsync(address, port);
                 if (await Task.WhenAny(connect, Task.Delay(15000)).ConfigureAwait(false) != connect)
-                    throw new IOException("connect_timeout");
+                    throw new TimeoutException();
                 await connect.ConfigureAwait(false);
                 if (Volatile.Read(ref disposed) != 0) { client.Close(); return; }
                 Add(client, HostPeer);
             }
-            catch (Exception)
+            catch (Exception error)
             {
                 client.Close();
-                Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = "connect_failed" });
+                Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = ConnectFailure(error) });
+            }
+            finally { Interlocked.CompareExchange(ref pendingClient, null, client); }
+        }
+
+        // Keep actionable failure categories without leaking endpoint addresses or
+        // platform-specific exception messages into the UI or gameplay SDK.
+        internal static string ConnectFailure(Exception error)
+        {
+            if (error is TimeoutException) return "connect_timeout";
+            var socket = error as SocketException;
+            if (socket == null) return "connect_failed";
+            switch (socket.SocketErrorCode)
+            {
+                case SocketError.ConnectionRefused: return "connection_refused";
+                case SocketError.HostNotFound:
+                case SocketError.NoData:
+                case SocketError.TryAgain: return "address_not_found";
+                case SocketError.TimedOut: return "connect_timeout";
+                case SocketError.NetworkUnreachable:
+                case SocketError.HostUnreachable:
+                case SocketError.NetworkDown: return "network_unreachable";
+                case SocketError.AccessDenied: return "network_blocked";
+                default: return "connect_failed";
             }
         }
 
@@ -205,7 +231,7 @@ namespace OniOnline.Network
 
         public bool Send(string peer, byte[] data)
         {
-            if (data == null || data.Length == 0 || data.Length > Protocol.MaxPacketBytes) return false;
+            if (string.IsNullOrEmpty(peer) || data == null || data.Length == 0 || data.Length > Protocol.MaxPacketBytes) return false;
             Connection connection;
             if (!connections.TryGetValue(peer, out connection) || Volatile.Read(ref connection.Closed) != 0) return false;
             lock (connection.Outbox)
@@ -279,6 +305,9 @@ namespace OniOnline.Network
         {
             if (Interlocked.Exchange(ref disposed, 1) != 0) return;
             if (listener != null) listener.Stop();
+            // Cancelling a join also closes its pending socket, not just sockets
+            // already admitted to the room.
+            Interlocked.Exchange(ref pendingClient, null)?.Close();
             var closing = connections.Values.ToArray();
             foreach (var connection in closing)
             {

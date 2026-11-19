@@ -23,6 +23,12 @@ namespace OniOnline.Runtime
             return catalog == null ? key : catalog.Get(key, Localization.GetLocale()?.Code ?? Localization.GetCurrentLanguageCode());
         }
 
+        internal static string ConnectionError(string reason, string detail = null)
+        { return ConnectionStatusText.Error(reason, detail, Get); }
+
+        internal static string ReconnectStatus(Network.RoomSession session, bool includeCause = true)
+        { return ConnectionStatusText.Reconnecting(session, Get, includeCause); }
+
         internal static string DefaultSystemName(string playerName)
         {
             if (!Network.Protocol.ValidText(playerName, 32)) playerName = "Player";

@@ -27,6 +27,7 @@ namespace OniOnline.UI
         private RoomSession session;
         private string sendError;
         private bool closed;
+        private double nextReconnectRefresh;
 
         internal static OnlineChatWindow Create(OnlineRuntime runtime)
         {
@@ -126,6 +127,8 @@ namespace OniOnline.UI
                 .GetValue(ScreenPrefabs.Instance.ConfirmDialogScreen);
             status = OnlineWidgets.Label(content, "", 16);
             CopyStyle(status, style);
+            status.richText = false;
+            status.textWrappingMode = TextWrappingModes.Normal;
             OnlineWidgets.Size(status.gameObject, -1, 22);
             Transform rows;
             var scroll = OnlineWidgets.Scroll(content, 200, out rows);
@@ -271,8 +274,11 @@ namespace OniOnline.UI
                 session.Reconnecting, session.Closed, session.Leaving);
             heading.SetText(OnlineText.Get("chat.button"));
             heading.richText = false;
-            status.text = session?.Reconnecting == true ? OnlineText.Get("ui.reconnecting") :
+            status.text = session?.Reconnecting == true ? OnlineText.ReconnectStatus(session) :
                 !connected ? OnlineText.Get("chat.join_first") : sendError ?? "";
+            float statusWidth = Mathf.Max(180, ((RectTransform)transform).rect.width - 28);
+            float statusHeight = Mathf.Clamp(status.GetPreferredValues(status.text, statusWidth, 0).y + 4, 22, 88);
+            OnlineWidgets.Size(status.gameObject, -1, statusHeight);
             status.gameObject.SetActive(status.text.Length != 0);
             message.interactable = connected;
             send.isInteractable = connected;
@@ -305,7 +311,9 @@ namespace OniOnline.UI
                 runtime.HideChat();
                 return;
             }
-            if (revision != runtime.Revision || session != runtime.Session) Refresh();
+            bool retryTick = session?.Reconnecting == true && Time.realtimeSinceStartupAsDouble >= nextReconnectRefresh;
+            if (revision != runtime.Revision || session != runtime.Session || retryTick)
+            { Refresh(); nextReconnectRefresh = Time.realtimeSinceStartupAsDouble + 1; }
             if (focusFrame >= 0 && Time.frameCount >= focusFrame)
             {
                 focusFrame = -1;

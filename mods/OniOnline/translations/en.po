@@ -2479,3 +2479,47 @@ msgctxt "STRINGS.ONIONLINE.ERROR.NATIVE_BROWSER_UNAVAILABLE"
 msgid "Could not open the system browser."
 msgstr "Could not open the system browser."
 
+#. STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT"
+msgid "Reconnect attempt {0} in progress"
+msgstr "Reconnect attempt {0} in progress"
+
+#. STRINGS.ONIONLINE.UI.RECONNECT_WAIT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_WAIT"
+msgid "Reconnect attempt {0} in {1}s"
+msgstr "Reconnect attempt {0} in {1}s"
+
+#. STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED"
+msgid "Host refused the connection; check that the lobby is open and the port is correct"
+msgstr "Host refused the connection; check that the lobby is open and the port is correct"
+
+#. STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND
+msgctxt "STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND"
+msgid "Host address not found; check the hostname and DNS"
+msgstr "Host address not found; check the hostname and DNS"
+
+#. STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT"
+msgid "Connection timed out; check the host, firewall and network"
+msgstr "Connection timed out; check the host, firewall and network"
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE"
+msgid "Host network is unreachable; check the network or VPN"
+msgstr "Host network is unreachable; check the network or VPN"
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED"
+msgid "The system blocked the connection; check firewall permissions"
+msgstr "The system blocked the connection; check firewall permissions"
+
+#. STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT"
+msgid "Host did not complete the handshake; check both games and the network"
+msgstr "Host did not complete the handshake; check both games and the network"
+
+#. STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT"
+msgid "Host stopped responding; attempting to restore the connection"
+msgstr "Host stopped responding; attempting to restore the connection"

@@ -2479,3 +2479,47 @@ msgctxt "STRINGS.ONIONLINE.ERROR.NATIVE_BROWSER_UNAVAILABLE"
 msgid "Could not open the system browser."
 msgstr "暫時無法開啟星系列表。"
 
+#. STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_ATTEMPT"
+msgid "Reconnect attempt {0} in progress"
+msgstr "正在進行第 {0} 次重新連線"
+
+#. STRINGS.ONIONLINE.UI.RECONNECT_WAIT
+msgctxt "STRINGS.ONIONLINE.UI.RECONNECT_WAIT"
+msgid "Reconnect attempt {0} in {1}s"
+msgstr "{1} 秒後進行第 {0} 次重新連線"
+
+#. STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECTION_REFUSED"
+msgid "Host refused the connection; check that the lobby is open and the port is correct"
+msgstr "主機未接受連線；請確認大廳已開啟並核對連接埠"
+
+#. STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND
+msgctxt "STRINGS.ONIONLINE.ERROR.ADDRESS_NOT_FOUND"
+msgid "Host address not found; check the hostname and DNS"
+msgstr "找不到主機位址；請檢查主機名稱與 DNS"
+
+#. STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.CONNECT_TIMEOUT"
+msgid "Connection timed out; check the host, firewall and network"
+msgstr "連線逾時；請檢查主機、防火牆與網路"
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_UNREACHABLE"
+msgid "Host network is unreachable; check the network or VPN"
+msgstr "無法存取主機網路；請檢查網路或 VPN"
+
+#. STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED
+msgctxt "STRINGS.ONIONLINE.ERROR.NETWORK_BLOCKED"
+msgid "The system blocked the connection; check firewall permissions"
+msgstr "系統封鎖了連線；請檢查防火牆權限"
+
+#. STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.HANDSHAKE_TIMEOUT"
+msgid "Host did not complete the handshake; check both games and the network"
+msgstr "主機未完成交握；請檢查雙方模組與網路狀態"
+
+#. STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT
+msgctxt "STRINGS.ONIONLINE.ERROR.PEER_TIMEOUT"
+msgid "Host stopped responding; attempting to restore the connection"
+msgstr "主機已停止回應；正在嘗試恢復連線"

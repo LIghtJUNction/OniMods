@@ -195,7 +195,9 @@ namespace OniOnline.Network
         public bool Reconnecting { get; private set; }
         public bool Leaving { get; private set; }
         public int RetryAttempt { get; private set; }
-        public double RetryInSeconds { get { return Reconnecting ? Math.Max(0, retryAt - now) : 0; } }
+        public bool ConnectionAttemptInProgress { get { return Reconnecting && transport != null; } }
+        public double RetryInSeconds { get { return Reconnecting && transport == null ? Math.Max(0, retryAt - now) : 0; } }
+        public string LastConnectionError { get; private set; }
         public int PendingChatCount { get { return pendingChat.Count; } }
         public string LocalPlayerId { get { return localId; } }
         public double SmoothedRttMilliseconds { get; private set; }
@@ -204,8 +206,28 @@ namespace OniOnline.Network
         public string LastError { get; private set; }
         public string LastErrorDetail { get; private set; }
         public RoomBan[] Bans { get { return moderation.Bans; } }
-        public PlayerInfo[] Players { get { return (PlayerInfo[])players.Clone(); } }
-        public ChatLine[] Chat { get { return chat.ToArray(); } }
+        public PlayerInfo[] Players
+        {
+            get { return players.Select(player => new PlayerInfo { Id = player.Id, Name = player.Name,
+                Number = player.Number, Connected = player.Connected }).ToArray(); }
+        }
+        public ChatLine[] Chat
+        {
+            get { return chat.Select(line => new ChatLine { Sequence = line.Sequence, PlayerId = line.PlayerId,
+                Name = line.Name, Text = line.Text, MessageId = line.MessageId }).ToArray(); }
+        }
+        internal string HostPlayerId { get { return players.Length == 0 ? null : players[0].Id; } }
+        internal IEnumerable<string> ConnectedPlayerIds
+        {
+            get { foreach (var player in players) if (player.Connected) yield return player.Id; }
+        }
+        internal bool IsPlayerConnected(string playerId)
+        {
+            if (playerId == null) return false;
+            foreach (var player in players) if (player.Id == playerId) return player.Connected;
+            return false;
+        }
+
         public event System.Action Changed;
         public event System.Action GameStartRequested;
         public event System.Action<string, byte[]> ApplicationMessageReceived;
@@ -329,7 +351,7 @@ namespace OniOnline.Network
             if (Leaving && now >= leaveDeadline) { Stop("leave_unconfirmed"); return; }
             if (Reconnecting)
             {
-                if (now >= reconnectDeadline) { Stop("reconnect_expired"); return; }
+                if (now >= reconnectDeadline) { Stop("reconnect_expired", LastConnectionError); return; }
                 if (transport == null && now >= retryAt) ReconnectNow();
             }
             if (transport != null)
@@ -366,7 +388,7 @@ namespace OniOnline.Network
                         try
                         {
                             var packet = Protocol.Decode(item.Data);
-                            if (item.Realtime && (!RealtimeReady || !peer.Authenticated || packet.Kind != PacketKind.Application ||
+                            if (item.Realtime && (!ApplicationReady || !peer.Authenticated || packet.Kind != PacketKind.Application ||
                                 !RoomVoiceWire.IsVoicePayload(packet.Payload))) continue;
                             Receive(item.Peer, peer, packet);
                         }
@@ -388,7 +410,7 @@ namespace OniOnline.Network
                     : now - peer.ConnectedAt > options.HandshakeTimeoutSeconds)
                 {
                     if (transport != null) transport.Disconnect(entry.Key);
-                    RemovePeer(entry.Key, false);
+                    RemovePeer(entry.Key, false, peer.Authenticated ? "peer_timeout" : "handshake_timeout");
                 }
                 else if (peer.Authenticated && peer.CloseAt == 0)
                 {
@@ -402,7 +424,7 @@ namespace OniOnline.Network
                 }
             }
             if (!IsHost && transport != null && !Joined && peers.Count == 0 && now - attemptStarted > options.HandshakeTimeoutSeconds)
-                ConnectionLost("connect_failed");
+                ConnectionLost("connect_timeout");
             if (IsHost)
             {
                 bool changed = false;
@@ -446,12 +468,19 @@ namespace OniOnline.Network
                 attemptStarted = now;
                 Notify();
             }
-            catch (Exception) { transport = null; ScheduleRetry(); }
+            catch (Exception)
+            {
+                var failed = transport; transport = null;
+                if (failed != null) failed.Dispose();
+                LastConnectionError = "connect_failed";
+                ScheduleRetry();
+            }
         }
 
         private void ConnectionLost(string reason)
         {
             if (Closed || disposed) return;
+            LastConnectionError = reason ?? "host_disconnected";
             Joined = false;
             hostEnvironment = null;
             peers.Clear();
@@ -460,7 +489,7 @@ namespace OniOnline.Network
             if (old != null) old.Dispose();
             if (reconnect == null) { Stop(reason ?? "host_disconnected"); return; }
             if (!Reconnecting) { Reconnecting = true; reconnectDeadline = now + options.ReconnectWindowSeconds; RetryAttempt = 0; }
-            LastError = "reconnecting";
+            LastError = "reconnecting"; LastErrorDetail = null;
             ScheduleRetry();
         }
 
@@ -543,7 +572,8 @@ namespace OniOnline.Network
                     hostEnvironment = new SessionEnvironment(packet.GameVersion, packet.CycleTrimVersion, packet.SpacedOut,
                         packet.Capabilities, packet.RequiredCapabilities);
                     hostConnectionGeneration = checked(hostConnectionGeneration + 1);
-                    peer.Authenticated = true; Joined = true; Reconnecting = false; RetryAttempt = 0; LastError = null;
+                    peer.Authenticated = true; Joined = true; Reconnecting = false; RetryAttempt = 0;
+                    LastError = LastErrorDetail = LastConnectionError = null;
                     localId = packet.PlayerId; players = packet.Players; RoomName = packet.Name;
                     advertisedSequence = packet.Sequence;
                     bool startChanged = !Started && packet.Started;
@@ -590,6 +620,7 @@ namespace OniOnline.Network
             }
             if (packet.Kind == PacketKind.Application)
             {
+                if (!ApplicationReady) return;
                 if (packet.Payload == null || packet.Payload.Length > Protocol.MaxApplicationBytes) throw new InvalidDataException();
                 string sender = IsHost ? peer.Seat.Id : packet.PlayerId;
                 if (!IsHost && (sender == null || sender.Length != 32)) throw new InvalidDataException();
@@ -760,7 +791,7 @@ namespace OniOnline.Network
             else Stop(reason);
         }
 
-        private void RemovePeer(string key, bool explicitLeave)
+        private void RemovePeer(string key, bool explicitLeave, string reason = "host_disconnected")
         {
             Peer peer;
             if (!peers.TryGetValue(key, out peer)) return;
@@ -774,7 +805,7 @@ namespace OniOnline.Network
                 }
                 RefreshRoster(); Notify();
             }
-            else ConnectionLost("host_disconnected");
+            else ConnectionLost(reason);
         }
 
         private void RefreshRoster()
@@ -800,11 +831,14 @@ namespace OniOnline.Network
         }
 
         private bool Send(string key, Packet packet) { return transport != null && transport.Send(key, Protocol.Encode(packet)); }
-        private void Broadcast(Packet packet)
+        private bool Broadcast(Packet packet)
         {
-            if (transport == null) return;
+            if (transport == null) return false;
             byte[] bytes = Protocol.Encode(packet);
-            foreach (var entry in peers.Where(p => p.Value.Authenticated && p.Value.CloseAt == 0).ToArray()) transport.Send(entry.Key, bytes);
+            bool accepted = false;
+            foreach (var entry in peers.Where(p => p.Value.Authenticated && p.Value.CloseAt == 0).ToArray())
+                accepted |= transport.Send(entry.Key, bytes);
+            return accepted;
         }
 
         public bool SendChat(string text)
@@ -842,23 +876,25 @@ namespace OniOnline.Network
             { receivedChat.Remove(++sequence); AddChat(next); }
         }
 
+        // A successful send means a live transport accepted the packet. Gameplay
+        // commands that need execution confirmation must exchange their own receipts.
         public bool SendApplication(byte[] payload)
         {
-            if (IsHost || !Joined || Closed || disposed || payload == null || payload.Length > Protocol.MaxApplicationBytes) return false;
+            if (IsHost || !ApplicationReady || payload == null || payload.Length > Protocol.MaxApplicationBytes) return false;
             return Send(transport.HostPeer, new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload });
         }
 
         public bool SendApplicationTo(string playerId, byte[] payload)
         {
-            if (!IsHost || !Joined || Closed || disposed || payload == null || payload.Length > Protocol.MaxApplicationBytes) return false;
-            Seat seat;
-            return seats.TryGetValue(playerId, out seat) && seat.Connection != null &&
-                Send(seat.Connection, new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload });
+            if (!IsHost || !ApplicationReady || payload == null || payload.Length > Protocol.MaxApplicationBytes) return false;
+            string connection;
+            return TryActivePeer(playerId, out connection) &&
+                Send(connection, new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload });
         }
 
         internal bool SendRealtimeApplication(byte[] payload)
         {
-            if (IsHost || !RealtimeReady || !RoomVoiceWire.IsVoicePayload(payload) || payload.Length > Protocol.MaxApplicationBytes) return false;
+            if (IsHost || !ApplicationReady || !RoomVoiceWire.IsVoicePayload(payload) || payload.Length > Protocol.MaxApplicationBytes) return false;
             var realtime = transport as IRealtimeRoomTransport;
             return realtime != null && realtime.SendRealtime(transport.HostPeer,
                 Protocol.Encode(new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload }));
@@ -866,37 +902,44 @@ namespace OniOnline.Network
 
         internal bool ForwardRealtimeApplication(string senderPlayerId, string targetPlayerId, byte[] payload)
         {
-            if (!IsHost || !RealtimeReady || senderPlayerId == null || targetPlayerId == null || !RoomVoiceWire.IsVoicePayload(payload) ||
+            if (!IsHost || !ApplicationReady || senderPlayerId == null || targetPlayerId == null || !RoomVoiceWire.IsVoicePayload(payload) ||
                 payload.Length > Protocol.MaxApplicationBytes) return false;
-            Seat sender;
-            Peer senderPeer;
-            if (senderPlayerId != localId && (!seats.TryGetValue(senderPlayerId, out sender) || sender.Connection == null ||
-                !peers.TryGetValue(sender.Connection, out senderPeer) || !senderPeer.Authenticated || senderPeer.CloseAt != 0)) return false;
-            Seat target;
-            Peer targetPeer;
-            if (!seats.TryGetValue(targetPlayerId, out target) || target.Connection == null ||
-                !peers.TryGetValue(target.Connection, out targetPeer) || !targetPeer.Authenticated || targetPeer.CloseAt != 0) return false;
+            string connection;
+            if (senderPlayerId != localId && !TryActivePeer(senderPlayerId, out connection)) return false;
+            if (!TryActivePeer(targetPlayerId, out connection)) return false;
             var realtime = transport as IRealtimeRoomTransport;
-            return realtime != null && realtime.SendRealtime(target.Connection,
+            return realtime != null && realtime.SendRealtime(connection,
                 Protocol.Encode(new Packet { Kind = PacketKind.Application, PlayerId = senderPlayerId, Payload = payload }));
         }
 
-        private bool RealtimeReady
+        private bool ApplicationReady
         { get { return !Closed && !disposed && Joined && !Reconnecting && !Leaving && transport != null; } }
+
+        private bool TryActivePeer(string playerId, out string connection)
+        {
+            connection = null;
+            Seat seat;
+            Peer peer;
+            if (playerId == null || !seats.TryGetValue(playerId, out seat) || seat.Connection == null ||
+                !peers.TryGetValue(seat.Connection, out peer) || !peer.Authenticated || peer.Leaving || peer.CloseAt > 0)
+                return false;
+            connection = seat.Connection;
+            return true;
+        }
 
         public bool ForwardApplication(string senderPlayerId, string targetPlayerId, byte[] payload)
         {
-            if (!IsHost || !Joined || Closed || disposed || payload == null || payload.Length > Protocol.MaxApplicationBytes ||
-                (senderPlayerId != localId && !seats.ContainsKey(senderPlayerId))) return false;
+            if (!IsHost || !ApplicationReady || payload == null || payload.Length > Protocol.MaxApplicationBytes) return false;
+            string connection;
+            if (senderPlayerId != localId && !TryActivePeer(senderPlayerId, out connection)) return false;
             var packet = new Packet { Kind = PacketKind.Application, PlayerId = senderPlayerId, Payload = payload };
-            if (targetPlayerId == null) { Broadcast(packet); return true; }
-            Seat target;
-            return seats.TryGetValue(targetPlayerId, out target) && target.Connection != null && Send(target.Connection, packet);
+            if (targetPlayerId == null) return Broadcast(packet);
+            return TryActivePeer(targetPlayerId, out connection) && Send(connection, packet);
         }
 
         public void BroadcastApplication(byte[] payload)
         {
-            if (!IsHost || !Joined || Closed || disposed || payload == null || payload.Length > Protocol.MaxApplicationBytes) return;
+            if (!IsHost || !ApplicationReady || payload == null || payload.Length > Protocol.MaxApplicationBytes) return;
             Broadcast(new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload });
         }
 
