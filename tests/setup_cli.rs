@@ -134,7 +134,7 @@ fn setup_creates_only_missing_files_with_a_valid_game_fixture() {
         fs::create_dir(&bin).unwrap();
         symlink("/bin/sh", bin.join("sh")).unwrap();
         // Setup only probes these command names; no game or SDK code is executed.
-        for name in ["dotnet", "tar", "unzip"] {
+        for name in ["dotnet", "tar"] {
             let stub = bin.join(name);
             fs::write(&stub, "#!/bin/sh\nexit 0\n").unwrap();
             fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();

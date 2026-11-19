@@ -63,7 +63,7 @@ pub fn install_release(cfg: &Config, selected: Option<String>, source: &str) -> 
     }
     let chosen = choose_release(candidates, selected.as_deref())?;
     let install_name = install_directory_name(&chosen)?;
-    install_zip(cfg, &chosen.file, &install_name, &chosen.static_id, None)
+    install_zip(cfg, &chosen.file, &install_name, &chosen.static_id)
 }
 
 pub fn install_repository(
@@ -197,9 +197,8 @@ fn install_zip(
     zip: &Path,
     name: &str,
     static_id: &str,
-    assembly_override: Option<&str>,
 ) -> Result<()> {
-    let files = zip_files(zip)?;
+    let files = archive::file_names(zip)?;
     let assembly = files
         .iter()
         .filter_map(|file| zip_root_name(file))
@@ -211,16 +210,7 @@ fn install_zip(
             Path::new(file).file_stem()?.to_str().map(str::to_owned)
         })
         .collect::<Vec<_>>();
-    let assembly = if let Some(name) = assembly_override {
-        if !files
-            .iter()
-            .filter_map(|entry| zip_root_name(entry))
-            .any(|entry| entry == format!("{name}.dll"))
-        {
-            bail!("安装包根目录缺少 Mod DLL：{name}.dll");
-        }
-        name.to_owned()
-    } else if assembly.len() == 1 {
+    let assembly = if assembly.len() == 1 {
         assembly[0].clone()
     } else {
         bail!(
@@ -231,19 +221,23 @@ fn install_zip(
     validate_mod_directory_name(name)?;
     let target = cfg.local_mod_dir(name)?;
     archive::install(zip, &target, &assembly, || {
-        let yaml = fs::read_to_string(target.join("mod.yaml"))?;
-        if yaml_value(&yaml, "staticID").as_deref() != Some(static_id) {
-            bail!("Release ZIP staticID 与预检值不一致");
-        }
-        identity::enforce_single_source(
-            cfg,
-            static_id,
-            Some(&KeepSource {
-                kind: SourceKind::Local,
-                id: name.to_owned(),
-            }),
-        )
+        activate_local(cfg, &target, name, static_id)
     })
+}
+
+fn activate_local(cfg: &Config, target: &Path, name: &str, static_id: &str) -> Result<()> {
+    let yaml = fs::read_to_string(target.join("mod.yaml"))?;
+    if yaml_value(&yaml, "staticID").as_deref() != Some(static_id) {
+        bail!("安装包 staticID 与预检值不一致");
+    }
+    identity::enforce_single_source(
+        cfg,
+        static_id,
+        Some(&KeepSource {
+            kind: SourceKind::Local,
+            id: name.to_owned(),
+        }),
+    )
 }
 
 fn install_directory(
@@ -254,27 +248,10 @@ fn install_directory(
     static_id: &str,
 ) -> Result<()> {
     validate_mod_directory_name(name)?;
-    let mut staged = std::env::temp_dir();
-    staged.push(format!(
-        "onim-source-{}-{}",
-        std::process::id(),
-        unique_nonce()?
-    ));
-    fs::create_dir_all(staged.parent().context("temp directory has no parent")?)?;
-    let zip = staged.with_extension("zip");
-    let status = Command::new("zip")
-        .args(["-q", "-r"])
-        .arg(&zip)
-        .arg(".")
-        .current_dir(package)
-        .status()
-        .context("创建 Mod 安装包失败；请确认已安装 zip")?;
-    if !status.success() {
-        bail!("创建 Mod 安装包失败：{}", package.display());
-    }
-    let result = install_zip(cfg, &zip, name, static_id, Some(assembly));
-    let _ = fs::remove_file(zip);
-    result
+    let target = cfg.local_mod_dir(name)?;
+    archive::install_directory(package, &target, assembly, || {
+        activate_local(cfg, &target, name, static_id)
+    })
 }
 
 fn build_package(root: &Path, project: &Path, assembly: &str, cache: &Path) -> Result<PathBuf> {
@@ -401,32 +378,6 @@ fn assembly_name(project: &Path) -> Result<String> {
         .and_then(|s| s.to_str())
         .context("csproj name is not UTF-8")?
         .to_owned())
-}
-
-fn zip_files(zip: &Path) -> Result<Vec<String>> {
-    let output = Command::new("unzip")
-        .args(["-Z1"])
-        .arg(zip)
-        .output()
-        .context("检查 Release ZIP 失败；请确认已安装 unzip")?;
-    if !output.status.success() {
-        bail!("无法读取 Release ZIP：{}", zip.display());
-    }
-    let text = String::from_utf8(output.stdout).context("ZIP entry names are not UTF-8")?;
-    let files: Vec<_> = text.lines().map(str::to_owned).collect();
-    if files.iter().any(|name| {
-        Path::new(name).components().any(|part| {
-            matches!(
-                part,
-                std::path::Component::ParentDir
-                    | std::path::Component::RootDir
-                    | std::path::Component::Prefix(_)
-            )
-        })
-    }) {
-        bail!("ZIP 包含越界路径");
-    }
-    Ok(files)
 }
 
 fn zip_root_name(entry: &str) -> Option<&str> {

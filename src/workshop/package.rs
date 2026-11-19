@@ -225,10 +225,12 @@ impl Plan {
 }
 
 pub(super) fn hash(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    let digest = Sha256::digest(bytes);
+    let mut encoded = [0_u8; 64];
+    zhex::encode_lower(&digest, &mut encoded).expect("SHA-256 fits exactly 64 hex bytes");
+    std::str::from_utf8(&encoded)
+        .expect("zhex emits ASCII")
+        .to_owned()
 }
 
 pub(super) fn state_root() -> Result<PathBuf> {

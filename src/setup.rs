@@ -137,12 +137,6 @@ pub fn run() -> Result<()> {
     if !check_command("dotnet") {
         missing.push("dotnet (.NET SDK)");
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        if !check_command("unzip") {
-            missing.push("unzip");
-        }
-    }
     if !check_command("tar") {
         missing.push("tar");
     }
@@ -155,10 +149,6 @@ pub fn run() -> Result<()> {
         println!();
         println!("请安装后重试：");
         println!("  .NET SDK: https://dotnet.microsoft.com/download");
-        #[cfg(not(target_os = "windows"))]
-        {
-            println!("  unzip: sudo apt install unzip  (或对应包管理器)");
-        }
         anyhow::bail!("缺少依赖");
     }
     println!("✅ 所有依赖已安装\n");

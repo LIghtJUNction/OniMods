@@ -118,15 +118,7 @@ fn check_file(label: &str, path: &Path, issues: &mut Vec<String>) {
 }
 
 fn required_tools() -> &'static [&'static str] {
-    #[cfg(target_os = "windows")]
-    {
-        &["dotnet", "tar"]
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        &["dotnet", "tar", "unzip"]
-    }
+    &["dotnet", "tar"]
 }
 
 fn tool_on_path(tool: &str) -> bool {
@@ -159,15 +151,8 @@ fn is_executable(path: &Path) -> bool {
 mod tests {
     use super::required_tools;
 
-    #[cfg(target_os = "windows")]
     #[test]
-    fn required_tools_should_use_windows_archive_support() {
+    fn required_tools_do_not_need_external_zip_programs() {
         assert_eq!(required_tools(), ["dotnet", "tar"]);
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    #[test]
-    fn required_tools_should_include_unzip_off_windows() {
-        assert_eq!(required_tools(), ["dotnet", "tar", "unzip"]);
     }
 }

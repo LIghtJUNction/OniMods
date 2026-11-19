@@ -1,5 +1,13 @@
 # onim Changelog
 
+## Unreleased
+
+- Read and extract mod ZIPs in process. `onim setup` and `onim doctor` no longer require an external `unzip` program.
+- Check ZIP headers and entry paths consistently. Reject traversal, duplicate or ambiguous paths, symbolic links and special files; prevent existing files or filesystem directory aliases from being overwritten or silently merged.
+- Install source build directories directly through the existing staging and rollback transaction, avoiding a temporary ZIP compression and extraction round trip. Preserve Unicode filenames, empty directories and file permissions.
+- Reuse Project Z's published `zhex 0.1.3` for SHA-256 hexadecimal encoding with a fixed output buffer. Hash values and immutable Workshop publication plans keep their existing format.
+- Add 13 archive regressions and use real ZIPs in the CLI installation fixtures, covering failed extraction, activation rollback and preservation of the previous installation.
+
 ## 0.1.13 - 2026-11-08
 
 - Support animated GIF previews for Legacy Workshop page updates.
