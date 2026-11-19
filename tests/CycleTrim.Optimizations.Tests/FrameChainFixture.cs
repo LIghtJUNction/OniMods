@@ -42,7 +42,42 @@ public sealed class Global
 }
 public sealed class App
 {
-    [MethodImpl(MethodImplOptions.NoInlining)] public void LateUpdate() { }
+    public static bool hasFocus = true;
+    public static bool isLoading;
+    public static bool ThrowWhileLoading;
+    public int LoadingCalls;
+    public int SleepCalls;
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void LateUpdate()
+    {
+        if (isLoading)
+        {
+            LoadingCalls++;
+            if (ThrowWhileLoading) throw new InvalidOperationException("scene fixture failed");
+            isLoading = false;
+        }
+        if (!hasFocus && Klei.GenericGameSettings.instance.sleepWhenOutOfFocus)
+        {
+            SleepCalls++;
+            System.Threading.Thread.Sleep(0);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void OnApplicationFocus(bool focus) { hasFocus = focus; }
+}
+
+namespace Klei
+{
+    public sealed class GenericGameSettings
+    {
+        public static GenericGameSettings instance { get; set; } = new GenericGameSettings(true);
+        public bool sleepWhenOutOfFocus { get; private set; }
+        public bool LastSavedSleep;
+        public GenericGameSettings(bool sleep) { sleepWhenOutOfFocus = sleep; }
+        public void SaveSettings() { LastSavedSleep = sleepWhenOutOfFocus; }
+    }
 }
 public sealed class StateMachineUpdater
 {

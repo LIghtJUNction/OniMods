@@ -14,6 +14,8 @@
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FrameTimingWindow.cs" Link="FrameTimingWindow.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/FrameEnvironmentWindow.cs" Link="FrameEnvironmentWindow.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/BackgroundThrottlePatch.cs" Link="BackgroundThrottlePatch.cs" />
     <Compile Include="../../mods/CycleTrim/Core/HarmonyPatchProfile.cs" Link="HarmonyPatchProfile.cs" />
     <Compile Include="../../mods/CycleTrim/Core/HarmonyPatchSnapshot.cs" Link="HarmonyPatchSnapshot.cs" />
     <Compile Include="../../mods/CycleTrim/Core/SaveTypeMetadataCache.cs" Link="SaveTypeMetadataCache.cs" />

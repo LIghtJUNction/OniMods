@@ -15,6 +15,7 @@ namespace CycleTrim.Optimizations.Tests
 
         internal static void Run()
         {
+            BackgroundThrottleRegression.Run();
             CheckCompleteFrameAndGap();
             CheckBoundedSampleWindows();
             CheckElapsedWindowBoundary();
@@ -48,6 +49,7 @@ namespace CycleTrim.Optimizations.Tests
                 Check(HasOwnPatch("Update") && HasOwnPatch("StepTheSim") && HasOwnPatch("SimEveryTick"),
                     "enabled diagnostics must install timing-only patches");
                 CheckFrameBehavior(game, frames);
+                BackgroundThrottleRegression.CheckEnvironmentReports();
                 string report = Debug.Messages.Find(message => message.StartsWith("[CycleTrim FPS]", StringComparison.Ordinal));
                 Check(report.Contains("Game.Update cadence") && report.Contains("Unattributed=")
                     && report.Contains("P50=") && report.Contains("P95=") && report.Contains("P99=")
@@ -243,7 +245,9 @@ namespace CycleTrim.Optimizations.Tests
                 typeof(FrameRateUnlockPatch.KeepUnlocked),
                 typeof(FrameStageProbe.MainStages),
                 typeof(FrameStageProbe.JobStages),
-                typeof(FrameStageProbe.NativePrepare)
+                typeof(FrameStageProbe.NativePrepare),
+                typeof(BackgroundThrottlePatch.DisableSleep),
+                typeof(BackgroundThrottlePatch.ObserveFocus)
             })
                 harmony.CreateClassProcessor(patch).Patch();
         }

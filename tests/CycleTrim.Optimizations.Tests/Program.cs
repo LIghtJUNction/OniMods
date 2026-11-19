@@ -10,6 +10,9 @@ namespace CycleTrim.Optimizations.Tests
         {
             try
             {
+                if (args.Length == 2 && args[0] == "--regression-frame-rate"
+                    && args[1] == CycleTrim.Patches.BackgroundThrottlePatch.LaunchArgument)
+                    args = new[] { args[0] };
                 if (args.Length == 1 && args[0] == "--benchmark-save")
                 {
                     SaveMetadataBenchmark.Run();

@@ -19,6 +19,7 @@ namespace CycleTrim.Patches
     {
         private static bool loggedFrameRepair;
         private static FrameTimingWindow timing;
+        private static FrameEnvironmentWindow environment;
         private static WeakReference captureGame;
         private static int lastGc0;
         private static int lastGc1;
@@ -73,6 +74,7 @@ namespace CycleTrim.Patches
                 if (timing == null || !ReferenceEquals(captureGame.Target, __instance))
                 {
                     timing = new FrameTimingWindow(Stopwatch.Frequency);
+                    environment = new FrameEnvironmentWindow();
                     captureGame = new WeakReference(__instance);
                     captureThread = Thread.CurrentThread.ManagedThreadId;
                     captureSequence++;
@@ -82,9 +84,18 @@ namespace CycleTrim.Patches
                 FrameTimingSummary summary;
                 bool report = timing.BeginFrame(now, Time.frameCount, out summary);
                 if (generation != timing.Generation)
+                {
                     SnapshotGcCounts();
+                    environment.Reset();
+                }
+                var conditions = CaptureEnvironment();
+                environment.Observe(conditions);
                 if (report)
+                {
                     Report(summary);
+                    environment.Reset();
+                    environment.Observe(conditions);
+                }
                 // Reporting is outside the method scope but inside the next
                 // complete Update-to-Update interval, as unattributed overhead.
                 __state = timing.BeginTiming(FrameTimingPhase.Update, Stopwatch.GetTimestamp());
@@ -185,9 +196,35 @@ namespace CycleTrim.Patches
                 state.Window.EndTiming(state, Stopwatch.GetTimestamp());
         }
 
+        internal static void ObserveEnvironment()
+        {
+            if (environment != null && timing != null
+                && Thread.CurrentThread.ManagedThreadId == captureThread)
+                environment.Observe(CaptureEnvironment());
+        }
+
+        private static FrameEnvironmentSample CaptureEnvironment()
+        {
+            bool? configuredSleep = null;
+            try
+            {
+                var settings = Klei.GenericGameSettings.instance;
+                if (settings != null) configuredSleep = settings.sleepWhenOutOfFocus;
+            }
+            catch
+            {
+                // Diagnostics remain usable when settings cannot be inspected.
+                // A null value explicitly excludes this window from a comparison.
+            }
+            return new FrameEnvironmentSample(Application.isFocused, App.hasFocus, configuredSleep,
+                BackgroundThrottlePatch.Requested, BackgroundThrottlePatch.OverrideApplied,
+                QualitySettings.vSyncCount, Application.targetFrameRate);
+        }
+
         private static void ResetMeasurements()
         {
             timing = null;
+            environment = null;
             captureGame = null;
             captureThread = 0;
         }
@@ -255,6 +292,9 @@ namespace CycleTrim.Patches
             Number(json, "p95Ticks", summary.P95Ticks);
             Number(json, "p99Ticks", summary.P99Ticks);
             Number(json, "maxTicks", summary.MaxTicks);
+            json.Append(",\"environment\":");
+            if (environment == null) json.Append("null");
+            else environment.AppendJson(json);
             json.AppendFormat(CultureInfo.InvariantCulture,
                 ",\"gcCollectionsDelta\":[{0},{1},{2}],\"phases\":[", gc0, gc1, gc2);
             for (int index = 0; index < summary.Phases.Length; index++)
