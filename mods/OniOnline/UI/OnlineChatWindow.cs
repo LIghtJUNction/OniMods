@@ -274,8 +274,11 @@ namespace OniOnline.UI
                 session.Reconnecting, session.Closed, session.Leaving);
             heading.SetText(OnlineText.Get("chat.button"));
             heading.richText = false;
+            string connectionError = OnlineText.ConnectionError(runtime.Error ?? session?.LastError,
+                runtime.ErrorDetail ?? session?.LastErrorDetail);
+            string disconnectedStatus = string.IsNullOrEmpty(connectionError) ? OnlineText.Get("chat.join_first") : connectionError;
             status.text = session?.Reconnecting == true ? OnlineText.ReconnectStatus(session) :
-                !connected ? OnlineText.Get("chat.join_first") : sendError ?? "";
+                !connected ? disconnectedStatus : sendError ?? "";
             float statusWidth = Mathf.Max(180, ((RectTransform)transform).rect.width - 28);
             float statusHeight = Mathf.Clamp(status.GetPreferredValues(status.text, statusWidth, 0).y + 4, 22, 88);
             OnlineWidgets.Size(status.gameObject, -1, statusHeight);
