@@ -1,0 +1,30 @@
+type public class App : MonoBehaviour
+member private const string PIPE_NAME = "KLEI_ONI_EXIT_CODE_PIPE"
+member private const string RESTART_FILENAME = "Restarter.exe"
+member private float lastSuspendTime
+member private static List < Type > types
+member private static float [ ] sleepIntervals
+member private static string currentSceneName
+member private void Awake ( )
+member private void OnApplicationFocus ( bool focus )
+member private void OnApplicationQuit ( )
+member private void OnDestroy ( )
+member public App ( )
+member public const int DIST_PLATFORM_FAILED = 2
+member public const int GAME_CRASHED = 1
+member public static App instance
+member public static List < Type > GetCurrentDomainTypes ( )
+member public static System . Action OnPostLoadScene
+member public static System . Action OnPreLoadScene
+member public static bool IsExiting
+member public static bool hasFocus
+member public static bool isLoading
+member public static string GetCurrentSceneName ( )
+member public static string loadingSceneName
+member public static void LoadScene ( string scene_name )
+member public static void OpenWebURL ( string url )
+member public static void Quit ( )
+member public static void QuitCode ( int exitCode )
+member public void LateUpdate ( )
+member public void Restart ( )
+member static App ( )

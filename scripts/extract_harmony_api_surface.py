@@ -15,6 +15,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATCH_RE = re.compile(r"HarmonyPatch\s*\(\s*typeof\((?P<type>[A-Za-z_][A-Za-z0-9_.]*)\)")
+# The liquid texture patch resolves a worker callback from this owner's delegate.
+# Track the explicit owner, not every typeof argument (for example TextureRegion).
+DYNAMIC_PATCH_RE = re.compile(
+    r"\bPropertyTextureCallbackTarget\s*\.\s*TryResolve\s*\(\s*typeof\s*\(\s*"
+    r"(?P<type>[A-Za-z_][A-Za-z0-9_.]*)\s*\)"
+)
 ASSEMBLY_NAMES = ("Assembly-CSharp.dll", "Assembly-CSharp-firstpass.dll")
 TYPE_DECL_RE_TEMPLATE = (
     r"(?m)^[ \t]*(?P<header>"
@@ -49,7 +55,8 @@ def target_types() -> list[str]:
     for root in (ROOT / "mods" / "OniMcp", ROOT / "mods" / "CycleTrim"):
         for path in root.rglob("*.cs"):
             source = path.read_text(encoding="utf-8")
-            found.update(match.group("type") for match in PATCH_RE.finditer(source))
+            for pattern in (PATCH_RE, DYNAMIC_PATCH_RE):
+                found.update(match.group("type") for match in pattern.finditer(source))
     return sorted(found)
 
 

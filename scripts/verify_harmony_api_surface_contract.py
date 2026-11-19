@@ -7,8 +7,9 @@ import io
 import json
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
-from extract_harmony_api_surface import canonical_type_surface, compare_baseline
+from extract_harmony_api_surface import canonical_type_surface, compare_baseline, target_types
 
 
 BASE_SOURCE = r'''
@@ -54,7 +55,42 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def verify_target_discovery() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        sources = root / "mods" / "CycleTrim"
+        sources.mkdir(parents=True)
+        (sources / "StaticPatch.cs").write_text(
+            '[HarmonyPatch(typeof(App), "LateUpdate")] class StaticPatch {}\n',
+            encoding="utf-8",
+        )
+        (sources / "CallbackPatch.cs").write_text(
+            """[HarmonyPatch]
+class CallbackPatch {
+    private MethodInfo target;
+    private string reason;
+    private bool Prepare() {
+        return PropertyTextureCallbackTarget . TryResolve (
+            typeof ( PropertyTextures ), "UpdateLiquid",
+            typeof(TextureRegion), out target, out reason);
+    }
+    private MethodBase TargetMethod() { return target; }
+    private Type Unrelated() { return typeof(NotAPatchTarget); }
+}
+[HarmonyPatch(typeof(App), "OnApplicationFocus")] class OtherStaticPatch {}
+""",
+            encoding="utf-8",
+        )
+        with patch("extract_harmony_api_surface.ROOT", root):
+            require(
+                target_types() == ["App", "PropertyTextures"],
+                "discovery must include the dynamic callback owner, deduplicate static "
+                "targets, and exclude unrelated typeof arguments",
+            )
+
+
 def main() -> int:
+    verify_target_discovery()
     baseline_surface = canonical_type_surface(BASE_SOURCE, "Outer.Target")
     formatted_surface = canonical_type_surface(FORMAT_ONLY_SOURCE, "Outer.Target")
     changed_surface = canonical_type_surface(CHANGED_SOURCE, "Outer.Target")
@@ -109,6 +145,16 @@ def main() -> int:
             require(
                 not compare_baseline(drifted, baseline_path),
                 "signature drift must fail baseline comparison",
+            )
+
+        missing = copy.deepcopy(current)
+        missing["targets"] = []
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+            io.StringIO()
+        ):
+            require(
+                not compare_baseline(missing, baseline_path),
+                "removing a target must fail even when assembly identities are unchanged",
             )
 
     print("PASS stable Harmony API surface regression")

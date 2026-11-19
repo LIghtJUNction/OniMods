@@ -18,6 +18,13 @@
   "schema": 1,
   "targets": [
     {
+      "assembly": "Assembly-CSharp-firstpass.dll",
+      "requested_type": "App",
+      "resolved_type": "App",
+      "signature_file": "Assembly-CSharp-firstpass__App.signatures.txt",
+      "signature_sha256": "2552004e3b31fd8cbdc82284d970cdfd3991141dd28c54f9abbfe9dc986215ef"
+    },
+    {
       "assembly": "Assembly-CSharp.dll",
       "requested_type": "AsyncPathProber.Manager",
       "resolved_type": "AsyncPathProber.Manager",
