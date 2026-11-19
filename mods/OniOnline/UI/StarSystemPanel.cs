@@ -212,8 +212,14 @@ namespace OniOnline.UI
             bool reservation = system?.State?.Members.Any(m => m.PeerId == session?.LocalPlayerId && m.Planet == null && m.Q == selectedQ && m.R == selectedR) == true;
             SetText(context, peer ? "map.observe" : homeView ? "native.select_asteroid" : system?.TravelConfirmed == true
                 ? "entry.waiting_confirmation" : reservation ? "entry.join" : "native.select_position");
-            context.isInteractable = active && (peer || homeView && selectedWorld >= 0 && canChoose ||
+            string observationError = peer ? runtime.WorldObservationUnavailableReason : null;
+            context.isInteractable = active && (peer ? observationError == null :
+                homeView && selectedWorld >= 0 && canChoose ||
                 !homeView && reservation && canChoose && runtime.SelectedPlanet != null);
+            var contextTooltip = context.GetComponent<ToolTip>();
+            if (contextTooltip != null)
+                contextTooltip.SetSimpleTooltip(observationError == null ? labels[context].text :
+                    OnlineText.ConnectionError(observationError));
             nextLayout = 0;
             string hint = runtime.DependencyError ?? system?.LastError ?? runtime.Error;
             var tooltip = connection.GetComponent<ToolTip>();

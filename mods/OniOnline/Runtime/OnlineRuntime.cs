@@ -1215,14 +1215,42 @@ namespace OniOnline.Runtime
             Revision++;
         }
 
+        internal string WorldObservationUnavailableReason
+        {
+            get
+            {
+                if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
+                    return "native_adapter_unavailable";
+                var session = Session;
+                if (session == null || !session.Joined || session.Closed || session.Leaving || session.Reconnecting)
+                    return "observation_not_connected";
+                return Multiplayer == null ? "observation_not_enabled" : null;
+            }
+        }
+
+        private bool CanOpenWorldObservation()
+        {
+            string reason = WorldObservationUnavailableReason;
+            if (reason == null) return true;
+            Error = reason;
+            ErrorDetail = null;
+            Revision++;
+            return false;
+        }
+
         internal void ShowWorldOverview()
         {
+            if (!CanOpenWorldObservation()) return;
             HideWindow();
-            Multiplayer?.Show();
+            Multiplayer.Show();
         }
 
         internal void ObserveWorld(string ownerId)
-        { HideWindow(); Multiplayer?.Show(ownerId); }
+        {
+            if (!CanOpenWorldObservation()) return;
+            HideWindow();
+            Multiplayer.Show(ownerId);
+        }
 
         internal void ShowWorkPlans(string ownerId, string planetId, WorkCell? draftCell = null)
         {

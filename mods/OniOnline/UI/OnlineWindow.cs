@@ -41,6 +41,7 @@ namespace OniOnline.UI
         private Button steam;
         private Button refresh;
         private Button worldsButton;
+        private TextMeshProUGUI worldsUnavailable;
         private Transform clockBar;
         private TextMeshProUGUI clockStatus;
         private double nextNetworkRefresh;
@@ -176,6 +177,9 @@ namespace OniOnline.UI
             preview.alignment = TextAlignmentOptions.MidlineRight;
             OnlineWidgets.Size(preview.gameObject, 165, 40);
             Ellipsis(preview);
+            worldsUnavailable = Caption(content, "", 14, 32);
+            worldsUnavailable.color = OnlineWidgets.MutedColor;
+            worldsUnavailable.textWrappingMode = TextWrappingModes.Normal;
 
             clockBar = OnlineWidgets.Row(content, 24);
             clockStatus = OnlineWidgets.Label(clockBar, "", 16);
@@ -228,6 +232,16 @@ namespace OniOnline.UI
                 if (Protocol.ValidText(value, 32)) PlayerPrefs.SetString("OniOnline.Nickname", value);
             });
             OnlineWidgets.Space(left, 2);
+            Caption(left, T("ui.room_name"), 16, 24).color = OnlineWidgets.MutedColor;
+            var roomName = OnlineWidgets.Input(left, runtime.RoomName, T("ui.room_name"));
+            roomName.name = "LobbyName";
+            roomName.characterLimit = 64;
+            roomName.onValueChanged.AddListener(value => runtime.RoomName = value);
+            connectionControls.Add(roomName);
+            var create = OnlineWidgets.Button(left, T("menu.create_room"), runtime.Host, -1);
+            create.name = "CreateLobby";
+            CompactButton(create);
+            connectionControls.Add(create);
             networkSettingsButton = OnlineWidgets.Button(left, T("lobby.network_settings") + "  +", ToggleNetworkSettings, -1);
             networkSettingsButton.name = "NetworkSettingsToggle";
             CompactButton(networkSettingsButton);
@@ -478,7 +492,10 @@ namespace OniOnline.UI
             bool showClock = session != null && session.Started && Game.Instance != null && Game.Instance.baseAlreadyCreated && multiplayer != null;
             clockBar.gameObject.SetActive(showClock);
             string detail = runtime.ErrorDetail ?? session?.LastErrorDetail;
-            worldsButton.interactable = session != null && !string.IsNullOrEmpty(session.LocalPlayerId);
+            string observationError = runtime.WorldObservationUnavailableReason;
+            worldsButton.interactable = observationError == null;
+            worldsUnavailable.text = OnlineText.ConnectionError(observationError);
+            worldsUnavailable.gameObject.SetActive(observationError != null);
             bool inRoom = session != null && !runtime.BrowsingSystems;
             lobbyView.SetActive(!inRoom); roomView.SetActive(inRoom);
             foreach (var control in connectionControls) control.interactable = session == null && !runtime.Busy;

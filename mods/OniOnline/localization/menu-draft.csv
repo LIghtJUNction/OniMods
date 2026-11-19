@@ -429,6 +429,8 @@ chat.send_failed,消息未能发送。,訊息未能送出。,Message could not b
 error.capability_mismatch,此星系需要当前未提供的联机功能。,此星系需要目前未提供的連線功能。,This system requires unavailable multiplayer features.
 error.invalid_profile,联机资料无效。,連線資料無效。,Invalid multiplayer profile.
 error.native_adapter_unavailable,当前游戏版本尚未支持此功能。,目前遊戲版本尚未支援此功能。,This feature is not supported on this game version.
+error.observation_not_connected,加入大厅并等待连接就绪后才能观察世界。,加入大廳並等待連線就緒後才能觀察世界。,Join a lobby and wait for the connection before observing worlds.
+error.observation_not_enabled,当前大厅未启用世界观察；默认聊天模式只提供大厅与聊天。,目前大廳未啟用世界觀察；預設聊天模式只提供大廳與聊天。,World observation is not enabled in this lobby; the default mode provides lobbies and chat.
 error.mod_sync_catalog_unavailable,未能核验当前模组。,未能核驗目前模組。,Could not verify the current mods.
 error.mod_sync_restart_required,模组已更改。重启游戏后再试。,模組已變更。重新啟動遊戲後再試。,Mods have changed. Restart the game and try again.
 mod_sync.title,模组不一致,模組不一致,Mod Mismatch

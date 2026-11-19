@@ -16,7 +16,7 @@ namespace OniOnline.UI
         private Transform entries;
         private GameObject entryTemplate;
         private ScrollRect scroll;
-        private KButton refresh, joinByCode, codeToggle, close, steam, lan;
+        private KButton refresh, joinByCode, codeToggle, createLobby, close, steam, lan;
         private KInputTextField code, nickname, password, pendingFocus;
         private LocText status, title, description, emptyTitle, emptyHint;
         private GameObject advanced, emptyState;
@@ -193,6 +193,9 @@ namespace OniOnline.UI
             actions = NativeUiTemplates.Row("BrowserActions", panel, 54);
             codeToggle.transform.SetParent(actions, false);
             StyleButton(codeToggle, 260, 48);
+            createLobby = NativeUiTemplates.Button(actions, T("menu.create_room"), () => runtime.ShowWindow(), 180);
+            createLobby.gameObject.name = "CreateLobby";
+            StyleButton(createLobby, 180, 48);
             var actionSpace = NativeUiTemplates.Rect("ActionSpacing", actions);
             NativeUiTemplates.Size(actionSpace.gameObject, 0, 0, 1);
             close.transform.SetParent(actions, false);
@@ -305,7 +308,9 @@ namespace OniOnline.UI
             StyleButton(steam, providerWidth, 44);
             StyleButton(lan, providerWidth, 44);
             StyleButton(refresh, narrow ? providerWidth : 144, 44);
-            StyleButton(codeToggle, narrow ? Mathf.Max(140, panel.sizeDelta.x - 164) : 260, 48);
+            float lobbyActionWidth = narrow ? Mathf.Max(80, (panel.sizeDelta.x - 164) / 2) : 260;
+            StyleButton(codeToggle, lobbyActionWidth, 48);
+            StyleButton(createLobby, narrow ? lobbyActionWidth : 180, 48);
             StyleButton(close, narrow ? 100 : 140, 48);
             foreach (var row in rows) SizeSystemRow(row.GetComponent<HierarchyReferences>(), narrow);
             LayoutRebuilder.MarkLayoutForRebuild(panel);
@@ -425,6 +430,7 @@ namespace OniOnline.UI
         {
             bool busy = Connecting;
             refresh.isInteractable = !busy;
+            createLobby.isInteractable = !busy && runtime.Session == null;
             if (joinByCode != null) joinByCode.isInteractable = !busy && !string.IsNullOrWhiteSpace(code.text);
             bool waitingForJoin = joining && Connecting;
             if (code != null) code.interactable = !waitingForJoin;
@@ -586,6 +592,15 @@ namespace OniOnline.UI
         private void Update()
         {
             if (closed || runtime == null) return;
+            var session = runtime.Session;
+            if (joining && session != null && session.Joined && !session.Closed &&
+                !session.Reconnecting && !session.Leaving &&
+                !session.CanUseCapabilityWith(session.LocalPlayerId, OniOnline.Sdk.GameplayFramework.WorldsCapability))
+            {
+                // Chat sessions finish in the room UI; they never enter a native planet flow.
+                runtime.ShowWindow();
+                return;
+            }
             UpdateGeometry();
             bool retryTick = runtime.Session?.Reconnecting == true && Time.realtimeSinceStartupAsDouble >= nextReconnectRefresh;
             if (revision != runtime.Revision || lastBusy != runtime.Busy || lastSearching != runtime.Searching || retryTick)
