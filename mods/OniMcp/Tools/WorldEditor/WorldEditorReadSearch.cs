@@ -27,6 +27,9 @@ namespace OniMcp.Tools
                     return patchResult;
                 if (relative == "index.md")
                     return CallToolResult.Text(ReadActiveIndexMarkdown(args));
+                if (CurrentStateDocument.TryRead(relative, CopyPayload(args),
+                    CurrentStateReadTools.ReadCurrent, out CallToolResult stateResult))
+                    return stateResult;
                 if (relative == "manifest.oni")
                     return GameControlEntryTools.ControlGame().Handler(Child(args, "state", "status"));
                 if (relative == "colony/status.oni")

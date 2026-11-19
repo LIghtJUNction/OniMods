@@ -15,6 +15,12 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--public-read-guidance-only")
+        {
+            Run("public read continuations preserve complete state", PublicReadGuidanceRegression.Run);
+            return failures == 0 ? 0 : 1;
+        }
+
         Run("report notes preserve content across game API versions", ReportNoteCollectorRegression.Run);
         if (args.Length == 1 && args[0] == "--report-notes-only")
             return failures == 0 ? 0 : 1;
@@ -32,6 +38,7 @@ internal static class Program
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
+        Run("public read continuations preserve complete state", PublicReadGuidanceRegression.Run);
         Run("dynamic resource routes preserve read actions and reject sandbox routes", DynamicResources);
         Run("resource URI authorities preserve canonical and fallback dispatch", ResourceAuthorityCompatibility);
         Run("resource templates reject query operation overrides", TemplateConstraints);

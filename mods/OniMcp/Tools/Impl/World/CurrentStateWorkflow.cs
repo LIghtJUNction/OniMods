@@ -41,39 +41,27 @@ namespace OniMcp.Tools
                             ["arguments"] = new JObject
                             {
                                 ["command"] = "read",
-                                ["path"] = "/active/map/cell_X_Y.md"
+                                ["path"] = "/active/map/cell_X_Y.md",
+                                ["task"] = "Inspect the target cell and its ports"
                             }
                         },
                         new JObject
                         {
-                            ["tool"] = "read_control",
+                            ["tool"] = "world_editor",
                             ["arguments"] = new JObject
                             {
-                                ["domain"] = "infrastructure",
-                                ["action"] = "nearby_ports",
-                                ["x"] = "target-x",
-                                ["y"] = "target-y",
-                                ["radius"] = 4,
-                                ["kind"] = "all"
+                                ["command"] = "zoom",
+                                ["path"] = "/active/map/zoom_X1_Y1_X2_Y2.md",
+                                ["views"] = new JArray("power", "liquid", "gas", "logic", "conveyor"),
+                                ["compact"] = true,
+                                ["task"] = "Inspect a small rectangle around the target ports"
                             }
+                            // Fill the rectangle from the target cell; keep it local.
                         }
                     }
                 },
-                new JObject
-                {
-                    ["step"] = "nearby_ports",
-                    ["tool"] = "read_control",
-                    ["arguments"] = new JObject
-                    {
-                        ["domain"] = "infrastructure",
-                        ["action"] = "nearby_ports",
-                        ["x"] = "target-x",
-                        ["y"] = "target-y",
-                        ["radius"] = 8,
-                        ["kind"] = "all"
-                    },
-                    ["why"] = "Low-token local port search when cell detail says a building has missing input/output."
-                }
+                WorkflowStep("local_ports", "/active/map/cell_X_Y.md",
+                    "Read Ports / Interfaces, then a small infrastructure zoom to verify neighboring input/output and lines.")
             };
         }
 
@@ -83,7 +71,7 @@ namespace OniMcp.Tools
             {
                 ["step"] = step,
                 ["tool"] = "world_editor",
-                ["arguments"] = new JObject { ["command"] = "read", ["path"] = path },
+                ["arguments"] = new JObject { ["command"] = "read", ["path"] = path, ["task"] = "Inspect " + step },
                 ["why"] = why
             };
         }
@@ -92,7 +80,7 @@ namespace OniMcp.Tools
         {
             return new JArray
             {
-                new JObject { ["step"] = 1, ["call"] = "read_control domain=state action=current", ["why"] = "Low-token colony, camera, editable files, recommended second call. Add includeReachability=true only before dig/build/rescue reach checks." },
+                new JObject { ["step"] = 1, ["call"] = "world_editor command=read path=/active/index.md includeState=true", ["why"] = "Low-token colony preview with a complete-document nextRead. Read /active/dupes/reachability.md before dig/build/rescue reach checks." },
                 new JObject
                 {
                     ["step"] = 2,
@@ -151,7 +139,8 @@ namespace OniMcp.Tools
                 ["kind"] = "starter",
                 ["autoLayout"] = true,
                 ["priority"] = 7,
-                ["execute"] = execute
+                ["execute"] = execute,
+                ["task"] = execute ? "Queue the starter room plan" : "Preview the starter room plan"
             };
 
             if (confirm)
@@ -217,21 +206,21 @@ namespace OniMcp.Tools
                 {
                     ["when"] = "generated call reports blocked/obstructed/missing support",
                     ["tool"] = "world_editor",
-                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/map/cell_X_Y.md" },
+                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/map/cell_X_Y.md", ["task"] = "Inspect the reported blocked cell" },
                     ["why"] = "Cell detail objects, pickups, ports, temperature suitability, Decision Hints."
                 },
                 new JObject
                 {
                     ["when"] = "work is unreachable dupes idle",
                     ["tool"] = "world_editor",
-                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/dupes/reachability.md", ["radius"] = 12, ["sampleLimit"] = 12 },
+                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/dupes/reachability.md", ["payload"] = new JObject { ["radius"] = 12, ["sampleLimit"] = 12 }, ["task"] = "Check duplicant reachability" },
                     ["why"] = "Reachability should be checked before adding ladders rescue digs."
                 },
                 new JObject
                 {
                     ["when"] = "exception/crash/unsafe diagnostic appears",
                     ["tool"] = "world_editor",
-                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/diagnostics/logs.md", ["logLimit"] = 220 },
+                    ["arguments"] = new JObject { ["command"] = "read", ["path"] = "/active/diagnostics/logs.md", ["logLimit"] = 220, ["task"] = "Read recent game errors" },
                     ["why"] = "Read logs only on failure; normal loop should stay low token."
                 }
             };
@@ -261,42 +250,33 @@ namespace OniMcp.Tools
                 StarterRoomTemplateCall(),
                 new JObject
                 {
-                    ["tool"] = "read_control",
-                    ["arguments"] = new JObject
-                    {
-                        ["domain"] = "world",
-                        ["action"] = "layout_candidates",
-                        ["purpose"] = "starter",
-                        ["width"] = 15,
-                        ["height"] = 4,
-                        ["limit"] = 5,
-                        ["maxCells"] = 1600
-                    },
-                    ["why"] = "Fallback only: inspect low-risk rectangles if one-call starter reports missing context or unsafe layout."
+                    ["tool"] = "building_control",
+                    ["arguments"] = StarterRoomTemplateArguments(execute: false, confirm: false, dryRun: true),
+                    ["why"] = "Preview the starter room plan and its blockers before queuing work."
                 },
                 new JObject
                 {
-                    ["tool"] = "read_control",
+                    ["tool"] = "world_editor",
                     ["arguments"] = new JObject
                     {
-                        ["domain"] = "world",
-                        ["action"] = "reachable_area",
-                        ["radius"] = 12,
-                        ["sampleLimit"] = 12
+                        ["command"] = "read",
+                        ["path"] = "/active/dupes/reachability.md",
+                        ["payload"] = new JObject { ["radius"] = 12, ["sampleLimit"] = 12 },
+                        ["task"] = "Check duplicant reachability"
                     },
                     ["why"] = "Compact duplicant movement ranges before planning dig/build/rescue work."
                 },
                 LocalZoomNextCall(),
                 new JObject
                 {
-                    ["tool"] = "read_control",
+                    ["tool"] = "world_editor",
                     ["arguments"] = new JObject
                     {
-                        ["domain"] = "world",
-                        ["action"] = "text_map",
-                        ["profile"] = "scan",
-                        ["encoding"] = "rle",
-                        ["maxCells"] = 1200
+                        ["command"] = "read",
+                        ["path"] = "/active/map/viewport.md",
+                        ["compact"] = true,
+                        ["maxCells"] = 1200,
+                        ["task"] = "Read the current map viewport"
                     },
                     ["why"] = "Compact default viewport map if visual context is needed."
                 }
@@ -308,7 +288,8 @@ namespace OniMcp.Tools
             var args = new JObject
             {
                 ["command"] = "zoom",
-                ["views"] = "default,power,temperature",
+                ["views"] = new JArray("default", "power", "temperature"),
+                ["task"] = "Inspect the local map and infrastructure",
                 ["compact"] = true,
                 ["syncView"] = true,
                 ["focusCamera"] = true

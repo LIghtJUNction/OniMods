@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Tags = new List<string> { "snapshot", "colony", "status", "diagnostics", "dupes", "food", "research", "performance", "快照", "状态" },
-                Description = "兼容入口：请优先使用 colony_control domain=snapshot action=get。一次返回低 token 殖民地状态快照，替代 game_control domain=speed action=time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status 的常规组合调用。默认不扫描全图大气；需要氧气统计时显式 includeAtmosphere=true。",
+                Description = "兼容入口：请使用 world_editor command=read path=/active/colony/status.oni。一次返回低 token 殖民地状态快照，替代 game_control domain=speed action=time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status 的常规组合调用。默认不扫描全图大气；需要氧气统计时显式 includeAtmosphere=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["profile"] = new McpToolParameter { Type = "string", Description = "minimal/brief/standard/full；minimal 只返回循环、暂停、告警级别、核心指标和一句摘要", Required = false, EnumValues = new List<string> { "minimal", "brief", "standard", "full" } },
@@ -110,7 +110,7 @@ namespace OniMcp.Tools
                         ["singleTool"] = true,
                         ["deltaAvailable"] = true,
                         ["watchOnly"] = watchOnly,
-                        ["replaces"] = new[] { "game_control domain=speed action=time", "colony_control domain=read action=status", "colony_control domain=diagnostic action=diagnostics", "colony_control domain=diagnostic action=alerts", "read_control domain=resources action=food", "colony_control domain=read action=dupes", "colony_control domain=management kind=research action=status" },
+                        ["replaces"] = new[] { "game_control domain=speed action=time", "resources/read uri=oni://colony/status", "resources/read uri=oni://colony/diagnostics", "resources/read uri=oni://colony/alerts", "resources/read uri=oni://resources/food", "resources/read uri=oni://dupes", "resources/read uri=oni://research/status" },
                         ["fullGridScan"] = needAtmosphere
                     };
                     if (needAtmosphere)

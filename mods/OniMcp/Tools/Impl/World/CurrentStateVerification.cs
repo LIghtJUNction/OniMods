@@ -13,7 +13,7 @@ namespace OniMcp.Tools
                 ["goal"] = "Keep normal play low-token and avoid broad/high-frequency reads unless a failure appears.",
                 ["normalLoop"] = new JArray
                 {
-                    "Use read_control domain=state action=current with default minimal profile.",
+                    "Use world_editor command=read path=/active/index.md includeState=true for a compact state preview.",
                     "Use one local zoom or one cell detail before editing; avoid scanning broad maps repeatedly.",
                     "After write actions, verify compact result first, then one returned cell or local zoom."
                 },
@@ -30,7 +30,8 @@ namespace OniMcp.Tools
                     {
                         ["command"] = "read",
                         ["path"] = "/active/diagnostics/logs.md",
-                        ["logLimit"] = 220
+                        ["logLimit"] = 220,
+                        ["task"] = "Read recent game errors"
                     },
                     ["why"] = "Tail-only stability check; do this on failures, not every normal loop."
                 },
@@ -74,7 +75,8 @@ namespace OniMcp.Tools
                     {
                         ["command"] = "read",
                         ["path"] = "/active/diagnostics/logs.md",
-                        ["logLimit"] = 220
+                        ["logLimit"] = 220,
+                        ["task"] = "Read recent game errors"
                     },
                     ["why"] = "Logs are expensive/noisy; read them only when result reports error, crash, or tester failure."
                 },

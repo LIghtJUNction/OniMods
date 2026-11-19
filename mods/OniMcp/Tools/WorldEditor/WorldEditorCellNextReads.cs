@@ -47,9 +47,8 @@ namespace OniMcp.Tools
             if (building == null)
                 return;
 
-            sb.AppendLine("- nearby ports: `read_control domain=infrastructure action=nearby_ports x="
-                + x + " y=" + y + " radius=8 kind=all`");
-            sb.AppendLine("- port workflow: read nearby_ports -> inspect this cell Ports / Interfaces -> confirm matching line in infrastructure view.");
+            sb.AppendLine("- nearby port context: `" + LocalZoomCall(x, y, "power,liquid,gas,logic,conveyor") + "`");
+            sb.AppendLine("- port workflow: inspect this cell Ports / Interfaces, then read the neighboring endpoint cell and confirm matching lines in the local zoom.");
         }
 
         private static void AppendCellInfrastructureReads(StringBuilder sb, int x, int y, int cell)
@@ -97,8 +96,8 @@ namespace OniMcp.Tools
 
             sb.AppendLine("- temperature: `" + LocalZoomCall(x, y, "temperature")
                 + "` comfort=10~37C, current=" + tempC.ToString("F1") + "C");
-            sb.AppendLine("- temperature detail: `read_control domain=world action=cell_info x="
-                + x + " y=" + y + " includeTemperature=true marginC=15 limit=20`");
+            sb.AppendLine("- temperature detail: `resources/read uri=oni://world/cell/"
+                + x + "/" + y + "`");
         }
 
         private static void AppendCellOperationHints(StringBuilder sb, int x, int y, int cell)

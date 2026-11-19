@@ -66,7 +66,7 @@ namespace OniMcp.Tools
         {
             sb.AppendLine("## Progressive Options");
             sb.AppendLine("- Default: low-token status and next calls only.");
-            sb.AppendLine("- `includeState=true`: append current colony JSON snapshot.");
+            sb.AppendLine("- `includeState=true`: append a valid JSON preview; `" + CurrentStateDocument.ReadCall + "` reads the complete document.");
             sb.AppendLine("- `includeInfrastructure=true infrastructureKind=all|power|liquid|gas|logic|rail`: append compact ports/lines.");
             sb.AppendLine("- Infrastructure files expose low-token `glyph/dirs/links/to`, bridges, ports, and producer/consumer roles.");
             sb.AppendLine("- `includeLogs=true logLimit=160`: append recent suspicious Player.log lines.");
@@ -144,7 +144,7 @@ namespace OniMcp.Tools
 
         private static void AppendExpandedCurrentState(StringBuilder sb, JObject args)
         {
-            var forwarded = new JObject(args);
+            var forwarded = CopyPayload(args);
             forwarded["domain"] = "state";
             forwarded["action"] = "current";
             forwarded.Remove("command");
@@ -158,23 +158,24 @@ namespace OniMcp.Tools
             {
                 sb.AppendLine("State read failed:");
                 sb.AppendLine("```text");
-                sb.AppendLine(TrimActiveIndexText(text, ActiveIndexExpandedStateLimit));
+                sb.AppendLine(TrimActiveIndexError(text, ActiveIndexExpandedStateLimit));
                 sb.AppendLine("```");
                 return;
             }
 
             sb.AppendLine("```json");
-            sb.AppendLine(TrimActiveIndexText(text, ActiveIndexExpandedStateLimit));
+            sb.AppendLine(CurrentStateDocument.Preview(text, ActiveIndexExpandedStateLimit, forwarded));
             sb.AppendLine("```");
+            sb.AppendLine("Full current state: `" + CurrentStateDocument.ReadCall + "`.");
             sb.AppendLine();
         }
 
-        private static string TrimActiveIndexText(string text, int max)
+        private static string TrimActiveIndexError(string text, int max)
         {
             if (string.IsNullOrEmpty(text) || text.Length <= max)
                 return text ?? string.Empty;
 
-            return text.Substring(0, max) + "\n... truncated; call read_control domain=state action=current for full output";
+            return text.Substring(0, max) + "\n... truncated; " + CurrentStateDocument.ReadCall + " reads the full result";
         }
 
         private static string ActiveSaveDisplayName()

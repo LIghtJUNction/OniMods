@@ -27,24 +27,38 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> CellProgressiveDetail(int x, int y)
         {
+            string path = $"/active/map/cell_{x}_{y}.md";
             return new Dictionary<string, object>
             {
-                ["markdown"] = $"/active/map/cell_{x}_{y}.md",
-                ["nearbyPorts"] = new Dictionary<string, object>
+                ["markdown"] = path,
+                ["cellRead"] = new Dictionary<string, object>
                 {
-                    ["tool"] = "read_control",
+                    ["tool"] = "world_editor",
                     ["arguments"] = new Dictionary<string, object>
                     {
-                        ["domain"] = "infrastructure",
-                        ["action"] = "nearby_ports",
-                        ["x"] = x,
-                        ["y"] = y,
-                        ["radius"] = 8,
-                        ["kind"] = "all",
-                        ["limit"] = 40
+                        ["command"] = "read",
+                        ["path"] = path,
+                        ["compact"] = false,
+                        ["task"] = "Inspect this cell and its ports"
                     }
                 },
-                ["tokenHint"] = "Use this cell_info first, then read markdown or nearby_ports only when more detail is needed."
+                ["nearbyPorts"] = new Dictionary<string, object>
+                {
+                    ["tool"] = "world_editor",
+                    ["arguments"] = new Dictionary<string, object>
+                    {
+                        ["command"] = "zoom",
+                        ["x1"] = Math.Max(0, x - 4),
+                        ["y1"] = Math.Max(0, y - 4),
+                        ["x2"] = Math.Min(Grid.WidthInCells - 1, x + 4),
+                        ["y2"] = Math.Min(Grid.HeightInCells - 1, y + 4),
+                        ["views"] = new[] { "power", "liquid", "gas", "logic", "conveyor" },
+                        ["compact"] = true,
+                        ["task"] = "Inspect nearby port and line context"
+                    },
+                    ["description"] = "Local map context; inspect each endpoint cell's Ports / Interfaces."
+                },
+                ["tokenHint"] = "Read cellRead for exact ports or nearbyPorts for a bounded local infrastructure map."
             };
         }
 

@@ -151,8 +151,8 @@ namespace OniMcp.Tools
             sb.AppendLine("# Duplicant Reachability");
             sb.AppendLine();
             sb.AppendLine("Path: /active/dupes/reachability.md");
-            sb.AppendLine("Source: read_control domain=world action=reachable_area radius="
-                + forwarded["radius"] + " sampleLimit=" + forwarded["sampleLimit"]);
+            sb.AppendLine("Read: world_editor command=read path=/active/dupes/reachability.md payload={radius:"
+                + forwarded["radius"] + ",sampleLimit:" + forwarded["sampleLimit"] + "}");
             sb.AppendLine();
             if (result.IsError)
             {

@@ -271,7 +271,7 @@ private static JArray ManagementQuickEdits()
             int x2 = Mathf.Clamp(cx + halfWidth, 0, Grid.WidthInCells - 1);
             int y1 = Mathf.Clamp(cy - halfHeight, 0, Grid.HeightInCells - 1);
             int y2 = Mathf.Clamp(cy + halfHeight, 0, Grid.HeightInCells - 1);
-            var args = new JObject { ["command"] = "zoom", ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2, ["views"] = views, ["compact"] = true, ["syncView"] = true, ["focusCamera"] = true, ["focusMode"] = focusMode };
+            var args = new JObject { ["command"] = "zoom", ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2, ["views"] = new JArray(views.Split(',')), ["task"] = "Inspect the " + direction + " local map", ["compact"] = true, ["syncView"] = true, ["focusCamera"] = true, ["focusMode"] = focusMode };
             string call = "world_editor command=zoom x1=" + x1 + " y1=" + y1 + " x2=" + x2 + " y2=" + y2
                 + " views=" + views + " compact=true syncView=true focusMode=" + focusMode;
             string why = focusMode == "overview" ? "Zoom out to anchor global layout before planning edits." : "Zoom in to inspect local cells, overlays, anchors, and stream-visible detail.";
@@ -282,13 +282,13 @@ private static JArray ManagementQuickEdits()
         {
             return new JArray
             {
-                DetailHint("overview", "read_control domain=state action=current", "Small first call: colony snapshot, editable files, next actions."),
+                DetailHint("overview", "world_editor command=read path=/active/index.md includeState=true", "Small first call: colony snapshot, editable files, next actions."),
                 DetailHint("logs", "world_editor command=read path=/active/diagnostics/logs.md logLimit=220", "Low-token Player.log stability check after crashes, tester failures, mod exceptions."),
                 DetailHint("zoom", "world_editor command=zoom x1=... y1=... x2=... y2=... views=default,power,temperature", "Local multi-view map; syncs live camera/view for stream."),
                 DetailHint("screenshot", "world_editor command=screenshot views=default,power,temperature waitFrames=2", "Capture current viewport across overlays; use as visual proof after map/connection edits."),
-                DetailHint("cell", "/active/map/cell_X_Y.md", "Exact cell: temperature suitability, objects, ports, lines, pickup stacks, Decision Hints for dig/mop/sweep/network risks."),
-                DetailHint("ports", "read_control domain=infrastructure action=nearby_ports x=... y=... radius=8 kind=all", "Local power/liquid/gas/logic/rail ports without broad scans."),
-                DetailHint("reachability", "read_control domain=state action=current includeReachability=true reachabilityRadius=12", "Compact duplicant movement range before rescue, dig, construction planning; use standalone reachable_area only for repeated checks."),
+                DetailHint("cell", "world_editor command=read path=/active/map/cell_X_Y.md", "Exact cell: temperature suitability, objects, ports, lines, pickup stacks, Decision Hints for dig/mop/sweep/network risks."),
+                DetailHint("ports", "world_editor command=read path=/active/map/cell_X_Y.md compact=false", "Inspect Ports / Interfaces, then a local infrastructure zoom; no broad port scan."),
+                DetailHint("reachability", "world_editor command=read path=/active/dupes/reachability.md", "Compact duplicant movement range before rescue, dig, or construction planning."),
                 DetailHint("ops", "world_editor command=read path=/active/ops/tools.md", "Grep-friendly operation file/tool index before issuing natural orders."),
                 DetailHint("edit", "/active/ops/orders.md, /active/ops/dupes.md, or /active/map/viewport.md SEARCH/REPLACE", "Execute typed orders, duplicant moves, or map-token edits after inspecting local detail.")
             };

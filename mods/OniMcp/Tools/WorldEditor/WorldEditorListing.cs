@@ -48,7 +48,10 @@ namespace OniMcp.Tools
             {
                 string relative = path.Substring("/active/".Length);
                 if (relative == "colony/")
+                {
                     add("status.oni", "file", "Colony snapshot.");
+                    add(CurrentStateDocument.FileName, "file", CurrentStateDocument.Description);
+                }
                 else if (relative == "map/")
                 {
                     add("viewport.html", "file", "Visual floor layout HTML page of the current camera viewport.");

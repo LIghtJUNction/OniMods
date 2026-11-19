@@ -11,6 +11,7 @@ namespace OniMcp.Tools
     {
         internal static int HandlerCalls;
         internal static bool FailNextFactory;
+        internal static Func<JObject, CallToolResult> CurrentStateReader;
 
         internal static McpTool Tool(string name)
         {
@@ -33,6 +34,11 @@ namespace OniMcp.Tools
                 Handler = arguments =>
                 {
                     HandlerCalls++;
+                    if (name == "world_editor" && CurrentStateReader != null
+                        && (string)arguments["command"] == "read"
+                        && CurrentStateDocument.TryRead((string)arguments["path"], arguments,
+                            CurrentStateReader, out CallToolResult state))
+                        return state;
                     if ((string)arguments["query"] == "throw")
                         throw new InvalidOperationException("handler failure");
                     if ((string)arguments["query"] == "error")
