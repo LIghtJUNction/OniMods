@@ -374,7 +374,7 @@ entry.selected,已选择,已選擇,Selected
 entry.engine_manual,打印舱操作手册 · 补充条目,列印艙操作手冊 · 補充條目,Printing pod manual · Addendum
 entry.engine_chart,打开星系航图,開啟星系航圖,Open system chart
 error.moderation_state_invalid,存档中的封禁记录无效，无法开放星系。原记录已保留。,存檔中的封禁紀錄無效，無法開放星系。原紀錄已保留。,The saved ban list is invalid. The system cannot be opened. The original data is preserved.
-error.moderation_save_failed,封禁变更在当前星系生效，但未能保存到殖民地状态。,封禁變更在目前星��生效，但未能保存到殖民地狀態。,The ban change applies to this system but could not be stored in the colony.
+error.moderation_save_failed,封禁变更在当前星系生效，但未能保存到殖民地状态。,封禁變更在目前星系生效，但未能保存到殖民地狀態。,The ban change applies to this system but could not be stored in the colony.
 dupe.move,"复制人 {0} → ({1}, {2})","複製人 {0} → ({1}, {2})","Duplicant {0} → ({1}, {2})"
 dupe.cancel,取消移动,取消移動,Cancel move
 dupe.active,正在前往,正在前往,Moving

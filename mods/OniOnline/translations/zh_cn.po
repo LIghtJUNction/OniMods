@@ -2027,7 +2027,7 @@ msgstr "启用星系语音"
 #. STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED_HINT
 msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_ENABLED_HINT"
 msgid "Capture the microphone only while push-to-talk is held. Default Ctrl+V; rebind in game Options > Controls > Mods. Disable to stop capture and playback immediately."
-msgstr "只在按住说话键时采集麦克风。默认 Ctrl+V���在游戏设置 → 控制 → 模组中改键。关闭后停止录音和播放，立即生效。"
+msgstr "只在按住说话键时采集麦克风。默认 Ctrl+V；在游戏设置 → 控制 → 模组中改键。关闭后停止录音和播放，立即生效。"
 
 #. STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME
 msgctxt "STRINGS.ONIONLINE.OPTIONS.VOICE_VOLUME"
