@@ -32,6 +32,8 @@ use onisim_gpu::disease_diffusion::{ActiveCell as DiffusionActive, DiseaseDiffus
 
 #[path = "gpu_thermal_cpu.rs"]
 mod thermal_cpu;
+#[path = "gpu_thermal_regions.rs"]
+mod thermal_regions;
 #[cfg(test)]
 use onisim_gpu::radiation_region::{PendingRadiation, RadiationCell, RadiationParams, RadiationRegionGpu, RadiationResult};
 
@@ -93,8 +95,6 @@ pub(crate) struct GpuSimulation {
     bubble_materials: Vec<BubbleMaterial>,
     bubble_y0: usize,
     bubble_height: usize,
-    pub(crate) pathfinder: onisim_gpu::gpu_pathfinder::GpuPathfinder,
-    pub(crate) resident: Option<onisim_gpu::resident_cells::ResidentCells>,
 }
 
 pub(crate) struct GasBatchJob<'a> {
@@ -179,12 +179,9 @@ impl GpuSimulation {
         let radiation_region = RadiationRegionGpu::new(context.clone());
         let gas_pressure_faces = GasPressureFacesGpu::new(context.clone());
         let bubble_settling = BubbleSettlingGpu::new(context.clone());
-        let pathfinder = onisim_gpu::gpu_pathfinder::GpuPathfinder::new(context.clone());
-        let resident = onisim_gpu::resident_cells::ResidentCells::new(context.clone(), cells).ok();
         Ok(Self {
             context,
             thermal,
-            resident,
             region_map: vec![0; cells],
             thermal_cpu_groups: Vec::new(),
             gas_cpu: Vec::new(),
@@ -240,7 +237,6 @@ impl GpuSimulation {
             bubble_materials: Vec::new(),
             bubble_y0: 0,
             bubble_height: 0,
-            pathfinder,
         })
     }
 
@@ -1096,26 +1092,32 @@ impl GpuSimulation {
         let bounds_changed = self.region_bounds.len() != world.regions.len()
             || self.region_bounds.iter().zip(&world.regions).any(|(old, r)| *old != (r.min_x,r.min_y,r.max_x,r.max_y));
         if !self.region_map_initialized || bounds_changed {
-        self.region_map.fill(0);
-        for (index, region) in world.regions.iter().enumerate() {
-            let min_x = region.min_x.max(1) as usize;
-            let min_y = region.min_y.max(1) as usize;
-            let max_x = (region.max_x as usize).min(world.width + 1);
-            let max_y = (region.max_y as usize).min(world.height + 1);
-            if max_x.saturating_sub(min_x) < 2 || max_y.saturating_sub(min_y) < 2 { continue; }
-            for y in min_y..max_y {
-                self.region_map[y*world.stride+min_x..y*world.stride+max_x].fill((index+1) as u32);
+            self.region_map.fill(0);
+            for (index, region) in world.regions.iter().enumerate() {
+                let Some([min_x, min_y, max_x, max_y]) =
+                    thermal_regions::clipped_bounds(region, world.width, world.height)
+                else {
+                    continue;
+                };
+                for y in min_y..max_y {
+                    self.region_map[y*world.stride+min_x..y*world.stride+max_x].fill((index+1) as u32);
+                }
             }
-        }
-        self.region_bounds.clear();
-        self.region_bounds.extend(world.regions.iter().map(|r|(r.min_x,r.min_y,r.max_x,r.max_y)));
-        self.region_map_initialized=true;
+            self.region_bounds.clear();
+            self.region_bounds.extend(world.regions.iter().map(|r|(r.min_x,r.min_y,r.max_x,r.max_y)));
+            self.region_map_initialized=true;
         }
         #[cfg(test)]
         let use_cpu_thermal = !self.thermal_reference;
         #[cfg(not(test))]
         let use_cpu_thermal = true;
-        if use_cpu_thermal && thermal_cpu::try_step(world, elements, &self.region_map, &mut self.thermal_cpu_groups, dt) {
+        // A nonzero region entry is necessary for every deferred gas cell.
+        // Skip only a prepass whose original eligibility threshold is impossible.
+        // The GPU still consumes the unchanged region map constructed above.
+        if use_cpu_thermal
+            && thermal_regions::cpu_prepass_can_succeed(&world.regions, world.width, world.height, count)
+            && thermal_cpu::try_step(world, elements, &self.region_map, &mut self.thermal_cpu_groups, dt)
+        {
             if profiling {
                 eprintln!("[CycleTrim OniSim] CPU sparse-face thermal profile cells={count} wall={:.3}ms",
                     started.elapsed().as_secs_f64() * 1000.0);

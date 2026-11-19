@@ -84,7 +84,7 @@ fn try_step_in_pool(
     });
     // A dense solid workload retains the GPU gather. The CPU path avoids a
     // transfer/barrier when the regional gas solver owns most interior faces.
-    if stats.0 < count / 2 || !stats.1 {
+    if stats.0 < super::thermal_regions::minimum_deferred_cells(count) || !stats.1 {
         return false;
     }
     let temperature = &world.read.temperature;
@@ -166,6 +166,74 @@ fn try_step_in_pool(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn thermal_prepass_scratch_is_disposable_after_rejection_or_skip() {
+        let (mut state, active_regions) =
+            crate::native_chain_tests::fixture::create(128, 96, "mixed");
+        let mut world = state.world.take().unwrap();
+        world.regions = active_regions;
+        world.initialize_boundary();
+        let elements = state.elements.take().unwrap();
+        for (cell, temperature) in world.write.temperature.iter_mut().enumerate() {
+            *temperature = 300.0 + (cell % 19) as f32 * 5.0;
+        }
+        world.write.properties[50 * world.stride + 40] = 1;
+        world.sync_read_from_write();
+        crate::multicomponent_flux::refresh_active_gas_channels(&mut world, &elements);
+
+        let count = world.read.mass.len();
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(2)
+            .build()
+            .unwrap();
+        let sparse = crate::world::Region {
+            min_x: 1,
+            min_y: 1,
+            max_x: 3,
+            max_y: 3,
+            ..Default::default()
+        };
+        assert!(!super::super::thermal_regions::cpu_prepass_can_succeed(
+            &[sparse], world.width, world.height, count
+        ));
+        let mut sparse_map = vec![0; count];
+        for y in 1..3 {
+            sparse_map[y * world.stride + 1..y * world.stride + 3].fill(1);
+        }
+        let original = world.write.temperature.clone();
+        let bits = |values: &[f32]| values.iter().map(|value| value.to_bits()).collect::<Vec<_>>();
+        let mut rejected_groups = vec![u32::MAX; count + 23];
+        assert!(!try_step_in_pool(
+            &mut world, &elements, &sparse_map, &mut rejected_groups, 0.2, &pool
+        ));
+        assert_eq!(bits(&world.write.temperature), bits(&original));
+
+        // A rejected legacy scan leaves computed groups. Skipping it leaves
+        // arbitrary stale capacity/content. Every later admitted call must
+        // overwrite either workspace and match a fresh one bit for bit.
+        let dense_map = vec![1; count];
+        let mut expected: Option<(Vec<u32>, Vec<u32>)> = None;
+        for mut groups in [
+            Vec::new(),
+            rejected_groups,
+            vec![u32::MAX; count + 23],
+            vec![7; count / 3],
+        ] {
+            world.write.temperature.copy_from_slice(&original);
+            assert!(try_step_in_pool(
+                &mut world, &elements, &dense_map, &mut groups, 0.2, &pool
+            ));
+            let actual = bits(&world.write.temperature);
+            assert_ne!(actual, bits(&original), "fixture must exchange heat");
+            if let Some((expected_groups, expected_temperature)) = &expected {
+                assert_eq!(&groups, expected_groups);
+                assert_eq!(&actual, expected_temperature);
+            } else {
+                expected = Some((groups, actual));
+            }
+        }
+    }
 
     #[test]
     fn sparse_face_cpu_heat_matches_gpu_gather_and_energy() {
