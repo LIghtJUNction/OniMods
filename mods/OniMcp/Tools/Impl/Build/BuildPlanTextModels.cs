@@ -159,16 +159,7 @@ namespace OniMcp.Tools
             {
                 if (intent == "world_pattern" || intent == "world_cell")
                 {
-                    return new Dictionary<string, object>
-                    {
-                        ["tool"] = "read_control",
-                        ["domain"] = "world",
-                        ["action"] = "search",
-                        ["sequence"] = string.Join("-", worldItems.Select(item => item.Token)),
-                        ["pattern"] = string.Join("-", worldItems.Select(item => item.ElementId)),
-                        ["matchMode"] = "smart",
-                        ["direction"] = "both"
-                    };
+                    return WorldSearchTemplate(worldItems);
                 }
 
                 return new Dictionary<string, object>
@@ -209,7 +200,7 @@ namespace OniMcp.Tools
                 {
                     case "world_pattern":
                     case "world_cell":
-                        return "Use actionTemplate with read_control to locate matching cells, then use a returned cell as anchor.";
+                        return "Use the world_editor call in actionTemplate (tool and arguments) to locate matching cells, then use a returned cell as anchor.";
                     case "build_chain":
                         return "Use sequenceSummary.buildSteps in order; each step can feed building_control domain=planning action=build_area dryRun=true.";
                     case "build_request_with_anchor_pattern":

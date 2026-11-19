@@ -165,7 +165,7 @@ namespace OniMcp.Tools
                                 : Available.Count > 0
                             ? "Retry with material=auto or material=" + Available[0].Tag.Name + " if exact material is not required."
                             : "No usable material is currently available; inspect inventory/material candidates before retrying.",
-                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
+                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect resources/read uri=oni://resources/inventory before retrying.",
                     ["error"] = Error
                 };
             }

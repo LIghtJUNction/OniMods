@@ -84,6 +84,7 @@ namespace OniMcp.Tools
                 ["canStart"] = canStart,
                 ["blockers"] = blockers,
                 ["next"] = LaunchNextHint(alreadyInGame, canStart),
+                ["nextRead"] = alreadyInGame ? CurrentStateDocument.NextRead() : null,
                 ["isPaused"] = SpeedControlScreen.Instance != null ? SpeedControlScreen.Instance.IsPaused : (bool?)null,
                 ["speed"] = SpeedControlScreen.Instance != null ? (object)(SpeedControlScreen.Instance.GetSpeed() + 1) : null,
                 ["candidateCount"] = saves.Count,
@@ -95,9 +96,11 @@ namespace OniMcp.Tools
         private static string LaunchNextHint(bool alreadyInGame, bool canStart)
         {
             if (alreadyInGame)
-                return "Game is already loaded. Use colony_control domain=snapshot action=get, or pass forceLoad=true to reload another save intentionally.";
+                return "Game is already loaded. Use " + CurrentStateDocument.ReadCall
+                    + " task=\"Read the complete current colony state\" or follow nextRead. "
+                    + "To load another save intentionally, call game_control domain=launch action=start forceLoad=true confirm=true task=\"Load the selected save\" with its path or index.";
             return canStart
-                ? "Call game_control domain=launch action=start confirm=true. Pass index/path to choose a save."
+                ? "Call game_control domain=launch action=start confirm=true task=\"Load the selected save\". Pass index/path to choose a save."
                 : "Wait for ONI main menu save services or pass a valid save path under the ONI save root.";
         }
 

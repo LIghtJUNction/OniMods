@@ -53,16 +53,20 @@ namespace OniMcp.Tools
 
             return new Dictionary<string, object>
             {
-                ["tool"] = "read_control",
+                ["tool"] = "world_editor",
                 ["arguments"] = new Dictionary<string, object>
                 {
+                    ["command"] = "search",
                     ["domain"] = "world",
-                    ["action"] = "search",
-                    ["pattern"] = string.Join("-", worldItems.Select(item => item.ElementId)),
-                    ["sequence"] = string.Join("-", worldItems.Select(item => item.Token)),
-                    ["matchMode"] = "smart",
-                    ["direction"] = "both",
-                    ["limit"] = 5
+                    ["task"] = "Locate the parsed world pattern",
+                    ["limit"] = 5,
+                    ["payload"] = new Dictionary<string, object>
+                    {
+                        ["pattern"] = string.Join("-", worldItems.Select(item => item.ElementId)),
+                        ["sequence"] = string.Join("-", worldItems.Select(item => item.Token)),
+                        ["matchMode"] = "smart",
+                        ["direction"] = "both"
+                    }
                 }
             };
         }

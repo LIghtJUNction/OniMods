@@ -115,7 +115,7 @@ namespace OniMcp.Tools
 
             if (best == null || bestScore <= 0)
             {
-                error = $"No built power endpoint instance matched '{query}'. Use read_control domain=buildings action=list query={query} to inspect existing targets, or provide explicit fromX/fromY/toX/toY.";
+                error = $"No built power endpoint instance matched '{query}'. Use world_editor command=read path=/active/buildings/index.oni query={Newtonsoft.Json.JsonConvert.SerializeObject(query ?? string.Empty)} task=\"Inspect existing power endpoints\" to find a matching existing endpoint.";
                 return false;
             }
 
