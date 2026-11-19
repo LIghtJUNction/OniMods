@@ -243,8 +243,6 @@ namespace OniMcp.Tools
                 },
                 Handler = args =>
                 {
-                    if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
                     if (!ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required");
 
@@ -254,6 +252,8 @@ namespace OniMcp.Tools
 
                     string saved = null;
                     bool saveFirst = ToolUtil.GetBool(args, "saveFirst", false);
+                    if (Game.Instance == null && (target != "desktop" || saveFirst))
+                        return CallToolResult.Error("Game not initialized");
                     if (saveFirst)
                     {
                         if (SaveLoader.Instance == null)
