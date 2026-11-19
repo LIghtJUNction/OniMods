@@ -96,6 +96,7 @@ namespace OniMcp.Server
         public object Result { get; set; }
         public string Error { get; set; }
         public bool CancelRequested { get; set; }
+        internal bool ExecutionStarted { get; set; }
 
         public McpTaskInfo ToInfo()
         {

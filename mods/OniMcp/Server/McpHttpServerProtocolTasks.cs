@@ -17,6 +17,9 @@ namespace OniMcp.Server
         {
             using (PushSessionContext(sessionId))
             {
+                var parameterError = ValidateMethodParameters(request);
+                if (parameterError != null)
+                    return parameterError;
                 switch (request.Method)
                 {
                     case "initialize":
@@ -179,42 +182,48 @@ namespace OniMcp.Server
 
         private object HandleGetTask(JsonRpcRequest request)
         {
-            JsonRpcResponse error;
-            var task = FindTask(request, out error);
-            if (error != null)
-                return error;
-            return task.ToInfo();
+            lock (_taskLock)
+            {
+                JsonRpcResponse error;
+                var task = FindTask(request, out error);
+                return error != null ? (object)error : task.ToInfo();
+            }
         }
 
         private object HandleGetTaskResult(JsonRpcRequest request)
         {
-            JsonRpcResponse error;
-            var task = FindTask(request, out error);
-            if (error != null)
-                return error;
-
-            return new TaskResult
+            lock (_taskLock)
             {
-                Result = task.Result,
-                Error = task.Error,
-                Meta = RelatedTaskMeta(task.TaskId)
-            };
+                JsonRpcResponse error;
+                var task = FindTask(request, out error);
+                if (error != null)
+                    return error;
+
+                return new TaskResult
+                {
+                    Result = task.Result,
+                    Error = task.Error,
+                    Meta = RelatedTaskMeta(task.TaskId)
+                };
+            }
         }
 
         private object HandleCancelTask(JsonRpcRequest request)
         {
-            JsonRpcResponse error;
-            var task = FindTask(request, out error);
-            if (error != null)
-                return error;
-
             lock (_taskLock)
             {
+                JsonRpcResponse error;
+                var task = FindTask(request, out error);
+                if (error != null)
+                    return error;
+
                 if (task.Status != "completed" && task.Status != "failed" && task.Status != "cancelled")
                 {
                     task.CancelRequested = true;
                     task.Status = "cancelled";
-                    task.StatusMessage = "Task cancelled";
+                    task.StatusMessage = task.ExecutionStarted
+                        ? "Cancellation requested after tool started; inspect game state before retrying"
+                        : "Task cancelled before execution";
                     task.LastUpdatedAt = System.DateTime.UtcNow;
                 }
                 return task.ToInfo();
@@ -273,7 +282,8 @@ namespace OniMcp.Server
             }
 
             ExecuteToolTask(task.TaskId, callParams.Name, callParams.Arguments, sessionId);
-            return new CreateTaskResult { Task = task.ToInfo(), Meta = RelatedTaskMeta(task.TaskId) };
+            lock (_taskLock)
+                return new CreateTaskResult { Task = task.ToInfo(), Meta = RelatedTaskMeta(task.TaskId) };
         }
 
         private void ExecuteToolTask(string taskId, string toolName, JObject arguments, string sessionId)
@@ -288,6 +298,7 @@ namespace OniMcp.Server
                 {
                     if (!_tasks.TryGetValue(taskId, out task) || task.CancelRequested)
                         return;
+                    task.ExecutionStarted = true;
                     task.Status = "working";
                     task.StatusMessage = $"Calling tool {toolName}";
                     task.LastUpdatedAt = System.DateTime.UtcNow;
@@ -321,7 +332,8 @@ namespace OniMcp.Server
                         if (task.CancelRequested)
                         {
                             task.Status = "cancelled";
-                            task.StatusMessage = "Task cancelled";
+                            task.StatusMessage = "Cancellation requested after tool started; inspect the returned result and game state";
+                            task.Result = result;
                         }
                         else if (result != null && result.IsError)
                         {
@@ -350,8 +362,10 @@ namespace OniMcp.Server
                 {
                     lock (_taskLock)
                     {
-                        task.Status = "failed";
-                        task.StatusMessage = "Task failed";
+                        task.Status = task.CancelRequested ? "cancelled" : "failed";
+                        task.StatusMessage = task.CancelRequested
+                            ? "Cancellation requested after tool started; tool ended with an error"
+                            : "Task failed";
                         task.Error = ex.Message;
                         task.LastUpdatedAt = System.DateTime.UtcNow;
                     }

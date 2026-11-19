@@ -81,7 +81,7 @@ namespace OniMcp.Server
                 return;
             }
 
-            string metadataVersion = (rawMessage["params"] as JObject)?["_meta"]?["io.modelcontextprotocol/protocolVersion"]?.ToString();
+            string metadataVersion = ((rawMessage["params"] as JObject)?["_meta"] as JObject)?["io.modelcontextprotocol/protocolVersion"]?.ToString();
             if (!string.IsNullOrEmpty(metadataVersion) && !IsSupportedProtocolVersion(metadataVersion))
             {
                 SendJson(response, UnsupportedProtocolVersion(requestId, metadataVersion), 400);
@@ -132,7 +132,8 @@ namespace OniMcp.Server
             }
             catch (JsonException ex)
             {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
+                SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidParams,
+                    "JSON-RPC params must be an object: " + ex.Message), 200);
                 return;
             }
 
@@ -175,6 +176,27 @@ namespace OniMcp.Server
                 SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);
                 SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, new JObject()), 200);
+                return;
+            }
+
+            var parameterError = ValidateMethodParameters(rpcRequest);
+            // Task state is guarded by _taskLock and has no Unity dependency.
+            // Keep errors and task inspection/cancellation responsive even when
+            // every gameplay admission slot is occupied or the game is loading.
+            if (parameterError != null || IsTaskMetadataMethod(rpcRequest.Method))
+            {
+                object metadata = parameterError != null
+                    ? (object)parameterError : ProcessMethod(rpcRequest, sessionId);
+                if (isNotification)
+                {
+                    SetResponseSessionId(response, sessionId);
+                    SetResponseProtocolVersion(response, sessionId);
+                    response.StatusCode = 202;
+                    response.ContentLength64 = 0;
+                    response.Close();
+                }
+                else
+                    SendPostResponse(response, rpcRequest.Id, metadata, null, sessionId);
                 return;
             }
 

@@ -139,6 +139,7 @@ internal static class Program
             });
         }
         finally { Invoke(_dispatcher, "OnDestroy"); }
+        ProtocolMetadataRegression.Run();
         RetiredProtocolRegression.Run();
         HttpAdmissionRegression.Run();
         HttpFrontDoorAdmissionRegression.Run();
