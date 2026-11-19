@@ -87,6 +87,7 @@ namespace OniMcp.Tools
                         ["state"] = ToolUtil.GetElementState(element),
                         ["massKg"] = Math.Round(SafeFloat(Grid.Mass[cell]), 3),
                         ["massKgExact"] = SafeFloat(Grid.Mass[cell]),
+                        ["multicomponent"] = CellComponentInventory(cell),
                         ["temperatureK"] = Math.Round(SafeFloat(Grid.Temperature[cell]), 2),
                         ["temperatureC"] = Math.Round(SafeFloat(Grid.Temperature[cell]) - 273.15f, 2),
                         ["pressureKg"] = Math.Round(SafeFloat(Grid.Pressure[cell]), 3),
@@ -111,6 +112,45 @@ namespace OniMcp.Tools
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
+            };
+        }
+
+        private static Dictionary<string, object> CellComponentInventory(int cell)
+        {
+            // Grid fields describe the legacy display element. Read the complete
+            // inventory from the same validated publication used by the shims.
+            if (!Jlib.Multicomponent.MulticomponentCellAccess.TryGetCell(cell, out var mixture))
+                return new Dictionary<string, object>
+                {
+                    ["available"] = false,
+                    ["reasonCode"] = "component_snapshot_unavailable"
+                };
+
+            var components = new List<Dictionary<string, object>>(mixture.ComponentCount);
+            for (int i = 0; i < mixture.ComponentCount; i++)
+            {
+                var component = mixture.Components[i];
+                components.Add(new Dictionary<string, object>
+                {
+                    ["element"] = component.Element.id.ToString(),
+                    ["elementName"] = ToolUtil.CleanName(component.Element.name),
+                    ["state"] = ToolUtil.GetElementState(component.Element),
+                    ["massKg"] = (double)component.Mass,
+                    ["temperatureK"] = (double)component.Temperature,
+                    ["partialPressureKPa"] = (double)component.PartialPressureKPa,
+                    ["volumeFraction"] = (double)component.VolumeFraction
+                });
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["available"] = true,
+                ["componentCount"] = mixture.ComponentCount,
+                ["totalMassKg"] = (double)mixture.TotalMass,
+                ["gasPressureKPa"] = (double)mixture.GasPressureKPa,
+                ["liquidPressureKPa"] = (double)mixture.LiquidPressureKPa,
+                ["liquidVolumeFraction"] = (double)mixture.LiquidVolumeFraction,
+                ["components"] = components
             };
         }
 
