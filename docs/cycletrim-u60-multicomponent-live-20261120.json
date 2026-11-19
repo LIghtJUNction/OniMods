@@ -1,0 +1,321 @@
+{
+  "schema": 1,
+  "stage": "Functional acceptance checkpoint; performance improvement work continues",
+  "testedSourceRefs": {
+    ".": "8db265410028785b1cc89a94ab90e52662a3247b",
+    "mods/Jlib": "26c6eae7e784c09a11f2a77d1517f8e6a7860563",
+    "tools/OniHarness": "12296780c360ad980a3531d69fd71f4eed0c63f1"
+  },
+  "game": {
+    "build": 763796,
+    "unity": "6000.3.17f1",
+    "platform": "Linux x64",
+    "renderBackend": "OpenGLCore",
+    "nativeComputeBackend": "Vulkan",
+    "device": "NVIDIA GeForce RTX 4060 Laptop GPU"
+  },
+  "managedAssembliesMatchedInstallation": [
+    {
+      "path": "Jlib/Jlib.dll",
+      "sha256": "908a3e0cb310d3adccafd6c231b0c86776d8ce04f4295d10fa55c539265898bd"
+    },
+    {
+      "path": "OniMcp/OniMcp.dll",
+      "sha256": "60dd42b19ec25ea8a846f66c0f46d02a7859960a5a439d875cf8d2e6d03dace8"
+    },
+    {
+      "path": "OniMcp/implementation/OniMcp.dll",
+      "sha256": "236e0a065b1d5753abc8dacf8e0752d23599b6201aa12de574cb0973dca801c2"
+    },
+    {
+      "path": "CycleTrim/CycleTrim.dll",
+      "sha256": "51c7a4983f398cc73a4022de4b37206b3ea2c6351df771ceb3ff9feb2c67e373"
+    },
+    {
+      "path": "CycleTrim/implementation/CycleTrim.dll",
+      "sha256": "683ca122a0461d6d9cdd700093a7211c361a6855c1dcb81775de6c177d613ba8"
+    },
+    {
+      "path": "CycleTrim/implementation/OniSim.Compatibility.dll",
+      "sha256": "9c5706ad2a328a29840577ec6a1feb44b1e8cc6a40409656a31f4be2d90b0821"
+    },
+    {
+      "path": "OniOnline/OniOnline.Framework.dll",
+      "sha256": "e90bb6d429716926ca5408cd7405237c4fb48549ace171cf6563585b85124eea"
+    },
+    {
+      "path": "OniOnline/OniOnline.dll",
+      "sha256": "80b6d5127d7359fd45e0e7ccf7dfa6bae91c934853704661ac4be3b1280503fa"
+    },
+    {
+      "path": "OniOnline/implementation/OniOnline.dll",
+      "sha256": "750f90394dde412620a36ec7cdd15b6a803a0ed1790d426f35846f1a95c955a1"
+    }
+  ],
+  "method": {
+    "launch": "Steam, normal graphics, frame/native profiling enabled",
+    "scene": "Three-duplicant save copy; paused observation and bounded natural simulation only",
+    "naturalAdvancement": {
+      "firstExactGameSeconds": 8.016544342041016,
+      "secondExactGameSeconds": 30.066207885742188
+    },
+    "save": "Unique new checkpoint; overwrite=false; updateActiveSave=false",
+    "reload": "Normal MCP load in the same game process, native shutdown/reinitialization; clock restored while paused",
+    "protection": "Original save, initial copy and new checkpoint hashes unchanged by reload"
+  },
+  "result": {
+    "nativeWorkerAndPublicationObserved": true,
+    "naturalMixedCells": 6,
+    "positiveComponentsPerCell": 2,
+    "elements": [
+      "Oxygen",
+      "CarbonDioxide"
+    ],
+    "checkpointClock": 89.19940185546875,
+    "beforeReloadClock": 91.26603698730469,
+    "afterReloadClock": 89.19940185546875,
+    "sameProcess": true,
+    "saveLeftInventoryUnchanged": true,
+    "reloadInventoryMatch": "Exact binary32 mass, temperature and total mass, complete inventory sorted by element ID",
+    "postReloadBoundedAdvancement": {
+      "mcpReportedGameSeconds": 4,
+      "mcpReportedWallSeconds": 1.5,
+      "completedPaused": true,
+      "mixedInventoryStillAvailable": true
+    },
+    "observedCells": [
+      {
+        "worldId": 0,
+        "x": 76,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.4912667274475098,
+        "totalMassBits": "0x3fbee1d4",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.0055582220666110516,
+            "massBits": "0x3bb621bf",
+            "temperatureK": 295.0860595703125,
+            "temperatureBits": "0x43938b04"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.485708475112915,
+            "massBits": "0x3fbe2bb2",
+            "temperatureK": 295.0860595703125,
+            "temperatureBits": "0x43938b04"
+          }
+        ]
+      },
+      {
+        "worldId": 0,
+        "x": 77,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.4939236640930176,
+        "totalMassBits": "0x3fbf38e4",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.005559426266700029,
+            "massBits": "0x3bb62bd9",
+            "temperatureK": 295.100341796875,
+            "temperatureBits": "0x43938cd8"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.4883642196655273,
+            "massBits": "0x3fbe82b8",
+            "temperatureK": 295.100341796875,
+            "temperatureBits": "0x43938cd8"
+          }
+        ]
+      },
+      {
+        "worldId": 0,
+        "x": 78,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.4999632835388184,
+        "totalMassBits": "0x3fbffecc",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.005536329932510853,
+            "massBits": "0x3bb56a1a",
+            "temperatureK": 295.1351623535156,
+            "temperatureBits": "0x4393914d"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.494426965713501,
+            "massBits": "0x3fbf4962",
+            "temperatureK": 295.1351623535156,
+            "temperatureBits": "0x4393914d"
+          }
+        ]
+      },
+      {
+        "worldId": 0,
+        "x": 79,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.5005639791488647,
+        "totalMassBits": "0x3fc0127b",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.0054461658000946045,
+            "massBits": "0x3bb275c0",
+            "temperatureK": 295.11590576171875,
+            "temperatureBits": "0x43938ed6"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.4951177835464478,
+            "massBits": "0x3fbf6005",
+            "temperatureK": 295.11590576171875,
+            "temperatureBits": "0x43938ed6"
+          }
+        ]
+      },
+      {
+        "worldId": 0,
+        "x": 80,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.4992247819900513,
+        "totalMassBits": "0x3fbfe699",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.005256292875856161,
+            "massBits": "0x3bac3cfb",
+            "temperatureK": 295.1106872558594,
+            "temperatureBits": "0x43938e2b"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.4939684867858887,
+            "massBits": "0x3fbf3a5c",
+            "temperatureK": 295.1106872558594,
+            "temperatureBits": "0x43938e2b"
+          }
+        ]
+      },
+      {
+        "worldId": 0,
+        "x": 81,
+        "y": 110,
+        "componentCount": 2,
+        "positiveComponentCount": 2,
+        "totalMassKg": 1.4912551641464233,
+        "totalMassBits": "0x3fbee173",
+        "components": [
+          {
+            "element": "CarbonDioxide",
+            "massKg": 0.00494175823405385,
+            "massBits": "0x3ba1ee79",
+            "temperatureK": 295.1116027832031,
+            "temperatureBits": "0x43938e49"
+          },
+          {
+            "element": "Oxygen",
+            "massKg": 1.4863134622573853,
+            "massBits": "0x3fbe3f85",
+            "temperatureK": 295.1116027832031,
+            "temperatureBits": "0x43938e49"
+          }
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "The live scene covers two positive species per cell, not the extra-species storage. Twenty-two-species coverage remains in host/FFI tests.",
+    "The first short run includes substantial startup warming. Its elapsed time is not a performance improvement claim.",
+    "Pressure fields in this tested version are uncomputed zero placeholders; liquid-fill availability and pressure semantics are being corrected separately.",
+    "A later larger-save load in the same process experienced severe page-in stalls; it produced no valid running performance sample.",
+    "The main-menu-to-desktop quit case is still pending, although this run exited normally from the loaded game without saving."
+  ],
+  "largeLoadDiagnostic": {
+    "wallSeconds": 20.000100709003164,
+    "processCpuSeconds": 7.63,
+    "majorFaults": 93383,
+    "peakSwapKiB": 8713816,
+    "interpretation": "Loading-time memory/page-in pressure; not evidence of native solver saturation. Fresh-process testing is required."
+  },
+  "evidence": [
+    {
+      "file": "first-natural-step.json",
+      "bytes": 1765,
+      "sha256": "84b5999816f2b50b80cfee5c27d4c190d1eedb706eefc733310c0e5b562ae583"
+    },
+    {
+      "file": "second-natural-step.json",
+      "bytes": 1769,
+      "sha256": "bb317d22965ad469eed5003a1cc98d5d9cb0d9fa22e36cbdd4f06f5852bbbc61"
+    },
+    {
+      "file": "mixed-viewport-before-save.json",
+      "bytes": 31612,
+      "sha256": "389891939ac8421a887159f3a13e8c526e0ea3c0640aba9f3f1b34f695a32010"
+    },
+    {
+      "file": "roundtrip-save-preview.json",
+      "bytes": 1520,
+      "sha256": "3695f44bd646329a822057fe489156e99c939deccd54037ace3d4f41401c61a9"
+    },
+    {
+      "file": "roundtrip-save-result.json",
+      "bytes": 1406,
+      "sha256": "3311eadf6d14283eb539ade68aff9e6bc295c6922aea93f48714eab75407a033"
+    },
+    {
+      "file": "save-stability-comparison.json",
+      "bytes": 293,
+      "sha256": "6d68a9ca8efad38eb758936fab92463806544730d8074bfb8e9611780c01eb7e"
+    },
+    {
+      "file": "roundtrip-marker-step.json",
+      "bytes": 1326,
+      "sha256": "506c25f2577a539100f93719ba01521b470ac068544887586f7986cd032dab83"
+    },
+    {
+      "file": "roundtrip-load.json",
+      "bytes": 4177,
+      "sha256": "ba0a055ef5e41f053ce6cc75fb3836671865da64265d5eb052e593fb5500bd23"
+    },
+    {
+      "file": "mixed-reloaded.json",
+      "bytes": 23945,
+      "sha256": "9e53be44f10161801af0725f59992af80c2eb6a5979625b3f60ab444d5da6c52"
+    },
+    {
+      "file": "roundtrip-exact-comparison.json",
+      "bytes": 293,
+      "sha256": "6d68a9ca8efad38eb758936fab92463806544730d8074bfb8e9611780c01eb7e"
+    },
+    {
+      "file": "postreload-step.json",
+      "bytes": 3999,
+      "sha256": "b80f6e1c62b8ae49e86419218e53e3c32972b3180129e3ab1abbf4c82492157e"
+    },
+    {
+      "file": "large-load-process.json",
+      "bytes": 2217764,
+      "sha256": "7c2e04dc01505d8b7adfc2691c9b91ff38d420597a73b3dc85d95791265f502f"
+    },
+    {
+      "file": "large-load-quit-request.json",
+      "bytes": 3853,
+      "sha256": "ccd6b33a48c9faab8157916e87b82b2163103bd6bca9b1d483d47d0f6989c3e6"
+    }
+  ],
+  "rawArtifacts": "Kept locally; game saves, game binaries, decompiled code and unsanitized player logs are not included."
+}
