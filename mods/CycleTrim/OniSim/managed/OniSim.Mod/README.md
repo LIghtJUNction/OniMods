@@ -21,7 +21,15 @@ when unset, the loader uses the platform library under `OniSim/linux-x64/`,
 `OniSim/windows-x64/` or `OniSim/macos-x64/` beside the Mod assembly.
 These switches control mapping; they do not establish gameplay compatibility.
 
-The preflight requires x64 Unity Mono. Linux retains the exact inspected game assembly and Unity Mono fingerprints in `OfficialProfile.cs`. Windows/macOS require release build 744825 and the canonical SimDLL import/message-layout fingerprint in `PortableProfile.cs`; assembly MVIDs and PE headers do not affect that ABI check. Other platforms bind public embedding exports only from the already-loaded game-local Unity runtime. It requires no `Game` instance,
+The preflight requires x64 Unity Mono. Linux admits only the inspected 744825
+and 763796 tuples in `InspectedGameProfile.cs`, with exact game assembly, Mono
+and official Sim fingerprints plus the canonical import/message-layout check.
+The [U60 profile receipt](../../../../../docs/cycletrim-u60-native-profile-20261120.json)
+and [actual Unity Mono ABI comparison](../../../../../docs/cycletrim-u60-runtime-abi-20261120.json)
+record the evidence. Windows/macOS remain limited to release build 744825 and
+the canonical fingerprint in `PortableProfile.cs`; assembly MVIDs and PE headers
+do not affect that ABI check. These platforms bind public embedding exports only
+from the already-loaded game-local Unity runtime. It requires no `Game` instance,
 gets the existing Mono module with `RTLD_NOLOAD`, and enumerates loaded assemblies
 to locate the exact `Assembly-CSharp` MonoImage by filename. It rejects missing
 images, unsupported profiles, missing exports, and non-v1 native ABI before the
@@ -44,11 +52,14 @@ requires restarting the process; there is no hot unload or rollback operation.
 Repeated configuration reports the existing mapping even if the enable or path
 environment variables have since changed.
 
-Required runtime gates remain: fresh-process import timing, all 16 import
-destinations, initialization and shutdown, real official element/disease tables,
-frame handoff and event lifetimes, save/load, conduit behavior, supported DLCs,
-and failure handling. Until those are exercised, this project is source and
-build evidence only. Other Mods with their own assembly-level `SimDLL` imports
+The Linux U60 development checkpoint at source `8db2654` adds bounded actual-game
+takeover and six two-species save/reload checks with exact inventory bits; see
+[runtime validation](../../docs/runtime-validation.md). It has not been published
+to Steam Workshop. Complete fresh-process import timing, all game call paths,
+event lifetimes, conduit behavior, DLC and failure handling remain acceptance
+gates. Mixed saves require the [versioned OniMix reader](../../docs/save-format.md#compatibility-and-mandatory-marker);
+this mapping mechanism does not make them readable by older native libraries.
+Other Mods with their own assembly-level `SimDLL` imports
 are outside this mapping; calls they make through official managed methods
 retain that managed surface.
 

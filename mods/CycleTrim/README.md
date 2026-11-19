@@ -131,7 +131,7 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 
 ## 兼容与说明
 
-- 与 ONI DLC 与主线兼容。
+- OniSim 的主线、DLC 和其他 Mod 完整兼容性仍待验收；已验证的构建与场景见下文。
 - 以稳定性优先，避免影响原版关键玩法。
 - CycleTrim 不再接管 `SmartReservoir` 的 automation 信号发送；储液罐/气库及复用该组件的第三方建筑保留原版重复通知语义。
 
@@ -141,9 +141,13 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。GPU 算子相关开关见上文 [GPU 进度](#gpu-进度2026-11-08)。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
 
-历史二进制的隔离实测曾通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)；这些回执只适用于记录中的精确二进制，不代表当前源码已通过游戏验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
+运行回执只适用于其精确源码、二进制和场景，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)。Linux x64 接受经过检查的 744825、763796 两组 `Assembly-CSharp`、Mono 与官方 Sim 指纹，并校验完整原生接口与消息布局；未知版本或混用运行时会拒绝映射。Windows/macOS 仍限 744825，没有 U60 实机验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未通过。
 
-**U60 / 763796（2026-11-20）**：液体纹理回调已适配新接口，依赖 Jlib 0.3.9。当前 U60 的原生替换仍未放行，使用原版仿真；不能把液体候选扫描的微基准加速称为当前 U60 的游戏帧率提升。升级前后指纹、ABI 检查范围及启动退化回归见[兼容性记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)。
+**U60 / 763796 开发构建检查点（2026-11-20）**：Linux x64 的精确运行时组合已通过[严格 profile 检查](../../docs/cycletrim-u60-native-profile-20261120.json)与[实际 Unity Mono ABI 核对](../../docs/cycletrim-u60-runtime-abi-20261120.json)。源码 `8db265410028785b1cc89a94ab90e52662a3247b` 经 Steam 正常图形启动，在三复制人存档副本中自然形成 6 个氧气/二氧化碳混合格；新建检查点、同进程重载后，完整组分的质量、温度及总质量 binary32 位一致，并能继续推进。方法、文件身份和结果见[实机回执](../../docs/cycletrim-u60-multicomponent-live-20261120.json)。本轮变更尚未发布到 Steam 创意工坊。
+
+**混合存档需要新读者。** 没有额外正质量组分的世界仍写出原 SIMSAVE v15；混合世界使用专用版本 `0x4f4d0001` 和必需的 `ONIMIX` 扩展。受测的扩展前 OniSim 会拒绝该混合档，不能假定降级、卸载或切回原版后可继续读取。22 组分的精确往返已在 host/FFI 中验证，实机目前只覆盖每格两个正质量组分；格式和旧读者边界见[存档契约](OniSim/docs/save-format.md#compatibility-and-mandatory-marker)。
+
+整机性能 A/B 仍待验证，液体扫描微基准和启动预热不能作为游戏帧率收益。受测 `8db2654` 的压力字段仍是未计算占位；后续液体填充率、压力可用性和后台运行开关改动不在这份实机验收范围内。[最初启动拒绝记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)保留为此前检查点。
 
 Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。运行时默认尝试经过校验的映射；`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前关闭原生替换。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内原生库；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 

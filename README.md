@@ -43,7 +43,7 @@ The linked gameplay demo shows an MCP client reading colony state and issuing bo
 | --- | --- | --- |
 | **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
 | **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) · [Rust CLI](docs/oni-mcp-cli.md) |
-| **CycleTrim** | High-risk experiment. A Rust SimDLL (OniSim) replaces the official one at startup; thermal diffusion and eligible gas/liquid regions already run on Vulkan (wgpu) GPU passes, with experimental multicomponent cells. Speed first | [Module docs](mods/CycleTrim/README.md) · [GPU status](mods/CycleTrim/OniSim/gpu/README.md) |
+| **CycleTrim** | High-risk experiment. A Rust SimDLL (OniSim) takes over after exact runtime checks; thermal diffusion and eligible gas/liquid regions use Vulkan (wgpu) GPU passes. The Linux U60 development checkpoint has limited mixture save/load evidence; mixed saves require the new format reader. This iteration is not yet on Workshop, and whole-game speedup remains unverified | [Compatibility and save format](mods/CycleTrim/README.md#onisim-原生仿真内核) · [GPU status](mods/CycleTrim/OniSim/gpu/README.md) |
 | **OniOnline** | Multiplayer framework with lobby chat; other gameplay ships as separate mods | [Module docs](mods/OniOnline/README.md) |
 | **Jlib** | A standalone shared PLib-compatible prerequisite library ([Workshop 3835083839](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839)) | [Source and install notes](mods/Jlib/README.md) |
 | **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |

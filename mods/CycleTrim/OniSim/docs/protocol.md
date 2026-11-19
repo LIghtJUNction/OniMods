@@ -187,7 +187,11 @@ partial pressure, volume fraction, or an equation-of-state result. The optional
 symbol is loaded defensively by the managed facade; older native libraries
 without it remain usable, and the snapshot call fails closed.
 
-The 496-byte legacy GameData descriptor and the existing save image are unchanged.
+The 496-byte legacy GameData descriptor remains unchanged. Single-inventory
+worlds retain the ordinary SIMSAVE v15 image; mixed worlds now use the separate
+`0x4f4d0001` version and mandatory `ONIMIX` extension. They require a reader that
+supports this format; the tested pre-extension OniSim rejects them. See the
+[save-format contract](save-format.md#compatibility-and-mandatory-marker).
 
 ## Published data
 

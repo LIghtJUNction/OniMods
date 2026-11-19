@@ -3,8 +3,8 @@
 This interface and binary-format description was originally derived by static
 inspection of the local official Linux x64 binaries. Those observations alone
 were not runtime evidence. Subsequent authored native fixtures and disposable
-colony tests are recorded separately in [conformance/README.md](conformance/README.md)
-and [RUNTIME-VALIDATION.md](RUNTIME-VALIDATION.md), with exact binary identities.
+colony tests are recorded separately in [conformance/README.md](../conformance/README.md)
+and [runtime-validation.md](runtime-validation.md), with exact binary identities.
 
 Sources inspected statically on 2026-10-20:
 
@@ -438,8 +438,22 @@ old-reader result applies to that tested OniSim build, not to official readers.
 Both host and FFI checks ran with GPU simulation disabled.
 
 The pre-fix round-trip test failed because only the primary inventory survived.
-A passing native host suite establishes these authored state and format
-contracts; it does not establish a real colony save/reload, Unity rendering,
-official-reader compatibility or a performance improvement. Actual game
-acceptance must compare the complete same-cell species inventory before save
-and after reload, using a disposable save copy.
+The host and FFI results establish the authored state and format contracts;
+they do not establish official-reader compatibility or game performance.
+
+A subsequent [Linux U60 live receipt](../../../../docs/cycletrim-u60-multicomponent-live-20261120.json)
+covers source `8db265410028785b1cc89a94ab90e52662a3247b`, build 763796,
+Unity 6000.3.17f1 and a three-duplicant save copy launched through Steam with
+normal graphics. Six naturally formed oxygen/carbon-dioxide cells were observed
+while paused, saved to a unique checkpoint and reloaded in the same process.
+Every sampled cell's complete species inventory, mass, shared temperature and
+total mass matched bit-for-bit as binary32 values. The clock returned to the checkpoint,
+and bounded simulation continued after reload. Original saves and the active
+save pointer were preserved.
+
+This is two-species game evidence; additional species slots remain covered by
+the 22-species host/FFI fixtures only. The tested pressure fields are uncomputed
+placeholders. Later liquid-fill, pressure-availability and background-run changes,
+long-duration/DLC acceptance and a controlled whole-game performance A/B remain
+outside that receipt. These development changes have not been published to
+Steam Workshop; the new mixed format still requires a supporting OniSim reader.

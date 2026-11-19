@@ -23,14 +23,15 @@ are expected if the new model genuinely replaces the old one.
 | Four-slot `world.flow` | pressure sweep + presentation | Must define conversion from projected face velocity to legacy flow/presentation units | Flow texture and visual acceptance; do not copy velocity bits into mass-flow slots |
 | Dirty bits/events | `PressureSweep::notify`, EventQueues | Publish when public state changes | Event schema exact; order policy documented; no missed/duplicate events |
 | Tick/region ordering | `simulation_step.rs`, `simulation_step_fluid.rs` | New solver called at a defined phase boundary | Existing non-pressure phase ordering unchanged |
-| C# ABI/save format | native public interface and conformance harness | Unchanged | Exact ABI, save image and roundtrip compatibility |
+| C# ABI/save format | native public interface and conformance harness | Official ABI and single-inventory v15 retained; mixtures use the separately versioned [OniMix format](save-format.md#compatibility-and-mandatory-marker) | Exact ABI and legacy save baseline; complete mixed inventory roundtrip and rejection by unsupported readers |
 
 ## Acceptance layers
 
 ### A. Exact compatibility (must pass)
 
 - C ABI structures, function signatures, status codes and ownership.
-- Save image encoding and load/reload behavior.
+- Legacy single-inventory save encoding and load/reload behavior; mixed saves
+  follow the separate OniMix format contract and require a supporting reader.
 - Event schema, enum values, payload layout and callback lifetime.
 - Non-pressure phases: thermal, disease, radiation, components, post-process,
   and material interactions not explicitly in the approved change list.

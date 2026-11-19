@@ -1,9 +1,11 @@
 # OniSim：CycleTrim 的 Rust 仿真内核与 C# 兼容层
 
 OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与可观测行为实现 Rust 版本。
-它已纳入 CycleTrim 源码与构建工程，自 0.4.5 起启动即强制接管官方 SimDLL；性能和 Mod 兼容性仍在验收，当前不能当作已经验证的替代内核。
+它已纳入 CycleTrim 源码与构建工程，启动时默认尝试通过精确版本、运行时与接口检查后接管官方 SimDLL；完整性能和 Mod 兼容性仍在验收。
 
-一格一物正在拆：`displace_gas` 失败时允许第二种气体与主元素共存（`FLAG_MULTICOMPONENT_COEXISTENCE`），多组分气体通量（`native/src/multicomponent_flux.rs`）已接入固定步进；存档仍只保存主元素 + 运行时组分叠加。原始设想见 [下个版本：实验替换一格一物](../docs/next-cell-representation.md)，发布架构见 [docs/multicomponent-publication.md](docs/multicomponent-publication.md)。
+多组分输运与权威组分存档已接入原生核心。没有额外正质量组分的世界保留 SIMSAVE v15；混合世界使用版本 `0x4f4d0001` 与必需的 `ONIMIX` 扩展，保存主、次与额外组分的质量和共享温度。受测旧 OniSim 拒绝这种混合档，不保证原版读者能够读取。格式、22 组分 host/FFI 往返及旧读者证据见 [docs/save-format.md](docs/save-format.md)。原始设想见 [下个版本：实验替换一格一物](../docs/next-cell-representation.md)，发布架构见 [docs/multicomponent-publication.md](docs/multicomponent-publication.md)。
+
+**Linux U60 开发检查点（2026-11-20）**：精确匹配的 Linux x64 763796 组合已通过严格 profile 和实际 Mono ABI 检查。源码 `8db2654` 在正常图形实机的存档副本中，验证了 6 个氧气/二氧化碳混合格保存、重载后完整 inventory 的 binary32 位一致与继续推进；实机尚未覆盖额外组分槽。方法与边界见 [docs/runtime-validation.md](docs/runtime-validation.md)。本轮尚未发布到 Workshop；Windows/macOS 仍限 744825。整机性能 A/B 以及后续 fill、pressure availability 和后台运行开关改动的实机验收仍待完成。
 
 GPU：`native` 依赖 `gpu/` crate，启动时创建 wgpu（Vulkan）`GpuSimulation`，默认开启，`CYCLETRIM_ONISIM_GPU=0` 关闭。热扩散、符合条件的气体区域与液体扩散已在时间步内走 GPU；工作区还在接入相变、气泡、液体流动、疾病、辐射与衰减算子。逐项状态见 [gpu/README.md](gpu/README.md)。
 
@@ -32,7 +34,7 @@ GPU：`native` 依赖 `gpu/` crate，启动时创建 wgpu（Vulkan）`GpuSimulat
 - 调度已接入 Step 批次、双 GameData、ready 屏障与异步工作线程，完整调度等价性仍待验收。
   细节见 [docs/frame-sync.md](docs/frame-sync.md)。
 - C# 独立调用层提供长度边界、错误检查、会话生命周期和借用指针视图。
-  0.4.5 起移除了 PLib `EnableOniSimExperimental` 开关与官方 SimDLL 运行时回退，启动即映射；
+  0.4.5 起移除了 PLib `EnableOniSimExperimental` 开关与映射后的官方 SimDLL 运行时回退，启动校验通过后尝试映射；
   `CYCLETRIM_ONISIM_ENABLE=0` 仅作为启动前的紧急熔断。真实游戏完整兼容性尚未验收。
 - 疾病发射范围和疾病生长后处理已接入最多 8 线程的常驻线程池，小任务保留串行；未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，设置为 `1` 可关闭内核并行。验收与复现见 [docs/parallel-validation.md](docs/parallel-validation.md)。
 - 疾病发射器的菱形遍历经过 Lean 4.19 证明和 65,040 个差分场景验证；该组件基准在记录的场景中快 13.894 倍，不代表整局性能提升。详见 [lean-lab/README.md](lean-lab/README.md)。
@@ -73,7 +75,7 @@ rtk dotnet build mods/CycleTrim/OniSim/managed/OniSim.Host/OniSim.Host.csproj -c
 ```
 
 编译通过只证明源码和 ABI 边界可构建，不证明游戏行为、存档、DLC 或其他 Mod 兼容。
-CycleTrim 在 Windows x64、macOS x64、Linux x64 包内默认携带 OniSim，并在启动时强制映射；
+CycleTrim 在 Windows x64、macOS x64、Linux x64 包内默认携带 OniSim，并在启动时通过支持的运行时检查后尝试映射；
 `CYCLETRIM_ONISIM_ENABLE=0` 可在启动前紧急关闭，`CYCLETRIM_ONISIM_GPU=0` 只关闭 GPU 算子。
 在完成多场景、长时与原版对照验收前，不要把它当作已验证的原版替代品。
 

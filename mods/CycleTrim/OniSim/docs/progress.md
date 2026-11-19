@@ -1,6 +1,27 @@
 # OniSim engineering log
 
-## Current status (2026-11-16)
+## Current checkpoint (2026-11-20)
+
+The exact Linux x64 U60/763796 tuple is admitted after strict assembly, Mono,
+official Sim and ABI checks. Development source `8db2654` has actual-game
+evidence for six naturally formed oxygen/carbon-dioxide cells: complete
+inventories, mass, temperature and total mass match as binary32 bits after a
+unique checkpoint and same-process reload, followed by bounded advancement.
+See [runtime validation](runtime-validation.md) for method, identities and the
+linked profile, actual-Mono and live receipts. These changes are not yet on
+Steam Workshop; Windows/macOS profiles remain limited to 744825.
+
+Mixed saves now use version `0x4f4d0001` and a mandatory `ONIMIX` extension;
+ordinary single-inventory v15 images remain unchanged. The tested older OniSim
+rejects mixed images. The [save contract](save-format.md) records exact
+22-species host/FFI round trips; live extra-species slots remain unverified.
+Whole-game performance A/B and long-duration/DLC acceptance remain open.
+The tested pressure values are placeholders; later fill, pressure-availability
+and background-run changes need their own actual-game validation.
+
+The dated snapshots below retain their original evidence and limitations.
+
+## Status snapshot (2026-11-16)
 
 CycleTrim 0.4.24 corrects multicomponent region coverage at the final public row
 and column. Public coordinates are shifted by one into padded storage, so the
