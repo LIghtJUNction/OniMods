@@ -1,11 +1,15 @@
 //! Ordered pressure/liquid traversal from official UpdateData, ELF 0x69730.
 
 use crate::events::EventQueues;
-use rayon::prelude::*;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{PhysicsWorld, Region};
 
+#[path = "liquid_candidates.rs"]
+mod liquid_candidates;
+
 thread_local! {
+    static LIQUID_CANDIDATES: std::cell::RefCell<liquid_candidates::LiquidCandidates> =
+        std::cell::RefCell::new(liquid_candidates::LiquidCandidates::default());
     static LIQUID_TRANSPORT: std::cell::RefCell<crate::liquid_transport::LiquidTransport> =
         std::cell::RefCell::new(crate::liquid_transport::LiquidTransport::default());
     static LIQUID_PRESSURE: std::cell::RefCell<crate::fluid_pressure::PressureScratch> =
@@ -39,81 +43,40 @@ pub(crate) fn liquid_phase_with_flow(
 ) -> bool {
     let width = (region.max_x - region.min_x).max(0) as usize;
     let height = (region.max_y - region.min_y).max(0) as usize;
-    let empty = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
-    let merge = |a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)|
-        (a.0.min(b.0), a.1.min(b.1), a.2.max(b.2), a.3.max(b.3));
-    let has_extras = !world.extra_mixtures.is_empty();
-    let row_scan = |y: i32| {
-        let mut bounds = empty;
-        let mut cells = Vec::new();
-        let row_base = y as usize * world.stride;
-        for x in region.min_x..region.max_x {
-            let cell = row_base + x as usize;
-            let liquid = (world.write.mass[cell] > 0.0
-                && world.element_phase[world.write.element[cell] as usize] == 2)
-                || (world.mixture_mass[cell] > 0.0
-                    && world.element_phase[world.mixture_element[cell] as usize] == 2)
-                || (has_extras
-                    && world.extra_mixtures.get(&cell).is_some_and(|species| {
-                        species.iter().any(|&(id, mass)| mass > 0.0 && world.element_phase[id as usize] == 2)
-                    }));
-            if liquid {
-                bounds = merge(bounds, (x, y, x + 1, y + 1));
-                cells.push(cell);
+    LIQUID_CANDIDATES.with(|candidates| {
+        let mut candidates = candidates.borrow_mut();
+        candidates.scan(world, region);
+        let Some([left, bottom, right, top]) = candidates.bounds() else {
+            return flow_already_applied;
+        };
+        // One-cell halo owns the free surface and region-boundary faces. Gas-only
+        // rows outside this active rectangle need no pressure or transport sweeps.
+        let region = Region {
+            min_x: (left - 1).max(region.min_x),
+            min_y: (bottom - 1).max(region.min_y),
+            max_x: (right + 1).min(region.max_x),
+            max_y: (top + 1).min(region.max_y),
+            ..region
+        };
+        static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
+        let started = profiling.then(std::time::Instant::now);
+        LIQUID_PRESSURE.with(|scratch| {
+            let mut scratch = scratch.borrow_mut();
+            let pressure_changed = scratch.run_with_candidates(
+                world, elements, diseases, events, region, Some(candidates.cells()),
+            );
+            let pressure_at = started.map(|start| start.elapsed());
+            let transport_changed = LIQUID_TRANSPORT.with(|transport| {
+                transport.borrow_mut().run(world, elements, diseases, events, region, &scratch.covered)
+            });
+            if let (Some(start), Some(pressure)) = (started, pressure_at) {
+                eprintln!("[CycleTrim OniSim] liquid detail cells={} nodes={} sweeps={} pressure={:.3}ms transport={:.3}ms",
+                    width * height, scratch.profile_nodes, scratch.profile_sweeps, pressure.as_secs_f64() * 1000.0,
+                    (start.elapsed() - pressure).as_secs_f64() * 1000.0);
             }
-        }
-        (bounds, cells)
-    };
-    let (bounds, liquid_cells) = if let Some(pool) = crate::parallel::pool(width.saturating_mul(height)) {
-        let rows: Vec<_> = pool.install(|| (region.min_y..region.max_y).into_par_iter().with_min_len(8)
-            .map(row_scan).collect());
-        let total_cells: usize = rows.iter().map(|(_, c)| c.len()).sum();
-        let mut bounds = empty;
-        let mut liquid_cells = Vec::with_capacity(total_cells);
-        for (row_bounds, row_cells) in rows {
-            if !row_cells.is_empty() {
-                bounds = merge(bounds, row_bounds);
-                liquid_cells.extend(row_cells);
-            }
-        }
-        (bounds, liquid_cells)
-    } else {
-        let mut bounds = empty;
-        let mut liquid_cells = Vec::new();
-        for y in region.min_y..region.max_y {
-            let (row_bounds, row_cells) = row_scan(y);
-            if !row_cells.is_empty() {
-                bounds = merge(bounds, row_bounds);
-                liquid_cells.extend(row_cells);
-            }
-        }
-        (bounds, liquid_cells)
-    };
-    if bounds.0 == i32::MAX { return flow_already_applied; }
-    // One-cell halo owns the free surface and region-boundary faces. Gas-only
-    // rows outside this active rectangle need no pressure or transport sweeps.
-    let region = Region {
-        min_x: (bounds.0 - 1).max(region.min_x),
-        min_y: (bounds.1 - 1).max(region.min_y),
-        max_x: (bounds.2 + 1).min(region.max_x),
-        max_y: (bounds.3 + 1).min(region.max_y),
-        ..region
-    };
-    static PROFILE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    let profiling = *PROFILE.get_or_init(|| std::env::var_os("CYCLETRIM_GPU_PROFILE").is_some());
-    let started = profiling.then(std::time::Instant::now);
-    LIQUID_PRESSURE.with(|scratch| {
-        let mut scratch = scratch.borrow_mut();
-        let pressure_changed = scratch.run_with_candidates(world, elements, diseases, events, region, Some(&liquid_cells));
-        let pressure_at = started.map(|start| start.elapsed());
-        let transport_changed = LIQUID_TRANSPORT.with(|transport| transport.borrow_mut()
-            .run(world, elements, diseases, events, region, &scratch.covered));
-        if let (Some(start), Some(pressure)) = (started, pressure_at) {
-            eprintln!("[CycleTrim OniSim] liquid detail cells={} nodes={} sweeps={} pressure={:.3}ms transport={:.3}ms",
-                width * height, scratch.profile_nodes, scratch.profile_sweeps, pressure.as_secs_f64() * 1000.0,
-                (start.elapsed() - pressure).as_secs_f64() * 1000.0);
-        }
-        flow_already_applied || pressure_changed || transport_changed
+            flow_already_applied || pressure_changed || transport_changed
+        })
     })
 }
 
