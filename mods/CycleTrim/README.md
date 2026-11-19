@@ -147,7 +147,7 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 **U60 / 763796 开发构建检查点（2026-11-20）**：Linux x64 的精确运行时组合已通过[严格 profile 检查](../../docs/cycletrim-u60-native-profile-20261120.json)与[实际 Unity Mono ABI 核对](../../docs/cycletrim-u60-runtime-abi-20261120.json)。源码 `8db265410028785b1cc89a94ab90e52662a3247b` 经 Steam 正常图形启动，在三复制人存档副本中自然形成 6 个氧气/二氧化碳混合格；新建检查点、同进程重载后，完整组分的质量、温度及总质量 binary32 位一致，并能继续推进。方法、文件身份和结果见[实机回执](../../docs/cycletrim-u60-multicomponent-live-20261120.json)。本轮变更尚未发布到 Steam 创意工坊。
 
-**混合存档需要新读者。** 没有额外正质量组分的世界仍写出原 SIMSAVE v15；混合世界使用专用版本 `0x4f4d0001` 和必需的 `ONIMIX` 扩展。受测的扩展前 OniSim 会拒绝该混合档，不能假定降级、卸载或切回原版后可继续读取。22 组分的精确往返已在 host/FFI 中验证，实机目前只覆盖每格两个正质量组分；格式和旧读者边界见[存档契约](OniSim/docs/save-format.md#compatibility-and-mandatory-marker)。
+**混合存档需要新读者。** 没有任何正质量的第二或后续组分时，仍写出原 SIMSAVE v15；混合世界使用专用版本 `0x4f4d0001` 和必需的 `ONIMIX` 扩展。受测的扩展前 OniSim 会拒绝该混合档，不能假定降级、卸载或切回原版后可继续读取。22 组分的精确往返已在 host/FFI 中验证，实机目前只覆盖每格两个正质量组分；格式和旧读者边界见[存档契约](OniSim/docs/save-format.md#compatibility-and-mandatory-marker)。
 
 **当前派生字段状态（Jlib 0.3.10）：** 压力和分压明确报告不可用，旧截图中的零占位不再作为当前读数。液体占格份额按求解器标称容量计算，并单独提供可用性标记。后续 U60 实机读取已观察到气体格 `pressureAvailable=false`、`liquidVolumeFractionAvailable=true` 和已知液体占格值 `0`；正液体填充场景仍待实机验收。六混合格存读档回执属于前述 `8db2654` 检查点，新的派生字段检查单独记录。[最初启动拒绝记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)保留为此前检查点。
 
@@ -164,7 +164,7 @@ Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `Inclu
 
 四个新增区域/暂存状态回归、既有 CPU/GPU 热传导等价用例均通过，Linux 原生 Release 构建通过。通过这些门禁后，下一步是在同一存档、设置及硬件图形后端下测量完整更新链路。
 
-**本轮整机 FPS A/B 仍待完成。** 当前隔离桌面的 GL 后端为 **llvmpipe 软件渲染**；该环境只用于对应的功能检查。RTX 4060 的硬件帧率对照需要恢复匹配的硬件图形环境后单独进行。三平台 CI 还需完成硬件/软件适配器分类修正并重跑；CPU/GPU 路径正确性和硬件加速收益分别记录。
+**本轮整机 FPS A/B 仍待完成。** 当前隔离桌面的 GL 后端为 **llvmpipe 软件渲染**；该环境只用于对应的功能检查。RTX 4060 的硬件帧率对照需要恢复匹配的硬件图形环境后单独进行。源码 `3a6a600` 的[三平台 CI](https://github.com/LIghtJUNction/OniMods/actions/runs/44629256953)已通过构建及静态门禁；正式 bundle 的 170 项源码身份和 ELF/PE/Mach-O 格式核验通过。三份构建回执均为 `gameRuntimeTested=false`，Windows/macOS 尚未实机验收。CPU/GPU 路径正确性和硬件加速收益分别记录。
 
 ### 旧版本局部场景记录
 
