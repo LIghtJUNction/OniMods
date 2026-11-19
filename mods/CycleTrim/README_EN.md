@@ -1,22 +1,22 @@
 # CycleTrim
 
-![CycleTrim](preview.gif)
+![CycleTrim](preview.png)
 
-**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) version **0.3.2 or later**, then restart the game. CycleTrim has used the batch-read interface since 0.4.10; its bootstrap checks the dependency version before loading the implementation. Consumer packages no longer embed Jlib.
+**Prerequisite:** install and enable [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) ([source](https://github.com/LIghtJUNction/Jlib)) version **0.3.10 or a newer compatible version**, then restart the game. CycleTrim has used the batch-read interface since 0.4.10; its bootstrap checks the dependency version before loading the implementation. Consumer packages no longer embed Jlib.
 
-A disruptive, high-risk experimental performance mod, still in early development. The direction is to rebuild the underlying algorithms and move as much computation as possible onto the GPU. Speed comes first, compatibility later. **Use it only with disposable test saves.**
+An experimental simulation and performance mod. The goal is to improve underlying algorithms, choose CPU/GPU work from measured costs, and reduce repeated computation and synchronization. Correctness, compatibility and performance are checked separately. **Use disposable test-save copies only.**
 
-The current build (0.4.22) fixes trace-gas depletion and reuses liquid/gas staging buffers. OniSim runs multicomponent transport inside the native tick with a mix of resident CPU operators and GPU batches; it does not move the entire game onto the GPU. The published species records expose coexistence while the legacy Grid shows the dominant element. Compatibility and save/load limitations remain experimental; see [the implementation notes](OniSim/docs/multicomponent-publication.md) and [CHANGELOG](CHANGELOG.md). Requires Jlib 0.3.8 or newer. Whole-game FPS gains require controlled in-game measurements.
+The release target for this iteration is **0.4.25**, requiring **Jlib 0.3.10**; Workshop upload confirmation is pending. Current work skips CPU thermal grid prepasses that cannot qualify, removes unused GPU setup, preserves complete multicomponent save inventories and makes derived-data availability explicit. OniSim combines CPU operators and GPU batches inside the native tick. The legacy Grid shows the dominant element; the publication API exposes the complete mixture. See the [implementation notes](OniSim/docs/multicomponent-publication.md), validation scope below and [CHANGELOG](CHANGELOG.md).
 
-The hot-path cuts listed below are what the current build already does. They are not the final shape, and they are not a promise of vanilla behavior.
+The hot-path cuts below are implemented in source. Vanilla semantic comparisons and whole-game gains are evaluated for specific builds and scenes.
 
 This mod comes from [OniMods](https://github.com/LIghtJUNction/OniMods). onim is the toolchain in that repo. It takes an Oxygen Not Included mod straight through development, testing, and Workshop publishing: `onim dev` tries it in game, `onim build` packs it, and `onim publish` sends it to Steam.
 
 ## Index (summary page)
 
 - [Whole-game update chain and diagnostics (0.4.12)](#whole-game-update-chain-and-diagnostics-0412)
-- [Complete experiments and acceptance limits](../../docs/cycletrim-whole-chain-20261109.md)
-- [Next version: replace one element per cell](docs/next-cell-representation.md)
+- [Historical whole-chain experiments (0.4.12)](../../docs/cycletrim-whole-chain-20261109.md)
+- [Multicomponent design roadmap (historical)](docs/next-cell-representation.md)
 - [GPU progress (2026-11-08)](#gpu-progress-2026-11-08)
 - [Multicomponent assumptions audit](docs/multicomponent-assumptions-audit.md)
 - [Algorithm evolution and mathematical models (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README_EN.md#algorithm-evolution-from-per-cell-displacement-to-gpu-poisson-pressure-projection-stage-221)
@@ -73,22 +73,24 @@ The new formulation treats fluid as a variable-density finite-volume continuum e
 $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \text{Poisson} \longrightarrow \text{Projection} \longrightarrow \text{Transport} }$$
 The goal is to keep the complete physical loop in GPU memory while the CPU handles entity interactions, publication and gameplay queries. The execution boundaries below describe the current implementation, which has not reached that complete resident loop.
 
-> **Status**: The Stage 2 CPU mathematical reference (residual $10^{-7}$, divergence decay, zero-velocity fixed point, and semantic comparators) and Stage 2.1 WGSL kernels (7 GPU operator tests and benchmark harness) are completed. Regional gas pressure projection, transport and thermal work now chain between GPU buffers inside the native tick; a global Poisson solver has not replaced the vanilla displacement path.
+> **Historical stage status:** the Stage 2 CPU numerical reference and Stage 2.1 WGSL operators remain independent experiments and references. Version 0.4.15 removed incompressible projection and intermediate velocity readback from production gas transport; that path uses density-driven bounded transport and thermal work.
 
 ## GPU progress (2026-11-08)
+
+> This section retains the November 8–9 pipeline record. See the native-core checkpoint and 0.4.25 performance section below for current persistence, data availability and algorithm status.
 
 OniSim creates a `GpuSimulation` on wgpu 30 (Vulkan backend) at startup, enabled by default. `CYCLETRIM_ONISIM_GPU=0` disables it before launch; an initialization failure is logged and the CPU path is used. `CYCLETRIM_GPU_PROFILE=1`, or the Steam launch argument `--cycletrim-gpu-profile`, enables sampled timing logs.
 
 **Committed on `main` and wired into the tick:**
 
 - Whole-grid GPU thermal diffusion (variable-coefficient finite volume) and species sensible-enthalpy conversion. Temperatures stay resident across steps; species-presence masks are compressed and uploads are block-incremental.
-- Eligible gas regions: multicomponent concentration diffusion, density-gradient velocity, pressure projection, transport and thermal work chained between GPU buffers.
+- Eligible gas regions: multicomponent concentration diffusion, density-gradient velocity, bounded transport and thermal work chained between GPU buffers.
 - Eligible liquid regions: sparse GPU multicomponent diffusion, overlapped with the CPU gas-pressure pass; diffusion snapshots cover only the active region.
 - CPU work includes region eligibility and packing, applying phase-transition results, events and building components. Stages use their CPU path when no GPU is available or a region is ineligible. Idle zero-time frames can reuse already generated publication data.
 
 **Whole-chain source review, 2026-11-09:** bubbles, thermal work, phase-transition selection, eligible gas pressure/transport, disease and radiation have GPU call paths, interleaved with uploads, waits, readback and CPU application. Multicomponent liquid diffusion has a GPU path, while production `gpu_liquid_flow` remains `false`: liquid pressure, flow and ordered displacement still execute on the CPU. WGSL operators and `resident_cells` in the repository do not establish that the entire production update has moved to the GPU. The [native-stage review](../../docs/cycletrim-whole-chain-20261109.md) records each boundary and its source.
 
-**Still open:** every step still uploads, waits on the GPU and reads back — this is not a fully device-resident pipeline. Event application, building interaction and publication stay on the CPU. Pressure, partial-pressure and liquid-volume-fraction publication, three or more species and full save/load are incomplete, and whole-game FPS gains are not fully validated. The latest `Player.log` (2026-11-08 00:26) shows GPU acceleration active on an RTX 4060 Laptop; later commits have no new in-game log yet. Details: [OniSim/gpu/README.md](OniSim/gpu/README.md), [OniSim/docs/progress.md](OniSim/docs/progress.md).
+**Open items at that historical checkpoint:** steps still uploaded, waited and read back; event application, buildings and publication remained on the CPU. Pressure, additional species and persistence had incomplete integration in the November 8 record. Later work added complete inventory persistence, 22-species host/FFI regressions and a six-cell natural-mixture game reload check. Current pressure/liquid-occupancy status appears below. The November 8 RTX 4060 activation log applies to that earlier build. Details: [OniSim/gpu/README.md](OniSim/gpu/README.md), [OniSim/docs/progress.md](OniSim/docs/progress.md).
 
 ## What it does
 
@@ -104,7 +106,7 @@ OniSim creates a `GpuSimulation` on wgpu 30 (Vulkan backend) at startup, enabled
 ## Usage
 
 - Subscribe and enable as normal.
-- No extra configuration is required in most cases.
+- Make a test copy of the save first and retain the original separately.
 
 **Save type metadata** is enabled by default and reuses adjacent type queries
 within each save invocation. **Power overlay queries** is opt-in
@@ -142,11 +144,26 @@ Use only with a disposable test save. All 62 official message IDs are now accoun
 
 **Mixed saves require the new reader.** Worlds without additional positive inventory retain the ordinary SIMSAVE v15 image. Mixed worlds use version `0x4f4d0001` with a mandatory `ONIMIX` extension; the tested pre-extension OniSim rejects them. Do not assume a downgrade, removal or switch to vanilla can read them. Exact 22-species round trips are host/FFI evidence; the live scene covers two positive species per cell. See the [format contract](OniSim/docs/save-format.md#compatibility-and-mandatory-marker).
 
-Whole-game performance A/B remains pending. Liquid-scan microbenchmarks and startup warming do not establish game FPS gains. Pressure values in the tested `8db2654` build are uncomputed placeholders; later liquid-fill, pressure-availability and background-run changes are outside this live receipt.
+**Current derived fields (Jlib 0.3.10):** pressure and partial pressure explicitly report unavailable. Liquid occupancy is computed from the solver's nominal capacity and has its own availability flag. A later U60 game read observed a gas cell with `pressureAvailable=false`, `liquidVolumeFractionAvailable=true` and a known occupancy of `0`; positive liquid fill still needs game acceptance. The six-cell persistence receipt remains scoped to checkpoint `8db2654`; derived-field checks are recorded separately.
 
 Builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. `CYCLETRIM_ONISIM_WORKERS` defaults to 8 (set `1` to disable kernel parallelism). `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute path; when unset, the loader uses the `.dll`, `.dylib` or `.so` under `OniSim/<platform>/` in the Mod folder. macOS needs an x64 game process (Rosetta on Apple Silicon). Three-platform CI builds and host loader tests are not in-game acceptance on every platform.
 
 ## Benchmark summary
+
+### Pending 0.4.25: remove work that cannot help
+
+The [algorithm and resource cleanup](https://github.com/LIghtJUNction/OniMods/commit/bc156bf68f927d7a4b3980e59a3b7b523e0e1ee4) contains two concrete changes:
+
+- **Thermal admission bound.** The CPU shortcut previously scanned the entire grid before checking whether eligible cells reached the existing `floor(padded_cells / 2)` threshold. It now first sums the clipped areas of existing thermal regions as a conservative upper bound. If even that bound is too small, it skips the doomed CPU prepass and continues with the existing GPU thermal path. Overlapping regions only overestimate the bound; eligibility rules, the GPU region map and solver arithmetic are retained. See the [region bound](OniSim/native/src/gpu_thermal_regions.rs).
+- **Unused GPU setup removed.** The simulation worker no longer creates its unused `ResidentCells` buffer and three pathfinding pipelines. For the observed 225,828 padded cells, that removes a request for `225828 × 20 × 4 = 18,066,240` bytes, or **17.229 MiB** of GPU buffer storage. This is the removed allocation request; driver-resident memory needs its own measurement. The independent public pathfinding interface remains available.
+
+Four new region/scratch regressions and the existing CPU/GPU thermal-equivalence case pass, as does the Linux native Release build. The next measurement must cover the complete update chain with the same save, settings and hardware graphics backend.
+
+**Whole-game FPS A/B for this iteration remains pending.** The current isolated desktop uses **llvmpipe software rendering** for its functional checks. An RTX 4060 frame-rate comparison requires a matching hardware graphics environment. Three-platform CI still needs corrected hardware/software adapter classification and reruns; path correctness and hardware acceleration results are recorded separately.
+
+### Earlier local-scene records
+
+The following table retains earlier fixed-scene results, scoped to their historical builds, hardware and saves. The current 0.4.25 validation and pending measurements are listed above.
 
 | Scenario | Metric | Before -> After | Improvement |
 |---|---|---|---|

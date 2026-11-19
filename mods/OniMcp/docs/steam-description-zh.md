@@ -1,58 +1,52 @@
-[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png[/img]
+[img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/ai-generated-congratulations.png[/img]
+[h1]恭喜！[/h1]
+[b]这个 Mod 完全由 AI 生成！[/b]
+该声明指本项目的 AI 开发方式。第三方库、协议规范和游戏素材各有原作者，继续适用各自署名与许可。
 
-[b]必需前置：Jlib[/b]。请订阅并在游戏模组菜单启用 Jlib，然后重启游戏。多个 Mod 共用一份 Jlib，不再分别内嵌。
+[img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/mods/OniMcp/preview.png[/img]
 
-[h1]ONI MCP Server[/h1]
+[h1]OniMcp · 让客户端读懂你的殖民地[/h1]
+OniMcp 为《缺氧》提供本地 MCP 服务。连接支持 MCP 的客户端后，可以读取殖民地状态、查找问题，并调用明确的游戏操作。模型与客户端由你选择。
 
-欢迎来到 ONI MCP Server！把《缺氧》接到本机 Model Context Protocol 的桥梁。
-有了这个模组，[b]AI 客户端可以读取殖民地，并且只在你开放的工具范围内行动。[/b]
+[b]待发布目标：0.2.9。必需前置：Jlib 0.3.10 或更新的兼容版本。[/b]
+0.2.9 尚待工坊上传确认。
+[url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]订阅 Jlib[/url] 后，在游戏 Mods 菜单同时启用两者并重启。多个依赖 Mod 共用一份 Jlib。工坊实际包版本以你安装的包为准。
 
-把 Claude、Cursor、Codex 或 Gemini 指向本机服务。告警、管道、电网和复制人状态都能看见，模拟线程不会被遥测堵住。
+[h2]三步开始[/h2]
+[list]
+[*]载入殖民地。服务可以在主菜单启动，但地图读取需要存档已经就绪。
+[*]在 MCP 客户端添加 [code]http://localhost:8788/mcp/[/code]。浏览器状态页是 [code]http://localhost:8788/[/code]。
+[*]先发现工具与资源，再读取当前状态：[code]world_editor command=read path=/active/colony/current.oni[/code]
+[/list]
 
-[h2]当前阶段: v0.2.6[/h2]
-[i]本地服务已在实际使用。工具覆盖和客户端提示仍会随版本调整。[/i]
-[i]其他模组可能改变这些工具读到的数据。请把 Jlib 排在本模组前面再启用。[/i]
+[h2]现在能做什么[/h2]
+[list]
+[*]通过公开的七个工具入口读取状态、操作镜头、规划建筑、下达任务并控制游戏。
+[*]使用 world_editor 浏览虚拟目录，或通过 resources/read 读取 oni:// 资源；read_control 已不是公开工具。
+[*]读取格子完整组分质量与温度；提供者缺席时明确报告不可用。
+[*]使用保持合法 JSON 的状态预览，再按给出的路径读取完整文档。
+[*]查看请求错误与任务状态，按当前会话的 tools/list 核对参数。
+[/list]
+格子资源示例：[code]oni://world/cell/81/111[/code]，请换成当前地图的坐标。公开入口为 world_editor、game_control、navigation_control、building_control、orders_control、server_control、benchmark。
 
-[h3]MOD 拓展接口 (API)[/h3]
-玩家需要共享库 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url]。先订阅并启用它，再启用 ONI MCP Server，然后重启游戏。
-开发者通过 [url=https://www.nuget.org/packages/LIghtJUNction.Jlib]LIghtJUNction.Jlib[/url] 引用，并设置 ExcludeAssets="runtime"。NuGet 包不能代替创意工坊里的前置模组。
-对外接口是 MCP 端点加上 oni:// 资源。从 oni://tools/manifest 看当前工具清单。
+[h2]数据和验证边界[/h2]
+多组分压力、分压与体积分数各自带可用性标记。当前 OniSim 压力与分压报告为不可用，请按可用性标记解释数据。液体占格比例来自求解器的标称容量，表示占格份额。
 
-[h3]客户端能碰到什么[/h3]
-载入存档后可以读取殖民地状态、复制人检查、文本地图、建筑定义和库存。
-聚合工具覆盖世界读取、镜头与图层、建造计划、挖掘清扫订单，以及服务器控制。
-大规模挖掘、拆除和读档保持显式确认。它不是负责整局战役的自动玩家。
+本轮已在 U60 检查公开入口发现、当前状态 JSON 和格子读取。定向宿主回归通过 50 个断言；其余游戏操作仍需分别验收。最新六处后续提示已修正，实机复查待完成。自动游玩效果和帧率取决于客户端策略与实际游戏场景，需另外测量。
 
-[h3]操作指南与体验优化 (QoL)[/h3]
-服务离开模拟线程运行。殖民地资源要等存档载入后才出现。
+[h2]连接说明[/h2]
+默认只监听本机。改为非回环监听时必须开启认证；Bearer token 不会加密传输。远程使用请自行配置 VPN 或 TLS 反向代理。MCP 协议版本为 2025-11-25，客户端需正常初始化会话。读档、重启和大范围修改前，应明确操作范围并确认。
 
-* 浏览器首页：http://localhost:8788/
-* MCP 端点：http://localhost:8788/mcp/
-* 主菜单就会启动服务。oni:// 殖民地工具需要已载入的存档。
-* 鉴权默认关闭。端口离开本机前，请在 OniMcpConfig.json 里打开 AuthEnabled。
+[h2]保留的演示图片[/h2]
+下列实拍来自仓库历史演示，展示当时的操作场景。
+[img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/docs/images/gpt-oni-demo/mcp-workflow.jpg[/img]
+[img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/docs/images/gpt-oni-demo/colony-building.jpg[/img]
+[img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/docs/images/gpt-oni-demo/colony-overview.jpg[/img]
 
-[h3]由 onim 完成[/h3]
-本模组来自 [url=https://github.com/LIghtJUNction/OniMods]OniMods[/url]。onim 是这个仓库里的工具。它把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线。
+开发流程手绘示意；测量结果另见验证记录。
+[img]https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/onim-illustrated-onimcp.gif[/img]
 
-onim dev 放进游戏里试。onim build 打包。onim publish 发到 Steam。
-
-[h3]开源贡献[/h3]
-非常欢迎社区贡献！
-如果你有优化、Bug 修复或新功能建议，欢迎提交 Pull Request。
-
-请确保你的提交条理清晰并在必要处附带说明文档。
-
-项目地址：[url=https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniMcp]GitHub 仓库传送门[/url]
-
-[h3]免责声明[/h3]
-请注意本模组仍在紧密迭代中，我们将保持频繁更新与维护。
-我们非常重视大家的反馈与建议！
-问题请报到 GitHub。客户端只在读取时，请保持游戏暂停。
-
-[h3]联系我们[/h3]
-提问和缺陷请送到 [url=https://github.com/LIghtJUNction/OniMods/issues]GitHub Issues[/url]。
-
-祝游戏愉快。复制人仍然需要氧气，模型只是来参观的。
-
-如果这份工作对你有用，欢迎支持 OniMcp 的后续测试：
-[url=https://donate.lmm.best/?project=onimcp]捐赠[/url]
+[h2]文档与反馈[/h2]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]完整文档与接入说明[/url] · [url=https://github.com/LIghtJUNction/OniMods/issues]问题反馈[/url]
+反馈请附游戏/Mod 版本、请求、错误和最小复现，移除令牌及私人账号信息。
+[url=https://donate.lmm.best/?project=onimcp]支持开发与测试[/url]

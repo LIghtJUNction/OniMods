@@ -1,22 +1,22 @@
 # CycleTrim
 
-![CycleTrim](preview.gif)
+![CycleTrim](preview.png)
 
-**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib) **0.3.5 或更新版本**，再重启游戏。CycleTrim 自 0.4.10 起使用新的批量读取接口，启动器会在加载实现前检查依赖版本。消费者包不再内嵌一份 Jlib。
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib) **0.3.10 或更新的兼容版本**，再重启游戏。CycleTrim 自 0.4.10 起使用新的批量读取接口，启动器会在加载实现前检查依赖版本。消费者包不再内嵌一份 Jlib。
 
-极具颠覆性的高风险实验性性能优化 Mod，仍在早期开发。方向是重构底层算法，按实测耗时选择 CPU/GPU，减少重复计算与同步等待。顺序是先加速，再兼容。**只在可丢弃的测试存档上使用。**
+实验性仿真与性能 Mod。目标是重构底层算法，按实测耗时选择 CPU/GPU，并减少重复计算与同步等待。每次改动分别验证数据正确性、兼容性和性能。**只在可丢弃的测试存档副本上使用。**
 
-当前版本（0.4.22）修复微量气体耗尽后的质量残留，并复用液体与气体暂存缓冲区，减少重复分配。OniSim 在原生时间步内混合使用驻留 CPU 算子与 GPU 批处理；多组分发布提供共存记录，旧 Grid 仍显示主要元素。兼容性与存读档仍属实验范围，详见[实现说明](OniSim/docs/multicomponent-publication.md)和[更新记录](CHANGELOG.md)。需要 Jlib 0.3.8 或更新版本；整机帧率收益须以受控实测确认。
+本轮待发布目标为 **0.4.25**，需要 **Jlib 0.3.10**；工坊上传确认尚待完成。当前改动重点是跳过必然失败的 CPU 热传导全网格预扫、移除未用 GPU 初始化，以及完整保存多组分库存、明确派生数据可用性。OniSim 在原生时间步内结合 CPU 算子与 GPU 批处理；旧 Grid 仍显示主要元素，完整组分通过发布接口读取。详见[实现说明](OniSim/docs/multicomponent-publication.md)、下文的验证范围与[更新记录](CHANGELOG.md)。
 
-下面列出的热路径裁剪是眼下构建里已经有的内容，不是最终形态，也不承诺与原版行为对齐。
+下面列出的热路径裁剪已进入源码；原版语义对照与整机收益按具体构建和场景分别验收。
 
 本模组来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 是这个仓库里的工具，把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
 
 ## 快速索引（本页为总览）
 
 - [全游戏更新链路与诊断（0.4.12）](#全游戏更新链路与诊断0412)
-- [本轮完整实验与验收边界](../../docs/cycletrim-whole-chain-20261109.md)
-- [下个版本：实验替换一格一物](docs/next-cell-representation.md)
+- [历史整链实验与验收边界（0.4.12）](../../docs/cycletrim-whole-chain-20261109.md)
+- [多组分路线设计（历史）](docs/next-cell-representation.md)
 - [GPU 进度（2026-11-08）](#gpu-进度2026-11-08)
 - [多组分假设审计](docs/multicomponent-assumptions-audit.md)
 - [算法演进与数学模型 (Stage 2/2.1)](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#算法演进从一格一物排挤到-gpu-泊松压力投影-stage-221)
@@ -78,6 +78,8 @@ $$\boxed{ \text{Transport} \longrightarrow \text{Divergence} \longrightarrow \te
 
 ## GPU 进度（2026-11-08）
 
+> 此节保留 11-08/09 的管线记录；当前保存、数据可用性与算法状态见后文的原生内核检查点及 0.4.25 性能段。
+
 OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开启；`CYCLETRIM_ONISIM_GPU=0` 可在启动前关闭，初始化失败时打印原因并回到 CPU 路径。`CYCLETRIM_GPU_PROFILE=1` 或 Steam 启动参数 `--cycletrim-gpu-profile` 打开抽样耗时日志。
 
 **已提交（main）并接入时间步：**
@@ -89,7 +91,7 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 
 **2026-11-09 整链源码审查：** 气泡、温度、相变选择、符合条件的气体压力/传输、疾病与辐射存在 GPU 调用路径；上传、等待、读回及 CPU 应用仍穿插在固定步内。液体多组分扩散有 GPU 路径，但生产 `gpu_liquid_flow` 固定为 `false`，液体压力、流动和有序排挤仍由 CPU 执行。仓库中存在液体流动等 WGSL 算子和 `resident_cells` 缓冲，不代表整条路径已经接管生产更新。0.4.15 已移除生产气体压力投影，并将环境辐射改为 CPU 直接遍历；上述记录保留其历史时点。逐阶段依据见[原生固定步审查](../../docs/cycletrim-whole-chain-20261109.md#原生固定步也保留-cpu-阶段和同步)。
 
-**仍未完成：** 每个时间步仍有 CPU 上传、GPU 等待与读回，不是全流程显存驻留；事件应用、建筑交互和结果发布仍在 CPU；气压/分压/液体体积占比发布值、三种以上组分、完整存读档未贯通；整局帧率提升未完整验证。最近一份 `Player.log`（11-08 00:26）记录 GPU 在 RTX 4060 Laptop 上激活，之后的提交尚无新的实机日志。细节见 [OniSim/gpu/README.md](OniSim/gpu/README.md) 与 [OniSim/docs/progress.md](OniSim/docs/progress.md)。
+**历史检查点的未完成项：** 11-08 时每步仍有 CPU 上传、GPU 等待与读回，事件、建筑交互和发布留在 CPU；当时的压力、额外组分与保存贯通状态见原记录。此后已增加完整库存保存、22 组分 host/FFI 回归和六个自然混合格的实机重载验证；最新压力与液体占格状态见下方 U60 段。原 11-08 日志中的 RTX 4060 激活记录属于当时构建。细节见 [OniSim/gpu/README.md](OniSim/gpu/README.md) 与 [OniSim/docs/progress.md](OniSim/docs/progress.md)。
 
 ## 核心功能（简要）
 
@@ -107,7 +109,7 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 ## 使用方式
 
 - 订阅后按常规启用即可。
-- 推荐配合现有存档直接运行，无需额外配置。
+- 先复制存档，只在测试副本启用；原存档继续单独保留。
 
 ### 模组设置
 
@@ -132,7 +134,7 @@ OniSim 启动时用 wgpu 30（Vulkan 后端）创建 `GpuSimulation`，默认开
 ## 兼容与说明
 
 - OniSim 的主线、DLC 和其他 Mod 完整兼容性仍待验收；已验证的构建与场景见下文。
-- 以稳定性优先，避免影响原版关键玩法。
+- 兼容性与数据正确性按构建、玩法和场景分别记录。
 - CycleTrim 不再接管 `SmartReservoir` 的 automation 信号发送；储液罐/气库及复用该组件的第三方建筑保留原版重复通知语义。
 
 ### OniSim 原生仿真内核
@@ -147,13 +149,26 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 **混合存档需要新读者。** 没有额外正质量组分的世界仍写出原 SIMSAVE v15；混合世界使用专用版本 `0x4f4d0001` 和必需的 `ONIMIX` 扩展。受测的扩展前 OniSim 会拒绝该混合档，不能假定降级、卸载或切回原版后可继续读取。22 组分的精确往返已在 host/FFI 中验证，实机目前只覆盖每格两个正质量组分；格式和旧读者边界见[存档契约](OniSim/docs/save-format.md#compatibility-and-mandatory-marker)。
 
-整机性能 A/B 仍待验证，液体扫描微基准和启动预热不能作为游戏帧率收益。受测 `8db2654` 的压力字段仍是未计算占位；后续液体填充率、压力可用性和后台运行开关改动不在这份实机验收范围内。[最初启动拒绝记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)保留为此前检查点。
+**当前派生字段状态（Jlib 0.3.10）：** 压力和分压明确报告不可用，旧截图中的零占位不再作为当前读数。液体占格份额按求解器标称容量计算，并单独提供可用性标记。后续 U60 实机读取已观察到气体格 `pressureAvailable=false`、`liquidVolumeFractionAvailable=true` 和已知液体占格值 `0`；正液体填充场景仍待实机验收。六混合格存读档回执属于前述 `8db2654` 检查点，新的派生字段检查单独记录。[最初启动拒绝记录](../../docs/cycletrim-u60-startup-compatibility-20261120.json)保留为此前检查点。
 
 Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。运行时默认尝试经过校验的映射；`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前关闭原生替换。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内原生库；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 
 ## 性能实测摘要
 
-以下为固定场景增量测试（非全局通用），硬件与存档不同会有差异：
+### 待发布 0.4.25：先减少确定无效的工作
+
+本轮[算法与资源清理提交](https://github.com/LIghtJUNction/OniMods/commit/bc156bf68f927d7a4b3980e59a3b7b523e0e1ee4)包含两项具体改动：
+
+- **热传导资格预判。** 原 CPU 快捷路径需要先扫完整网格，数出合格格子后再判断是否达到原阈值 `floor(padded_cells / 2)`。现在先把现有热区域裁剪后的矩形面积相加，得到合格格子数的保守上界。即使这个上界也不足，就直接跳过必然失败的 CPU 预扫，继续原有 GPU 热路径。重叠区域只会把上界估大；原资格条件、GPU 区域图和求解算术保持原有规则。对应实现见[区域上界判断](OniSim/native/src/gpu_thermal_regions.rs)。
+- **删除未用 GPU 初始化。** 模拟 worker 不再创建未被使用的 `ResidentCells` 缓冲及三个寻路管线。225,828 个含边界填充格子的场景因此少请求 `225828 × 20 × 4 = 18,066,240` 字节，即 **17.229 MiB** 的 GPU 缓冲。这里统计的是取消的分配请求量；显卡驱动的实际驻留量另行测量。独立公开寻路接口继续保留。
+
+四个新增区域/暂存状态回归、既有 CPU/GPU 热传导等价用例均通过，Linux 原生 Release 构建通过。通过这些门禁后，下一步是在同一存档、设置及硬件图形后端下测量完整更新链路。
+
+**本轮整机 FPS A/B 仍待完成。** 当前隔离桌面的 GL 后端为 **llvmpipe 软件渲染**；该环境只用于对应的功能检查。RTX 4060 的硬件帧率对照需要恢复匹配的硬件图形环境后单独进行。三平台 CI 还需完成硬件/软件适配器分类修正并重跑；CPU/GPU 路径正确性和硬件加速收益分别记录。
+
+### 旧版本局部场景记录
+
+以下保留旧版固定场景增量记录；其适用范围为各自历史构建、硬件和存档。本轮 0.4.25 的验证范围与待测项目见上节：
 
 | 场景 | 指标 | 优化前 -> 优化后 | 改善 |
 |---|---|---|---|

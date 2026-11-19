@@ -1,86 +1,88 @@
-# OniOnline — 联机框架开发预览
+# OniOnline — 大厅、聊天与联机开发框架
 
-**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。所有本项目 Mod 共用一份 Jlib，消费者包不再内嵌 PLib/Jlib。
+![OniOnline 预览图](preview.png)
 
-<p align="center">
-  <img src="assets/onionline-logo-v1.png" alt="OniOnline" width="320" />
-</p>
+OniOnline 的默认玩法是 **ChatOnly**：提供大厅、连接会话和文字聊天。世界观察、原生行星入驻等服务需要另一个玩法 Mod 主动注册、选择并声明能力；单独安装本包不会开启完整多人殖民地模拟。
 
-OniOnline 是《缺氧》的联机模组开发框架。安装后默认只有大厅和聊天。一人一星球或其他玩法要做成单独的模组，向框架注册后再选中。
+本轮待发布目标为 **0.5.3**，网络协议为 **11**，配套使用 Jlib 0.3.10。0.5.3 尚待工坊上传确认；已发布版本以实际安装包为准。
 
-本模组来自 [OniMods](https://github.com/LIghtJUNction/OniMods)。onim 是这个仓库里的工具，把缺氧 Mod 的开发、测试和创意工坊发布连成一条直线：`onim dev` 放进游戏里试，`onim build` 打包，`onim publish` 发到 Steam。
+## 先把大厅用起来
 
-当前源码候选为 **0.5.0，协议 11**，仍是开发预览。此版本号不表示已发布到 Steam。图形交互、实际 Steam 模组下载与两个真实游戏客户端的完整验收尚未完成。
+先订阅并启用 [Jlib](https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839) 与 [OniOnline](https://steamcommunity.com/sharedfiles/filedetails/?id=3835145552)，重启游戏。基础会话不要求安装 CycleTrim，也不以拥有 DLC 为前提。
 
-## 开始使用
+当前源码接通了以下操作路径；**本轮新增入口的 U60 实机与双端验收尚待完成**：
 
-- 主菜单 **浏览大厅**：查找、加入或创建房间。默认玩法是聊天。
-- 进入殖民地后，原生管理栏的气泡按钮直接打开 **通讯**；默认 `Ctrl+T` 打开聊天、`Escape` 关闭，快捷键可在游戏控制设置中修改。菜单、载入和初始复制人选择期间不显示联机操作 HUD。
-- 玩法模组在 `OnLoad` 里 `GameplayFramework.Register`，并在连接前 `Select`。需要星球登记和世界同步时，在能力合同里声明 `onionline.worlds.v1`。未声明时，框架只保留大厅、聊天、会话和模组同步。
+1. 主菜单点击 **浏览大厅**。可筛选 Steam / 局域网，或输入大厅码。
+2. 选择 **创建大厅**，进入连接表单。填写昵称和大厅名称；在 **网络设置** 中选择传输方式、局域网端口和可选密码，再点 **创建大厅**。
+3. 房间中复制大厅码给参与者。对方使用浏览页或大厅码加入，聊天玩法成功连接后进入同一个房间界面。
+4. 已连接并载入殖民地后，通过管理栏气泡 **通讯** 或默认 **Ctrl+T** 打开聊天；**Esc** 关闭。快捷键可在游戏中重绑定。未连接时不显示聊天 HUD。
 
-`OnePlanetPerPlayer` 仍在 SDK 里，供单独的玩法模组调用 `RegisterIfMissing()`。框架本身不登记、也不默认选中它。房间 ID、观察世界 ID 和跨存档 PlanetId 仍是不同身份。
+新入口复用原有创建与握手逻辑。连接状态会区分正在尝试、等待下次重连和最终失败，并保留原因。聊天发送失败会保留输入，便于重试。SDK 发送成功的语义是传输层接受了消息。远端处理与逐个参与者的送达确认，需要调用者自己的协议。
 
-从源码安装及分阶段测试见 [构建、安装与测试](docs/build-install-test-zh.md)。游戏始终通过 Steam 启动。OniOnline 需要独立的 Jlib 前置 Mod；普通玩家无需安装 OniMcp 或 OniHarness。
+## U60 的能力边界
 
-## 兼容与模组同步
+这里的“可接入”描述源码路径，两个真实游戏客户端的本轮验收仍待完成。
 
-CycleTrim 和 Spaced Out! **不是固定前置**。基础会话按协议、玩法版本和双方提供的功能合同协商，不以游戏构建号、DLC 标签或 CycleTrim 版本的简单相等作为准入条件。
+| 流程 | 当前默认包 / U60（763796） |
+| --- | --- |
+| 浏览、创建、按码加入大厅 | 不受 744825 原生适配门禁限制；新建入口及加入后的房间跳转已接通，实机验收待完成 |
+| 大厅文字聊天、成员列表、断线重连 | 使用独立会话层；已有宿主网络回归，未完成本轮 U60 双端实机验收 |
+| Mod 清单核验与兼容性协商 | 有独立会话路径；启用及重启由玩家确认，状态通道由 Mod 明确注册 |
+| 已注册的 SDK 消息/状态通道 | 由相应 Mod 声明及启用；默认聊天包没有额外游戏玩法 |
+| 原生行星、世界观察、远程工作相关世界服务 | **U60 不可用**；适配白名单仍只有游戏构建 744825 |
+| 原生星图协作 | **U60 不可用**；还要求 744825、Spaced Out! 和显式启用对应玩法 |
+| 完整殖民地迁移、复制人或资源运输、火箭运输、离线追赶 | 默认包未提供可用的完整玩法流程 |
 
-当前游戏适配器登记的构建是 **744825**：
+世界观察不可用时按钮禁用并显示原因；运行时也会在关闭窗口之前拒绝请求。U60 对应的错误为 `native_adapter_unavailable`，界面提示“当前游戏版本尚未支持此功能。”。聊天模式在受支持旧版本上也不会自动获得世界服务。
 
-| 原生功能 | 游戏本体 | Spaced Out! |
-| --- | --- | --- |
-| 星球身份与清单 | 已有适配 | 已有适配 |
-| 授权观察采样 | 已有适配 | 已有适配 |
-| 原生星图 | 不提供 | 已有适配 |
+白名单依据在 [SessionCompatibility](Network/SessionCompatibility.cs)。构建 744825 的基础游戏可声明原生行星和观察能力，Spaced Out! 另可声明原生星图能力；这只是受审查适配器范围，仍须有玩法 Mod 选择这些服务。元数据中的最低游戏版本不表示所有后续版本都支持原生功能。
 
-未知构建的原生读取明确不可用，保留可用的基础会话与纯框架功能。模组元数据的最低构建仍为 744825；这不承诺任意游戏版本能加载模组，也不代表本体和跨版本原生交互已完成实机验收。详见 [兼容边界](docs/FRAMEWORK-COMPATIBILITY.md)。
+## Mod 一致性与传输
 
-加入玩法前，双方交换并确认模组清单。必需模组的来源、版本、受控内容摘要和实际加载状态必须对齐；重连需重新确认。未声明用途的模组默认必需，因此星系主人启用的 CycleTrim 或其他模组仍可能需要客人一并安装。
+连接时核验所需 Mod 的来源、版本、内容哈希和加载状态；重连后重新确认。未声明策略的 Mod 按必需处理。不一致时使用原生界面提示；来自公开工坊的内容可以走相应下载流程，下载后仍需玩家确认启用，并在需要时重启加载。
 
-发现差异时，原生确认窗提供摘要、可选完整列表，以及下载或管理模组入口。Steam 只负责下载公开工坊内容；**下载完成不等于 ONI 已安装、启用或加载**。下载并核验成功后，玩家可以明确选择“启用并重启”，由游戏原生模组管理器写入设置并重启；来源不明确或写入失败时仍回到模组菜单手动处理。Local/Dev 模组不自动上传或分发，需自行取得对应版本。详见 [模组内容同步](docs/MOD-CONTENT-SYNC.md)。
+本地开发 Mod 不会被自动上传给别人。状态同步只覆盖注册的通道，不复制任意 Mod 内存，游戏物资、复制人和存档转移需要另行实现相应流程。
 
-游戏中还可同步模组通过 SDK **显式注册的状态频道**。框架提供经过身份验证的传输、版本化快照和增量；模组开发者负责定义数据、权限与迁移规则。它不会自动同步任意第三方模组的内存、私有配置或整个原生模拟。
+局域网默认 TCP 端口为 `27140`，发现端口为 UDP `27141`：
 
-## 当前范围
+- 局域网直连：`oni://IP:27140`。
+- Steam 大厅：`oni://steam/<lobby id>`。
+- 局域网链路面向可信网络；大厅密码不加密 TCP 数据。跨公网使用应另行配置受信网络通道。
 
-- 大厅支持 Steam 公开房间、LAN 发现和大厅码，带密码、聊天、断线恢复和房主管理。
-- 默认玩法只有聊天。星球登记、授权观察和星图属于声明 `onionline.worlds.v1` 的玩法模组。
-- 开发候选包含按住说话的 Steam 语音，默认 `Ctrl+V`；麦克风、失焦停止和双客户端听音仍待实机验收。
+语音默认 **Ctrl+V** 按住说话仍属开发能力，麦克风、焦点切换和双端体验未完成验收，目前保留为开发能力。
 
-完整殖民地迁移、火箭互访、物资运输和离线代算尚未实现。关闭负责模拟的游戏进程后，该殖民地不会继续运行。
+## 给玩法 Mod 作者
 
-LAN 默认 TCP `27140`，发现端口 UDP `27141`；广播不可达时可用 `oni://IP:27140` 直连。LAN 预览面向可信局域网，密码验证不等于传输加密。Steam 星系码使用 `oni://steam/<lobby id>`，沿用游戏现有 Steam 客户端。
+在 `OnLoad` 注册 `GameplayFramework.Register`，并在连接前选择玩法。默认只注册 `onionline.chat`。需要世界服务的玩法声明 `onionline.worlds.v1` 并满足原生能力协商；声明能力不能绕过本机适配门禁。
 
-## 给玩法开发者
+`OnePlanetPerPlayer` 是可复用 SDK 规则，不是默认注册的完整多人玩法。`OniOnline.Framework` 是 `netstandard2.0` 的独立程序集，不依赖 Unity、ONI 或 PLib。
 
-`OniOnline.Framework.dll` 是独立的 .NET Standard 2.0 SDK，不引用 Unity、ONI 或 PLib。聊天和第三方玩法使用同一套注册接口；玩法模组可以添加准入规则、经过身份验证的消息、注册状态同步和按殖民地保存的版本化数据。
+- [SDK](docs/SDK.md)
+- [兼容性契约](docs/FRAMEWORK-COMPATIBILITY.md)
+- [Mod 同步 SDK](docs/SDK-MOD-SYNC.md)
+- [Mod 内容同步](docs/MOD-CONTENT-SYNC.md)
+- [构建、安装与测试](docs/build-install-test-zh.md)
 
-- [SDK 入口、生命周期与边界](docs/SDK.md)
-- [独立框架项目](../../sdk/OniOnline.Framework/README.md)
-- [独立开发示例](../../examples/OniOnline.PlanetSignals)
-- [兼容与原生适配](docs/FRAMEWORK-COMPATIBILITY.md)
-- [模组对齐、下载与加载证据](docs/MOD-CONTENT-SYNC.md)
+## 已验证与未验证
 
-SDK 仍处开发预览，尚未承诺后续二进制兼容。不要随第三方玩法重复打包框架 DLL，也不要把网络消息当成任意操作其他玩家星球的权限。
+本轮干净源码快照的独立宿主通过 **4,808 个断言**。覆盖真实回环 TCP、三个独立客户端进程、限流/延迟、断线重连、会话生命周期及保存失败处理。网络压力场景为每方向 2,048 B/s、每个代理数据块 160 ms ± 70 ms 延迟与 2,000 格地图。游戏世界和时间边界使用替身。
 
-## 构建和验证
+这些结果覆盖被测会话路径；**U60 两台机器或两个真实游戏客户端的多人验收仍待完成**。世界观察与原生行星在 U60 仍由适配门禁禁用。新的大厅 UI 入口、Steam 下载流程与语音体验须分别实机检查。
 
-游戏适配器从本机合法安装的游戏读取引用，不分发游戏 DLL。配置 `Directory.Build.props` 后，在仓库根目录构建：
-
-```sh
-onim -m OniOnline build --release
-```
-
-产物为 `dist/OniOnline.zip`，包含根加载入口 **OniOnline.dll**、**implementation/OniOnline.dll** 和 **OniOnline.Framework.dll**。实际安装使用 `onim -m OniOnline install`；它会重新构建 Release，安装前正常保存并退出游戏。开发用 `dev` 安装 Debug，两种路线选一条，不把 Debug 当成 Release 验收。
-
-先选受影响模块做局部宿主测试，例如：
+源码构建需要合法安装的游戏引用；从仓库按构建文档运行。纯 SDK/宿主回归可使用：
 
 ```sh
-dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --sdk
-dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --mod-sync-session
+dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false
 ```
 
-宿主测试不启动游戏。完整宿主回归和 Steam 实机集成留到局部模块通过后进行；构建、打包、安装、进程实际加载、图形验收和双客户端联机分别记录，不互相替代。[双完整游戏验收工具](../../tests/OniOnline.Tests/MULTIPLAYER-RUNTIME.md)要求真实 Steam 游戏进程，本机协议客户端不能代替完整游戏。
+该命令从 OniMods 仓库根执行。探针构建仅用于开发，不进入普通发行包。测试未知玩法前保留存档副本。
 
-测试探针只在专门构建中存在，普通包不包含它，也不能打包探针构建。旧的一人一星球设计稿和阶段验收记录已从发布包移除，不能当作 0.5.0 的当前说明。
+## 图示、来源与反馈
+
+手绘图说明框架与工具链，具体玩法状态见上方能力表：
+
+![OniOnline 开发流程手绘示意](https://raw.githubusercontent.com/LIghtJUNction/OniMods/main/.agents/skills/oni-workshop-description/assets/onim-illustrated-onionline.gif)
+
+<p align="center"><img src="assets/onionline-logo-v1.png" alt="OniOnline 标志" width="240"></p>
+
+项目采用 AI 生成开发与迭代。第三方库和原版游戏素材保留原作者及许可，见[第三方声明](THIRD_PARTY_NOTICES.txt)。[反馈问题](https://github.com/LIghtJUNction/OniMods/issues)时请提供双方版本、所选玩法、传输方式与错误码；移除大厅密码、私人地址和账号信息。
