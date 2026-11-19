@@ -189,7 +189,8 @@ namespace OniMcp.Tools
             var result = new Dictionary<string, object>
             {
                 ["type"] = entry.reportType.ToString(),
-                ["name"] = hasGroup ? Localize(group.stringKey) : entry.reportType.ToString(),
+                // ReportGroup.stringKey is already localized display text.
+                ["name"] = hasGroup ? group.stringKey : entry.reportType.ToString(),
                 ["stringKey"] = hasGroup ? group.stringKey : null,
                 ["context"] = entry.context,
                 ["net"] = Round(entry.Net),
@@ -341,21 +342,6 @@ namespace OniMcp.Tools
             catch
             {
                 return null;
-            }
-        }
-
-        private static string Localize(string stringKey)
-        {
-            if (string.IsNullOrEmpty(stringKey))
-                return stringKey;
-
-            try
-            {
-                return Strings.Get(stringKey).ToString();
-            }
-            catch
-            {
-                return stringKey;
             }
         }
     }
