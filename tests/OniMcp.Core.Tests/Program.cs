@@ -13,8 +13,12 @@ internal static class Program
     private static int failures;
     private static int groups;
 
-    private static int Main()
+    private static int Main(string[] args)
     {
+        Run("report notes preserve content across game API versions", ReportNoteCollectorRegression.Run);
+        if (args.Length == 1 && args[0] == "--report-notes-only")
+            return failures == 0 ? 0 : 1;
+
         Run("deconstruction preserves protected-target eligibility", DeconstructionEligibilityRegression.Run);
         Run("registry initialization can retry after a factory failure", InitializationRetry);
         Run("JSON-RPC preserves null id and success result", JsonRpcNulls);

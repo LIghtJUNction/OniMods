@@ -229,15 +229,16 @@ namespace OniMcp.Tools
 
         private static List<Dictionary<string, object>> NotesToList(ReportManager.ReportEntry entry)
         {
-            var notes = new List<Dictionary<string, object>>();
-            entry.IterateNotes(note =>
+            var collectedNotes = ReportNoteCollector<ReportManager.ReportEntry, ReportManager.ReportEntry.Note>.Read(entry);
+            var notes = new List<Dictionary<string, object>>(collectedNotes.Count);
+            foreach (var note in collectedNotes)
             {
                 notes.Add(new Dictionary<string, object>
                 {
                     ["value"] = Round(note.value),
                     ["note"] = note.note
                 });
-            });
+            }
             return notes;
         }
 
