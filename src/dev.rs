@@ -174,11 +174,11 @@ fn ensure_prerequisite_order(mods: &mut Vec<Value>) {
                 || id == Some("OniMcp")
         });
 
-        if let Some(consumer_pos) = first_consumer_idx {
-            if jlib_pos > consumer_pos {
-                let jlib = mods.remove(jlib_pos);
-                mods.insert(consumer_pos, jlib);
-            }
+        if let Some(consumer_pos) = first_consumer_idx
+            && jlib_pos > consumer_pos
+        {
+            let jlib = mods.remove(jlib_pos);
+            mods.insert(consumer_pos, jlib);
         }
     }
 }

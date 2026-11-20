@@ -192,12 +192,7 @@ pub fn install_repository(
     Ok(())
 }
 
-fn install_zip(
-    cfg: &Config,
-    zip: &Path,
-    name: &str,
-    static_id: &str,
-) -> Result<()> {
+fn install_zip(cfg: &Config, zip: &Path, name: &str, static_id: &str) -> Result<()> {
     let files = archive::file_names(zip)?;
     let assembly = files
         .iter()

@@ -109,7 +109,8 @@ exit "${ONIM_DOTNET_EXIT-0}"
                 zip.start_file("mod_info.yaml", options).unwrap();
                 zip.write_all(b"minimumSupportedBuild: 744825\n").unwrap();
                 zip.start_file("mod.yaml", options).unwrap();
-                zip.write_all(format!("staticID: test.{name}\n").as_bytes()).unwrap();
+                zip.write_all(format!("staticID: test.{name}\n").as_bytes())
+                    .unwrap();
             }
             zip.finish().unwrap();
         }
