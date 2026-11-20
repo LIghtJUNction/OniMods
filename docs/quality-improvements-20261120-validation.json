@@ -1,0 +1,1036 @@
+{
+  "schema": "onimods.quality-validation.v1",
+  "generatedAtUtc": "2026-11-20T03:01:10.719Z",
+  "report": {
+    "path": "quality-improvements-20261120.md",
+    "sha256": "b8d62f955fa0766de44ae1c81488df95fe29ae204833432acd90f5125c39732c",
+    "binding": "Exact Markdown report bytes accompanying this validation record."
+  },
+  "collection": {
+    "existingEvidenceOnly": true,
+    "newTestsOrBuilds": false,
+    "gitOrSteamMutations": false,
+    "gameOperations": false,
+    "rawLogsEmbedded": false,
+    "noRawSaveContent": true,
+    "noPrivateIPOrAccountIdentifiers": true,
+    "remoteEvidenceRoot": "/tmp/onimods-quality-20261120/",
+    "countsPolicy": "Independent scopes and invocations remain separate. Subsets, repeated matrix executions and historical overlapping suites are not summed into a global total.",
+    "testSourceRule": "Historical/frozen-candidate tests stay separate from final14d source/build/install/publication; no retest is inferred.",
+    "scope": "Assembly of this evidence index only; implementation, testing and publication operations are recorded in their own sections.",
+    "evidenceIntegrityCheck": {
+      "referencedSourceArtifacts": 40,
+      "matchedSha256": 40,
+      "mismatches": 0,
+      "localReportSha256CheckedSeparately": true,
+      "scope": "Read-only byte hashes checked against the final index; does not rerun tests."
+    }
+  },
+  "source": {
+    "refs": {
+      ".": "14dba75a5752c3142039a8660ce37cdf57d7082a",
+      "mods/Jlib": "315a4806e52dabc3d32886cd7f458b3e43d4b4b9",
+      "tools/OniHarness": "3618c90a6a300318186264b17d46f9d6ab44c5a0"
+    },
+    "versions": {
+      "CycleTrim": "0.4.25",
+      "OniMcp": "0.2.9",
+      "OniOnline": "0.5.3",
+      "Jlib": "0.3.10"
+    },
+    "verifiedTrackedBlobs": {
+      ".": 2317,
+      "mods/Jlib": 250,
+      "tools/OniHarness": 118
+    },
+    "lfsPathsVerified": 11,
+    "allTrackedBlobsMatch": true,
+    "gameBuild": 763796,
+    "evidence": "source14d",
+    "ci": {
+      "evidence": "ci14d",
+      "source": "14dba75a5752c3142039a8660ce37cdf57d7082a",
+      "runs": [
+        {
+          "id": 44655187013,
+          "name": "Mod quality",
+          "conclusion": "success",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/44655187013"
+        },
+        {
+          "id": 44655187084,
+          "name": "ONI reference compatibility",
+          "conclusion": "success",
+          "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/44655187084"
+        }
+      ]
+    }
+  },
+  "release": {
+    "finalBuild": {
+      "source": "14dba75a5752c3142039a8660ce37cdf57d7082a",
+      "evidence": "build14d",
+      "steps": [
+        {
+          "name": "native-bundle-validation",
+          "exitCode": 0,
+          "seconds": 0.16028785705566406,
+          "log": "native-bundle-validation.log",
+          "logSha256": "797d3a6f3f768afd9aef59092ca13e83bdbddafd43dcf8f07a1b1bd0db51e829"
+        },
+        {
+          "name": "onim-release-build",
+          "exitCode": 0,
+          "seconds": 0.21689772605895996,
+          "log": "onim-release-build.log",
+          "logSha256": "15b61b4aa7d1571dbce8c7425aa6afcc46a5b9b951e108fc147f93415efc68c2"
+        },
+        {
+          "name": "all-mods-release",
+          "exitCode": 0,
+          "seconds": 22.794002294540405,
+          "log": "all-mods-release.log",
+          "logSha256": "6e3ab9886312f3a15c98ed14815968c40b7daaca9d5b66b8a2302c1d17677633"
+        },
+        {
+          "name": "harness-runtime-release",
+          "exitCode": 0,
+          "seconds": 0.9571261405944824,
+          "log": "harness-runtime-release.log",
+          "logSha256": "41f5a70361354f0cdd2f086f1b29abd69cd0f9928446d49deb1ccf3620b8efd1"
+        }
+      ],
+      "onimExecutableSha256": "5744e3f8f4b402eef010134feefca44b8f1baffe0501ed780ed5f619f11b6416",
+      "dualTfmJlib": [
+        "net48",
+        "netstandard2.1"
+      ],
+      "native": "Existing bundle revalidated/packaged, not a new native compilation or conformance run.",
+      "logRoot": "release-14d-candidate/"
+    },
+    "formalGates": {
+      "evidence": "d9-formal-gates",
+      "actualSource": "d9ad44a78166375b35ca2665152c8cdd036f80a0",
+      "fullDryRunWrappers": [
+        "Jlib",
+        "OniMcp",
+        "CycleTrim"
+      ],
+      "allExitCodes": 0,
+      "outerSequenceWallSeconds": [
+        60.567,
+        105.356,
+        55.453
+      ],
+      "reuseEvidence": "gate-reuse",
+      "onlySourceChangeTo14d": "mods/OniOnline/mod.yaml",
+      "actual14dNewChecks": [
+        "source identity",
+        "OniOnline metadata dry-run",
+        "OniOnline C# VDF validation",
+        "complete Release builds"
+      ],
+      "limitation": "Reused source/test/publisher-source gates; not full-wrapper reruns at 14d and not all binary files equal."
+    },
+    "testedPackages": {
+      "evidence": "packages14d",
+      "files": {
+        "Jlib": 11,
+        "CycleTrim": 119,
+        "OniMcp": 12,
+        "OniOnline": 30
+      },
+      "totalModFiles": 172,
+      "harnessRuntimeFiles": 6,
+      "d9To14dManifestComparison": {
+        "equalFiles": 163,
+        "differentFiles": 9,
+        "differences": "Eight managed DLLs and OniOnline/mod.yaml."
+      },
+      "jlibDll": {
+        "bytes": 492032,
+        "sha256": "ae381218be3963d1be1a4334a26cc78b5cd261cc71b8411b5e2b6e6ca1489833"
+      }
+    },
+    "installation": {
+      "evidence": "install14d",
+      "status": "installed",
+      "finishedUtc": "2026-11-20T01:44:24.328944+00:00",
+      "exactlyFiveEnabled": true,
+      "copies": [
+        {
+          "name": "CycleTrim",
+          "source_files": 119,
+          "destination_files": 119,
+          "matched": true
+        },
+        {
+          "name": "Jlib",
+          "source_files": 11,
+          "destination_files": 11,
+          "matched": true
+        },
+        {
+          "name": "OniHarness.Runtime",
+          "source_files": 6,
+          "destination_files": 6,
+          "matched": true
+        },
+        {
+          "name": "OniMcp",
+          "source_files": 12,
+          "destination_files": 12,
+          "matched": true
+        },
+        {
+          "name": "OniOnline",
+          "source_files": 30,
+          "destination_files": 30,
+          "matched": true
+        }
+      ],
+      "all178ComponentFilesMatched": true,
+      "hostConfigurationUnchangedAtInstall": true,
+      "saveUnchangedAtInstall": true,
+      "saveSha256": "4a6bb910fcb363db3749d0dc6818ffd578bee735df89265fb225910b29921857",
+      "scope": "Isolated functional profile, not an original-profile FPS comparison."
+    }
+  },
+  "validationGroups": [
+    {
+      "id": "mcp-http-host",
+      "status": "passed",
+      "counts": {
+        "baseRegressions": 23,
+        "aggregateAssertions": null,
+        "acceptNegotiationGroups": 19
+      },
+      "evidence": [
+        "mcp-harness-prior"
+      ],
+      "scope": "Production HttpListener/dispatcher; game boundaries stubbed. 23 excludes other suites; no aggregate count. Old negative run stopped at first malformed-request ~3 s timeout (exit134), before later cases."
+    },
+    {
+      "id": "mcp-coordinate-search",
+      "status": "passed",
+      "counts": {
+        "regressionGroups": 3
+      },
+      "evidence": [
+        "prior-noncycle-audit"
+      ],
+      "scope": "Three old-red/new-green host groups; final numeric-label visual/cell-selection acceptance not run."
+    },
+    {
+      "id": "mcp-report-notes",
+      "status": "reported_pass",
+      "counts": {
+        "assertions": 66
+      },
+      "evidence": [
+        "notes66"
+      ],
+      "scope": "66 pass assertions; command/exit absent from selected log. Live counts22 entries/35 names/14 positive/17 negative notes are data, not tests.",
+      "command": null,
+      "exitCode": null
+    },
+    {
+      "id": "mcp-release-using-gate",
+      "status": "passed",
+      "counts": {
+        "sourceFilesChanged": 8,
+        "unusedUsingsRemoved": 9,
+        "analyzedFiles": 448
+      },
+      "evidence": [
+        "prior-noncycle-audit"
+      ],
+      "scope": "Focused f081+Jlib ee267+8-file patch: Release zero warnings/errors and448 analyzer files clean. Not a claim of zero warnings for all14d cold builds."
+    },
+    {
+      "id": "harness-client",
+      "status": "passed",
+      "counts": {
+        "pythonTests": 50
+      },
+      "evidence": [
+        "prior-noncycle-audit",
+        "mcp-harness-prior"
+      ],
+      "scope": "50 Python tests plus ruff/mypy/wheel/sdist/Twine gates. Windows/Linux Python3.10/3.15 repeats do not add independent cases."
+    },
+    {
+      "id": "harness-startup",
+      "status": "passed",
+      "counts": {
+        "offlineTests": 32,
+        "newSubset": 10
+      },
+      "evidence": [
+        "prior-noncycle-audit"
+      ],
+      "scope": "Offline launcher/startup diagnostics;10 new tests included in32. No live game method proof."
+    },
+    {
+      "id": "harness-historical-complete",
+      "status": "passed",
+      "counts": {
+        "managedChecks": 13,
+        "pythonTests": 114
+      },
+      "evidence": [
+        "mcp-harness-prior"
+      ],
+      "scope": "Historical verify.py without --game-path: no game/native execution. Overlaps other Harness runs; totals not additive."
+    },
+    {
+      "id": "onionline-isolated-host",
+      "status": "passed",
+      "counts": {
+        "assertions": 4818,
+        "focusedSubset": 120,
+        "newInFocusedSubset": 10
+      },
+      "evidence": [
+        "online4818"
+      ],
+      "scope": "Real TCP/3 client processes;4818 includes120 (10 new). Clean snapshot+frozen overlays, isolated0.3.10 source package/cache/DLL identities. Not two complete U60 peers, Internet or cross-device acceptance.",
+      "sourceBinding": {
+        "rootBase": "e29b5134831f4a17421a5c0dcaf75fe655f8e0a0",
+        "jlibPackageSource": "ee2670a233b3b2be6babe75d1a5e351f40f784e2",
+        "scope": "Clean archived sources plus frozen catalog/declaration/pin overlays; original user dirty sources excluded."
+      },
+      "dependency": {
+        "id": "LIghtJUNction.Jlib",
+        "version": "0.3.10",
+        "packageSha256": "7beda83460fd3946df0998f364ef4eb1be4ab137d2059341df4a3ad3e6ab9a22",
+        "runtimeDllSha256": "34fce83d34a31adf4ffdf3c10debbd845f9bd647a9d2cc33ee3b53beb957e32f",
+        "selectedFramework": "netstandard2.1"
+      }
+    },
+    {
+      "id": "cycle-online-declaration",
+      "status": "passed",
+      "counts": {
+        "assertions": 10
+      },
+      "evidence": [
+        "online4818"
+      ],
+      "scope": "10 assertions using real Framework API; optional loaded-Framework integration declares CycleTrim Required. No bundled Framework or weakened third-party gate."
+    },
+    {
+      "id": "derived-native-publication",
+      "status": "passed",
+      "counts": {
+        "publicationTests": 13,
+        "liquidTransportTests": 12
+      },
+      "evidence": [
+        "derived-fields"
+      ],
+      "scope": "13 publication +12 liquid-transport tests in frozen candidate. Transport used Vulkan despite outer GPU=0; no concurrent game.25 is these filters, not whole-repository coverage."
+    },
+    {
+      "id": "derived-managed-hosts",
+      "status": "passed",
+      "counts": {
+        "jlibAssertions": 2379,
+        "cycleTrimAssertions": 85
+      },
+      "evidence": [
+        "derived-fields"
+      ],
+      "scope": "Historical availability/capability candidate. Earlier incomplete-JSON/fixture-order failures retained; final2379/85 passed. Jlib count overlaps2391; final live positive fill not run."
+    },
+    {
+      "id": "jlib-preview-host",
+      "status": "passed",
+      "counts": {
+        "assertions": 2391,
+        "newHeaderSubset": 36,
+        "acceptedHeaderCases": 5,
+        "rejectedHeaderCases": 31
+      },
+      "evidence": [
+        "jlib-preview"
+      ],
+      "scope": "Default source host, including36 header cases. Only signature/IHDR/positive square size/project10MiB checks. Inspected old0.2.0 nupkg, not fresh0.3.10 install. Historical52 cold-build warnings retained.",
+      "sourceBinding": {
+        "base": "ee2670a233b3b2be6babe75d1a5e351f40f784e2",
+        "candidateCommitted": "315a4806e52dabc3d32886cd7f458b3e43d4b4b9"
+      }
+    },
+    {
+      "id": "thermal-region-and-equivalence",
+      "status": "passed",
+      "counts": {
+        "newCpuRegressions": 4,
+        "existingCpuGpuEquivalence": 1
+      },
+      "evidence": [
+        "thermal-ab"
+      ],
+      "scope": "3 region +1 disposable-scratch regression and1 existing actual GPU equivalence. No whole-game FPS or measured VRAM claim."
+    },
+    {
+      "id": "gpu-classification",
+      "status": "passed",
+      "counts": {
+        "realRtxCases": 7,
+        "cpuCiHardwareExcluded": 30
+      },
+      "evidence": [
+        "gpu-seven-validation",
+        "gpu-seven-log",
+        "gpu-cpu-exclusions",
+        "gpu-frozen-candidate"
+      ],
+      "scope": "Seven exact tests on real RTX4060 Laptop Vulkan: 3 material-range gas/thermal boundaries, 2 disease CPU/GPU comparisons, 2 liquid boundary/workspace tests. Exit0,7 passed,265 filtered. Thirty hardware-dependent names are identical exclusions across three CPU lanes, not passed fallback tests. This group excludes the separate sparse-face thermal equivalence test."
+    },
+    {
+      "id": "onim-archive-install",
+      "status": "passed",
+      "counts": {
+        "unit": 64,
+        "buildCli": 17,
+        "setupCli": 5,
+        "totalWithinThisInvocation": 86,
+        "archiveSubset": 13
+      },
+      "evidence": [
+        "prior-noncycle-audit"
+      ],
+      "scope": "Linux real-ZIP/transactional-install suite with no unzip on PATH.13 archive cases are subset.215.5 s includes lock waiting, not performance; no Win/macOS runtime claim."
+    },
+    {
+      "id": "onim-publish-unit",
+      "status": "passed",
+      "counts": {
+        "unit": 71
+      },
+      "evidence": [
+        "onim-publish"
+      ],
+      "scope": "e16+two frozen files later committed d9.71 overlaps64 unit tests in old86; build_cli/setup_cli not independently rerun.",
+      "sourceBinding": {
+        "base": "e16a08ba1a41f11514f0155eedddaf8e0969ad9b",
+        "candidateCommit": "d9ad44a78166375b35ca2665152c8cdd036f80a0",
+        "publishRsSha256": "c7fe5047eda2e4147e51d24496f984e257d8e21bd1653dd55b566d6c944c73e5",
+        "packageRsSha256": "05d6f562d932caad6309dc787b981abed28bcd1180d798e62acb7ddac80cda87"
+      }
+    },
+    {
+      "id": "onim-four-package-plan",
+      "status": "passed",
+      "counts": {
+        "isolatedTestCases": 1,
+        "realPackages": 4,
+        "inputFiles": 172
+      },
+      "evidence": [
+        "onim-publish",
+        "onim-fixture-inputs"
+      ],
+      "scope": "One isolated case checks4 real old packages/172 files, fixture owner, no Steam. Input has no single recorded commit;159 files equal/13 differ from d9. Revised docs covered by formal d9 gate."
+    },
+    {
+      "id": "publisher-utf8",
+      "status": "passed",
+      "counts": {
+        "paths": 5,
+        "utf8BoundaryAssertions": 72,
+        "utf8BoundaryGroups": 12
+      },
+      "evidence": [
+        "publisher-utf8"
+      ],
+      "scope": "ASCII/CJK/emoji8000/8001-byte boundaries; old failure retained. C#8000 vs Rust7999 distinct. Covered byte predicate does not execute every Steam page parser."
+    },
+    {
+      "id": "description-generator",
+      "status": "passed",
+      "counts": {
+        "tests": 3,
+        "boundaryCases": 8
+      },
+      "evidence": [
+        "prior-noncycle-audit"
+      ],
+      "scope": "3 tests/8 boundary cases at4bc0c7c; boundaries not additional tests; no upload proof.",
+      "sourceBinding": {
+        "commit": "4bc0c7cce2c2b18c7be1ec76d08f400348eadb16"
+      }
+    }
+  ],
+  "performance": {
+    "localScanner": {
+      "evidence": "liquid-scan",
+      "baselineCommit": "47785a0b0e6657402d8a77135c99fbc3416d3a4f",
+      "scope": "Production liquid candidate discovery only; no game FPS or full-frame measurement",
+      "hardware": {
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900HX",
+        "logicalCpus": 24,
+        "workerCap": 16,
+        "gameConfiguredWorkers": 8
+      },
+      "profile": "release; thin LTO; codegen-units=1",
+      "scenarios": 16,
+      "implementations": 2,
+      "batchesPerImplementationPerScenario": 12,
+      "scansPerBatch": 200,
+      "totalTimedBatches": 384,
+      "totalTimedScans": 76800,
+      "order": "6 alternating ABBA/BAAB rounds",
+      "statistic": "Median of 12 batch means for each implementation/scenario.",
+      "medianSpeedupRange": [
+        1.155,
+        6.835
+      ],
+      "fpsClaim": false,
+      "warmupScansPerImplementationPerScenario": 12
+    },
+    "thermalAndStartup": {
+      "scope": "Conservative thermal prepass upper-bound skip; remove unused ResidentCells and three GPU pipeline initializations.",
+      "evidence": "thermal-ab",
+      "requestedBufferBytesAvoided": 18066240,
+      "paddedCells": 225828,
+      "measuredVramReduction": false
+    },
+    "wholeGame": {
+      "status": "not_run",
+      "comparison": "A1-B-A2 for native changes from 9c9c65e to bc156bf; A already includes candidate scanner improvements.",
+      "validFpsImprovement": null,
+      "physicalPresentationTimesAvailable": false,
+      "plannedMetric": "Unity Game.Update update frequency, not screen-present FPS.",
+      "reasonEvidence": "resource-disposition",
+      "runnerValidation": {
+        "status": "passed_offline_fixtures",
+        "count": 32,
+        "parts": {
+          "originalCleanupAndTransactions": 19,
+          "namespaceEnvironment": 7,
+          "stickyAbort": 6
+        },
+        "actualPerformanceRun": false,
+        "evidence": "aba-runner-validation"
+      },
+      "readonlyPreflight": {
+        "status": "passed",
+        "source": "14dba75a5752c3142039a8660ce37cdf57d7082a",
+        "installedFiles": 178,
+        "gameStarted": false,
+        "evidence": "aba-preflight14d"
+      }
+    }
+  },
+  "runtime": {
+    "testedFinal": {
+      "evidence": [
+        "launch14d",
+        "interrupted14d",
+        "quit14d"
+      ],
+      "ready": true,
+      "graphicsDevice": "Vulkan",
+      "gpuName": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "completed": [
+        "main menu Browse lobbies",
+        "Steam/LAN browser tabs",
+        "LAN Create lobby navigation",
+        "single-instance LAN Host Connected, one local host member",
+        "Asteroids disabled with game-version unsupported reason; click kept room visible"
+      ],
+      "saveLoaded": false,
+      "notRun": [
+        "peer chat send/receive",
+        "two game instances or cross-device multiplayer",
+        "smoke save load",
+        "functional coordinate screenshot",
+        "positive liquid volume check",
+        "native A-B-A"
+      ],
+      "notEstablished": [
+        "Complete follow of final public-tool guidance",
+        "Start game/shared simulation",
+        "Two real U60 peers",
+        "Windows/macOS U60 real game"
+      ],
+      "quit": {
+        "scheduled": "quit_desktop",
+        "saveFirst": false,
+        "pidAbsent": true,
+        "saveUnchanged": true,
+        "saveSha256": "4a6bb910fcb363db3749d0dc6818ffd578bee735df89265fb225910b29921857"
+      },
+      "disabledControlScreenshotSha256Only": "e02d226f457791f5d94f6c0e3040e124876f91813b8aee78387cce01ed69c06a",
+      "rawScreenshotExported": false,
+      "usesOriginalTestedJlibNotPublishedRebuild": true,
+      "sameAsFinalSourceRefs": true
+    },
+    "historicalMulticomponent": {
+      "evidence": "mixed-live-old",
+      "sourceRefs": {
+        ".": "8db265410028785b1cc89a94ab90e52662a3247b",
+        "mods/Jlib": "26c6eae7e784c09a11f2a77d1517f8e6a7860563",
+        "tools/OniHarness": "12296780c360ad980a3531d69fd71f4eed0c63f1"
+      },
+      "gameBuild": 763796,
+      "unity": "6000.3.17f1",
+      "platform": "Linux x64",
+      "naturalMixedCells": 6,
+      "positiveComponentsPerCell": 2,
+      "elements": [
+        "Oxygen",
+        "CarbonDioxide"
+      ],
+      "saveReloadComparison": "Exact binary32 complete inventory masses, temperatures and total mass; native shutdown/reinitialization in same process.",
+      "postReloadGameSeconds": 4,
+      "postReloadMixedInventoryAvailable": true,
+      "hostOnlySpeciesCoverage": 22,
+      "limitations": [
+        "Historical 8db test, not rerun on final 14d.",
+        "Two species live does not exercise extra-species storage; 22-species coverage is host/FFI.",
+        "Old measured build had uncomputed pressure placeholders; does not validate final positive liquid-fill availability.",
+        "No base-game reader compatibility for mixed ONIMIX saves is claimed."
+      ]
+    },
+    "resourceAdmission": {
+      "evidence": "resource-disposition",
+      "observedUtc": "2026-11-20T02:53:07.616268+00:00",
+      "availableBytes": 4207927296,
+      "requiredBytes": 7516192768,
+      "admitted": false,
+      "finalNotRun": [
+        "public_guidance_full_follow",
+        "numeric_coordinate_visual_cell_check",
+        "natural_positive_liquid_fill",
+        "native_A1_B_A2"
+      ]
+    }
+  },
+  "publication": {
+    "state": "all_four_published_and_verified_with_jlib_identity_exception",
+    "method": "Existing final publication receipts read; this collection made no Steam calls.",
+    "preflight": {
+      "evidence": "legacy-preflight",
+      "readOnlyCalls": 12,
+      "creatorApp": 636750,
+      "consumerApp": 457140,
+      "allExitCodes": 0,
+      "expectedOwnershipVerified": true,
+      "meaning": "Preflight only; final upload evidence is per-package below."
+    },
+    "packages": [
+      {
+        "mod": "Jlib",
+        "version": "0.3.10",
+        "workshopId": "3835083839",
+        "status": "published_and_verified_with_reviewed_build_identity_difference",
+        "finishedUtc": "2026-11-20T02:51:57.374535+00:00",
+        "evidence": "published-jlib",
+        "remoteZip": {
+          "bytes": 1279162,
+          "sha256": "92227cb7eca5082c27c3805256163bbbca93988759b788671e5c453304e9b053",
+          "entries": 11,
+          "version": "0.3.10",
+          "timeUpdatedUnix": 1795141383,
+          "allMembersMatchTestedCandidate": false,
+          "matchesActualUpload": true,
+          "identicalMembers": 10,
+          "differentMembers": [
+            "Jlib.dll"
+          ]
+        },
+        "preview": {
+          "bytes": 1241441,
+          "sha256": "f283beb38b2d6ecc681a3dce4d4f7ce535504d63b955bb83356c51ff5de33ce1",
+          "matchesApprovedAsset": true
+        },
+        "descriptions": {
+          "englishDirectApiMatch": true,
+          "chineseVerifiedByPublisherConsumerQuery": true,
+          "englishCanonicalTrimmedUtf8Bytes": 4105
+        },
+        "legacyPreserved": true,
+        "contentUnchangedByPreview": true,
+        "reviewedBuildIdentityDifference": {
+          "evidence": "jlib-identity",
+          "testedDllSha256": "ae381218be3963d1be1a4334a26cc78b5cd261cc71b8411b5e2b6e6ca1489833",
+          "publishedDllSha256": "9ccc71ac5f29f2b4dd1e37972a49ca7f875ce45cb19399c0db8b63e3a66f145d",
+          "differentBytes": 71,
+          "fieldCapacityBytes": 72,
+          "fieldChangedBytes": {
+            "coff_timestamp": 3,
+            "module_mvid": 16,
+            "codeview_timestamp": 4,
+            "codeview_pdb_guid": 16,
+            "pdb_sha256": 32
+          },
+          "identicalBytesOutsideFields": 491960,
+          "unexpectedDifferences": [],
+          "ilResourcesAndNonMvidMetadataIdentical": true,
+          "fullFileShaAndMvidDiffer": true,
+          "strictMultiplayerFingerprintDiffers": true,
+          "pdbInputRootCause": "unknown",
+          "liveRuntimeEvidenceUsesOriginalTestedCandidate": true
+        },
+        "originalFailureStatusPreserved": "failed_or_requires_review",
+        "logCaveat": "Consumer verification exited 0 but logged a SteamNetworkingSockets shutdown assertion; independent fresh HTTPS ZIP was verified separately."
+      },
+      {
+        "mod": "OniMcp",
+        "version": "0.2.9",
+        "workshopId": "3807166922",
+        "status": "published_and_verified",
+        "finishedUtc": "2026-11-20T02:51:14.523792+00:00",
+        "evidence": "published-onimcp",
+        "remoteZip": {
+          "bytes": 2704544,
+          "sha256": "2c2a96c45783ab0bc5db65cce13a9e195357ba24e23a4570ebd799aaee20ba4b",
+          "entries": 12,
+          "version": "0.2.9",
+          "timeUpdatedUnix": 1795142232,
+          "allMembersMatchTestedCandidate": true
+        },
+        "preview": {
+          "bytes": 1269834,
+          "sha256": "2dcfb7c8efbdb7db112408cfd5e3eb4bb868ef9b4c49384e89c4311274dab8c3",
+          "matchesApprovedAsset": true
+        },
+        "descriptions": {
+          "englishDirectApiMatch": true,
+          "chineseVerifiedByPublisherConsumerQuery": true,
+          "englishCanonicalTrimmedUtf8Bytes": 4520
+        },
+        "legacyPreserved": true,
+        "contentUnchangedByPreview": true
+      },
+      {
+        "mod": "OniOnline",
+        "version": "0.5.3",
+        "workshopId": "3835145552",
+        "status": "published_and_verified",
+        "finishedUtc": "2026-11-20T02:51:23.934908+00:00",
+        "evidence": "published-onionline",
+        "remoteZip": {
+          "bytes": 12129635,
+          "sha256": "c7cb48ea32558c4a3fb0243f2ee39d06d730e396cde29096df8c2a3410701de9",
+          "entries": 30,
+          "version": "0.5.3",
+          "timeUpdatedUnix": 1795142718,
+          "allMembersMatchTestedCandidate": true
+        },
+        "preview": {
+          "bytes": 1302480,
+          "sha256": "fe2a347b2f10c74b71017206ede72ea3496678295f3a60ed57710b415810d110",
+          "matchesApprovedAsset": true
+        },
+        "descriptions": {
+          "englishDirectApiMatch": true,
+          "chineseVerifiedByPublisherConsumerQuery": true,
+          "englishCanonicalTrimmedUtf8Bytes": 4886
+        },
+        "legacyPreserved": true,
+        "contentUnchangedByPreview": true
+      },
+      {
+        "mod": "CycleTrim",
+        "version": "0.4.25",
+        "workshopId": "3807166689",
+        "status": "published_and_verified",
+        "finishedUtc": "2026-11-20T02:51:32.866497+00:00",
+        "evidence": "published-cycletrim",
+        "remoteZip": {
+          "bytes": 9645607,
+          "sha256": "a48b5f7c62bd43108bc74ff36e1e66655476f0ad1a50307cdecad0d8d2d15b86",
+          "entries": 119,
+          "version": "0.4.25",
+          "timeUpdatedUnix": 1795143032,
+          "allMembersMatchTestedCandidate": true
+        },
+        "preview": {
+          "bytes": 1371336,
+          "sha256": "f2bdd99064c938d9ed2487aa86265c46e28c98b8b7322363e8b37b64a1b3f145",
+          "matchesApprovedAsset": true
+        },
+        "descriptions": {
+          "englishDirectApiMatch": true,
+          "chineseVerifiedByPublisherConsumerQuery": true,
+          "englishCanonicalTrimmedUtf8Bytes": 7454
+        },
+        "legacyPreserved": true,
+        "contentUnchangedByPreview": true
+      }
+    ],
+    "nugetPublished": false,
+    "pypiPublished": false,
+    "boundary": "Published Jlib has an independently reviewed build-identity difference; no bit-identical/full strict-fingerprint or new live-runtime claim for that rebuilt DLL.",
+    "source": "14dba75a5752c3142039a8660ce37cdf57d7082a"
+  },
+  "cleanup": {
+    "steam": {
+      "evidence": "steam-shutdown",
+      "normalShutdownCommandExitCode": 0,
+      "ownedMasterAbsent": true
+    },
+    "privateDisplay": {
+      "evidence": "display-shutdown",
+      "ownedDbusAndXvfbExitCodes": [
+        0,
+        0
+      ],
+      "fourOwnedProcessesAbsent": true,
+      "ownedEndpointsAlreadyAbsent": true,
+      "profilePreserved": true,
+      "supervisorExitCode": 1,
+      "failure": null,
+      "hostSnapshotUnchanged": false,
+      "guardFailure": "Host /tmp/.X11-unix/X0 pathname missing.",
+      "hostXwaylandAndHyprlandReportedStillAlive": true,
+      "causalAttribution": "X0 pathname absence unexplained; bounded review found cleanup restricted to owned pins and no actual unlink. No action taken on host X0.",
+      "ownedCleanupCodeReviewed": true,
+      "actualUnlinkPerformed": false,
+      "hostOriginalSocketUnchanged": true
+    },
+    "scope": "Owned process cleanup succeeded but display supervisor's host guard did not. Do not describe the whole host as unchanged or display supervision as exit 0.",
+    "managedJobs": {
+      "evidence": "managed-jobs-final",
+      "active": 0,
+      "recordsInspected": 128
+    }
+  },
+  "dependencyPropagation": {
+    "internal": {
+      "jlibConsumers": "CycleTrim/OniMcp minimum 0.3.10; OniOnline.Tests pin 0.3.0 to 0.3.10 with fresh-source isolated package evidence.",
+      "harness": "Committed 3618c90 gitlink and downstream helpers/dependency/lock propagated.",
+      "zhex": "onim exact =0.1.3 in Cargo manifests and lock; no upstream zhex change.",
+      "audit": {
+        "manifestFiles": 46,
+        "textMatches": 413,
+        "consumers": 22
+      },
+      "unknownExternalConsumersNotClaimed": true
+    },
+    "projectZ": {
+      "state": "registration_and_f081_graph_committed_final14d_adoption_pending",
+      "basis": "Latest root read-only owner update during collection, not a fresh Git query by this collector.",
+      "owner": "Existing Project Z maintainer; coordinated by root",
+      "registrationCommit": "baa171fa166411aa9c2827aba90c484dd486d9c2",
+      "pinnedOniModsCommit": "f0819fa207c52e98aa7dff8084620557669af7ea",
+      "requestedTarget": "14dba75a5752c3142039a8660ce37cdf57d7082a",
+      "freshF081Graph": {
+        "repositoryImpactSha256": "7db340b269e112c92acc89518ead93f9f3e77ab3ec7b991328b6206d1c2d1f8f",
+        "catalogSha256": "9f5b8fb11b85c71458d4dfff3bed9aa8fa768454bfd7a0f1769bbce903e30837",
+        "repositories": 42,
+        "packages": 60,
+        "countsAgree": true,
+        "onimIsDirectZhexConsumer": true
+      },
+      "final14dPin": "pending_owner",
+      "freshFinal14dImpact": "pending_owner",
+      "boundary": "A committed registration/f081 graph is progress, not closure for the requested final 14d adoption. Cargo graph does not establish complete C#/Python reachability.",
+      "ownHoldReleased": true,
+      "handoffEvidence": "final-adoption-handoff",
+      "observedMain": "46e98822e8357b25670cea52794af3009d66660f",
+      "cargoManifestsAndLockUnchangedFromF081To14d": true,
+      "workspaceAndIndexCleanAtObservation": true
+    }
+  },
+  "openItems": [
+    {
+      "id": "runtime-four-cases",
+      "state": "not_run_resource_budget",
+      "evidence": "resource-disposition"
+    },
+    {
+      "id": "final-two-peer-online",
+      "state": "not_proven"
+    },
+    {
+      "id": "whole-game-performance",
+      "state": "not_run_no_fps_claim"
+    },
+    {
+      "id": "jlib-pdb-input-cause",
+      "state": "unknown",
+      "identityComparison": "complete",
+      "binaryEquality": false
+    },
+    {
+      "id": "host-x0-final-guard",
+      "state": "unexplained_observation_owned_cleanup_review_complete",
+      "evidence": "display-shutdown"
+    },
+    {
+      "id": "project-z-final14d-adoption",
+      "state": "pending_existing_owner"
+    }
+  ],
+  "evidence": {
+    "prior-noncycle-audit": {
+      "path": "final-report-updated/evidence.json",
+      "sha256": "5f6d28165e55534e5dae9615117b41150c7ee21920990be59add973a4e0b405f"
+    },
+    "source14d": {
+      "path": "release-14d-candidate/source-manifest.json",
+      "sha256": "dff90a275aff690cd8affd437d43d99f82309226dfa4a4283a2d8842c6aa1a96"
+    },
+    "build14d": {
+      "path": "release-14d-candidate/build-results.json",
+      "sha256": "b259f2b14834a83bfc048a53a057f83c0811d99a87379f5481fb16231f7f6f11"
+    },
+    "packages14d": {
+      "path": "release-14d-candidate/package-manifest.json",
+      "sha256": "e2e5af51c6bae2879a22652484e62a84a72a80386a10682e18bd3fe7ec6d7e59"
+    },
+    "ci14d": {
+      "path": "release-14d-candidate/ci-summary.json",
+      "sha256": "f09244e463dbb16c09e9ca36db4cfd715ded652a775d867561ba7bd0f572fb59"
+    },
+    "gate-reuse": {
+      "path": "release-gates-14d-sync.json",
+      "sha256": "6db35de2e3fd25d5c1cf31feb1310d060af6e8b6b950fb044f34c686941f9e9c"
+    },
+    "install14d": {
+      "path": "private-profile-final-install/installed-14d.json",
+      "sha256": "3ded127a5fdc7c45e63285ad05508b1e41f61296be78707a146e925d7eef9734"
+    },
+    "online4818": {
+      "path": "onionline-host-catalog/validation/results.json",
+      "sha256": "801d2cf0679d1c2844f1bb4173c2010fee14ac7d7645e36a064e53b2483f7e06"
+    },
+    "thermal-ab": {
+      "path": "thermal-candidate-ab/validation.json",
+      "sha256": "b2c43d2a3731073e4b73e2c9df441d7f34142df885cbcc3ab12dfa0db860e765"
+    },
+    "liquid-scan": {
+      "repositoryPath": "docs/cycletrim-liquid-candidates-20261120.json",
+      "sha256": "206098e00200858312346ca189e48da800a232a1a7e9766d47d8152f5463b15f"
+    },
+    "mixed-live-old": {
+      "repositoryPath": "docs/cycletrim-u60-multicomponent-live-20261120.json",
+      "sha256": "a089d96dfa5ca9b48282b61a2267b1637e1e030444a0d85d9efef91f9a87bebd"
+    },
+    "derived-fields": {
+      "path": "multicomponent-derived-fields/integration-freeze.json",
+      "sha256": "76205083030b947f312b09f5ee3439babd64cfe6f03247b0916defb1854da68f"
+    },
+    "resource-disposition": {
+      "path": "runtime-final-functional-v3/final-resource-disposition.json",
+      "sha256": "e7fdc4c0036de1def5b3ae0e479531ed4e8f9d2c4521a968f075a556bacc7ae5"
+    },
+    "launch14d": {
+      "path": "runtime-final-functional-v3/launch-receipt.json",
+      "sha256": "b7d90385d079ca510aaaf7dbe3d6fac89ad5da0d7a7d47b3c55ed354c15f126e"
+    },
+    "interrupted14d": {
+      "path": "runtime-final-functional-v3/functional-interruption.json",
+      "sha256": "3bda9d467797654c8c05e84686ad430f404e6adce5d879713ec6ee2685923da4"
+    },
+    "quit14d": {
+      "path": "runtime-final-functional-v3/functional-exit-observation.json",
+      "sha256": "571ec0fce112dba7aeb9ecf5f67966c1cbe939e0cf15c534d0950dfc1aa305ea"
+    },
+    "steam-shutdown": {
+      "path": "private-steam-final-01/shutdown-observation.json",
+      "sha256": "92341c65e554abe1d2ba1b4aa692a203332b8c6356f05a77dcce02a4f1b4890d"
+    },
+    "display-shutdown": {
+      "path": "private-display-final-01/stopped.json",
+      "sha256": "4b0815a1c8993fbd2a8280a9d1a66853a698f9496b040305a9b2d306bde35add"
+    },
+    "jlib-identity": {
+      "path": "workshop-release-14d/jlib-dll-identity-comparison-01/comparison.json",
+      "sha256": "748ad2567bd9fd6cc2571ea7545e1bad7c9bc966378bc0f9e544d5943366780b"
+    },
+    "jlib-preview": {
+      "path": "jlib-preview-contract/frozen-manifest.json",
+      "sha256": "edfac0c80f1f0a977e063bdb2b8576409ef4d97cf98053515575abd3391d4b40"
+    },
+    "onim-publish": {
+      "path": "publish-primary-language/validation-summary.json",
+      "sha256": "1e446f14bce63c0d1c51f26cc5a686a1f84d1258cad165ecba43c8d627f5aa8c"
+    },
+    "onim-fixture-inputs": {
+      "path": "publish-primary-language/input-packages-manifest.json",
+      "sha256": "03e4dfcd021808f1609cf6f41d231113949ce6994410d38715fb6cf29225eb48"
+    },
+    "d9-formal-gates": {
+      "path": "release-d9ad-sequence/sequence.json",
+      "sha256": "6986b6acff94020490d73c36f68ab64fef9fa18cba09c483ff589f07386f352f"
+    },
+    "sequence14d": {
+      "path": "release-14d-sequence/sequence.json",
+      "sha256": "57c383100bc3ec1e7b78aa10648930c606304323a8f982df9baf73edc6ffd9fe"
+    },
+    "legacy-preflight": {
+      "path": "workshop-release-14d/preflight/receipt.json",
+      "sha256": "7a7aaa0f5bc34bc840ab5bd763d23666589d1874cd222aa74f88e9a54ed5966c"
+    },
+    "notes66": {
+      "path": "validation/report-notes-core-regression.log",
+      "sha256": "26a33835d461b7ecb5b8cc94d6c75dd62bdf0b2cfe8b36b791146491b5a3859a"
+    },
+    "mcp-harness-prior": {
+      "path": "validation/onimcp-harness-prior-verification-evidence.json",
+      "sha256": "a592785322920743635ac631a10d32212225f37affc739339c523efb4a77f0a8"
+    },
+    "published-jlib": {
+      "path": "workshop-release-14d/complete-Jlib-01/receipt.json",
+      "sha256": "744993f018f895f900b629f24ec2950d61b18b89b19f2109ed6cf44624e4b441"
+    },
+    "published-onimcp": {
+      "path": "workshop-release-14d/complete-OniMcp-01/receipt.json",
+      "sha256": "105bc5539cccd462f5ed4b1c42fcd694a1b10eb929e9e56568c917ef88a9f09d"
+    },
+    "published-onionline": {
+      "path": "workshop-release-14d/complete-OniOnline-01/receipt.json",
+      "sha256": "7584c59d10170fcc9850d266fc92a5d5509fb50237ebc258768327abf4e9e98c"
+    },
+    "published-cycletrim": {
+      "path": "workshop-release-14d/complete-CycleTrim-01/receipt.json",
+      "sha256": "2fa439df5a1a33a9d155f503e78e584bf66368ac4fe792f51c395e1734bfcada"
+    },
+    "local-report": {
+      "path": "quality-improvements-20261120.md",
+      "sha256": "b8d62f955fa0766de44ae1c81488df95fe29ae204833432acd90f5125c39732c"
+    },
+    "final-adoption-handoff": {
+      "path": "final-report-updated/final-adoption-handoff.json",
+      "sha256": "ccbd6579d9c738b497ff230705b873c24c5d077e64160d3a7d09fe66a326356c"
+    },
+    "managed-jobs-final": {
+      "path": "private-steam-final-01/managed-jobs-final.json",
+      "sha256": "b599ce0326ac09dbd175d9b35be37301a01f4400864d1d03dadfa06781e60bcf"
+    },
+    "publisher-utf8": {
+      "path": "steam-description-utf8/validation.json",
+      "sha256": "95fd7046cccd7e8623ad85dc7055570c79fabbd550515fb01dc80404c89ecdc1"
+    },
+    "aba-runner-validation": {
+      "path": "controlled-native-ab-runner-v3/validation.json",
+      "sha256": "7bd66b07afc8f207f27cfe0f779a140d5592d3512b378cc0095f69b91e74fe9e"
+    },
+    "aba-preflight14d": {
+      "path": "controlled-native-ab-runner-v3/root-preflight-14d-invocation.json",
+      "sha256": "0f0cb1869863f4bd5f0ebfbe957b791dafef8370642a28f56dbce4b09e69659a"
+    },
+    "gpu-seven-validation": {
+      "path": "ci-bc156bf-fix/validation.json",
+      "sha256": "68bd22406b097b3500dc56806f4074dbaca3a055da3fdd8a01465c30e62aaa76"
+    },
+    "gpu-seven-log": {
+      "path": "ci-bc156bf-fix/seven-explicit-hardware-regressions.log",
+      "sha256": "38560a8e14c2747bb547fbbc403c22e4a313a0589707a5e35c30fa0837c9190c"
+    },
+    "gpu-cpu-exclusions": {
+      "path": "ci-bc156bf-fix/light-validation.json",
+      "sha256": "39aca9c89ca929e15a195eb028bf683dfa7b27114b56e27c175bd440eb5a4367"
+    },
+    "gpu-frozen-candidate": {
+      "path": "ci-bc156bf-fix/frozen-manifest.json",
+      "sha256": "89cd7b054230820d26a3565de8525bdab503cd9faf8ef036f4a3c3020b971ebd"
+    }
+  }
+}
