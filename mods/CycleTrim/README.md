@@ -164,7 +164,7 @@ Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `Inclu
 
 四个新增区域/暂存状态回归、既有 CPU/GPU 热传导等价用例均通过，Linux 原生 Release 构建通过。通过这些门禁后，下一步是在同一存档、设置及硬件图形后端下测量完整更新链路。
 
-**本轮整机 FPS A/B 仍待完成。** 当前隔离桌面的 GL 后端为 **llvmpipe 软件渲染**；该环境只用于对应的功能检查。RTX 4060 的硬件帧率对照需要恢复匹配的硬件图形环境后单独进行。源码 `3a6a600` 的[三平台 CI](https://github.com/LIghtJUNction/OniMods/actions/runs/44629256953)已通过构建及静态门禁；正式 bundle 的 170 项源码身份和 ELF/PE/Mach-O 格式核验通过。三份构建回执均为 `gameRuntimeTested=false`，Windows/macOS 尚未实机验收。CPU/GPU 路径正确性和硬件加速收益分别记录。
+**整机帧率结论须来自相同硬件、渲染器、存档和设置的对照。** 早期 GL 功能检查使用 **llvmpipe 软件渲染**；后续 `f0819fa` 构建已通过 Steam 启动并确认使用 **Vulkan / RTX 4060**，当次未加载测试存档，不能据此推断游戏帧率收益。[图形环境回执](../../docs/cycletrim-vulkan-readiness-20261120.json)只证明这一启动环境。源码 `3a6a600` 的[三平台 CI](https://github.com/LIghtJUNction/OniMods/actions/runs/44629256953)已通过构建及静态门禁；正式 bundle 的 170 项源码身份和 ELF/PE/Mach-O 格式核验通过。三份构建回执均为 `gameRuntimeTested=false`，Windows/macOS 尚未实机验收。CPU/GPU 路径正确性和硬件加速收益分别记录。
 
 ### 旧版本局部场景记录
 

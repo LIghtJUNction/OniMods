@@ -7,6 +7,9 @@ use std::process::Command;
 use crate::build;
 use crate::config::{Config, SelectedMod};
 
+// Keep the native Plan's conservative text budget; SDK terminator semantics are not inferred.
+pub(crate) const DESCRIPTION_MAX_BYTES: usize = 7_999;
+
 #[derive(Debug, Default)]
 pub struct PublishOptions {
     pub use_gui: bool,
@@ -214,17 +217,21 @@ fn strip_yaml_comment(value: &str) -> &str {
     value
 }
 
-fn read_mod_info(dist_mod: &Path) -> Option<(String, String, String)> {
-    let yaml = fs::read_to_string(dist_mod.join("mod.yaml")).ok()?;
+fn read_mod_info(dist_mod: &Path) -> Option<(String, String, String, PathBuf)> {
+    let yaml_path = dist_mod.join("mod.yaml");
+    let yaml = fs::read_to_string(&yaml_path).ok()?;
     let title = yaml_value(&yaml, "title").unwrap_or_else(|| "Untitled Mod".to_string());
-    let description = steam_markdown_description(dist_mod)
-        .or_else(|| yaml_value(&yaml, "description"))
-        .unwrap_or_default();
+    let (description, source) = steam_markdown_description(dist_mod).unwrap_or_else(|| {
+        (
+            yaml_value(&yaml, "description").unwrap_or_default(),
+            yaml_path,
+        )
+    });
     let version = fs::read_to_string(dist_mod.join("mod_info.yaml"))
         .ok()
         .and_then(|contents| yaml_value(&contents, "version"))
         .unwrap_or_else(|| "1.0.0".to_string());
-    Some((title, description, version))
+    Some((title, description, version, source))
 }
 
 fn read_static_id(dist_mod: &Path) -> Option<String> {
@@ -251,21 +258,45 @@ fn vdf_path_value(path: &Path, field: &str) -> Result<String> {
     Ok(escape_vdf_value(&value.replace('\\', "/")))
 }
 
-fn steam_description_file(dist_mod: &Path, name: &str) -> Option<String> {
-    read_file(&dist_mod.join("docs").join(name)).or_else(|| read_file(&dist_mod.join(name)))
+pub(crate) fn localized_description_file(
+    dist_mod: &Path,
+    markdown: &str,
+    legacy_text: &str,
+) -> Option<(String, PathBuf)> {
+    [
+        dist_mod.join("docs").join(markdown),
+        dist_mod.join(markdown),
+        dist_mod.join(legacy_text),
+    ]
+    .into_iter()
+    .find_map(|path| {
+        read_file(&path)
+            .filter(|text| !text.is_empty())
+            .map(|text| (text, path))
+    })
 }
 
-fn steam_markdown_description(dist_mod: &Path) -> Option<String> {
-    let zh = steam_description_file(dist_mod, "steam-description-zh.md");
-    let en = steam_description_file(dist_mod, "steam-description-en.md");
-    match (zh, en) {
-        (Some(zh_txt), Some(en_txt)) if !zh_txt.is_empty() && !en_txt.is_empty() => {
-            Some(format!("{}\n\n{}", zh_txt, en_txt))
-        }
-        (Some(zh_txt), _) if !zh_txt.is_empty() => Some(zh_txt),
-        (_, Some(en_txt)) if !en_txt.is_empty() => Some(en_txt),
-        _ => None,
-    }
+fn steam_markdown_description(dist_mod: &Path) -> Option<(String, PathBuf)> {
+    localized_description_file(dist_mod, "steam-description-en.md", "description.en.txt").or_else(
+        || localized_description_file(dist_mod, "steam-description-zh.md", "description.txt"),
+    )
+}
+
+fn validate_primary_description(description: &str, source: &Path) -> Result<usize> {
+    let bytes = description.len();
+    anyhow::ensure!(
+        !description.trim().is_empty() && !description.contains('\0'),
+        "Steam 主描述为空或包含 NUL：{}",
+        source.display()
+    );
+    anyhow::ensure!(
+        bytes <= DESCRIPTION_MAX_BYTES,
+        "Steam 主描述超过本客户端保守上限 {} UTF-8 字节：{}（{}）",
+        DESCRIPTION_MAX_BYTES,
+        bytes,
+        source.display()
+    );
+    Ok(bytes)
 }
 
 fn latest_changelog_summary(content: &str, max_items: usize) -> Option<String> {
@@ -412,16 +443,17 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         return Ok(());
     }
 
-    let (mod_title, description, version) = read_mod_info(&dist_mod)
-        .unwrap_or_else(|| (selected.name.clone(), String::new(), "1.0.0".to_string()));
+    let (mod_title, description, version, description_source) = read_mod_info(&dist_mod)
+        .unwrap_or_else(|| {
+            (
+                selected.name.clone(),
+                String::new(),
+                "1.0.0".to_string(),
+                dist_mod.join("mod.yaml"),
+            )
+        });
     let title = selected.config.workshop_title.clone().unwrap_or(mod_title);
-    if description.trim().is_empty() {
-        anyhow::bail!("Steam 描述为空，请更新 docs/steam-description-*.md");
-    }
-    let description_chars = description.chars().count();
-    if description_chars > 8_000 {
-        anyhow::bail!("Steam 描述超过 8000 字符：{}", description_chars);
-    }
+    let description_bytes = validate_primary_description(&description, &description_source)?;
 
     let project_dir = selected.config.project_abs(&cfg.repo_root);
     let default_changenote = extract_changelog_summary(&project_dir, 6)
@@ -466,7 +498,11 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
     )?;
     println!("   Workshop ID: {}", publishedfileid);
     println!("   标题: {}", title);
-    println!("   描述: {} 字符", description_chars);
+    println!(
+        "   主描述: {} UTF-8 字节（{}）",
+        description_bytes,
+        description_source.display()
+    );
     println!("   VDF: {}", vdf.display());
 
     reject_directory_upload_for_oni(&vdf)?;
@@ -689,10 +725,147 @@ mod tests {
         fs::write(root.join("steam-description-zh.md"), "中文说明")?;
         fs::write(root.join("steam-description-en.md"), "English description")?;
 
-        let description = steam_markdown_description(&root)
-            .ok_or_else(|| io::Error::other("combined description missing"))?;
+        let (description, source) = steam_markdown_description(&root)
+            .ok_or_else(|| io::Error::other("primary description missing"))?;
 
-        assert_eq!(description, "中文说明\n\nEnglish description");
+        assert_eq!(description, "English description");
+        assert_eq!(source, root.join("steam-description-en.md"));
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn independent_languages_do_not_overflow_the_primary_vdf() -> TestResult {
+        let root = test_dir("independent-descriptions");
+        let content = root.join("Mod");
+        fs::create_dir_all(&content)?;
+        let english = "E".repeat(6000);
+        let chinese = "中".repeat(2000);
+        assert!(english.len() <= DESCRIPTION_MAX_BYTES);
+        assert!(chinese.len() <= DESCRIPTION_MAX_BYTES);
+        assert!(format!("{chinese}\n\n{english}").chars().count() > 8000);
+        fs::write(content.join("steam-description-en.md"), &english)?;
+        fs::write(content.join("steam-description-zh.md"), &chinese)?;
+
+        let (description, source) = steam_markdown_description(&content)
+            .ok_or_else(|| io::Error::other("primary description missing"))?;
+        assert_eq!(description, english);
+        assert_eq!(validate_primary_description(&description, &source)?, 6000);
+        let vdf = generate_vdf(
+            &content,
+            &content.join("preview.png"),
+            "Mod",
+            &description,
+            "Offline description regression",
+            "0",
+        )?;
+        let stored = fs::read_to_string(vdf)?;
+        assert!(stored.contains(&format!("\"description\"\t\"{english}\"")));
+        assert!(!stored.contains(&chinese));
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn primary_description_fallbacks_skip_blank_files_and_keep_docs_first() -> TestResult {
+        let root = test_dir("description-fallbacks");
+        fs::create_dir_all(root.join("docs"))?;
+        let docs_en = root.join("docs/steam-description-en.md");
+        let flat_en = root.join("steam-description-en.md");
+        let text_en = root.join("description.en.txt");
+        let docs_zh = root.join("docs/steam-description-zh.md");
+        let flat_zh = root.join("steam-description-zh.md");
+        let text_zh = root.join("description.txt");
+
+        fs::write(&text_en, "Legacy English")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("Legacy English".into(), text_en.clone()))
+        );
+        fs::write(&docs_en, "Docs English")?;
+        fs::write(&flat_en, "Flat English")?;
+        fs::write(&docs_zh, "文档中文")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("Docs English".into(), docs_en.clone()))
+        );
+        fs::write(&docs_en, " \n\t ")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("Flat English".into(), flat_en.clone()))
+        );
+        fs::write(&flat_en, "\n ")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("Legacy English".into(), text_en.clone()))
+        );
+        fs::write(&text_en, " ")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("文档中文".into(), docs_zh.clone()))
+        );
+        fs::write(&docs_zh, "\n")?;
+        fs::write(&flat_zh, "平铺中文")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("平铺中文".into(), flat_zh.clone()))
+        );
+        fs::write(&flat_zh, " ")?;
+        fs::write(&text_zh, "旧格式中文")?;
+        assert_eq!(
+            steam_markdown_description(&root),
+            Some(("旧格式中文".into(), text_zh.clone()))
+        );
+        fs::write(&text_zh, "\t")?;
+        assert!(steam_markdown_description(&root).is_none());
+
+        fs::write(
+            root.join("mod.yaml"),
+            "title: Mod\ndescription: YAML fallback\n",
+        )?;
+        let (_, description, _, source) =
+            read_mod_info(&root).ok_or_else(|| io::Error::other("mod metadata missing"))?;
+        assert_eq!(description, "YAML fallback");
+        assert_eq!(source, root.join("mod.yaml"));
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn primary_description_uses_the_plan_utf8_byte_budget() -> TestResult {
+        let source = Path::new("docs/steam-description-en.md");
+        for unit in ["A", "中", "🧪"] {
+            let mut exact = unit.repeat(DESCRIPTION_MAX_BYTES / unit.len());
+            exact.push_str(&"x".repeat(DESCRIPTION_MAX_BYTES - exact.len()));
+            assert_eq!(
+                validate_primary_description(&exact, source)?,
+                DESCRIPTION_MAX_BYTES
+            );
+            exact.push('x');
+            let error = validate_primary_description(&exact, source)
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("7999 UTF-8"));
+            assert!(error.contains("8000"));
+            assert!(error.contains("steam-description-en.md"));
+        }
+        for invalid in ["", " \n\t ", "text\0tail"] {
+            assert!(validate_primary_description(invalid, source).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn oversized_english_is_rejected_without_silently_using_chinese() -> TestResult {
+        let root = test_dir("oversized-english");
+        fs::create_dir_all(&root)?;
+        let english = "E".repeat(DESCRIPTION_MAX_BYTES + 1);
+        fs::write(root.join("steam-description-en.md"), &english)?;
+        fs::write(root.join("steam-description-zh.md"), "合法中文")?;
+        let (description, source) = steam_markdown_description(&root)
+            .ok_or_else(|| io::Error::other("primary description missing"))?;
+        assert_eq!(description, english);
+        assert!(validate_primary_description(&description, &source).is_err());
         fs::remove_dir_all(root)?;
         Ok(())
     }

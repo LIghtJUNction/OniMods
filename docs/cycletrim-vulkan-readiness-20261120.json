@@ -1,0 +1,35 @@
+{
+  "scope": "Steam-launched graphics readiness only; no loaded-save performance acceptance",
+  "source_refs": {
+    ".": "f0819fa207c52e98aa7dff8084620557669af7ea",
+    "mods/Jlib": "ee2670a233b3b2be6babe75d1a5e351f40f784e2",
+    "tools/OniHarness": "3618c90a6a300318186264b17d46f9d6ab44c5a0"
+  },
+  "verified_at": "2026-11-20T00:07:42.755428+00:00",
+  "unity": "6000.3.17f1",
+  "graphics_api": "Vulkan",
+  "renderer_log": "Vulkan renderer=[NVIDIA GeForce RTX 4060 Laptop GPU] id=[28a0]",
+  "vendor_log": "Vulkan vendor=[NVIDIA] id=[10de]",
+  "headless": false,
+  "game_loaded": false,
+  "game_error": null,
+  "steam_app_id": 457140,
+  "graphics_arguments": [
+    "-force-vulkan",
+    "-force-device-index",
+    "1"
+  ],
+  "copied_save_unchanged_after_normal_exit": true,
+  "gameplay_fps_comparison": false,
+  "notes": [
+    "Full diagnostic probing was enabled; this is not a controlled frame-rate baseline.",
+    "The private display was closed normally for display allocation repair.",
+    "Windows/macOS game execution is not covered."
+  ],
+  "evidence_sha256": {
+    "ready.json": "b350a678a76eb9609d8bb64a3702f170c6c49df757b9b43f2ba28515450ba5ee",
+    "launch-receipt.json": "bca013685aeaf3c31c8450215c6f3309c36652707ad3b3aaca2e08a38ef8edd4",
+    "process-exit-receipt.json": "738c90bef0a157b2b743269c461113a73523922e8d2578e1b9ef7cf5df7aa449",
+    "player.log": "0a4238f2cae9e018956a0b3e79d944919483c70fbbaa6f803c9bfe7ca0807c3d"
+  }
+}

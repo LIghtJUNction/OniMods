@@ -12,6 +12,9 @@ use zip::write::SimpleFileOptions;
 
 use crate::config::{Config, SelectedMod};
 
+// Matches the project's Legacy publisher gate, not a universal Steam preview limit.
+const LEGACY_PREVIEW_MAX_BYTES: u64 = 10 * 1024 * 1024;
+
 /// Workshop visibility, separate from whether content has passed verification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 pub(crate) enum Visibility {
@@ -100,8 +103,8 @@ impl Plan {
             .unwrap_or(input.fallback);
         for (label, text, max) in [
             ("标题", &input.title, 128),
-            ("英文说明", &english, 7999),
-            ("中文说明", &chinese, 7999),
+            ("英文说明", &english, crate::publish::DESCRIPTION_MAX_BYTES),
+            ("中文说明", &chinese, crate::publish::DESCRIPTION_MAX_BYTES),
         ] {
             ensure!(
                 !text.trim().is_empty() && text.len() <= max && !text.contains('\0'),
@@ -109,11 +112,7 @@ impl Plan {
             );
         }
         let (zip, files) = build_zip(input.folder, input.assembly)?;
-        let preview = fs::read(input.preview)?;
-        ensure!(
-            !preview.is_empty() && preview.len() <= 1024 * 1024,
-            "预览图必须小于 1 MiB"
-        );
+        let preview = read_preview(input.preview)?;
         let extension = input
             .preview
             .extension()
@@ -252,6 +251,7 @@ pub(super) fn state_root() -> Result<PathBuf> {
 pub(super) fn steam_library(game: &Path) -> Result<PathBuf> {
     let candidates = [
         game.join("OxygenNotIncluded_Data/Plugins/libsteam_api.so"),
+        game.join("OxygenNotIncluded_Data/Plugins/AnyCPU/libsteam_api.so"),
         game.join("OxygenNotIncluded_Data/Plugins/x86_64/steam_api64.dll"),
         game.join("OxygenNotIncluded_Data/Plugins/steam_api64.dll"),
         game.join("Contents/Plugins/libsteam_api.dylib"),
@@ -263,18 +263,22 @@ pub(super) fn steam_library(game: &Path) -> Result<PathBuf> {
 }
 
 fn localized(folder: &Path, markdown: &str, text: &str) -> Option<String> {
-    [
-        folder.join(markdown),
-        folder.join("docs").join(markdown),
-        folder.join(text),
-    ]
-    .into_iter()
-    .find_map(|p| {
-        fs::read_to_string(p)
-            .ok()
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty())
-    })
+    crate::publish::localized_description_file(folder, markdown, text).map(|(content, _)| content)
+}
+
+fn validate_preview_size(bytes: u64) -> Result<()> {
+    ensure!(
+        bytes > 0 && bytes <= LEGACY_PREVIEW_MAX_BYTES,
+        "预览图必须为 1 字节至 10 MiB（本项目 Legacy 发布门禁）"
+    );
+    Ok(())
+}
+
+fn read_preview(path: &Path) -> Result<Vec<u8>> {
+    validate_preview_size(fs::symlink_metadata(path)?.len())?;
+    let bytes = read_regular(path)?;
+    validate_preview_size(bytes.len() as u64)?;
+    Ok(bytes)
 }
 
 fn checked_bytes(path: &Path, expected: &str) -> Result<Vec<u8>> {
@@ -463,6 +467,28 @@ mod tests {
     }
 
     #[test]
+    fn legacy_preview_size_uses_the_project_byte_budget() {
+        assert!(validate_preview_size(0).is_err());
+        assert!(validate_preview_size(1).is_ok());
+        assert!(validate_preview_size(1024 * 1024 + 1).is_ok());
+        assert!(validate_preview_size(LEGACY_PREVIEW_MAX_BYTES).is_ok());
+        assert!(validate_preview_size(LEGACY_PREVIEW_MAX_BYTES + 1).is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn preview_reader_rejects_non_regular_paths() {
+        let fixture = Fixture::new();
+        let preview = fixture.0.join("preview.png");
+        fs::write(&preview, b"preview fixture").unwrap();
+        assert_eq!(read_preview(&preview).unwrap(), b"preview fixture");
+        assert!(read_preview(&fixture.0).is_err());
+        let linked = fixture.0.join("linked.png");
+        std::os::unix::fs::symlink(&preview, &linked).unwrap();
+        assert!(read_preview(&linked).is_err());
+    }
+
+    #[test]
     fn zip_is_deterministic_and_keeps_implementation_paths() {
         let fixture = Fixture::new();
         fs::create_dir(fixture.0.join("implementation")).unwrap();
@@ -508,6 +534,22 @@ mod tests {
     }
 
     #[test]
+    fn steam_library_supports_legacy_and_anycpu_linux_layouts() {
+        let fixture = Fixture::new();
+        let plugins = fixture.0.join("OxygenNotIncluded_Data/Plugins");
+        fs::create_dir_all(plugins.join("AnyCPU")).unwrap();
+        let current = plugins.join("AnyCPU/libsteam_api.so");
+        fs::write(&current, b"SDK path fixture; never loaded").unwrap();
+        assert_eq!(steam_library(&fixture.0).unwrap(), current);
+        let legacy = plugins.join("libsteam_api.so");
+        fs::write(&legacy, b"legacy SDK path fixture; never loaded").unwrap();
+        assert_eq!(steam_library(&fixture.0).unwrap(), legacy);
+        fs::remove_file(legacy).unwrap();
+        fs::remove_file(current).unwrap();
+        assert!(steam_library(&fixture.0).is_err());
+    }
+
+    #[test]
     fn localized_text_is_selected_and_markdown_keeps_precedence() {
         let fixture = Fixture::new();
         fs::write(fixture.0.join("description.en.txt"), "English\n").unwrap();
@@ -516,10 +558,21 @@ mod tests {
             Some("English")
         );
         fs::create_dir(fixture.0.join("docs")).unwrap();
+        fs::write(fixture.0.join("steam-description-en.md"), "Flat fallback").unwrap();
         fs::write(fixture.0.join("docs/steam-description-en.md"), "Preferred").unwrap();
         assert_eq!(
             localized(&fixture.0, "steam-description-en.md", "description.en.txt").as_deref(),
             Some("Preferred")
+        );
+        fs::write(fixture.0.join("docs/steam-description-en.md"), " \n").unwrap();
+        assert_eq!(
+            localized(&fixture.0, "steam-description-en.md", "description.en.txt").as_deref(),
+            Some("Flat fallback")
+        );
+        fs::write(fixture.0.join("steam-description-en.md"), "\t").unwrap();
+        assert_eq!(
+            localized(&fixture.0, "steam-description-en.md", "description.en.txt").as_deref(),
+            Some("English")
         );
     }
 }

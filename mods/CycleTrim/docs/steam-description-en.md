@@ -27,7 +27,7 @@ Version notes: [b]CycleTrim 0.4.25 + Jlib 0.3.10[/b]. This iteration retains mul
 [*]Existing thermal-region areas bound the maximum possible eligible cells. If even that bound cannot meet the original threshold, the doomed CPU grid prepass is skipped and the existing thermal path continues. Solver rules are retained.
 [*]The worker no longer creates an unused GPU buffer and three compute pipelines. At 225,828 padded cells, this removes a 17.229 MiB buffer request. Resident GPU memory and whole-game gains need separate measurement.
 [/list]
-Four new regressions and the existing CPU/GPU thermal-equivalence case pass, along with the Linux native build. The current isolated desktop uses software rendering. RTX 4060 game FPS still needs a hardware comparison with the same save/settings. Three-platform builds and static gates passed. The build receipts do not include game-runtime acceptance; Windows/macOS remain untested in game.
+Four new regressions and the existing CPU/GPU thermal-equivalence case pass, along with the Linux native build. Early GL functional checks used software rendering. A later Vulkan launch confirmed RTX 4060 rendering without loading the test save; this does not establish a gameplay FPS gain. Comparisons need the same save, renderer and settings. Three-platform builds and static gates passed. The build receipts do not include game-runtime acceptance; Windows/macOS remain untested in game.
 [list]
 [*]The save extension preserves primary, secondary and additional inventories. Worlds with no positive mass in any secondary or later component retain ordinary SIMSAVE v15; mixed worlds need the new reader. Exact 22-species round trips have host/FFI evidence; broader game acceptance remains open.
 [*]GPU thermal diffusion covers the grid. Eligible gas regions use diffusion, velocity, bounded transport and heat kernels in one submission; eligible liquids use multicomponent diffusion. Other conditions still use CPU processing or exclude regions.
@@ -36,7 +36,7 @@ Four new regressions and the existing CPU/GPU thermal-equivalence case pass, alo
 [/list]
 The 2026-11-20 development checkpoint 8db2654 passed strict profile, runtime and ABI checks for Linux x64 U60/763796. It ran through Steam with normal graphics on a three-duplicant save copy. Six naturally formed oxygen/carbon-dioxide cells retained complete inventories, mass, temperature and total-mass binary32 bits after a unique checkpoint and same-process reload, then continued advancing. See the [url=https://github.com/LIghtJUNction/OniMods/blob/main/docs/cycletrim-u60-multicomponent-live-20261120.json]live evidence[/url] and [url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/OniSim/docs/save-format.md]save-format and old-reader boundaries[/url].
 
-The live scene covers two positive species per cell; 22-species coverage comes from standalone host/FFI checks. Linux U60/763796 has the game receipt above; Windows/macOS native profiles remain limited to 744825. Additional species, long runs, DLC and whole-game performance comparisons remain pending. New pressure-availability/liquid-occupancy checks are recorded separately.
+The live scene covers two positive species per cell; 22-species coverage comes from standalone host/FFI checks. Linux U60/763796 has the game receipt above; Windows/macOS native profiles remain limited to 744825. Additional species, long runs and DLC require independent checks; gameplay performance requires comparable scene measurements. New pressure-availability/liquid-occupancy checks are recorded separately.
 
 [h3]Gas mixing: oxygen and carbon dioxide in one cell[/h3]
 [img]https://media.githubusercontent.com/media/LIghtJUNction/OniMods/main/mods/CycleTrim/docs/images/experimental-gas-mix.png[/img]
@@ -58,7 +58,7 @@ This historical interface displays individual substances. Zero partial pressures
 [*]GPU thermal diffusion, pressure and multicomponent computation, with fewer transfers between CPU and GPU.
 [*]In-game visual and physics validation of textures, information cards, density stratification and rising bubbles.
 [/list]
-These goals are verified per build and scene. GPU acceleration and FPS require measurements on the same hardware, save and settings; this iteration's whole-game comparison remains pending.
+These goals are verified per build and scene. GPU acceleration and FPS require measurements on the same hardware, renderer, save and settings; menu timings do not establish gameplay gains.
 
 [h2]Installation and feedback[/h2]
 Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Jlib[/url] 0.3.10 or a newer compatible version. Subscribe to and enable Jlib and CycleTrim, then restart the game.

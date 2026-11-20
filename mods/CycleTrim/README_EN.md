@@ -159,11 +159,11 @@ The [algorithm and resource cleanup](https://github.com/LIghtJUNction/OniMods/co
 
 Four new region/scratch regressions and the existing CPU/GPU thermal-equivalence case pass, as does the Linux native Release build. The next measurement must cover the complete update chain with the same save, settings and hardware graphics backend.
 
-**Whole-game FPS A/B for this iteration remains pending.** The current isolated desktop uses **llvmpipe software rendering** for its functional checks. An RTX 4060 frame-rate comparison requires a matching hardware graphics environment. The [three-platform CI](https://github.com/LIghtJUNction/OniMods/actions/runs/44629256953) for source `3a6a600` passed build and static gates; the formal bundle passed validation of 170 source identities and ELF/PE/Mach-O formats. All three build receipts set `gameRuntimeTested=false`; Windows/macOS remain untested in game. Path correctness and hardware acceleration results are recorded separately.
+**Gameplay frame-rate conclusions require the same hardware, renderer, save and settings.** Early GL functional checks used **llvmpipe software rendering**. A later Steam launch of `f0819fa` confirmed **Vulkan / RTX 4060**, without loading the test save. The [graphics readiness receipt](../../docs/cycletrim-vulkan-readiness-20261120.json) establishes that launch environment; it does not establish a gameplay FPS gain. The [three-platform CI](https://github.com/LIghtJUNction/OniMods/actions/runs/44629256953) for source `3a6a600` passed build and static gates; the formal bundle passed validation of 170 source identities and ELF/PE/Mach-O formats. All three build receipts set `gameRuntimeTested=false`; Windows/macOS remain untested in game. Path correctness and hardware acceleration results are recorded separately.
 
 ### Earlier local-scene records
 
-The following table retains earlier fixed-scene results, scoped to their historical builds, hardware and saves. The current 0.4.25 validation and pending measurements are listed above.
+The following table retains earlier fixed-scene results, scoped to their historical builds, hardware and saves. The current 0.4.25 validation and measurement scope are listed above.
 
 | Scenario | Metric | Before -> After | Improvement |
 |---|---|---|---|
