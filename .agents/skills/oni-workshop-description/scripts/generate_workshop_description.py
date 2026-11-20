@@ -8,7 +8,7 @@ following the ONI Together community flavor.
 Features:
 - Plain-text descriptions of supported DLC
 - 1:1 English and Simplified Chinese BBCode output
-- Built-in validation for Steam's 8,000 character limit and BBCode tag matching
+- Built-in validation for Steam's 8,000 UTF-8 byte limit and BBCode tag matching
 - Directly integrates with the OniMods publish workflow (`onim workshop page`)
 """
 
@@ -228,11 +228,11 @@ def render_description_zh(data: Dict[str, Any]) -> str:
 
 
 def validate_description(text: str, lang: str = "en") -> None:
-    """Validate character limits and BBCode syntax."""
-    length = len(text)
-    print(f"[{lang.upper()}] Character count: {length} / 8000 limit", file=sys.stderr)
+    """Validate the submitted text's UTF-8 byte limit and BBCode syntax."""
+    length = len(text.encode("utf-8"))
+    print(f"[{lang.upper()}] UTF-8 bytes: {length} / 8000 limit", file=sys.stderr)
     if length > 8000:
-        raise ValueError(f"Steam Workshop description for {lang} exceeds limit: {length} > 8000 chars!")
+        raise ValueError(f"Steam Workshop description for {lang} exceeds limit: {length} > 8000 UTF-8 bytes!")
 
     # Check BBCode balance for common tags
     paired_tags = ["b", "i", "u", "h1", "h2", "h3", "strike", "spoiler", "list", "olist", "table"]

@@ -16,7 +16,7 @@ description: 为《缺氧》Steam 创意工坊模组撰写、校验或改写中�
 ```
 
 - 所有图片链接必须实测返回图片；不用临时分支、占位链接或失效图片。DLC 兼容性用经核实的文字说明，不使用 Sgt_Imalas 的兼容图标。
-- 每种语言限制 8000 字符，校验 BBCode 闭合。可使用 `scripts/generate_workshop_description.py` 生成和校验初稿；按实际需求编辑，不照搬无关模板。
+- 每种语言限制 8000 个 UTF-8 字节（含自动添加的前缀），按最终提交文本的 UTF-8 编码长度校验，并校验 BBCode 闭合。可使用 `scripts/generate_workshop_description.py` 生成和校验初稿；按实际需求编辑，不照搬无关模板。
 - 用户授权更新页面时，先 `onim workshop page show <ID>`，再按 `oni-workshop-publish` 使用 `onim workshop page set` 提交中英文描述并回读。描述更新不应重传 ZIP。
 
 - AI 生成声明采用恭喜、庆祝语气与简洁绿白标牌，不使用危险警告视觉；真实实验风险和存档警告仍须保留。中文标题使用「恭喜！」，正文使用「这个 Mod 完全由 AI 生成！」。页面操作顺序执行，避免发布器共享构建目录发生文件占用。

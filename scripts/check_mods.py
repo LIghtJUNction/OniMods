@@ -32,6 +32,7 @@ def python_regression_checks() -> list[tuple[str, list[str]]]:
         if path.name not in GAME_CHECKS
     ]
     directories = {path.parent for path in (ROOT / "tests").glob("*/test_*.py")}
+    directories.add(ROOT / ".agents/skills/oni-workshop-description/scripts")
     if sys.platform == "linux":
         directories.update(
             ROOT / relative for relative in LINUX_TEST_DIRECTORIES
