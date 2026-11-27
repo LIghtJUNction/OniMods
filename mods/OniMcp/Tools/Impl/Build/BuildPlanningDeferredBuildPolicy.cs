@@ -1,9 +1,46 @@
 using System.Collections.Generic;
 
+using Newtonsoft.Json.Linq;
+
 namespace OniMcp.Tools
 {
     internal static class BuildPlanningDeferredBuildPolicy
     {
+        internal static bool TryReadStatusBatch(JObject args, string action, out string[] ids, out string error)
+        {
+            ids = null;
+            if (action != "status")
+            {
+                error = "pendingBuildIds supports status only. Cancellation requires a single pendingBuildId.";
+                return false;
+            }
+            if (args["pendingBuildId"] != null)
+            {
+                error = "Use either pendingBuildId or pendingBuildIds.";
+                return false;
+            }
+            var handles = args["pendingBuildIds"] as JArray;
+            if (handles == null || handles.Count < 1 || handles.Count > 128)
+            {
+                error = "pendingBuildIds requires an array of 1 to 128 handle strings.";
+                return false;
+            }
+            var parsed = new string[handles.Count];
+            for (int i = 0; i < handles.Count; i++)
+            {
+                JToken handle = handles[i];
+                if (handle.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)handle))
+                {
+                    error = "pendingBuildIds[" + i + "] must be a nonblank handle string.";
+                    return false;
+                }
+                parsed[i] = (string)handle;
+            }
+            ids = parsed;
+            error = null;
+            return true;
+        }
+
         internal static string RegisteredHandle(Dictionary<string, object> result)
         {
             if (!result.TryGetValue("pendingBuild", out object pending) || !(pending is bool accepted) || !accepted

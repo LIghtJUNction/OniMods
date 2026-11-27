@@ -90,6 +90,8 @@ namespace OniMcp.Tools
                     return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds LogicWire.");
                 if (relative == "infrastructure/solid_conveyor.oni")
                     return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds SolidConduit.");
+                if (relative == "buildings/pending.oni")
+                    return BuildPlanningTools.DeferredBuildControl(Child(args, "planning", "status"));
                 if (relative == "buildings/index.oni")
                     return ReadTools.ControlRead().Handler(Child(args, "buildings", "list"));
                 if (relative == "buildings/index.md")

@@ -300,6 +300,8 @@ namespace OniMcp.Tools
                 ["rotation"] = new McpToolParameter { Type = "string", Description = "Alias for build orientation in map edits; accepts 0/90/180/270, right/left, clockwise/counterclockwise.", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "Search query or natural-language edit target.", Required = false },
                 ["queries"] = new McpToolParameter { Type = "array", Description = "symbols: batch glyph codes or names, at most 100 strings.", Required = false },
+                ["pendingBuildId"] = new McpToolParameter { Type = "string", Description = "read /active/buildings/pending.oni: one deferred construction handle for detailed status.", Required = false },
+                ["pendingBuildIds"] = new McpToolParameter { Type = "array", Description = "read /active/buildings/pending.oni: 1 to 128 handle strings for compact per-anchor statuses.", Required = false },
                 ["direction"] = new McpToolParameter { Type = "string", Description = "symbols: auto, code_to_meaning, or meaning_to_code.", Required = false, EnumValues = new List<string> { "auto", "code_to_meaning", "meaning_to_code" } },
                 ["matchMode"] = new McpToolParameter { Type = "string", Description = "symbols: auto/exact/contains.", Required = false, EnumValues = new List<string> { "auto", "exact", "contains" } },
                 ["perQueryLimit"] = new McpToolParameter { Type = "integer", Description = "symbols: matches per query, default 20, maximum 100.", Required = false },

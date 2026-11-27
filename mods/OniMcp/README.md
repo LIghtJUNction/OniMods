@@ -4,9 +4,11 @@
 
 OniMcp 把正在运行的《缺氧》开放为本地 MCP 服务，让支持 MCP 的客户端读取殖民地状态、定位问题，并调用明确的游戏操作。Mod 提供接口；模型与客户端由你选择。
 
-本文介绍 **OniMcp 0.2.10** 的功能与改进。使用时需要启用 **Jlib 0.3.10 或更新的兼容版本**。多个依赖 Mod 共用一份 Jlib。实际安装包与客户端支持范围请分别核对。
+本文介绍 **OniMcp 0.2.11** 的功能与改进。使用时需要启用 **Jlib 0.3.10 或更新的兼容版本**。多个依赖 Mod 共用一份 Jlib。实际安装包与客户端支持范围请分别核对。
 
 打开打印舱后，用 `building_control` 的 `list_immigrants` 查看本轮候选人和属性。对选中的 `candidateId`，先用 `claim_duplicant` 和 `dryRun=true` 预览，再用 `confirm=true` 招募。补给包继续使用 `list_rewards` 和 `claim`。
+
+在天然地块上规划地板或建筑时，一次地图编辑即可安排挖掘和后续建造。回执中的 `pendingStatusRead` 可以直接交给 `world_editor`，一次查询最多 128 项，查看各格坐标、状态和当前阻塞原因。
 
 ## 从这里开始
 

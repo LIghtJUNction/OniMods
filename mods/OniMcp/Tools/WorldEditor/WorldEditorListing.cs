@@ -128,6 +128,7 @@ namespace OniMcp.Tools
                     add("index.oni", "file", "Built buildings.");
                     add("catalog.oni", "file", "Buildable catalog search.");
                     add("plans.oni", "file", "Desired building plan. SEARCH/REPLACE creates blueprints.");
+                    add("pending.oni", "file", "Read deferred auto-dig construction with pendingBuildId or up to 128 pendingBuildIds.");
                 }
                 else if (relative == "buildings/instances/")
                 {

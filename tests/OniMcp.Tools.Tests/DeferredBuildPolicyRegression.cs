@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using OniMcp.Tools;
 
@@ -6,6 +7,7 @@ internal static class DeferredBuildPolicyRegression
 {
     internal static void Run()
     {
+        CheckStatusBatch();
         var receipt = new Dictionary<string, object>
         {
             ["autoDig"] = new Dictionary<string, object> { ["marked"] = 2 },
@@ -62,6 +64,36 @@ internal static class DeferredBuildPolicyRegression
         Check(!BuildPlanningDeferredBuildPolicy.IsUnfinished("built"), "built deferred build is terminal");
         Check(!BuildPlanningDeferredBuildPolicy.IsUnfinished("cancelled"), "cancelled deferred build is terminal");
         Check(!BuildPlanningDeferredBuildPolicy.IsUnfinished("failed"), "failed deferred build is terminal");
+    }
+
+    private static void CheckStatusBatch()
+    {
+        var handles = new JArray("second", "first", "second");
+        var args = new JObject { ["pendingBuildIds"] = handles };
+        Check(BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "status", out var ids, out var error)
+            && error == null && string.Join(",", ids) == "second,first,second", "batch preserves order and duplicate handles");
+        Check(!BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "cancel", out ids, out error),
+            "batch never cancels, even when requested");
+        args["pendingBuildId"] = "single";
+        Check(!BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "status", out ids, out error),
+            "mixed single and batch input is rejected");
+        args.Remove("pendingBuildId");
+        foreach (JToken invalid in new JToken[] { JValue.CreateNull(), new JValue("id"), new JArray(),
+            new JArray("valid", " "), new JArray(1), new JArray(JValue.CreateNull()) })
+        {
+            args["pendingBuildIds"] = invalid;
+            Check(!BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "status", out ids, out error)
+                && ids == null && error != null, "invalid batch is rejected without partial results");
+        }
+        var limit = new JArray();
+        for (int i = 0; i < 128; i++)
+            limit.Add(i.ToString());
+        args["pendingBuildIds"] = limit;
+        Check(BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "status", out ids, out error)
+            && ids.Length == 128, "full build-area commit fits in one query");
+        limit.Add("overflow");
+        Check(!BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, "status", out ids, out error),
+            "oversized batches are rejected");
     }
 
     private static void Check(bool condition, string scenario)

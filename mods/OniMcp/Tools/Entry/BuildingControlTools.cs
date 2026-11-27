@@ -78,7 +78,10 @@ namespace OniMcp.Tools
                     ["execute"] = new McpToolParameter { Type = "boolean", Description = "For planning room_template, immediately execute the generated calls.", Required = false },
                     ["direction"] = new McpToolParameter { Type = "string", Description = "For planning repair_line, missing edge direction right/left/up/down or R/L/U/D/右/左/上/下 from x/y.", Required = false },
                     ["dir"] = new McpToolParameter { Type = "string", Description = "Alias of direction for planning repair_line.", Required = false },
-                    ["steps"] = new McpToolParameter { Type = "integer", Description = "For planning repair_line, cells to connect in direction, default 1.", Required = false }
+                    ["steps"] = new McpToolParameter { Type = "integer", Description = "For planning repair_line, cells to connect in direction, default 1.", Required = false },
+                    ["pendingBuildId"] = new McpToolParameter { Type = "string", Description = "planning pending_build: one handle for full status or cancellation.", Required = false },
+                    ["pendingBuildIds"] = new McpToolParameter { Type = "array", Description = "planning pending_build status: 1 to 128 handle strings from pendingBuilds. Returns compact rows in input order, including unknown handles.", Required = false },
+                    ["pendingBuildAction"] = new McpToolParameter { Type = "string", Description = "planning pending_build: status (default) or cancel. Cancellation uses one pendingBuildId, dryRun=false and confirm=true.", Required = false, EnumValues = new List<string> { "status", "cancel" } }
                 },
                 Handler = args =>
                 {

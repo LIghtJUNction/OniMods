@@ -39,6 +39,7 @@ namespace OniMcp.Tools
             MergeParameters(parameters, BuildArea().Parameters);
  MergeParameters(parameters, RoomTemplatePlan().Parameters);
             parameters["pendingBuildId"] = new McpToolParameter { Type = "string", Description = "pending_build: opaque handle returned when an auto-dig build is deferred.", Required = false };
+            parameters["pendingBuildIds"] = new McpToolParameter { Type = "array", Description = "pending_build status: 1 to 128 handle strings from pendingBuilds. Returns compact rows in input order, including unknown handles.", Required = false };
             parameters["pendingBuildAction"] = new McpToolParameter { Type = "string", Description = "pending_build operation: status (default) or cancel. Cancel preview defaults to dryRun=true; actual cancellation requires dryRun=false and confirm=true. Native dig and uproot orders remain untouched.", Required = false, EnumValues = new List<string> { "status", "cancel" } };
             parameters["dryRun"] = new McpToolParameter { Type = "boolean", Description = "pending_build cancel: defaults to true; must be false to apply cancellation.", Required = false };
             parameters["confirm"] = new McpToolParameter { Type = "boolean", Description = "pending_build cancel: must be true to apply cancellation.", Required = false };
@@ -129,7 +130,6 @@ namespace OniMcp.Tools
                             forwardArgs["action"] = args["pendingBuildAction"].ToString();
                         else
                             forwardArgs["action"] = "status";
-                        forwardArgs["pendingBuildId"] = args["pendingBuildId"];
                         return DeferredBuildControl(forwardArgs);
                     default:
                         return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, repair_line, build_area, room_template, or pending_build");

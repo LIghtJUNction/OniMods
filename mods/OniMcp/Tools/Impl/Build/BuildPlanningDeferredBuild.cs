@@ -327,6 +327,12 @@ namespace OniMcp.Tools
             string id = args?["pendingBuildId"]?.ToString();
             if (action != "status" && action != "cancel")
                 return CallToolResult.Error("pending_build action must be status or cancel");
+            if (args?["pendingBuildIds"] != null)
+            {
+                if (!BuildPlanningDeferredBuildPolicy.TryReadStatusBatch(args, action, out var ids, out var error))
+                    return CallToolResult.Error(error);
+                return ReadDeferredBuildStatuses(ids);
+            }
             if (string.IsNullOrWhiteSpace(id))
                 return CallToolResult.Error("pendingBuildId is required");
 
@@ -363,6 +369,34 @@ namespace OniMcp.Tools
                 };
             }
             return CallToolResult.Text(Newtonsoft.Json.JsonConvert.SerializeObject(item.ToDictionary(), McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult ReadDeferredBuildStatuses(string[] ids)
+        {
+            var byId = DeferredBuilds.ToDictionary(item => item.Id, StringComparer.Ordinal);
+            var items = new List<object>(ids.Length);
+            int foundCount = 0;
+            foreach (string id in ids)
+            {
+                if (!byId.TryGetValue(id, out var item))
+                {
+                    items.Add(new { pendingBuildId = id, found = false, status = "unknown" });
+                    continue;
+                }
+                foundCount++;
+                items.Add(new
+                {
+                    pendingBuildId = id,
+                    found = true,
+                    status = item.Status,
+                    prefabId = item.PrefabId,
+                    worldId = item.WorldId,
+                    anchor = new { x = item.X, y = item.Y },
+                    blockedReason = item.Status == "pending" ? item.BlockedReason : null
+                });
+            }
+            var result = new { requestedCount = ids.Length, foundCount, items };
+            return CallToolResult.Text(Newtonsoft.Json.JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
         }
 
     }

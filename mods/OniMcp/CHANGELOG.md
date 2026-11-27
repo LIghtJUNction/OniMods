@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 2026-11-27 — 0.2.11
+
+- 在天然地块上规划地板或建筑时，一次地图编辑即可安排挖掘和后续建造。回执中的 `pendingStatusRead` 可以直接交给 `world_editor`，一次查询最多 128 项，查看各格坐标、状态和当前阻塞原因。
+- A single map edit can queue excavation and construction on natural terrain. Pass the returned `pendingStatusRead` to `world_editor` to check the coordinates, status and current blocker for up to 128 deferred placements at once.
+
 ## 2026-11-27 — 0.2.10
 
 - Add `list_immigrants` and `claim_duplicant` to Printing Pod controls. A candidate ID identifies one duplicant in the current pod offer. Previewing keeps the player's selection intact. Confirming uses the game's native delivery process.

@@ -59,6 +59,16 @@ namespace OniMcp.Tools
             };
 
             var remainingAction = source["remainingAction"];
+            if (source["pendingBuilds"] is JArray pendingBuilds && pendingBuilds.Count > 0)
+            {
+                summary["pendingStatusRead"] = new JObject
+                {
+                    ["command"] = "read",
+                    ["task"] = "Check the deferred construction from this map edit.",
+                    ["path"] = "/active/buildings/pending.oni",
+                    ["pendingBuildIds"] = new JArray(pendingBuilds.Select(item => (string)item["pendingBuildId"]))
+                };
+            }
             if (remainingAction != null && remainingAction.Type != JTokenType.Null)
                 summary["remainingAction"] = remainingAction.DeepClone();
             return summary;
