@@ -38,6 +38,7 @@
     <DefineConstants>$(DefineConstants);ONIONLINE_RUNTIME_PROBE</DefineConstants>
   </PropertyGroup>
   <ItemGroup Condition="'$(OnlineRuntimeProbe)' == 'true'">
+    <Compile Include="../../tests/OniOnline.Tests/Prototypes/*.cs" Link="Prototypes/%(Filename)%(Extension)" />
     <Compile Include="../../tests/OniOnline.Tests/RuntimeProbe.cs" Link="RuntimeProbe.cs" />
     <Compile Include="../../tests/OniOnline.Tests/RuntimeProbeExtras.cs" Link="RuntimeProbeExtras.cs" />
     <Compile Include="../../tests/OniOnline.Tests/RuntimeProbeBuilding.cs" Link="RuntimeProbeBuilding.cs" />

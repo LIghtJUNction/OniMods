@@ -44,28 +44,6 @@ namespace OniOnline.Multiplayer
     {
         private const string ExpectedAssemblySha256 = "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1";
         private const int ExpectedBuild = 744825, MaxPlanetCells = 262144;
-        private delegate Vector2I GridOffsetResolver(List<WorldContainer> worlds, Vector2I size, out Vector2I offset);
-        private static readonly GridOffsetResolver LegacyGridOffset = BindLegacyGridOffset();
-
-        private static GridOffsetResolver BindLegacyGridOffset()
-        {
-            var signature = new[] { typeof(List<WorldContainer>), typeof(Vector2I), typeof(Vector2I).MakeByRefType() };
-            MethodInfo method;
-            try
-            {
-                method = typeof(BestFit).GetMethod("GetGridOffset",
-                    BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.ExactBinding,
-                    null, signature, null);
-            }
-            catch (AmbiguousMatchException) { return null; }
-            if (method == null || method.ReturnType != typeof(Vector2I) || method.ContainsGenericParameters ||
-                (method.CallingConvention & CallingConventions.VarArgs) != 0) return null;
-            var parameters = method.GetParameters();
-            if (parameters.Length != signature.Length || !parameters[2].IsOut) return null;
-            for (int i = 0; i < signature.Length; i++)
-                if (parameters[i].ParameterType != signature[i]) return null;
-            return Delegate.CreateDelegate(typeof(GridOffsetResolver), method, false) as GridOffsetResolver;
-        }
         private readonly int owningThread = Thread.CurrentThread.ManagedThreadId;
 
         internal WorldAdmissionPreflightReport Inspect(int width, int height, int hexQ, int hexR)
@@ -155,11 +133,8 @@ namespace OniOnline.Multiplayer
                 failures.Add("world_capacity_requested_dimensions_exceed_grid");
             if (failures.Count > 0) return;
 
-            // Keep the reviewed U59 contract. U60 adds pending-destruction regions;
-            // accepting that API requires a separate native admission review.
-            if (LegacyGridOffset == null) { failures.Add("world_capacity_native_fit_unsupported"); return; }
             Vector2I offset;
-            Vector2I required = LegacyGridOffset(worlds, new Vector2I(report.RequestedWidth, report.RequestedHeight), out offset);
+            Vector2I required = BestFit.GetGridOffset(worlds, new Vector2I(report.RequestedWidth, report.RequestedHeight), out offset);
             report.CandidateX = offset.x; report.CandidateY = offset.y;
             report.FitsNativeGrid = required.x <= report.GridWidth && required.y <= report.GridHeight &&
                 Fits(offset.x, offset.y, report.RequestedWidth, report.RequestedHeight, report.GridWidth, report.GridHeight);

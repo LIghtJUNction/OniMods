@@ -323,3 +323,7 @@ dotnet build examples/OniOnline.PlanetSignals -c Release
 ```
 
 示例注册独立的玩法 ID，复用内置的星球准入规则，并实现实际共享的信号计数器，包含认证描述信息、发布权限和断线恢复。详见[示例说明](../../../examples/OniOnline.PlanetSignals/README.md)。它不会自动安装到游戏。
+
+## Experimental native probes (2026-11-13)
+
+The framework does not automatically control the native pause/speed buttons. `SharedClockPolicy` is the SDK revision-based arbitration policy for gameplay integrations. The unconnected voting controller, legacy `SharedTimeState`, and native time patches now live in `tests/OniOnline.Tests/Prototypes/`, together with duplicant archive/import and world-admission probes. They are excluded from the production Mod and Framework DLLs; only host tests or an explicit `OnlineRuntimeProbe=true` build compile them. Probe success is not evidence of a production multiplayer lifecycle. The former experimental `OniOnline.Core.SharedTimeState` types are no longer exported by the Framework DLL.

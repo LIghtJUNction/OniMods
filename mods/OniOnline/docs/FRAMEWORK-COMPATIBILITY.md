@@ -92,3 +92,7 @@ rtk proxy dotnet run --project tests/OniOnline.Tests -c Release -- --compatibili
 ```
 
 上述 57 项记录来自独立局部宿主；该仓库入口调用同一组用例。它们不启动游戏，不证明 Unity 生命周期、原生存读档、本体实机、跨版本原生交互或界面视觉已经验收。
+
+## Experimental native probes (2026-11-13)
+
+The framework does not automatically control the native pause/speed buttons. `SharedClockPolicy` is the SDK revision-based arbitration policy for gameplay integrations. The unconnected voting controller, legacy `SharedTimeState`, and native time patches now live in `tests/OniOnline.Tests/Prototypes/`, together with duplicant archive/import and world-admission probes. They are excluded from the production Mod and Framework DLLs; only host tests or an explicit `OnlineRuntimeProbe=true` build compile them. Probe success is not evidence of a production multiplayer lifecycle. The former experimental `OniOnline.Core.SharedTimeState` types are no longer exported by the Framework DLL.
