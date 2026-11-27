@@ -255,7 +255,6 @@ def verify_building_blueprint_safety(
         materials,
         "private static MaterialSelection SelectElements",
     )
-    auto_selection = extract_block(select_elements, "if (auto)")
     if "IsFreeBuildContext" in materials:
         fail("material selection must never bypass inventory")
     verify_auto_material_selection(materials)

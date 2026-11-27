@@ -13,6 +13,7 @@ internal static class Program
 
     private static void Main()
     {
+        BlueprintPlacementRegression.Run();
         LogicAlarmRegression.Run();
         WorldEditorTools.RunMapContractRegressions();
         MapReadPolicyRegression.Run();

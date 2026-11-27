@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -383,7 +384,10 @@ namespace OniMcp.Tools
                 fileCount = Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length;
                 dirCount = Directory.GetDirectories(root, "*", SearchOption.AllDirectories).Length;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                return CallToolResult.Error("Failed to read notes status: " + ex.Message);
+            }
 
             string agentsPath = Path.Combine(root, "AGENTS.md");
             bool hasAgents = File.Exists(agentsPath);

@@ -225,50 +225,44 @@ namespace OniMcp.Tools
                 placedViaMod = InvokeBlueprintsExpandedUse(path, x.Value, y.Value, out modError);
             }
 
-            int placedNatively = 0;
-            if (!placedViaMod)
+            JObject placement;
+            if (placedViaMod)
+            {
+                placement = new JObject { ["ok"] = true, ["partial"] = false,
+                    ["status"] = "placed", ["placedNatively"] = 0, ["failed"] = 0,
+                    ["failures"] = new JArray() };
+            }
+            else
             {
                 int priority = ToolUtil.GetInt(args, "priority") ?? 5;
-                foreach (JObject item in buildings.OfType<JObject>())
+                placement = BlueprintNativePlacement.Run(buildings, x.Value, y.Value, (item, targetX, targetY) =>
                 {
-                    string prefabId = item.Value<string>("buildingdef");
-                    if (string.IsNullOrEmpty(prefabId) || prefabId == "dig")
-                        continue;
-
-                    int offX = item.SelectToken("offset.x")?.Value<int>() ?? 0;
-                    int offY = item.SelectToken("offset.y")?.Value<int>() ?? 0;
                     string mat = (item["selectedElements"] as JArray)?.FirstOrDefault()?.ToString();
-
                     var buildArgs = CopyPayload(args);
                     buildArgs["domain"] = "planning";
                     buildArgs["action"] = "build_area";
-                    buildArgs["prefabId"] = prefabId;
-                    buildArgs["anchors"] = new JArray(new JObject { ["x"] = x.Value + offX, ["y"] = y.Value + offY });
+                    buildArgs["prefabId"] = item.Value<string>("buildingdef");
+                    buildArgs["anchors"] = new JArray(new JObject { ["x"] = targetX, ["y"] = targetY });
                     buildArgs["priority"] = priority;
                     buildArgs["confirm"] = true;
                     if (!string.IsNullOrEmpty(mat))
                         buildArgs["material"] = mat;
-
-                    try
-                    {
-                        var result = BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs);
-                        if (!WorldEditorResultFailed(result, args))
-                            placedNatively++;
-                    }
-                    catch { }
-                }
+                    return BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs);
+                }, result => WorldEditorResultFailed(result));
             }
 
-            ShowBlueprintVisualFeedback($"📐 已放置蓝图: {baseName} 于 ({x.Value},{y.Value})");
-            return JsonResult(new JObject
-            {
-                ["ok"] = true,
-                ["placed"] = Path.GetFileName(path),
-                ["origin"] = new JObject { ["x"] = x.Value, ["y"] = y.Value },
-                ["buildings"] = count,
-                ["placedNatively"] = placedNatively,
-                ["method"] = placedViaMod ? "BlueprintsExpandedMod" : "NativePlacement"
-            });
+            if (placement.Value<bool>("ok"))
+                ShowBlueprintVisualFeedback($"📐 已放置蓝图: {baseName} 于 ({x.Value},{y.Value})");
+            placement["placed"] = placement.Value<bool>("ok") ? (JToken)Path.GetFileName(path) : JValue.CreateNull();
+            placement["blueprint"] = Path.GetFileName(path);
+            placement["origin"] = new JObject { ["x"] = x.Value, ["y"] = y.Value };
+            placement["buildings"] = count;
+            placement["method"] = placedViaMod ? "BlueprintsExpandedMod" : "NativePlacement";
+            if (!string.IsNullOrEmpty(modError))
+                placement["modError"] = modError;
+            return placement.Value<string>("status") == "failed"
+                ? CallToolResult.Error(JsonConvert.SerializeObject(placement, McpJsonUtil.Settings))
+                : JsonResult(placement);
         }
 
         private static CallToolResult BlueprintCancel(JObject args)

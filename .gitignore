@@ -54,3 +54,7 @@ __pycache__
 # Rust CLI source files are not .NET build output.
 !/src/bin/
 !/src/bin/*.rs
+
+# Linux perf recordings
+/perf.data
+/perf.data.old
