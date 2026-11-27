@@ -4,7 +4,9 @@
 
 OniMcp exposes a running **Oxygen Not Included** game as a local MCP service. A compatible client can inspect a colony, investigate a problem, and request explicit game actions. The mod supplies the interface; you choose the model and client.
 
-This README describes **OniMcp 0.2.9**, which requires an enabled **Jlib 0.3.10 or a newer compatible provider**. Dependent mods share one Jlib installation. Check the installed package and your client's support separately.
+This README describes **OniMcp 0.2.10**, which requires an enabled **Jlib 0.3.10 or a newer compatible provider**. Dependent mods share one Jlib installation. Check the installed package and your client's support separately.
+
+After opening the Printing Pod, use `building_control` with `domain=side_surface surface=facility kind=printing_pod action=list_immigrants` to inspect the current candidates and their stats. Preview your chosen `candidateId` with `claim_duplicant` and `dryRun=true`. Recruit with the same ID and `confirm=true`. Use `list_rewards` and `claim` for care packages.
 
 ## Start here
 

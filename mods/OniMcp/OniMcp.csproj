@@ -21,7 +21,7 @@
     <ModTitle>ONI MCP Server</ModTitle>
     <ModDescription>ONI MCP Server - /mcp/ exposes the Model Context Protocol endpoint. The root path shows a virtual save and world file browser for feedback.</ModDescription>
     <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
-    <ModVersion>0.2.9</ModVersion>
+    <ModVersion>0.2.10</ModVersion>
     <JlibMinimumVersion>0.3.10</JlibMinimumVersion>
     <Version>$(ModVersion)</Version>
 

@@ -8,7 +8,7 @@ This statement describes this project's AI development. Third-party libraries, s
 [h1]OniMcp · Give your client a view of the colony[/h1]
 OniMcp provides a local MCP service for Oxygen Not Included. A compatible client can inspect colony state, investigate problems and request explicit game actions. You choose the model and client.
 
-[b]0.2.9 version notes. Required: Jlib 0.3.10 or a newer compatible provider.[/b]
+[b]0.2.10 version notes. Required: Jlib 0.3.10 or a newer compatible provider.[/b]
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3835083839]Subscribe to Jlib[/url], enable both mods in the game's Mods menu, then restart. Dependent mods share one Jlib installation. Check your installed package for the actual Workshop version.
 
 [h2]Start in three steps[/h2]
@@ -20,6 +20,7 @@ OniMcp provides a local MCP service for Oxygen Not Included. A compatible client
 
 [h2]What it provides[/h2]
 [list]
+[*]Inspect a Printing Pod candidate’s attributes, interests and traits, preview the choice, and explicitly confirm recruitment. Care packages have their own claim action.
 [*]Seven public tools for state inspection, camera controls, building plans, orders and game controls.
 [*]Virtual world paths through world_editor and oni:// resources through resources/read. read_control is no longer a public tool.
 [*]Complete published cell component masses and temperatures, with an explicit unavailable result when no provider snapshot exists.

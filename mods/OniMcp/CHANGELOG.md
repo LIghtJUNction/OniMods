@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 2026-11-27 — 0.2.10
+
+- Add `list_immigrants` and `claim_duplicant` to Printing Pod controls. A candidate ID identifies one duplicant in the current pod offer. Previewing keeps the player's selection intact. Confirming uses the game's native delivery process.
+- 打印舱支持查看候选人、按 ID 预演并确认招募。过期 ID 与重复领取会被拒绝，原有的补给包领取方式继续可用。见 [#585](https://github.com/LIghtJUNction/OniMods/issues/585)。
+
 ## 2026-11-20 — 0.2.9
 
 - 统一公开工具的下一步指引：加载状态返回可直接执行的 `world_editor` 读取调用，解析计划返回公开搜索调用，避免把内部工具名交给客户端。
