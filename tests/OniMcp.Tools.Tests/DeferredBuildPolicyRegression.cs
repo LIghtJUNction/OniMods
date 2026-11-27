@@ -1,10 +1,24 @@
 using System;
+using System.Collections.Generic;
 using OniMcp.Tools;
 
 internal static class DeferredBuildPolicyRegression
 {
     internal static void Run()
     {
+        var receipt = new Dictionary<string, object>
+        {
+            ["autoDig"] = new Dictionary<string, object> { ["marked"] = 2 },
+            ["pendingBuild"] = false
+        };
+        Equal(null, BuildPlanningDeferredBuildPolicy.RegisteredHandle(receipt));
+        receipt["pendingBuild"] = true;
+        Equal(null, BuildPlanningDeferredBuildPolicy.RegisteredHandle(receipt));
+        receipt["pendingBuildId"] = "job-id";
+        Equal("job-id", BuildPlanningDeferredBuildPolicy.RegisteredHandle(receipt));
+        receipt["pendingBuild"] = false;
+        Equal(null, BuildPlanningDeferredBuildPolicy.RegisteredHandle(receipt));
+
         Check(BuildPlanningDeferredBuildPolicy.HasPendingOrders(1, 0, 0, 0), "new dig mark remains pending");
         Check(BuildPlanningDeferredBuildPolicy.HasPendingOrders(0, 1, 0, 0), "existing dig mark remains pending");
         Check(BuildPlanningDeferredBuildPolicy.HasPendingOrders(0, 0, 1, 0), "new uproot mark remains pending");

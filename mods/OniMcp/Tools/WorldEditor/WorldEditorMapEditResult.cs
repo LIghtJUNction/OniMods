@@ -45,6 +45,7 @@ namespace OniMcp.Tools
                 ["autoDigMarked"] = source["autoDigQueued"]?.DeepClone() ?? new JValue(0),
                 ["autoDigAlreadyMarked"] = source["autoDigAlreadyMarked"]?.DeepClone() ?? new JValue(0),
                 ["pendingBuildAfterDig"] = source["pendingBuildAfterDig"]?.DeepClone() ?? new JValue(0),
+                ["pendingBuilds"] = source["pendingBuilds"]?.DeepClone() ?? new JArray(),
                 ["failed"] = source["failed"]?.DeepClone() ?? new JValue(0),
                 ["failedAnchors"] = failures,
                 ["constructionDiagnostics"] = constructionDiagnostics,

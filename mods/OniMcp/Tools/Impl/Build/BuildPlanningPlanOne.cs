@@ -135,7 +135,7 @@ namespace OniMcp.Tools
             {
                 ["tool"] = "building_control",
                 ["arguments"] = arguments,
-                ["note"] = "Retry only anchors that are not yet built/blueprinted/connected. If autoDigQueued > 0, run after dig chores finish."
+                ["note"] = "Only retry the listed anchors after correcting their blockers. Registered pending builds continue automatically."
             };
         }
 
@@ -195,15 +195,6 @@ namespace OniMcp.Tools
         {
             var autoDig = GetObject(result, "autoDig");
             return GetBool(autoDig, "available") && GetInt(autoDig, "targetCount") > 0;
-        }
-
-        private static bool IsAutoDigResult(Dictionary<string, object> result)
-        {
-            var autoDig = GetObject(result, "autoDig");
-            return GetInt(autoDig, "marked") > 0
-                || GetInt(autoDig, "alreadyMarked") > 0
-                || GetInt(autoDig, "uprootMarked") > 0
-                || GetInt(autoDig, "alreadyUprootMarked") > 0;
         }
 
         private static int GetAutoDigInt(Dictionary<string, object> result, string key)

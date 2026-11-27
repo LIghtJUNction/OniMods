@@ -1,7 +1,18 @@
+using System.Collections.Generic;
+
 namespace OniMcp.Tools
 {
     internal static class BuildPlanningDeferredBuildPolicy
     {
+        internal static string RegisteredHandle(Dictionary<string, object> result)
+        {
+            if (!result.TryGetValue("pendingBuild", out object pending) || !(pending is bool accepted) || !accepted
+                || !result.TryGetValue("pendingBuildId", out object handle))
+                return null;
+            string id = handle as string;
+            return string.IsNullOrWhiteSpace(id) ? null : id;
+        }
+
         internal static bool HasPendingOrders(int marked, int alreadyMarked,
             int uprootMarked, int alreadyUprootMarked)
         {

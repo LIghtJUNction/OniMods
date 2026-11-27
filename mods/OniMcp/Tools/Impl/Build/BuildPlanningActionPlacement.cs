@@ -251,7 +251,7 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                     bool alreadyPresent = result.ContainsKey("alreadyPresent") && (bool)result["alreadyPresent"];
                     bool alreadyConnected = result.ContainsKey("alreadyConnected") && (bool)result["alreadyConnected"];
                         autoMarked += GetAutoDigInt(result, "marked") + GetAutoDigInt(result, "uprootMarked") + GetAutoDigInt(result, "alreadyMarked") + GetAutoDigInt(result, "alreadyUprootMarked");
-                    if (ok || alreadyPresent || alreadyConnected || (dryRun && validPlacement) || IsAutoDigResult(result))
+                    if (ok || alreadyPresent || alreadyConnected || (dryRun && validPlacement) || BuildPlanningDeferredBuildPolicy.RegisteredHandle(result) != null)
                     {
                         valid++;
                         if (ok)

@@ -149,19 +149,17 @@ namespace OniMcp.Tools
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
                         AddConstructionDiagnostics(preview, prefabId, anchor.x, anchor.y, worldId);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
+                        bool needsDig = IsAutoDiggableFailure(preview);
                         if (valid)
-                        {
                             validAnchors.Add(anchor);
-                            actionableAnchors.Add(anchor);
-                        }
-                        else if (IsAutoDiggableFailure(preview))
-                        {
+                        if (needsDig)
                             autoDigAnchors.Add(anchor);
+                        if (valid || needsDig)
+                        {
                             actionableAnchors.Add(anchor);
-                        }
-                        if (valid || IsAutoDiggableFailure(preview))
                             ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints,
                                 ParseOrientation(args["orientation"]?.ToString()));
+                        }
                         previews.Add(preview);
                     }
 
@@ -217,6 +215,8 @@ namespace OniMcp.Tools
                     int failed = 0;
                     int autoDigQueued = 0;
                     int autoDigAlreadyMarked = 0;
+                    int autoUprootQueued = 0;
+                    var pendingBuilds = new List<Dictionary<string, object>>();
             foreach (var anchor in executionAnchors)
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
@@ -224,10 +224,18 @@ namespace OniMcp.Tools
                         bool wasPlanned = GetBool(result, "planned");
                         bool wasAlreadyPresent = GetBool(result, "alreadyPresent");
                         bool wasAlreadyConnected = GetBool(result, "alreadyConnected");
-                        bool isAutoDig = IsAutoDigResult(result);
-                        bool ok = wasPlanned || wasAlreadyPresent || wasAlreadyConnected || isAutoDig;
+                        string pendingId = BuildPlanningDeferredBuildPolicy.RegisteredHandle(result);
+                        bool ok = wasPlanned || wasAlreadyPresent || wasAlreadyConnected || pendingId != null;
                         autoDigQueued += GetAutoDigInt(result, "marked");
                         autoDigAlreadyMarked += GetAutoDigInt(result, "alreadyMarked");
+                        autoUprootQueued += GetAutoDigInt(result, "uprootMarked");
+                        if (pendingId != null)
+                            pendingBuilds.Add(new Dictionary<string, object>
+                            {
+                                ["x"] = anchor.x,
+                                ["y"] = anchor.y,
+                                ["pendingBuildId"] = pendingId
+                            });
                         if (wasPlanned && !wasAlreadyPresent && !wasAlreadyConnected)
                             planned++;
                         if (wasAlreadyPresent)
@@ -236,13 +244,11 @@ namespace OniMcp.Tools
                             alreadyConnected++;
                         if (ok)
                             succeeded++;
-                        else if (!isAutoDig)
+                        else
                         {
                             failed++;
                             remainingAnchors.Add(anchor);
                         }
-                        if (!wasPlanned && !wasAlreadyPresent && !wasAlreadyConnected && isAutoDig)
-                            remainingAnchors.Add(anchor);
                         results.Add(result);
                     }
 
@@ -259,7 +265,7 @@ namespace OniMcp.Tools
                     {
                         ["prefabId"] = prefabId,
                         ["dryRun"] = false,
-                        ["committed"] = planned > 0 || autoDigQueued > 0,
+                        ["committed"] = planned > 0 || autoDigQueued > 0 || autoUprootQueued > 0 || pendingBuilds.Count > 0,
                         ["allowPartial"] = allowPartial,
                         ["anchorResolution"] = anchorResolution,
                         ["planResolution"] = planResolution.ToDictionary(),
@@ -276,14 +282,17 @@ namespace OniMcp.Tools
                         ["autoDigAlreadyMarked"] = autoDigAlreadyMarked,
                         ["autoDigLimitReached"] = autoDigContext.LimitReached,
                         ["pendingBuildAfterDig"] = autoDigQueued + autoDigAlreadyMarked,
+                        ["pendingBuilds"] = pendingBuilds,
                         ["failed"] = failed + (allowPartial ? hardFailedPreviews.Count : 0),
                 ["allRequestedSatisfied"] = !throttled && planned + alreadyPresent + alreadyConnected >= anchors.Count,
                         ["remainingAnchors"] = remainingAnchors.Select(anchor => AnchorDictionary(anchor.x, anchor.y, ToolUtil.ResolveWorldId(args))).ToList(),
                 ["remainingAction"] = BuildRemainingBuildAreaAction(args, prefabId, remainingAnchors),
                 ["next"] = throttled
-                    ? "Batch was throttled for game stability. Execute remainingAction after the game processes this batch."
+                    ? "Batch was throttled. remainingAction contains only anchors still needing submission."
                     : remainingAnchors.Count > 0
-                        ? "Some anchors remain blocked or pending auto-dig. Inspect remainingAction/preflightErrors."
+                        ? "Inspect failed anchors before using remainingAction."
+                    : pendingBuilds.Count > 0
+                        ? "Dig orders will automatically continue to construction. Inspect pendingBuilds using planning/pending_build and each pendingBuildId."
                         : "Batch complete.",
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
                         ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
