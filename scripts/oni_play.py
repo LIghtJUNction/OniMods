@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Operate the running ONI colony using its normal blueprints, orders and menus."""
 import argparse
+from contextlib import contextmanager, nullcontext
 import json
 import re
 import subprocess
 import sys
+import threading
 
 MAP = "/active/map/viewport.md"
 RESEARCH = "/active/management/research.md"
@@ -13,6 +15,49 @@ ORDERS = "/active/ops/orders.md"
 
 class GameError(Exception):
     pass
+
+
+class GameOutcomeUnknown(GameError):
+    """Inspect game state before deciding what to do after a missing receipt."""
+
+
+_session_lock = threading.Lock()
+_session = None
+
+
+@contextmanager
+def persistent_session(config=None, timeout=60):
+    """Share an authorized session across all oni_play calls in this process.
+
+    Use one outer scope around the driver loop and join its workers before exit.
+    The config path and bearer override follow oni-mcp. Set the HTTP timeout
+    above the longest waiting game step. A missing receipt raises GameOutcomeUnknown.
+    """
+    from oni_mcp_session import McpClientError, OniMcpSession
+    global _session
+    with _session_lock:
+        if _session is not None:
+            raise GameError("An OniMcp client scope is already active.")
+        try:
+            client = OniMcpSession(config=config, timeout=timeout)
+        except McpClientError as exc:
+            raise GameError(str(exc)) from None
+        _session = client
+    failed = False
+    try:
+        yield
+    except BaseException:
+        failed = True
+        raise
+    finally:
+        try:
+            client.close()
+        except McpClientError:
+            if not failed:
+                raise GameError("Could not confirm OniMcp session closure.") from None
+        finally:
+            with _session_lock:
+                _session = None
 
 
 def unpack(value):
@@ -140,13 +185,35 @@ def checked(value):
 
 
 def invoke(*command):
-    run = subprocess.run(["oni-mcp", *command], capture_output=True, text=True)
-    if run.returncode:
-        raise GameError((run.stdout + "\n" + run.stderr).strip())
-    try:
-        response = unpack(json.loads(run.stdout))
-    except ValueError as exc:
-        raise GameError("Invalid OniMcp response: " + run.stdout) from exc
+    with _session_lock:
+        client = _session
+    if client is None:
+        run = subprocess.run(["oni-mcp", *command], capture_output=True, text=True)
+        if run.returncode:
+            raise GameError((run.stdout + "\n" + run.stderr).strip())
+        try:
+            response = unpack(json.loads(run.stdout))
+        except ValueError as exc:
+            raise GameError("Invalid OniMcp response: " + run.stdout) from exc
+    else:
+        from oni_mcp_session import McpClientError, OutcomeUnknown
+        if len(command) == 2 and command[0] == "read":
+            method, params = "resources/read", {"uri": command[1]}
+        elif len(command) in (2, 3) and command[0] == "call":
+            arguments = json.loads(command[2]) if len(command) == 3 else {}
+            if not isinstance(arguments, dict):
+                raise GameError("Tool arguments must be a JSON object.")
+            method, params = "tools/call", {"name": command[1], "arguments": arguments}
+        elif command in (("tools",), ("status",)):
+            method, params = ("tools/list" if command[0] == "tools" else "ping"), {}
+        else:
+            raise GameError("Use call, read, tools, or status inside a persistent OniMcp client scope.")
+        try:
+            response = unpack(client.call(method, params))
+        except OutcomeUnknown as exc:
+            raise GameOutcomeUnknown(str(exc)) from None
+        except McpClientError as exc:
+            raise GameError(str(exc)) from None
     if not isinstance(response, dict) or response.get("isError") is True:
         raise GameError("OniMcp response: " + render(response))
     checked(response)
@@ -286,6 +353,7 @@ def positive(value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--persistent", action="store_true", help="reuse one MCP session for this command")
     subs = parser.add_subparsers(dest="op", required=True)
     for name in ("read", "map", "dig", "build", "research", "step", "save", "new-status", "new-choice", "new"):
         p = subs.add_parser(name)
@@ -315,7 +383,8 @@ def main():
             p.add_argument("wall_seconds", type=positive)
     args = parser.parse_args()
     try:
-        print(render(run(args)))
+        with persistent_session() if args.persistent else nullcontext():
+            print(render(run(args)))
     except (GameError, OSError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
