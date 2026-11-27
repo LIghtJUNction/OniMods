@@ -31,7 +31,7 @@ namespace OniMcp.Tools
             int worldId = ToolUtil.GetInt(args, "worldId") ?? (ClusterManager.Instance?.activeWorldId ?? -1);
             var telepad = Components.Telepads.Items
                 .FirstOrDefault(item => item != null && (worldId < 0 || item.gameObject.GetMyWorldId() == worldId))
-                ?? Components.Telepads.Items.FirstOrDefault(item => item != null);
+                ?? (args["worldId"] == null ? Components.Telepads.Items.FirstOrDefault(item => item != null) : null);
             return telepad == null ? null : telepad.gameObject;
         }
 
@@ -51,7 +51,7 @@ namespace OniMcp.Tools
 
             var selected = ResolvePrintingReward(args, rewards);
             if (selected == null)
-                return CallToolResult.Error("No current claimable care-package reward matched. If the printing pod offers duplicants, use action=open_immigrants for manual UI selection.");
+                return CallToolResult.Error("No current claimable care-package reward matched. Use list_immigrants to inspect duplicant candidates.");
 
             var reward = CarePackageInfoDictionary(selected, rewards.IndexOf(selected));
             var priorityPlan = PrintingRewardPriorityPlan(telepad, reward);
@@ -121,7 +121,7 @@ namespace OniMcp.Tools
                 ["rewardCount"] = rewards.Count,
                 ["rewards"] = rewards,
                 ["claimSupport"] = rewards.Count > 0 ? "care_package_only" : "none_currently_safe",
-                ["dupeClaimSupport"] = "open_immigrants UI only; automatic duplicant selection is intentionally not claimed by action=claim",
+                ["dupeClaimSupport"] = "Use list_immigrants and claim_duplicant with an exact candidateId; claim is for care packages.",
                 ["notes"] = rewards.Count > 0
                     ? "Only currently materialized care-package choices are listed."
                     : "No current care-package containers are materialized. This tool will not open or initialize the immigrant screen during list/status or claim."

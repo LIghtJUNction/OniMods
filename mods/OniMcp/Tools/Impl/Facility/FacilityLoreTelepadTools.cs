@@ -129,11 +129,12 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "low",
                 Tags = new List<string> { "story", "telepad", "printing-pod", "immigration", "side-screen" },
-                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=list_rewards/claim/open_immigrants/open_colony_summary/open_skills/open_research",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=list_rewards/claim/list_immigrants/claim_duplicant/open_immigrants/open_colony_summary/open_skills/open_research",
                 Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "list_rewards/status/rewards、claim、open_immigrants、open_colony_summary、open_skills 或 open_research", Required = true, EnumValues = new List<string> { "list_rewards", "rewards", "status", "claim", "open_immigrants", "open_colony_summary", "open_skills", "open_research" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list_rewards/status/rewards、claim、list_immigrants、claim_duplicant、open_immigrants、open_colony_summary、open_skills 或 open_research", Required = true, EnumValues = new List<string> { "list_rewards", "rewards", "status", "claim", "list_immigrants", "claim_duplicant", "open_immigrants", "open_colony_summary", "open_skills", "open_research" } },
+                    ["candidateId"] = new McpToolParameter { Type = "string", Description = "list_immigrants 返回的当前候选 ID；claim_duplicant 支持 dryRun 预览，确认招募时传 confirm=true", Required = false },
                     ["rewardIndex"] = new McpToolParameter { Type = "integer", Description = "action=claim 时领取 rewards[index]，默认 0", Required = false },
                     ["itemId"] = new McpToolParameter { Type = "string", Description = "action=claim 时按奖励 prefab/tag/id 匹配", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "action=claim 时只预览不领取，默认 false", Required = false },
@@ -146,6 +147,10 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("Target Telepad not found");
                     var telepad = go.GetComponent<Telepad>();
                     string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list_immigrants")
+                        return ListPrintingImmigrants(telepad);
+                    if (action == "claim_duplicant")
+                        return ClaimPrintingDuplicant(args, telepad);
                     var before = TelepadInfo(telepad, includeVictory: false);
 
                     if (action == "list_rewards" || action == "rewards" || action == "status")

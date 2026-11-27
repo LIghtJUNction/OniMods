@@ -65,7 +65,9 @@ Every leaf accepts `stableSeconds` (0–30 **game** seconds). Default is 2 for i
 
 A ready Printing Pod is checked before releasing the pause when the expression includes `printing_pod_ready`. The complete expression must match: readiness does not bypass `all` siblings or explicit stability windows. A default zero-second ready leaf in `any` can stop immediately, including `wait=false`; an explicit positive `stableSeconds` still requires game time. Expressions without this fact keep their existing start behavior. Legacy `print` / `printing_pod` / `printable` / `immigrant` aliases share this state semantics; legacy `any` still excludes printing.
 
-`immigrantsAvailable` is returned by `step_facts`, `step_status`, and completion results. Treat it as the readiness fact. `list_rewards.rewardCount=0` only means no care-package choices are materialized yet; it does not mean the pod is unavailable. While paused, list the pod, explicitly `open_immigrants` with `confirm=true` if available but unmaterialized, then list and select only a care package. Readiness observation never opens UI or selects any reward.
+`immigrantsAvailable` is returned by `step_facts`, `step_status`, and completion results. Treat it as the readiness fact. `list_rewards.rewardCount=0` only means no care-package choices are materialized yet; it does not mean the pod is unavailable. While paused, list the pod, explicitly `open_immigrants` with `confirm=true` if available but unmaterialized, then use `list_rewards` and `claim` for a care package. Readiness observation never opens UI or selects any reward.
+
+For an explicit recruitment request, use `building_control domain=side_surface surface=facility kind=printing_pod action=list_immigrants` on that pod. Preview `action=claim_duplicant` with its exact `candidateId` and `dryRun=true`. Send the same ID with `confirm=true` to recruit. Relist if the offer changes.
 
 ## Population and tracking boundaries
 
