@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Operate the running ONI colony using its normal blueprints, orders and menus."""
 import argparse
-import csv
 import json
 import re
 import subprocess
@@ -48,6 +47,18 @@ def scalar(text):
         return text
 
 
+def toon_values(text):
+    """Split comma-delimited TOON scalars without losing JSON string quotes."""
+    values = []
+    start = 0
+    for match in re.finditer(r'"(?:\\.|[^"\\])*"|,', text):
+        if match[0] == ",":
+            values.append(scalar(text[start:match.start()].strip()))
+            start = match.end()
+    values.append(scalar(text[start:].strip()))
+    return values
+
+
 def toon_object(text):
     """Read object fields and rows used by OniMcp receipt envelopes."""
     root = {}
@@ -65,24 +76,30 @@ def toon_object(text):
             stack.pop()
         _, parent, columns = stack[-1]
         if columns:
-            values = next(csv.reader([body], escapechar=chr(92)))
+            values = toon_values(body)
             if len(values) == len(columns):
-                parent.append(dict(zip(columns, map(scalar, values))))
+                parent.append(dict(zip(columns, values)))
             continue
         if isinstance(parent, list):
             if not (body == "-" or body.startswith("- ")):
+                continue
+            body = body[1:].strip()
+            if body and not field.fullmatch(body):
+                parent.append(scalar(body))
                 continue
             obj = {}
             parent.append(obj)
             stack.append((indent, obj, None))
             parent = obj
             indent += 2
-            body = body[1:].strip()
         match = field.fullmatch(body)
         if not match or not isinstance(parent, dict):
             continue
         key, size, names, value = match.groups()
         if size is not None:
+            if value and not names:
+                parent[key] = toon_values(value)
+                continue
             child = []
             parent[key] = child
             stack.append((indent, child, names.split(",") if names else None))
