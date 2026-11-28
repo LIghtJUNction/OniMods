@@ -141,6 +141,21 @@ internal sealed class ImmigrantScreen : CharacterSelectionController
         selected = null;
     }
 
+    internal int RejectionCalls { get; private set; }
+    internal bool ThrowAfterRejection { get; set; }
+
+    private void OnRejectionConfirmed()
+    {
+        RejectionCalls++;
+        Immigration.Instance.EndImmigration();
+        if (ThrowAfterRejection)
+            throw new InvalidOperationException("native error after ending immigration");
+        foreach (var container in Choices)
+            UnityEngine.Object.Destroy(container.GetGameObject());
+        Choices.Clear();
+        Show(false);
+    }
+
     internal bool ThrowOnHide { get; set; }
     internal int HideAttempts { get; private set; }
     internal void Show(bool visible)
@@ -198,6 +213,8 @@ namespace OniMcp.Tools
         internal static CallToolResult TestClaim(JObject args, Telepad telepad)
             => ClaimPrintingReward(args, telepad, new Dictionary<string, object>());
         internal static CallToolResult TestImmigrants(Telepad telepad) => ListPrintingImmigrants(telepad);
+        internal static CallToolResult TestRejectOffer(JObject args, Telepad pod)
+            => RejectPrintingOffer(args, pod);
         internal static CallToolResult TestDuplicantClaim(JObject args, Telepad telepad)
             => ClaimPrintingDuplicant(args, telepad);
         internal static List<CarePackageInfo> TestRewards() => CurrentCarePackages().ToList();

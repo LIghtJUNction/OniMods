@@ -82,6 +82,7 @@ internal static class PrintingPodClaimHandlerRegression
             && UnityEngine.Object.Destroyed.Count == 2 && screen.HideAttempts == 1,
             "a later available cycle must not revive old static options before new screen choices exist");
         CheckDuplicantOffers();
+        CheckRejectOffer();
         Reset();
         ImmigrantScreen.instance = null;
         Immigration.Instance = null;
@@ -228,6 +229,58 @@ internal static class PrintingPodClaimHandlerRegression
         result = FacilitySideScreenTools.TestDuplicantClaim(DuplicantArgs(selected), pod);
         Check(result.IsError && screen.ProceedCalls == 1 && pod.DuplicantDeliveries.Count == 1,
             "a partially completed native proceed must never retry the same candidate");
+    }
+
+    private static void CheckRejectOffer()
+    {
+        var pod = Reset();
+        var screen = ImmigrantScreen.instance;
+        screen.Telepad = pod;
+        Check(FacilitySideScreenTools.TestRejectOffer(new JObject { ["dryRun"] = true }, pod).IsError,
+            "an empty offer cannot be previewed");
+        var package = CarePackage("Dirt");
+        screen.Choices.Add(package);
+        var preview = new JObject { ["dryRun"] = true, ["confirm"] = true };
+        var result = FacilitySideScreenTools.TestRejectOffer(preview, pod);
+        var plan = JObject.Parse(result.Content[0].Text);
+        var offerId = (string)plan["offerId"];
+        Check(!result.IsError && !string.IsNullOrEmpty(offerId) && (int)plan["optionCount"] == 1
+            && NoWrites(pod) && screen.RejectionCalls == 0 && screen.HideAttempts == 0,
+            "preview supports package-only offers and preserves the native state even with confirmation present");
+        var request = new JObject { ["offerId"] = offerId, ["confirm"] = true };
+        Check(FacilitySideScreenTools.TestRejectOffer(request, new Telepad()).IsError
+            && FacilitySideScreenTools.TestRejectOffer(new JObject { ["offerId"] = offerId }, pod).IsError
+            && FacilitySideScreenTools.TestRejectOffer(new JObject { ["confirm"] = true }, pod).IsError
+            && NoWrites(pod) && screen.RejectionCalls == 0,
+            "an offer requires its owning pod, a token and explicit confirmation");
+        package.Info = CarePackage("Algae").Info;
+        Check(FacilitySideScreenTools.TestRejectOffer(request, pod).IsError && NoWrites(pod),
+            "changing a reward in the same native card invalidates a previous preview");
+        var candidate = Candidate("Mae");
+        screen.Choices.Add(candidate);
+        var candidateId = CandidateIds(pod).Single();
+        request["offerId"] = (string)JObject.Parse(FacilitySideScreenTools.TestRejectOffer(preview, pod).Content[0].Text)["offerId"];
+        result = FacilitySideScreenTools.TestRejectOffer(request, pod);
+        Check(!result.IsError && screen.RejectionCalls == 1 && screen.HideAttempts == 1
+            && Immigration.Instance.EndCalls == 1 && screen.Choices.Count == 0
+            && pod.Deliveries.Count == 0 && pod.DuplicantDeliveries.Count == 0,
+            "native rejection consumes a mixed offer once without delivering anything");
+        Immigration.Instance.ImmigrantsAvailable = true;
+        screen.Choices = new List<ITelepadDeliverableContainer> { CarePackage("Water") };
+        Check(FacilitySideScreenTools.TestRejectOffer(request, pod).IsError && screen.RejectionCalls == 1
+            && FacilitySideScreenTools.TestDuplicantClaim(DuplicantArgs(candidateId), pod).IsError,
+            "rejection retires both the offer token and previous duplicant IDs");
+
+        request["offerId"] = (string)JObject.Parse(FacilitySideScreenTools.TestRejectOffer(preview, pod).Content[0].Text)["offerId"];
+        screen.ThrowAfterRejection = true;
+        result = FacilitySideScreenTools.TestRejectOffer(request, pod);
+        Check(result.IsError && screen.RejectionCalls == 2 && Immigration.Instance.EndCalls == 2,
+            "a native exception after consumption must return an unknown outcome");
+        Immigration.Instance.ImmigrantsAvailable = true;
+        Check(FacilitySideScreenTools.TestRejectOffer(request, pod).IsError
+            && FacilitySideScreenTools.TestRejectOffer(preview, pod).IsError
+            && screen.RejectionCalls == 2 && Immigration.Instance.EndCalls == 2,
+            "an uncertain native outcome must never reauthorize the same offer");
     }
 
     private static List<string> CandidateIds(Telepad pod)
