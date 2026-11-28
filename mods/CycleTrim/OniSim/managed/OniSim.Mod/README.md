@@ -21,8 +21,8 @@ when unset, the loader uses the platform library under `OniSim/linux-x64/`,
 `OniSim/windows-x64/` or `OniSim/macos-x64/` beside the Mod assembly.
 These switches control mapping; they do not establish gameplay compatibility.
 
-The preflight requires x64 Unity Mono. Linux admits only the inspected 744825
-and 763796 tuples in `InspectedGameProfile.cs`, with exact game assembly, Mono
+The preflight requires x64 Unity Mono. Linux admits only the inspected 744825,
+763796, and 764961 tuples in `InspectedGameProfile.cs`, with exact game assembly, Mono
 and official Sim fingerprints plus the canonical import/message-layout check.
 The [U60 profile receipt](../../../../../docs/cycletrim-u60-native-profile-20261120.json)
 and [actual Unity Mono ABI comparison](../../../../../docs/cycletrim-u60-runtime-abi-20261120.json)

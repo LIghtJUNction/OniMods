@@ -14,8 +14,12 @@ namespace OniSim.CycleTrim
             763796,
             "801207a0e194ad11892c86af754ad4d3218d89de3a079c2179e24723947135d4",
             "ef78998d272456345b025b41c71bd3fd294da19d963e68f1a1e00c907eacb20b");
+        internal static readonly InspectedGameProfile LinuxU60Build764961 = new InspectedGameProfile(
+            764961,
+            "51aafd6c2857e997daaf154ea0ac0f4db9b4520fb8872bc92333f9086e933d9a",
+            LinuxU60.MonoSha256);
 
-        // The shipped Linux simulator is byte-identical in both inspected builds.
+        // The shipped Linux simulator is byte-identical across these inspected builds.
         internal const string SimulatorSha256 =
             "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d";
 
@@ -34,6 +38,7 @@ namespace OniSim.CycleTrim
         {
             if (build == LinuxU59.GameBuild) return LinuxU59;
             if (build == LinuxU60.GameBuild) return LinuxU60;
+            if (build == LinuxU60Build764961.GameBuild) return LinuxU60Build764961;
             throw new InvalidOperationException("No inspected Linux OniSim profile exists for game build " + build + ".");
         }
 

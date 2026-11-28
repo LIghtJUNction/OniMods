@@ -143,7 +143,7 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。未设置时默认 `CYCLETRIM_ONISIM_WORKERS=8`，启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。GPU 算子相关开关见上文 [GPU 进度](#gpu-进度2026-11-08)。源码内的验收记录见 [`OniSim/docs/parallel-validation.md`](OniSim/docs/parallel-validation.md)。
 
-运行回执只适用于其精确源码、二进制和场景，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)。Linux x64 接受经过检查的 744825、763796 两组 `Assembly-CSharp`、Mono 与官方 Sim 指纹，并校验完整原生接口与消息布局；未知版本或混用运行时会拒绝映射。Windows/macOS 仍限 744825，没有 U60 实机验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未通过。
+运行回执只适用于其精确源码、二进制和场景，见 [`OniSim/docs/runtime-validation.md`](OniSim/docs/runtime-validation.md)。Linux x64 接受经过检查的 744825、763796、764961 三组 `Assembly-CSharp`、Mono 与官方 Sim 指纹，并校验完整原生接口与消息布局；未知版本或混用运行时会拒绝映射。Windows/macOS 仍限 744825，没有 U60 实机验收。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未通过。
 
 **U60 / 763796 开发构建检查点（2026-11-20）**：Linux x64 的精确运行时组合已通过[严格 profile 检查](../../docs/cycletrim-u60-native-profile-20261120.json)与[实际 Unity Mono ABI 核对](../../docs/cycletrim-u60-runtime-abi-20261120.json)。源码 `8db265410028785b1cc89a94ab90e52662a3247b` 经 Steam 正常图形启动，在三复制人存档副本中自然形成 6 个氧气/二氧化碳混合格；新建检查点、同进程重载后，完整组分的质量、温度及总质量 binary32 位一致，并能继续推进。方法、文件身份和结果见[实机回执](../../docs/cycletrim-u60-multicomponent-live-20261120.json)。
 
