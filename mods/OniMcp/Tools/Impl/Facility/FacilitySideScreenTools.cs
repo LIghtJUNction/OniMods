@@ -208,10 +208,11 @@ namespace OniMcp.Tools
             return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
             {
                 ["kind"] = new McpToolParameter { Type = "string", Description = "dispenser、suit_locker、lore_bearer、telepad 或 artifact", Required = true },
-                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：select_item/order/cancel、request_suit/no_suit/drop_suit、press、list_rewards/claim/list_immigrants/claim_duplicant/open_immigrants/open_colony_summary/open_skills/open_research、open", Required = false },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：select_item/order/cancel、request_suit/no_suit/drop_suit、press、list_rewards/claim/list_immigrants/claim_duplicant/reject_all/open_immigrants/open_colony_summary/open_skills/open_research、open", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId、状态或物品筛选；artifact 也可筛选 artifact id", Required = false },
                 ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 返回上限", Required = false },
                 ["itemId"] = new McpToolParameter { Type = "string", Description = "kind=dispenser action=select_item 或 kind=telepad action=claim 时的目标 Tag/prefab id", Required = false },
+                ["offerId"] = new McpToolParameter { Type = "string", Description = "Exact offer ID returned by a Printing Pod reject_all dry run.", Required = false },
                 ["candidateId"] = new McpToolParameter { Type = "string", Description = "list_immigrants 返回的当前候选 ID；claim_duplicant 支持 dryRun 预览，确认招募时传 confirm=true", Required = false },
                 ["rewardIndex"] = new McpToolParameter { Type = "integer", Description = "kind=telepad action=claim 时领取 rewards[index]，默认 0", Required = false },
                 ["itemIndex"] = new McpToolParameter { Type = "integer", Description = "kind=dispenser action=select_item 时的可分发物品序号", Required = false },

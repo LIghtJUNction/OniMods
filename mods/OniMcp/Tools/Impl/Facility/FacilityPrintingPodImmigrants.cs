@@ -18,13 +18,40 @@ namespace OniMcp.Tools
         private static readonly MethodInfo ProceedWithImmigrant = typeof(ImmigrantScreen).GetMethod(
             "OnProceed", BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 
+        private static readonly MethodInfo RejectImmigrantOffer = typeof(ImmigrantScreen).GetMethod(
+            "OnRejectionConfirmed", BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+
         private sealed class ImmigrantOffer
         {
             internal ImmigrantScreen Screen;
             internal Telepad Pod;
-            internal bool DeliveryAttempted;
+            internal bool ResolutionAttempted;
+            internal RejectionPreview Rejection;
             internal readonly Dictionary<CharacterContainer, ImmigrantCandidate> Candidates =
                 new Dictionary<CharacterContainer, ImmigrantCandidate>();
+        }
+
+        private sealed class RejectionPreview
+        {
+            internal readonly string Id = Guid.NewGuid().ToString("N");
+            private readonly ITelepadDeliverableContainer[] cards;
+            private readonly object[] rewards;
+
+            internal RejectionPreview(List<ITelepadDeliverableContainer> options)
+            {
+                cards = options.ToArray();
+                rewards = cards.Select(RewardIdentity).ToArray();
+            }
+
+            internal bool Matches(List<ITelepadDeliverableContainer> options)
+            {
+                return cards.Length == options.Count && Enumerable.Range(0, cards.Length).All(index =>
+                    ReferenceEquals(cards[index], options[index]) &&
+                    ReferenceEquals(rewards[index], RewardIdentity(options[index])));
+            }
+
+            private static object RewardIdentity(ITelepadDeliverableContainer card)
+                => card is CharacterContainer duplicant ? (object)duplicant.Stats : (card as CarePackageContainer)?.Info;
         }
 
         private sealed class ImmigrantCandidate
@@ -59,21 +86,28 @@ namespace OniMcp.Tools
                 && TryGetImmigrantScreenContainers(out containers);
         }
 
+        private static ImmigrantOffer GetImmigrantOffer(
+            List<ITelepadDeliverableContainer> containers, ImmigrantScreen screen, Telepad pod)
+        {
+            var offer = ImmigrantOffers.GetValue(containers, choices => new ImmigrantOffer());
+            if (offer.Screen != screen || offer.Pod != pod)
+            {
+                offer.Candidates.Clear();
+                offer.Rejection = null;
+                offer.Screen = screen;
+                offer.Pod = pod;
+            }
+            return offer;
+        }
+
         private static CallToolResult ListPrintingImmigrants(Telepad telepad)
         {
             var candidates = new List<Dictionary<string, object>>();
             List<ITelepadDeliverableContainer> containers;
             if (HasImmigrantOffer(telepad, out containers))
             {
-                var offer = ImmigrantOffers.GetValue(containers, choices => new ImmigrantOffer());
-                var screen = ImmigrantScreen.instance;
-                if (offer.Screen != screen || offer.Pod != telepad)
-                {
-                    offer.Candidates.Clear();
-                    offer.Screen = screen;
-                    offer.Pod = telepad;
-                }
-                if (!offer.DeliveryAttempted)
+                var offer = GetImmigrantOffer(containers, ImmigrantScreen.instance, telepad);
+                if (!offer.ResolutionAttempted)
                 {
                     foreach (var card in containers.OfType<CharacterContainer>())
                     {
@@ -93,6 +127,57 @@ namespace OniMcp.Tools
             });
         }
 
+        private static CallToolResult RejectPrintingOffer(JObject args, Telepad telepad)
+        {
+            if (args["dryRun"] != null && args["dryRun"].Type != JTokenType.Boolean)
+                return CallToolResult.Error("dryRun must be a boolean.");
+            bool preview = (bool?)args["dryRun"] == true;
+            if (!preview && (args["confirm"]?.Type != JTokenType.Boolean || !(bool)args["confirm"]))
+                return CallToolResult.Error("confirm=true required to decline a Printing Pod offer.");
+            if (RejectImmigrantOffer == null)
+                return CallToolResult.Error("The native Printing Pod rejection confirmation is unavailable.");
+
+            var screen = ImmigrantScreen.instance;
+            if (!HasImmigrantOffer(telepad, out var containers) || containers.Count == 0)
+                return CallToolResult.Error("No materialized offer at this pod. Use open_immigrants when the pod is ready.");
+
+            if (preview)
+            {
+                var current = GetImmigrantOffer(containers, screen, telepad);
+                if (current.ResolutionAttempted)
+                    return CallToolResult.Error("Resolution of this Printing Pod offer has already been attempted.");
+                if (current.Rejection == null || !current.Rejection.Matches(containers))
+                    current.Rejection = new RejectionPreview(containers);
+                return JsonResult(new Dictionary<string, object>
+                {
+                    ["dryRun"] = true,
+                    ["offerId"] = current.Rejection.Id,
+                    ["optionCount"] = containers.Count
+                });
+            }
+
+            if (args["offerId"]?.Type != JTokenType.String
+                || !ImmigrantOffers.TryGetValue(containers, out var offer)
+                || offer.Screen != screen || offer.Pod != telepad || offer.ResolutionAttempted
+                || offer.Rejection == null || offer.Rejection.Id != (string)args["offerId"]
+                || !offer.Rejection.Matches(containers))
+                return CallToolResult.Error("Provide the current offerId from a reject_all dry run at this pod.");
+
+            // The native callback consumes the offer. It may throw after
+            // rejection, so the preview cannot authorize a second attempt.
+            offer.ResolutionAttempted = true;
+            try
+            {
+                RejectImmigrantOffer.Invoke(screen, null);
+            }
+            catch (TargetInvocationException e)
+            {
+                return CallToolResult.Error("Native offer rejection outcome is unknown. Inspect the pod before continuing: "
+                    + (e.InnerException ?? e).Message);
+            }
+            return JsonResult(new Dictionary<string, object> { ["rejected"] = true, ["offerId"] = offer.Rejection.Id });
+        }
+
         private static CallToolResult ClaimPrintingDuplicant(JObject args, Telepad telepad)
         {
             if (args["candidateId"]?.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)args["candidateId"]))
@@ -107,7 +192,7 @@ namespace OniMcp.Tools
             ImmigrantOffer offer;
             var screen = ImmigrantScreen.instance;
             if (!HasImmigrantOffer(telepad, out containers) || !ImmigrantOffers.TryGetValue(containers, out offer)
-                || offer.DeliveryAttempted || offer.Pod != telepad || offer.Screen != screen)
+                || offer.ResolutionAttempted || offer.Pod != telepad || offer.Screen != screen)
                 return CallToolResult.Error("No listed duplicant offer is claimable at this pod.");
 
             string id = (string)args["candidateId"];
@@ -133,7 +218,7 @@ namespace OniMcp.Tools
 
                 // OnProceed delivers, ends immigration and retires the cards. A
                 // native exception may occur after delivery, so never replay it.
-                offer.DeliveryAttempted = true;
+                offer.ResolutionAttempted = true;
                 try
                 {
                     ProceedWithImmigrant.Invoke(screen, null);

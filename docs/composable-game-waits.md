@@ -69,6 +69,12 @@ A ready Printing Pod is checked before releasing the pause when the expression i
 
 For an explicit recruitment request, use `building_control domain=side_surface surface=facility kind=printing_pod action=list_immigrants` on that pod. Preview `action=claim_duplicant` with its exact `candidateId` and `dryRun=true`. Send the same ID with `confirm=true` to recruit. Relist if the offer changes.
 
+To decline the entire current offer, call `action=reject_all` with
+`dryRun=true` on the same pod. This returns an `offerId` without changing the
+offer. Confirm with that exact `offerId` and `confirm=true` while the offer is
+still current. The game applies its normal Reject All cooldown and delivers
+no reward.
+
 ## Population and tracking boundaries
 
 Idle population is every live duplicant in `worldId` (default: the selected world). With `schedule=work`, each matching duplicant's current `ScheduleBlock.GroupId` must equal the native `Db.Get().ScheduleGroups.Worktime.Id`. This is a schedule-group identity, distinct from the `Work` block type or localized labels. Raw `scheduleGroupId` / `workScheduleGroupId` values are included in idle facts for verification. `all` requires **every** member of the full population to satisfy both facts; off-work duplicants are not silently excluded. Zero duplicants never satisfy either quantifier. A null current chore is not classified as idle because it also occurs between chores. Native idle includes idle wandering. The two-second default filters brief idle transitions; the agent can change it.
