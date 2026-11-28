@@ -124,30 +124,21 @@ pub(crate) fn clear_species_cell(world: &mut PhysicsWorld, cell: usize) {
 /// Mirror the primary/mixture/extra fields into the dense species tensor.
 pub(crate) fn ingest_write_cell(world: &mut PhysicsWorld, elements: &ElementTable, cell: usize) {
     let start = cell * GAS_CHANNELS;
-    if start + GAS_CHANNELS > world.species_mass.len() {
+    let end = start + GAS_CHANNELS;
+    if end > world.species_mass.len() {
         return;
     }
-    world.species_mass[start..start + GAS_CHANNELS].fill(0.0);
-    let mut species = [(0u16, 0.0f32); 16];
-    let mut count = 0;
+    let mut projected = [0.0; GAS_CHANNELS];
     world.for_each_cell_species(cell, |elem_id, mass| {
-        if count < 16 {
-            species[count] = (elem_id, mass);
-            count += 1;
+        let element = elem_id as usize;
+        if let Some(&channel) = world.gas_channel_of_element.get(element)
+            && let Some(output) = projected.get_mut(channel as usize)
+            && elements.elements.get(element).is_some_and(|e| e.record.state & 3 == 1)
+        {
+            *output += mass;
         }
     });
-    for &(elem_id, mass) in &species[..count] {
-        let element = elem_id as usize;
-        if mass > 0.0
-            && element < elements.elements.len()
-            && elements.elements[element].record.state & 3 == 1
-        {
-            let channel = world.gas_channel_of_element.get(element).copied().unwrap_or(u8::MAX);
-            if channel != u8::MAX {
-                world.species_mass[start + channel as usize] += mass;
-            }
-        }
-    }
+    world.species_mass[start..end].copy_from_slice(&projected);
 }
 
 /// Project dense species back onto Grid, mixture overlay, and extra_mixtures (all representable species).

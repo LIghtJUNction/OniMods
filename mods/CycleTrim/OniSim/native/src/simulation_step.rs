@@ -573,7 +573,11 @@ fn decay_inactive(
     for y in bounds.2..bounds.3 {
         for x in bounds.0..bounds.1 {
             let cell = y * world.stride + x;
-            if !space_exposed(world, cell) {
+            if !space_exposed(world, cell)
+                || !(world.write.mass[cell] > 0.0
+                    || world.mixture_mass[cell] > 0.0
+                    || world.extra_mixtures.contains_key(&cell))
+            {
                 continue;
             }
             apply_space_decay(world, elements, cell);
@@ -592,6 +596,23 @@ fn space_exposed(world: &PhysicsWorld, cell: usize) -> bool {
             || world.backwall_element[cell] == u16::MAX)
 }
 
+fn gas_space_loss_fraction(world: &PhysicsWorld, cell: usize) -> f64 {
+    let open_sides = [cell - 1, cell + 1, cell - world.stride, cell + world.stride]
+        .into_iter()
+        .filter(|&neighbor| {
+            space_exposed(world, neighbor)
+                && world.read.properties[neighbor] & 1 == 0
+                && world
+                    .element_phase
+                    .get(world.read.element[neighbor] as usize)
+                    .is_some_and(|&phase| phase <= 1)
+        })
+        .count();
+    // An exposed cell vents through its missing backwall. Additional exposed
+    // faces increase escape into open space while a sheltered edge still diffuses.
+    (0.25 + 0.15 * open_sides as f64) * f64::from(FIXED_DT)
+}
+
 /// Remove each phase's escaped mass proportionately across all its species.
 /// Storage order never affects the loss rate or which species survives.
 pub(crate) fn apply_space_decay(world: &mut PhysicsWorld, elements: &ElementTable, cell: usize) {
@@ -604,21 +625,22 @@ pub(crate) fn apply_space_decay(world: &mut PhysicsWorld, elements: &ElementTabl
         return;
     }
     let mut fraction = [1.0f32; 4];
-    // Preserve the existing absolute kg/s ceilings, but drain at most 5% of
-    // the present phase per 0.2s tick. A newly arriving small parcel can keep
-    // spreading into adjacent exposed cells instead of vanishing in one tick.
-    for (phase, kilograms_per_second) in [(1, 0.1f64), (2, 100.0f64)] {
-        let total = totals[phase];
-        if total > 0.0 {
-            let loss = (kilograms_per_second * f64::from(FIXED_DT))
-                .min(total * 0.25 * f64::from(FIXED_DT));
-            let remaining = total - loss;
-            fraction[phase] = if remaining <= 1e-6 {
-                0.0
-            } else {
-                (remaining / total) as f32
-            };
-        }
+    if totals[1] > 0.0 {
+        let retained = 1.0 - gas_space_loss_fraction(world, cell);
+        fraction[1] = if totals[1] * retained <= 1e-6 {
+            0.0
+        } else {
+            retained as f32
+        };
+    }
+    if totals[2] > 0.0 {
+        let loss = (100.0 * f64::from(FIXED_DT)).min(totals[2] * 0.25 * f64::from(FIXED_DT));
+        let remaining = totals[2] - loss;
+        fraction[2] = if remaining <= 1e-6 {
+            0.0
+        } else {
+            (remaining / totals[2]) as f32
+        };
     }
     let scale = |id: u16| fraction[(elements.elements[id as usize].record.state & 3) as usize];
     world.write.mass[cell] *= scale(world.write.element[cell]);
@@ -628,26 +650,27 @@ pub(crate) fn apply_space_decay(world: &mut PhysicsWorld, elements: &ElementTabl
             *mass *= scale(*id);
         }
         extras.retain(|&(_, mass)| mass > 0.0);
+        if extras.is_empty() {
+            world.extra_mixtures.remove(&cell);
+        }
     }
     // Scaling one phase does not reorder its species. Avoid the legacy
     // normalization's fixed-size temporary array and its component limit.
-    if world.extra_mixtures.get(&cell).is_some_and(Vec::is_empty) {
-        world.extra_mixtures.remove(&cell);
-    }
-    if world.write.mass[cell] == 0.0 {
-        world.write.element[cell] = world.vacuum_element;
-    }
     if world.mixture_mass[cell] == 0.0 {
         world.mixture_element[cell] = world.vacuum_element;
     }
+    if world.write.mass[cell] == 0.0 {
+        world.write.element[cell] = world.vacuum_element;
+        world.restore_empty_primary(cell);
+    }
     crate::multicomponent_flux::ingest_write_cell(world, elements, cell);
-    let old = totals.iter().sum::<f64>();
-    let remaining = totals
-        .iter()
-        .zip(fraction)
-        .map(|(mass, scale)| mass * f64::from(scale))
-        .sum::<f64>();
-    if old > 0.0 {
+    if world.write.disease_count[cell] != 0 {
+        let old = totals.iter().sum::<f64>();
+        let remaining = totals
+            .iter()
+            .zip(fraction)
+            .map(|(mass, scale)| mass * f64::from(scale))
+            .sum::<f64>();
         world.write.disease_count[cell] =
             (f64::from(world.write.disease_count[cell]) * remaining / old) as i32;
     }
@@ -750,12 +773,132 @@ mod space_tests {
             let before: f32 = world.write.mass.iter().sum();
             crate::multicomponent_flux::step_region(&mut world, &table,
                 &mut EventQueues::default(), region, None, false).unwrap();
+            world.sync_read_from_write();
             decay_inactive(&mut world, &table, (1, 9, 1, 9));
             let after: f32 = world.write.mass.iter().sum();
-            assert!(after < before && after > before * 0.94, "exposure must leak progressively");
+            assert!(
+                (after - before * 0.83).abs() < 1e-6,
+                "fully exposed small parcels must spread while losing mass progressively: {before} -> {after}"
+            );
         }
         assert!(world.write.mass[source + 1] > 0.0);
         assert!(world.write.mass[source + world.stride] > 0.0);
+    }
+
+    #[test]
+    fn sealed_and_blocked_neighbors_do_not_increase_escape() {
+        let table = table_with_gases(1);
+        let mut world = PhysicsWorld::new(5, 5, 42, &table).unwrap();
+        let cell = 3 * world.stride + 3;
+        let mut zones = vec![0; world.write.mass.len()];
+        for neighbor in [cell, cell - 1, cell + 1, cell - world.stride, cell + world.stride] {
+            zones[neighbor] = u8::MAX;
+            world.backwall_element[neighbor] = u16::MAX;
+            world.read.element[neighbor] = world.vacuum_element;
+            world.read.properties[neighbor] = 0;
+        }
+        world.inactive_mask = Some(zones);
+        world.backwall_element[cell - 1] = 2;
+        world.read.properties[cell + 1] = 1;
+        world.read.element[cell - world.stride] = 4;
+        world.write.element[cell] = 3;
+        world.write.mass[cell] = 1.0;
+        apply_space_decay(&mut world, &table, cell);
+        assert_eq!(world.write.mass[cell], 0.92);
+    }
+
+    #[test]
+    fn pressurized_space_leak_dilutes_every_species_at_the_same_rate() {
+        let table = table_with_gases(2);
+        let mut world = PhysicsWorld::new(4, 4, 42, &table).unwrap();
+        let cell = world.stride + 1;
+        world.write.element[cell] = 3;
+        world.write.mass[cell] = 75.0;
+        world.mixture_element[cell] = 4;
+        world.mixture_mass[cell] = 25.0;
+        apply_space_decay(&mut world, &table, cell);
+        assert_eq!(world.write.mass[cell], 71.25);
+        assert_eq!(world.mixture_mass[cell], 23.75);
+    }
+
+    #[test]
+    fn space_decay_displays_surviving_gas_when_the_last_liquid_escapes() {
+        let table = table_with_gases(1);
+        let mut world = PhysicsWorld::new(4, 4, 42, &table).unwrap();
+        let cell = world.stride + 1;
+        world.write.element[cell] = 4;
+        world.write.mass[cell] = 1e-6;
+        world.mixture_element[cell] = 3;
+        world.mixture_mass[cell] = 0.25;
+        apply_space_decay(&mut world, &table, cell);
+        assert_eq!(world.write.element[cell], 3);
+        assert_eq!(world.write.mass[cell], 0.2375);
+        assert_eq!(world.mixture_mass[cell], 0.0);
+    }
+
+    #[test]
+    fn space_decay_refreshes_a_mapped_gas_after_sixteen_inventory_entries() {
+        let table = table_with_gases(20);
+        let mut world = PhysicsWorld::new(4, 4, 42, &table).unwrap();
+        let cell = world.stride + 1;
+        world.write.element[cell] = 22;
+        world.write.mass[cell] = 0.01;
+        world.mixture_element[cell] = 21;
+        world.mixture_mass[cell] = 0.01;
+        world.extra_mixtures
+            .insert(cell, (3..21).rev().map(|id| (id, 0.01)).collect());
+        crate::multicomponent_flux::rebuild_gas_channels(&mut world, &table);
+        apply_space_decay(&mut world, &table, cell);
+        let channel = world.gas_channel_of_element[3] as usize;
+        let projected = world.species_mass[cell * crate::multicomponent_flux::GAS_CHANNELS + channel];
+        assert_eq!(projected, 0.01 * 0.95);
+    }
+
+    #[test]
+    #[ignore = "manual timing of the exposed-space decay pass"]
+    fn benchmark_space_decay() {
+        let table = table_with_gases(3);
+        let (width, height) = (738, 306);
+        let bounds = (1, width + 1, 1, height + 1);
+        for (label, spacing) in [("mostly-vacuum", 127), ("gas-plume", 3)] {
+            let mut world = PhysicsWorld::new(width, height, 42, &table).unwrap();
+            let mut zones = vec![0; world.write.mass.len()];
+            let mut gas_cells = Vec::new();
+            world.write.element.fill(world.vacuum_element);
+            world.write.mass.fill(0.0);
+            for y in height / 2..=height {
+                for x in 1..=width {
+                    let cell = y * world.stride + x;
+                    zones[cell] = u8::MAX;
+                    if cell % spacing == 0 {
+                        world.write.element[cell] = 3;
+                        world.mixture_element[cell] = 4;
+                        world.extra_mixtures.insert(cell, vec![(5, 0.05)]);
+                        gas_cells.push(cell);
+                    }
+                }
+            }
+            world.inactive_mask = Some(zones);
+            crate::multicomponent_flux::rebuild_gas_channels(&mut world, &table);
+            for sample in 0..9 {
+                for &cell in &gas_cells {
+                    world.write.mass[cell] = 0.12;
+                    world.mixture_mass[cell] = 0.08;
+                    world.extra_mixtures.get_mut(&cell).unwrap()[0].1 = 0.05;
+                }
+                let started = std::time::Instant::now();
+                for _ in 0..48 {
+                    decay_inactive(std::hint::black_box(&mut world), &table, bounds);
+                }
+                if sample != 0 {
+                    println!(
+                        "SPACE_DECAY scene={label} cells={} us_per_step={:.3}",
+                        gas_cells.len(),
+                        started.elapsed().as_secs_f64() * 1e6 / 48.0,
+                    );
+                }
+            }
+        }
     }
 
     #[test]
