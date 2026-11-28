@@ -375,7 +375,7 @@ internal sealed class Operational { internal bool IsOperational { get; set; } }
 internal static partial class Components
 {
     internal static class AssignableItems { internal static readonly List<Assignable> Items = new List<Assignable>(); }
-    internal static class LiveMinionIdentities { internal static readonly List<MinionIdentity> Items = new List<MinionIdentity>(); }
+    internal static class LiveMinionIdentities { internal static readonly List<MinionIdentity> Items = new List<MinionIdentity>(); internal static int Count => Items.Count; }
     internal static class Clinics { internal static readonly List<Clinic> Items = new List<Clinic>(); }
     internal static class BuildingCompletes { internal static readonly List<BuildingComplete> Items = new List<BuildingComplete>(); }
 }

@@ -36,17 +36,9 @@ namespace OniMcp.Tools
 
             internal Dictionary<string, object> Describe()
             {
-                return new Dictionary<string, object>
-                {
-                    ["candidateId"] = Id,
-                    ["name"] = Stats.Name,
-                    ["personalityId"] = Stats.personality?.Id,
-                    ["startingLevels"] = Stats.StartingLevels,
-                    ["traits"] = Stats.Traits.Where(t => t != null).Select(t => t.Id).ToArray(),
-                    ["aptitudes"] = Stats.skillAptitudes.ToDictionary(p => p.Key.Id, p => p.Value),
-                    ["stressTrait"] = Stats.stressTrait?.Id,
-                    ["joyTrait"] = Stats.joyTrait?.Id
-                };
+                var result = DuplicantCandidateInfo.Describe(Stats);
+                result["candidateId"] = Id;
+                return result;
             }
         }
 

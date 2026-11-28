@@ -59,6 +59,7 @@ internal static class Program
         TestWorldEditorCellObjectPolicy();
         GameControlRoutingRegression.Run();
         NewGameOpeningRegression.Run();
+        StarterCrewRegression.Run();
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();

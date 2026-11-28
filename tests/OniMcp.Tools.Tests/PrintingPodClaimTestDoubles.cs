@@ -59,6 +59,7 @@ internal sealed class CarePackageContainer : ITelepadDeliverableContainer
 internal sealed class TestPrintingResource
 {
     internal string Id { get; }
+    internal string model { get; } = "Standard";
     internal TestPrintingResource(string id) { Id = id; }
 }
 
@@ -75,10 +76,11 @@ internal sealed class MinionStartingStats : ITelepadDeliverable
         = new Dictionary<TestPrintingResource, float>();
 }
 
-internal sealed class CharacterContainer : ITelepadDeliverableContainer
+internal sealed class CharacterContainer : KScreen, ITelepadDeliverableContainer
 {
     internal MinionStartingStats Stats { get; set; }
-    private readonly GameObject gameObject = new GameObject();
+    private readonly KButton reshuffleButton = new KButton();
+    internal KButton RerollButton => reshuffleButton;
     public GameObject GetGameObject() => gameObject;
 }
 
@@ -184,7 +186,7 @@ internal static class PrintingPodGameObjectExtensions
 
 namespace UnityEngine
 {
-    internal static class Object
+    internal static partial class Object
     {
         internal static readonly List<GameObject> Destroyed = new List<GameObject>();
         internal static void Destroy(GameObject target) { Destroyed.Add(target); }

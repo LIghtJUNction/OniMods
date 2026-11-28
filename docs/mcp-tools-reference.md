@@ -86,6 +86,12 @@ operations and are not callable as MCP tools.
 
 `active` 是原生 `KScreen.IsActive()` 标志。有模组差异等子弹窗时，列表可见而该标志为 `false`；应检查当前弹窗，不要因此重复打开菜单。原生加载列表可能整理本地与云端的重叠存档，文件路径可以变化。
 
+At the `characters` stage, `new_game_status` lists `candidates` with their
+zero-based slot indices and native stats. To reroll one slot, pass its
+`rerollChoiceId` as `name` to `new_game_select`. Preview with `dryRun=true`,
+then execute with `confirm=true`. Read status again to inspect the rerolled
+crew before choosing `embark`.
+
 ## 建造规划
 
 `building_control domain=planning` 是新的建造入口。

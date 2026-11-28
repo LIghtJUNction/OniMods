@@ -59,7 +59,7 @@ namespace OniMcp.Tools
             if (!ToolUtil.GetBool(args, "confirm", false))
                 return CallToolResult.Error("confirm=true is required");
 
-            if (stage == "characters" && !NewGamePauseWatcher.Begin(Game.Instance))
+            if (stage == "characters" && choice.Id == "embark" && !NewGamePauseWatcher.Begin(Game.Instance))
                 return CallToolResult.Error("New-game pause guard is unavailable or already active; no Embark was submitted");
             choice.Click();
             return Scheduled(stage, choice.Id);
@@ -113,7 +113,15 @@ namespace OniMcp.Tools
                 AddButton(result, "generate_world", Field<KButton>(screen, "launchButton"));
             else if (screen is MinionSelectScreen crew && crew.IsStarterMinion
                 && Game.Instance != null && !Game.Instance.baseAlreadyCreated)
+            {
                 AddButton(result, "embark", Field<KButton>(crew, "proceedButton"));
+                var candidates = Crew(crew);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i].Stats?.IsValid == true)
+                        AddButton(result, RerollChoiceId(i), Field<KButton>(candidates[i], "reshuffleButton"));
+                }
+            }
             return result;
         }
 
@@ -154,6 +162,8 @@ namespace OniMcp.Tools
             return containers == null ? new List<CharacterContainer>()
                 : containers.OfType<CharacterContainer>().ToList();
         }
+
+        private static string RerollChoiceId(int slot) => $"reroll_slot_{slot}";
 
         private static bool StarterCrewReady(MinionSelectScreen screen)
         {
@@ -200,8 +210,24 @@ namespace OniMcp.Tools
             }
             if (screen is MinionSelectScreen crew)
             {
-                result["startingCandidates"] = Crew(crew).Count;
+                var candidates = Crew(crew);
+                result["startingCandidates"] = candidates.Count;
                 result["crewReady"] = StarterCrewReady(crew);
+                var listedCandidates = new JArray();
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var stats = candidates[i].Stats;
+                    if (stats?.IsValid != true)
+                        continue;
+                    var candidate = JObject.FromObject(DuplicantCandidateInfo.Describe(stats));
+                    candidate["model"] = stats.personality?.model.ToString();
+                    candidate["slotIndex"] = i;
+                    string choiceId = RerollChoiceId(i);
+                    if (choices.Any(choice => choice.Id == choiceId && choice.Enabled))
+                        candidate["rerollChoiceId"] = choiceId;
+                    listedCandidates.Add(candidate);
+                }
+                result["candidates"] = listedCandidates;
             }
             return CallToolResult.Text(result.ToString(Newtonsoft.Json.Formatting.None));
         }
